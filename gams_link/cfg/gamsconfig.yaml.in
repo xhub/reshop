@@ -1,0 +1,20 @@
+solverConfig:
+  - RESHOP:
+      minVersion: 33
+      fileType: 102111
+      dictType: 5
+      licCodes: 000102030405
+      scriptName: @GAMS_SCRIPTNAME@
+      executableName: @GAMS_EXENAME@
+      defName: |CFG_DIR|optreshop.def
+      library:
+        libName: |BIN_DIR|$<TARGET_FILE_NAME:@RESHOP_GAMS_INTERFACE@>
+        auditCode: rhp
+        solverInterfaceType: 1
+        threadSafeIndic: True
+      modelTypes:
+        - EMP
+        - QCP
+        - NLP
+        - LP
+        - MCP

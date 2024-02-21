@@ -1,0 +1,13 @@
+#ifdef __linux__
+#define RESHOP_XOPEN_SOURCE 700
+#else
+#define RESHOP_XOPEN_SOURCE 600
+#endif
+
+
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE RESHOP_XOPEN_SOURCE
+#elif _XOPEN_SOURCE < RESHOP_XOPEN_SOURCE
+#undef _XOPEN_SOURCE
+#define _XOPEN_SOURCE RESHOP_XOPEN_SOURCE
+#endif

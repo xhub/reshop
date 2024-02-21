@@ -1,0 +1,10 @@
+LIBRARY rhpcclib64.dll
+EXPORTS
+xcreate_=xcreate
+xfree_=xfree
+rhpcreate_=rhpcreate
+rhpfree_=rhpfree
+rhpxcreate_=rhpxcreate
+rhpxfree_=rhpxfree
+rhpcallsolver_=c__rhpcallsolver
+rhpreadyapi_=c__rhpreadyapi

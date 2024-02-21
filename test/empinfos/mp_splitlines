@@ -1,0 +1,7 @@
+dag
+n1: max w1 x(1) x(2)
+* NOT IMPORTANT
+x(3) objequ cons
+n2: min w2 z(1) z(2) z(3)
+
+

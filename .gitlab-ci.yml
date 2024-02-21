@@ -1,0 +1,151 @@
+default:
+  retry:
+    max: 2
+    when: runner_system_failure
+  image:
+    name: huberoli/debian-c-compile-analyse:latest
+    pull_policy: [always, if-not-present]
+
+
+stages:
+   - build
+   - gams_test
+   - fbinfer
+   - scan-build
+   - cppcheck
+   - sanitizers
+   - upload
+
+variables:
+  GAMS_MAJVER: "45"
+  TERM: "xterm-256color"
+  COLORTERM: "truecolor"
+
+build:
+  stage: build
+  variables:
+    USER: "gitlab-runner"
+  before_script:
+    - export N_PROCS=$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2)
+    - sed -i -e 's|http://deb.debian.org|https://ftps.crans.org|' /etc/apt/sources.list.d/debian.sources
+      #    - echo 'Dir::Bin::Methods::ftp "ftp";' | tee -a /etc/apt/apt.conf.d/99local-ftp
+    - apt-get update -y
+    - apt-get install graphviz bzip2 makeself pax-utils -y  # bzip2 for gams-c-api, pax-utils for lddtree
+    - apt-get install -y python3-numpy python3-scipy swig python3-pytest python3-setuptools python-wheel-common python3-venv python3-dev
+    - 'which ssh-agent || apt-get install openssh-client -y'
+    - eval $(ssh-agent -s)
+    - wget -nv http://perso.crans.org/~huber/gams-c-api.tar.bz2 && tar xjf gams-c-api.tar.bz2
+    - wget https://ftp.cs.wisc.edu/math-prog/solvers/path/pathlib/lib_lnx/{libpath50.so,liblusol.so}
+  script:
+    - mkdir build && cd build
+    - cp ../libpath50.so ../liblusol.so .
+    - CC=gcc-13 CXX=g++-13 cmake -DCMAKE_BUILD_TYPE=Release -DGCC_ANALYZER=ON -DGAMSSYSDIR="$(pwd)/.." -DGAMS_VERSION=$GAMS_MAJVER
+        -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DBUILD_GAMS_SOLVER=ON -DBUILD_DOCUMENTATION=1 -DGIT_HASH=$CI_COMMIT_SHORT_SHA
+        -DBUILD_INSTALLER=1 -DINSTALL_COMMON_MAKESELF=1 -DBUILD_PYTHON=python3 ..
+    - make -j$N_PROCS 2>&1 install makeself | tee gcc.log
+    - make doc -j$N_PROCS
+    - cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
+    - cat compile_commands.json | 
+        jq '[.[] | select(.file | contains("apifiles") or contains("PYTHON_wrap") | not )]' | sed -e 's:-fanalyzer::'  > compile_commands2.json
+    - mv compile_commands2.json compile_commands.json
+    - cp libpath50.so liblusol.so test
+    - cp libpath50.so liblusol.so swig
+    - ctest -D ExperimentalMemCheck || ctest --rerun-failed --output-on-failure
+    - PYTHONPATH=$(pwd)/swig pytest ../swig/tests/basic_test.py
+    - lddtree makeself/libvrepr.so --copy-to-tree $(pwd)/makeself --bindir / --libdir /
+  artifacts:
+    expire_in: 2 weeks
+    when: on_success
+    paths:
+      - build/libreshop.so
+      - build/compile_commands.json
+      - build/docs/html
+      - build/gcc.log
+      - build/Testing/Temporary
+      - build/generated
+      - apifiles
+      - libpath50.so
+      - liblusol.so
+      - build/makeself
+      - "build/*.run"
+
+gams_test:
+  stage: gams_test
+  image:
+    name: gams/gams:latest
+    pull_policy: [always, always, always, if-not-present]
+
+  before_script:
+    - export RESHOP_MAKESELF_UNATTENDED=1
+    - apt-get update
+    - apt-get install numdiff -y
+  script:
+    - bash build/*.run
+    - cp build/makeself/libvrepr.so build/makeself/libgmp*.so.* build/makeself/libppl*.so.* /root/.local/share/GAMS/$GAMS_MAJVER/
+    - cp build/makeself/libstdc++.so.6 /gams/libstdc++.so.6
+    - bash test/gams/test.sh
+  allow_failure: true
+
+scan-build:
+  stage: scan-build
+  script:
+    - mkdir build-scan-build && cd build-scan-build && sh ../utils/scan-build-ci.sh -DGAMSDIR="$(pwd)/.." ..
+  artifacts:
+    expire_in: 2 weeks
+    when: always
+    paths:
+      - build-scan-build/scan-build
+
+fbinfer:
+  stage: fbinfer
+  script:
+    - infer run --keep-going --compilation-database build/compile_commands.json; infer-explore --html
+  artifacts:
+    expire_in: 2 weeks
+    when: on_success
+    paths:
+      - infer-out
+
+cppcheck:
+  stage: cppcheck
+  script:
+    - mkdir -p build && cd build && sh ../utils/cppcheck-ci.sh
+    - mv cppcheck ../
+  artifacts:
+    expire_in: 2 weeks
+    when: always
+    paths:
+      - cppcheck
+  allow_failure: true
+
+sanitizer:
+  stage: sanitizers
+  before_script:
+    - export ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_invalid_pointer_pairs=100
+
+  script:
+    - mkdir $COMPILER-$SANITIZER && cd $COMPILER-$SANITIZER && cp ../libpath50.so ../liblusol.so .
+    - CC=${COMPILER/_*/} CXX=${COMPILER/*_/} cmake -DCMAKE_BUILD_TYPE=$SANITIZER -DGAMSSYSDIR="$(pwd)/.." -DWITH_BACKTRACE=0 -DWITH_BACKWARD=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA ../
+    - make -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2)
+    - export LD_LIBRARY_PATH=$(pwd); ctest -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) || ctest --rerun-failed --output-on-failure
+  parallel:
+    matrix:
+      - COMPILER: ["gcc-13_g++-13", "clang-17_clang++-17"]
+        SANITIZER: [Asan, UBsan]
+
+
+upload:
+  stage: upload
+  when: always
+  script:
+    - mkdir public
+    - mkdir public/valgrind
+    - cp build/gcc.log public/
+    - cp -r cppcheck public/
+    - cp -r build/docs/html public/doxygen
+    - cp -r build-scan-build/scan-build public/
+    - cp -r infer-out/report.html public/report-fbinfer
+    - cp build/Testing/Temporary/MemoryChecker*.log public/valgrind/ || true
+    - chmod a+rx -R public
+    - chmod 600 $SSH_KEY && sed -i 's/\r$//g' $SSH_KEY
+    - scp -i $SSH_KEY -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r public huber@zamok.crans.org:www/reshop-ci

@@ -1,0 +1,51 @@
+{
+   dlopen
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:_dl_catch_exception
+   ...
+}
+{
+   dlopen
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:calloc
+   ...
+   fun:_dl_catch_exception
+   ...
+}
+{
+   GAMS
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:allocate_dtv_entry
+   fun:allocate_and_init
+   fun:tls_get_addr_tail
+   ...
+}
+{
+   Weird bcmp error (glibc 2.38)
+   Memcheck:Addr32
+   fun:bcmp
+   ...
+   fun:decompose_rpath
+   ...
+   fun:_dl_catch_exception
+   ...
+}
+
+{
+   dlopen
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   obj:*
+   ...
+   fun:_dl_catch_exception
+   ...
+}
+

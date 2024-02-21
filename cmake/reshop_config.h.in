@@ -1,0 +1,18 @@
+/* Defines for RESHOP*/
+#ifndef RESHOP_CONFIG_H
+#define RESHOP_CONFIG_H
+
+/* we want this for SNAN */
+#define __STDC_WANT_IEC_60559_BFP_EXT__
+
+
+#ifndef _GNU_SOURCE
+#cmakedefine _GNU_SOURCE @_GNU_SOURCE@
+#endif
+
+/* Use for Mac. Might bite us but ensure that we are getting all the extensions. Sparse documentation */
+#cmakedefine _DARWIN_C_SOURCE
+
+#cmakedefine WITH_FMEM
+
+#endif

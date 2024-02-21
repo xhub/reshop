@@ -1,0 +1,3 @@
+#include "git_version.h"
+
+const char *rhp_git_hash = "@GIT_HASH@";

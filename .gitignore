@@ -1,0 +1,11 @@
+obj/
+
+# GAMS stuff
+*.lst
+*.opt
+*.op[1-9]
+225[a-z]/
+225[a-z][a-z]/
+
+# LSP
+compile_commands.json

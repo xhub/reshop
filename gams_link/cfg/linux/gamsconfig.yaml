@@ -1,0 +1,15 @@
+solverConfig:
+  - RESHOP:
+      minVersion: 33
+      fileType: 102111
+      dictType: 5
+      licCodes: 000102030405
+      scriptName: gmsgenus.run
+      executableName: gmsgenux.out
+      library:
+        libName: librhpcclib64.so
+        auditCode: rhp
+        solverInterfaceType: 1
+        threadSafeIndic: True
+      modelTypes:
+        - EMP

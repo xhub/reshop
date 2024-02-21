@@ -1,0 +1,67 @@
+#!/bin/sh
+
+# Linux/MAC Installer for ReSHOP
+#
+# GAMS specify the following standard location:
+# - config: $XDG_CONFIG_HOME or $HOME/.config/GAMS
+# - data: $XDG_DATA_HOME or $HOME/.local/share/GAMS
+
+GAMS_VERSION="@GAMS_VERSION@"
+GAMS_DRIVER="$<TARGET_FILE_NAME:@RESHOP_GAMS_INTERFACE@>"
+RESHOP_LIB="$<TARGET_FILE_NAME:@RESHOP_LIBNAME@>"
+#RESHOP_LIBS="*$<TARGET_FILE_SUFFIX:@RESHOP_LIBNAME@>"
+GAMS_OPTFILE="optreshop.def"
+
+IS_LINUX="@IS_LINUX@"
+
+if [ "${IS_LINUX}" -eq "1" ]; then
+   USER_CONFIG_DIR="${XDG_CONFIG_HOME}"
+   USER_DATA_DIR="${XDG_DATA_HOME}"
+
+   [ -n "${USER_CONFIG_DIR}" ] || USER_CONFIG_DIR="${HOME}"/.config/GAMS
+   [ -n "${USER_DATA_DIR}" ] || USER_DATA_DIR="${HOME}"/.local/share/GAMS
+else # MACOS
+    USER_CONFIG_DIR="${HOME}/Library/Preferences/GAMS"
+    #USER_DATA_DIR="${HOME}/Library/Application Support/GAMS"
+    USER_DATA_DIR="${HOME}/Library/Preferences/GAMS"
+fi
+
+# TODO: check for sed
+BIN_DIR="${USER_DATA_DIR}/${GAMS_VERSION}"
+CFG_DIR="${USER_CONFIG_DIR}/${GAMS_VERSION}"
+
+
+
+sed -i'bck' -e "s:|BIN_DIR|:${BIN_DIR}/:" -e "s:|CFG_DIR|:${CFG_DIR}/:" gamsconfig.yaml || exit 1
+
+# Create directory
+mkdir -p "${BIN_DIR}" || exit 1
+mkdir -p "${CFG_DIR}" || exit 1
+
+echo "Installing config files in ${CFG_DIR}"
+
+# Copy config files
+cp -f gamsconfig.yaml ${GAMS_OPTFILE} "${CFG_DIR}" || exit 1
+
+# Update or install the main gamsconfig.yaml as a symlink
+if [ -e "${USER_CONFIG_DIR}"/gamsconfig.yaml ]; then
+   if [ -L "${USER_CONFIG_DIR}"/gamsconfig.yaml ]; then
+      echo "Removing ${USER_CONFIG_DIR}/gamsconfig.yaml"
+      rm -f "${USER_CONFIG_DIR}"/gamsconfig.yaml;
+      echo "Creating a symlink ${USER_CONFIG_DIR}/gamsconfig.yaml to ${CFG_DIR}/gamsconfig.yaml"
+      ln -s "${CFG_DIR}"/gamsconfig.yaml "${USER_CONFIG_DIR}"/gamsconfig.yaml || exit 1
+   else
+      echo ""
+      echo "WARNING! File ${USER_CONFIG_DIR}/gamsconfig.yaml exists and is not a symlink."
+      echo "ACTION! Update this file yourself to use the version just installed"
+      echo ""
+   fi
+else
+   echo "Creating a symlink ${USER_CONFIG_DIR}/gamsconfig.yaml to ${CFG_DIR}/gamsconfig.yaml"
+   ln -s "${CFG_DIR}"/gamsconfig.yaml "${USER_CONFIG_DIR}"/gamsconfig.yaml || exit 1
+fi
+
+echo "Installing binary files \"${GAMS_DRIVER} ${RESHOP_LIB}\" in ${BIN_DIR}"
+# copy binary files
+cp -f "${GAMS_DRIVER}" "${RESHOP_LIB}" "${BIN_DIR}" || exit 1
+#cp -f "${RESHOP_LIBS}" "${BIN_DIR}" || exit 1

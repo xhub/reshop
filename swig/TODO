@@ -1,0 +1,10 @@
+# Python bindings
+
+- maybe unify the names got querying data
+- declaring a function and using the name objequ is bad
+- equ_add for function is not great
+
+
+# Infra
+
+- streamline pybuild.sh so that it can be part of the CI with tests!

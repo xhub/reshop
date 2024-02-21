@@ -1,0 +1,7 @@
+set(GMSPyVer "3.12")
+set(GMSPython_PREFIX /usr)
+set(Python3_INCLUDE_DIRS ${GMSPython_PREFIX}/include/python${GMSPyVer}/)
+set(Python3_NumPy_INCLUDE_DIRS ${GMSPython_PREFIX}/lib/python${GMSPyVer}/site-packages/numpy/core/include)
+set(Python3_SOABI cpython-312-darwin)
+set(Python3_LINK_OPTIONS -undefined dynamic_lookup)
+set(Python3_platform "macosx_10_9_x86_64")

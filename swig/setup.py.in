@@ -1,0 +1,59 @@
+from setuptools import setup, find_packages
+from setuptools.dist import Distribution
+from setuptools.command.install import install
+
+# read the contents of your README file
+from pathlib import Path
+topleveldir = Path(__file__).parent
+long_description = (topleveldir / "README.md").read_text()
+
+class BinaryDistribution(Distribution):
+    def is_pure(self):
+        return False
+
+    def has_ext_modules(self):
+        return True
+
+
+class InstallPlatlib(install):
+    def finalize_options(self):
+        install.finalize_options(self)
+        self.install_lib = self.install_platlib
+
+setup(
+    name="ReSHOP",
+    version="@ReSHOP_VERSION@",
+    packages=find_packages(),
+
+    package_data={'reshop': ['*.so', '*.dll', '*.pyd', '*.dylib']},
+    include_package_data=True,
+
+    # metadata to display on PyPI
+
+    author="Olivier Huber",
+    author_email="oli.huber@gmail.com",
+    description="ReSHOP bindings for python",
+    keywords="ReSHOP optimization solver",
+    url="https://reshop.eu",   # project home page, if any
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+
+    install_requires=[
+            "numpy >= 1.19",
+            "scipy >= 0.16",
+            ],
+
+    project_urls={
+        "Documentation": "https://reshop.eu/docs/",
+    },
+
+    classifiers=[
+        "License :: OSI Approved :: Python Software Foundation License"
+    ],
+
+    # from https://github.com/Mizux/cmake-swig
+    distclass=BinaryDistribution,
+    cmdclass={'install': InstallPlatlib},
+)
+
+
