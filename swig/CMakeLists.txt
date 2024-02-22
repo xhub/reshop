@@ -211,7 +211,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       set(TEST_PYTHON_WRKDIR ${CMAKE_BINARY_DIR})
    else(VENV_TESTING)
       if (DARLING)
-         set(TEST_PYTHON_EXECUTABLE ${DARLING} shell python3)
+         set(TEST_PYTHON_EXECUTABLE ${DARLING} shell /Library/Frameworks/Python.framework/Versions/3.12/bin/python3)
       else()
          set(TEST_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
       endif()
@@ -220,13 +220,16 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    endif()
 
    if (DARLING)
-      set(PYTEST_DIR /Volumes/SystemRoot/${CMAKE_SOURCE_DIR}/swig/tests/)
+      set(PYTEST_DIR /Users/xhub/LinuxHome/reshop/swig/tests/)
    else(DARLING)
       set(PYTEST_DIR ${CMAKE_SOURCE_DIR}/swig/tests/)
    endif(DARLING)
 
+   if (APPLE OR LINUX)
+      set (PYTEST_OPTS "--rootdir=/tmp")
+   endif()
    add_test(NAME ${pytarget}-tests
-            COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest ${PYTEST_DIR}
+            COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest ${PYTEST_OPTS} ${PYTEST_DIR}
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
    
 endmacro()
