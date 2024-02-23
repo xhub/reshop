@@ -103,7 +103,7 @@ static int mdl_exportasmpec_gmo(Model *mdl, Model *mdl_solver)
 
    EmpDag *empdag = &mdl->empinfo.empdag;
    assert(empdag->roots.len == 1);
-   daguid_t root_uid = empdag->roots.list[0];
+   daguid_t root_uid = empdag->roots.arr[0];
 
    if (!uidisMP(root_uid)) {
       errormsg("[bilevel2MPEC] ERROR: root is required to be an MP");
@@ -122,7 +122,7 @@ static int mdl_exportasmpec_gmo(Model *mdl, Model *mdl_solver)
       return Error_EMPRuntimeError;
    }
 
-   daguid_t lower_uid = empdag->mps.Carcs[upper_id].list[0];
+   daguid_t lower_uid = empdag->mps.Carcs[upper_id].arr[0];
 
    /* TODO: this should not be necessary */
    Model *mdl_rhp_for_fooc;
@@ -182,7 +182,7 @@ static int mdl_exportasmpec_gmo(Model *mdl, Model *mdl_solver)
    /* TODO: what happens if v_upper is not in the model? */
    if (mpequs.len > 0) {
       Aequ e_upper;
-      aequ_setlist(&e_upper, mpequs.len, mpequs.list);
+      aequ_setlist(&e_upper, mpequs.len, mpequs.arr);
       S_CHECK(rmdl_appendequs(mdl_mpec, &e_upper));
    }
 

@@ -19,7 +19,7 @@ typedef struct nltree_pool NlPool;
 
 typedef struct rhp_mathprgm MathPrgm;
 typedef struct rhp_equilibrium Mpe;
-typedef struct rhp_empdag_Varc Varc;
+typedef struct rhp_empdag_arcVF Varc;
 
 typedef struct rhp_int_data   IntArray;
 typedef struct rhp_uint_data  UIntArray;

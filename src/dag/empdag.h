@@ -143,8 +143,8 @@ typedef struct empdag {
    } simple_data;                /**< Data structure for simple case  */
 
    Model *mdl;
-   struct empdag *empdag_next;
-   const struct empdag *empdag_up;
+   struct empdag *empdag_next;     /**< UNUSED */
+   const struct empdag *empdag_up; /**< UNUSED */
 } EmpDag;
 
 /* --------------------------------------------------------------------------
@@ -230,7 +230,7 @@ int empdag_getmpeidbyname(const EmpDag *empdag, const char *name,
  * -------------------------------------------------------------------------- */
 
 int empdag_mpVFmpbyid(EmpDag *empdag, unsigned id_parent,
-                      const struct rhp_empdag_Varc *edgeVF) NONNULL;
+                      const struct rhp_empdag_arcVF *edgeVF) NONNULL;
 int empdag_mpCTRLmpbyid(EmpDag *empdag, unsigned id_parent, unsigned id_child)
                         NONNULL;
 int empdag_mpCTRLmpebyid(EmpDag *empdag, mpid_t mpid, mpeid_t mpeid)
@@ -241,7 +241,7 @@ int empdag_mpeaddmpsbyid(EmpDag *empdag, mpeid_t mpeid,
                          const UIntArray *mps) NONNULL;
 
 int empdag_mpVFmpbyname(EmpDag *empdag, const char *mp1_name,
-                        const struct rhp_empdag_Varc *vf_info) NONNULL;
+                        const struct rhp_empdag_arcVF *vf_info) NONNULL;
 int empdag_mpCTRLmpbyname(EmpDag *empdag, const char *mp1_name,
                           const char *mp2_name) NONNULL;
 int empdag_mpCTRLmpebyname(EmpDag *empdag, const char *mp_name,
@@ -251,7 +251,7 @@ int empdag_mpeaddmpbyname(EmpDag *empdag, const char *mpe_name,
 int empdag_mpeaddmpsbyname(EmpDag *empdag, const char *mpe_name,
                            const char *mp_names, unsigned mps_len) NONNULL;
 
-int empdag_addedge_byuids(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
+int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
                           struct empdag_edge *edge) NONNULL;
 /* --------------------------------------------------------------------------
  * Roots related functions
@@ -292,7 +292,7 @@ const char *empdag_getmpname(const EmpDag *empdag, mpid_t mpid);
 const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getmpename(const EmpDag *empdag, mpeid_t mpeid);
 unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp) NONNULL;
-const struct rhp_empdag_Varc* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
+const struct rhp_empdag_arcVF* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
                                             mpid_t mpid_child) NONNULL;
 
 /* --------------------------------------------------------------------------
@@ -321,11 +321,11 @@ static inline bool empdag_mphaschild(const EmpDag *empdag, mpid_t mpid) {
 
 
 NONNULL static inline bool empdag_rootismpe(const EmpDag *empdag) {
-   return empdag->roots.len == 1 && uidisMPE(empdag->roots.list[0]);
+   return empdag->roots.len == 1 && uidisMPE(empdag->roots.arr[0]);
 }
 
  NONNULL static inline bool empdag_rootismp(const EmpDag *empdag) {
-   return empdag->roots.len == 1 && uidisMP(empdag->roots.list[0]);
+   return empdag->roots.len == 1 && uidisMP(empdag->roots.arr[0]);
 
 }
 
@@ -385,7 +385,7 @@ static inline bool empdag_isroot(const EmpDag *empdag, unsigned uid)
 static inline unsigned empdag_getrootuidfast(const EmpDag *empdag, unsigned root_id)
 {
    assert(root_id < empdag->roots.len);
-   return empdag->roots.list[root_id];
+   return empdag->roots.arr[root_id];
 }
 
 static inline unsigned empdag_getrootlen(const EmpDag *empdag)

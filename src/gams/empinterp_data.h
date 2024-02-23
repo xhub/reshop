@@ -46,17 +46,4 @@ typedef struct multiset {
    struct gdx_reader * gdxreader; /**< struct where this array has been found */
 } MultiSet;
 
-typedef enum {
-   EdgeVFobjSimple,
-   EdgeVFobjLequ,
-   EdgeVFobjEqu,
-   EdgeVFcons,
-   EdgeCtrl,
-   EdgeNash,
-   EdgeTypeUnset,
-} EdgeType;
-
-
-const char *edgetype_str(EdgeType type);
-
 #endif // !EMPPARSER_DATA_H

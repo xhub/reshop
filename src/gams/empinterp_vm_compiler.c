@@ -571,13 +571,13 @@ int loop_initandstart(Interpreter * restrict interp, Tape * restrict tape,
          return Error_EMPRuntimeError;
       }
 
-      VmValue v = globals->list[loopobj_gidx];
+      VmValue v = globals->arr[loopobj_gidx];
       EmpVmOpCode opcode_expected;
       if (IS_GMSSYMITER(v)) {
          opcode_expected = OP_GMSSYMITER_SETFROM_LOOPVAR;
       } else if (IS_REGENTRY(v)) {
          opcode_expected = OP_REGENTRY_SETFROM_LOOPVAR;
-      } else if (IS_EDGEOBJ(v)) {
+      } else if (IS_ARCOBJ(v)) {
          opcode_expected = OP_EDGEOBJ_SETFROM_LOOPVAR;
       } else {
          error("[empcompiler] ERROR: global object at index %u has invalid type "
@@ -779,13 +779,13 @@ static int vm_regentry_alloc(Compiler* restrict c, const char *basename,
 static int vm_daglabels_alloc(Compiler* restrict c, DagLabels **dagc,
                               const char* basename, unsigned basename_len,
                               uint8_t dim, uint8_t num_vars, unsigned size,
-                              EdgeType edge_type, unsigned *gidx)
+                              ArcType arc_type, unsigned *gidx)
 {
    DagLabels *ldagc;
    A_CHECK(ldagc, dag_labels_new(basename, basename_len, dim, num_vars, size));
-   ldagc->edge_type = edge_type;
+   ldagc->arc_type = arc_type;
 
-   S_CHECK(vmvals_add(&c->vm->globals, EDGEOBJ_VAL(ldagc)));
+   S_CHECK(vmvals_add(&c->vm->globals, ARCOBJ_VAL(ldagc)));
 
    *dagc = ldagc;
    *gidx = c->vm->globals.len - 1;
@@ -891,9 +891,9 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
 }
 
 
-static int edgeobj_init(Interpreter * restrict interp, Tape * restrict tape,
+static int arcobj_init(Interpreter * restrict interp, Tape * restrict tape,
                         const char* labelname, unsigned labelname_len,
-                        EdgeType edge_type, GmsIndicesData *indices,
+                        ArcType arc_type, GmsIndicesData *indices,
                         LoopIterators *iterators, unsigned *edgeobj_gidx)
 {
    Compiler *c = interp->compiler;
@@ -903,7 +903,7 @@ static int edgeobj_init(Interpreter * restrict interp, Tape * restrict tape,
    uint8_t num_vars = indices->num_sets + indices->num_localsets;
    unsigned dagl_template_gidx;
    S_CHECK(vm_daglabels_alloc(c, &dagc, labelname, labelname_len, dim,
-                              num_vars, 0, edge_type, &dagl_template_gidx));
+                              num_vars, 0, arc_type, &dagl_template_gidx));
    *edgeobj_gidx = dagl_template_gidx;
 
    if (indices->nargs == 0) {
@@ -1382,8 +1382,8 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
  *
  * @return                the error code
  */
-static int vm_gmsindicesasedge(Interpreter *interp, unsigned *p, const char *labelname,
-                               unsigned labelname_len, EdgeType edge_type,
+static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labelname,
+                               unsigned labelname_len, ArcType arc_type,
                                GmsIndicesData *gmsindices)
 {
    Compiler *c = interp->compiler;
@@ -1394,10 +1394,10 @@ static int vm_gmsindicesasedge(Interpreter *interp, unsigned *p, const char *lab
    /* This defines the loop iterators and the edgeobj*/
    LoopIterators loopiters = {.size = 0};
    unsigned edge_gidx;
-   S_CHECK(edgeobj_init(interp, tape, labelname, labelname_len, edge_type,
+   S_CHECK(arcobj_init(interp, tape, labelname, labelname_len, arc_type,
                         gmsindices, &loopiters, &edge_gidx));
 
-   assert(vmval_is_edgeobj(&vm->globals, edge_gidx) == OK);
+   assert(vmval_is_arcobj(&vm->globals, edge_gidx) == OK);
 
    /* ---------------------------------------------------------------------
     * If there is no (local) set, then we can just duplicate the value
@@ -1478,7 +1478,7 @@ static int vm_gmsindicesasedge(Interpreter *interp, unsigned *p, const char *lab
 }
 
 NONNULL static
-int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, EdgeType edge_type)
+int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
 {
    const char* basename = emptok_getstrstart(&interp->cur);
    unsigned basename_len = emptok_getstrlen(&interp->cur);
@@ -1494,7 +1494,7 @@ int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, EdgeTy
    }
 
 
-   S_CHECK(vm_gmsindicesasedge(interp, p, basename, basename_len, edge_type, &indices));
+   S_CHECK(vm_gmsindicesasarc(interp, p, basename, basename_len, edge_type, &indices));
    assert(interp->cur.type == TOK_RPAREN);
 
    return advance(interp, p, &toktype);
@@ -1711,7 +1711,7 @@ int parse_defvar(Interpreter * restrict interp, unsigned * restrict p)
    case IdentLocalSet:
    case IdentSet: {
       IntArray set = {.len = 0, .max = 5};
-      MALLOC_(set.list, int, set.max);
+      MALLOC_(set.arr, int, set.max);
       S_CHECK(namedints_add(&interp->globals.localsets, set, lvar_name));
       lvar_gidx = interp->globals.localsets.len-1;
       opcode_reset = OP_LSET_RESET;
@@ -1993,7 +1993,7 @@ int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
  * @param gmsindices   the indices for the basename
  * @return 
  */
-static int vm_add_edges(Interpreter * interp, unsigned * restrict p, EdgeType edgetype,
+static int vm_add_edges(Interpreter * interp, unsigned * restrict p, ArcType edgetype,
                         const char* argname, unsigned argname_len, GmsIndicesData* gmsindices)
 {
    assert(gmsindices->nargs > 0);
@@ -2015,7 +2015,7 @@ static int vm_add_edges(Interpreter * interp, unsigned * restrict p, EdgeType ed
 //
 //   }
 
-   S_CHECK(vm_gmsindicesasedge(interp, p, argname, argname_len, edgetype, gmsindices));
+   S_CHECK(vm_gmsindicesasarc(interp, p, argname, argname_len, edgetype, gmsindices));
 
    return OK;
 }
@@ -2023,19 +2023,19 @@ static int vm_add_edges(Interpreter * interp, unsigned * restrict p, EdgeType ed
 int vm_nash(Interpreter * interp, unsigned * restrict p, const char* argname,
             unsigned argname_len, GmsIndicesData* gmsindices)
 {
-   return vm_add_edges(interp, p, EdgeNash, argname, argname_len, gmsindices);
+   return vm_add_edges(interp, p, ArcNash, argname, argname_len, gmsindices);
 }
 
 int vm_add_VFobjSimple_edge(Interpreter * interp, unsigned * restrict p, const char* argname,
             unsigned argname_len, GmsIndicesData* gmsindices)
 {
-   return vm_add_edges(interp, p, EdgeVFobjSimple, argname, argname_len, gmsindices);
+   return vm_add_edges(interp, p, ArcVF, argname, argname_len, gmsindices);
 }
 
 int vm_add_Ctrl_edge(Interpreter * interp, unsigned * restrict p, const char* argname,
                      unsigned argname_len, GmsIndicesData* gmsindices)
 {
-   return vm_add_edges(interp, p, EdgeCtrl, argname, argname_len, gmsindices);
+   return vm_add_edges(interp, p, ArcCtrl, argname, argname_len, gmsindices);
 }
 
 NONNULL static

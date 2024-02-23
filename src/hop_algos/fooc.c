@@ -161,7 +161,7 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
 end:
 
    assert(depth < r->mdls.len);
-   rhp_idx * restrict rosetta_vars = &r->data[r->rosetta_starts.list[depth]];
+   rhp_idx * restrict rosetta_vars = &r->data[r->rosetta_starts.arr[depth]];
 
    Equ *e_up = &mdl->ctr.equs[ei];
 
@@ -195,7 +195,7 @@ int setup_equvarnames(struct equ_inh_names * equnames, McpInfo *mcpinfo,
    Aequ e, e_src;
    aequ_setcompact(&e, n_cons, mcpinfo->ei_cons_start);
    S_CHECK(aequ_extendandown(&cdat_mcp->equname_inherited.e, &e));
-   aequ_setandownlist(&e_src, n_cons, equnames->cons_src.list);
+   aequ_setandownlist(&e_src, n_cons, equnames->cons_src.arr);
    S_CHECK(aequ_extendandown(&cdat_mcp->equname_inherited.e_src, &e_src));
  
 
@@ -668,13 +668,13 @@ static void identify_vars_in_mp(bool *restrict var_in_mp,
    * Not so sure about the deleted variables, but it should be fine
    * ------------------------------------------------------------------- */
 
-   rhp_idx * restrict mp_vars = mp->vars.list;
+   rhp_idx * restrict mp_vars = mp->vars.arr;
    unsigned len = mp->vars.len;
    if (rosetta_vars) {
 
       for (size_t i = 0; i < len; ++i) {
 
-         rhp_idx vi = rosetta_vars[mp->vars.list[i]];
+         rhp_idx vi = rosetta_vars[mp->vars.arr[i]];
 
          if (valid_vi(vi)) {
             var_in_mp[vi] = true;
@@ -1865,7 +1865,7 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
 
          for (size_t j = 0, len = equs_mp->len; j < len; ++j) {
 
-            rhp_idx ei = equs_mp->list[j]; assert(valid_ei(ei));
+            rhp_idx ei = equs_mp->arr[j]; assert(valid_ei(ei));
             rhp_idx ei_mcp = rosetta_equ[ei];
 
             if (!valid_ei(ei_mcp) || ei_mcp < ei_cons_start) {
@@ -2110,7 +2110,7 @@ static NONNULL int fooc_mcp_analyze_emp(Model *mdl, daguid_t *uid)
 
    if (roots_len == 1) {
 
-      _uid = roots->list[0];
+      _uid = roots->arr[0];
 
    } else if (roots_len == 0) {
       error("[fooc] ERROR: No root in the EMPDAG for %s model '%.*s' #%u\n",
@@ -2148,7 +2148,7 @@ static NONNULL int fooc_mcp_analyze_emp(Model *mdl, daguid_t *uid)
       }
 
       for (unsigned i = 0; i < nb_mp; ++i) {
-         mpid_t mpid = uid2id(mps.list[i]);
+         mpid_t mpid = uid2id(mps.arr[i]);
          if (!childless_mp(empdag, mpid)) { status = Error_OperationNotAllowed; }
       }
 

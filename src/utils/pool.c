@@ -48,6 +48,7 @@ void pool_release(NlPool* pool)
       pool->cnt--;
    } else {
       error("%s ERROR: cnt is already 0!\n", __func__);
+      return;
    }
 
    if (pool->cnt == 0) {

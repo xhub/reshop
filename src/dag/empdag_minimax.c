@@ -33,7 +33,7 @@ int empdag_minimax_reformulate(Model *mdl)
    }
 
    for (unsigned i = 0, len = mps2reform->len; i < len; ++i) {
-      unsigned mp_id = mps2reform->list[i];
+      unsigned mp_id = mps2reform->arr[i];
 
       MathPrgm *mp = empdag->mps.arr[mp_id];
 

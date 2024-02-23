@@ -221,7 +221,7 @@ static bool isconstraint_vi(MathPrgm *mp, rhp_idx eidx) {
          return false;
       }
       for (unsigned i = 0; i < mp->equs.len; ++i) {
-         if (eidx == mp->equs.list[i]) {
+         if (eidx == mp->equs.arr[i]) {
             return true;
          }
       }
@@ -870,13 +870,13 @@ void mp_print(MathPrgm *mp, const Model *mdl) {
 
    printout(PO_INFO, "\n Variables owned by this mathprgm:\n");
    for (unsigned i = 0; i < mp->vars.len; ++i) {
-      rhp_idx vidx = mp->vars.list[i];
+      rhp_idx vidx = mp->vars.arr[i];
       printout(PO_INFO, "   [%5d] %s\n", vidx, ctr_printvarname(ctr, vidx));
    }
 
    printout(PO_INFO, "\n Equations owned by this mathprgm:\n");
    for (unsigned i = 0; i < mp->equs.len; ++i) {
-      rhp_idx eidx = mp->equs.list[i];
+      rhp_idx eidx = mp->equs.arr[i];
       printout(PO_INFO, "   [%5d] %s\n", eidx, ctr_printequname(ctr, eidx));
    }
 
@@ -887,7 +887,7 @@ void mp_print(MathPrgm *mp, const Model *mdl) {
    const struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)ctr->data;
    printout(PO_INFO, "\n External Variables in the equations:\n");
    for (unsigned i = 0; i < mp->equs.len; ++i) {
-      rhp_idx eidx = mp->equs.list[i];
+      rhp_idx eidx = mp->equs.arr[i];
       bool has_print_equ = false;
 
       /*  TODO(xhub) create API to walk over all variables in an eqn */

@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "compat.h"
+#include "empdag_common.h"
 #include "empdag_data.h"
 #include "empinterp_data.h"
 #include "empinterp_fwd.h"
@@ -123,9 +124,9 @@ typedef struct NamedIntsArray {
 #define RHP_LIST_PREFIX namedints
 #define RHP_LIST_TYPE NamedIntsArray
 #define RHP_ELT_TYPE IntArray
-#define RHP_ELT_INVALID ((IntArray) {.len = 0, .max = 0, .list = NULL})
+#define RHP_ELT_INVALID ((IntArray) {.len = 0, .max = 0, .arr = NULL})
 #include "namedlist_generic.inc"
-#define valid_set(obj)  ((obj).list != NULL)
+#define valid_set(obj)  ((obj).arr != NULL)
 
 typedef struct NamedDblArray {
    unsigned len;
@@ -250,7 +251,7 @@ typedef struct dag_labels_list {
 typedef struct dag_labels {
    uint8_t dim;
    uint8_t num_var;
-   EdgeType edge_type;
+   ArcType arc_type;
    uint16_t basename_len;
    unsigned num_children;
    unsigned max_children;  /**< Max number of children  */
@@ -263,7 +264,7 @@ typedef struct dag_labels {
 
 typedef struct dag_label {
    uint8_t dim;
-   EdgeType edge_type;
+   ArcType arc_type;
    uint16_t basename_len;
    daguid_t daguid; 
    const char *basename;
@@ -411,7 +412,7 @@ typedef struct parser_ops {
    int (*mpe_addmp)(Interpreter* restrict interp, unsigned equil_id, MathPrgm *mp);
    int (*mpe_finalize)(Interpreter* restrict interp, Mpe *mpe);
    int (*mpe_new)(Interpreter* restrict interp, Mpe **mpe);
-   int (*identaslabels)(Interpreter * interp, unsigned * p, EdgeType edge_type);
+   int (*identaslabels)(Interpreter * interp, unsigned * p, ArcType edge_type);
    int (*ovf_addbyname)(Interpreter* restrict interp, EmpInfo *empinfo, const char *name, void ** ovfdef_data);
 //   int (*ovf_args_init)(Parser* restrict parser, void *ovfdef_data);
    int (*ovf_addarg)(Interpreter* restrict interp, void *ovfdef_data);

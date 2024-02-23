@@ -22,7 +22,7 @@ struct tree {
    struct rhp_aequ *defState;
    struct rhp_aequ *objequs;
    struct rhp_aequ *objequCRM;
-   struct rhp_empdag_Varc *edgeVF;
+   struct rhp_empdag_arcVF *edgeVF;
    bool *visited;
    const double *prices;
    const double *rain;

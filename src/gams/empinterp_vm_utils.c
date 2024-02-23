@@ -25,7 +25,7 @@ const char* vmval_typename(VmValue vmval)
    case SIGNATURE_OVFOBJ:    return "OVF object";
    case SIGNATURE_GMSSYMITER:    return "GmsSymIterator";
    case SIGNATURE_REGENTRY:    return "Register entry";
-   case SIGNATURE_EDGEOBJ:    return "Edge object";
+   case SIGNATURE_ARCOBJ:    return "Edge object";
    }
 
    return "ERROR invalid vmval type";
@@ -40,7 +40,7 @@ int vmval_is_regentry(VmValueArray * vmvals, unsigned idx)
       return Error_EMPRuntimeError;
    }
 
-   VmValue v = vmvals->list[idx];
+   VmValue v = vmvals->arr[idx];
    if (!IS_REGENTRY(v)) {
       error("[empcompiler] ERROR: global object at index %u is not a Label, "
             "rather it has type %s\n", idx, vmval_typename(v));
@@ -59,7 +59,7 @@ int vmval_is_gmssymiter(VmValueArray * vmvals, unsigned idx)
       return Error_EMPRuntimeError;
    }
 
-   VmValue v = vmvals->list[idx];
+   VmValue v = vmvals->arr[idx];
    if (!IS_GMSSYMITER(v)) {
       error("[empcompiler] ERROR: global object at index %u is not a GmsFilter, "
             "rather it has type %s\n", idx, vmval_typename(v));
@@ -70,17 +70,17 @@ int vmval_is_gmssymiter(VmValueArray * vmvals, unsigned idx)
    return OK;
 }
 
-int vmval_is_edgeobj(VmValueArray * vmvals, unsigned idx)
+int vmval_is_arcobj(VmValueArray * vmvals, unsigned idx)
 {
    if (idx >= vmvals->len) {
-      error("[empcompiler] ERROR: Label object index %u is not in [0,%u)\n",
+      error("[empcompiler] ERROR: Arc object index %u is not in [0,%u)\n",
             idx, vmvals->len);
       return Error_EMPRuntimeError;
    }
 
-   VmValue v = vmvals->list[idx];
-   if (!IS_EDGEOBJ(v)) {
-      error("[empcompiler] ERROR: global object at index %u is not a EdgeObj, "
+   VmValue v = vmvals->arr[idx];
+   if (!IS_ARCOBJ(v)) {
+      error("[empcompiler] ERROR: global object at index %u is not an ArcObj, "
             "rather it has type %s\n", idx, vmval_typename(v));
       return Error_EMPRuntimeError;
 

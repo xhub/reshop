@@ -1,9 +1,7 @@
 #include "asprintf.h"
 
-#include <stdio.h>
-
-
 #include "empdag.h"
+#include "empdag_common.h"
 #include "empinfo.h"
 #include "empinterp.h"
 #include "empinterp_edgeresolver.h"
@@ -15,7 +13,7 @@
 #include "status.h"
 
 typedef struct problem_edge {
-   EdgeType type;
+   ArcType type;
    uint8_t dim;
    uint16_t basename_len;
    const char *basename;
@@ -74,15 +72,14 @@ _loop:
 static int addedge(Interpreter *interp, daguid_t daguid, daguid_t child_daguid,
                    ProblemEdge *edge)
 {
-   assert(edge->type != EdgeTypeUnset);
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
    trace_empdag("[empinterp] Adding edge of type %s from %s to %s\n",
-                edgetype_str(edge->type), empdag_getname(empdag, daguid),
+                arctype_str(edge->type), empdag_getname(empdag, daguid),
                 empdag_getname(empdag, child_daguid));
 
-   EmpDagEdge empedge = { .type = edge->type };
-   if (edge->type == EdgeVFobjSimple) {
+   EmpDagArc empedge = { .type = edge->type };
+   if (edge->type == ArcVF) {
 
       if (!uidisMP(daguid)) {
          errormsg("[empinterp] ERROR: a VF edge can only point to an MP node. "
@@ -112,23 +109,19 @@ static int addedge(Interpreter *interp, daguid_t daguid, daguid_t child_daguid,
 
       if (mp_gettype(mp) == MpTypeOpt && !valid_ei(objequ)) {
          error("[empinterp] ERROR: while building a %s edge for the OPT MP "
-               "node '%s' has no objective function.\n", edgetype_str(edge->type),
+               "node '%s' has no objective function.\n", arctype_str(edge->type),
                empdag_getname(empdag, daguid));
          return Error_EMPIncorrectSyntax;
       }
       assert(valid_ei(objequ) || (objequ == IdxCcflib && mp_gettype(mp) == MpTypeCcflib));
 
-      empedge.edgeVF.type = EdgeVFBasic;
-      empedge.edgeVF.child_id = mpchild_id;
-      empedge.edgeVF.basic_dat.ei = objequ;
-      empedge.edgeVF.basic_dat.cst = 1.;
-      empedge.edgeVF.basic_dat.vi = IdxNA;
+      empedge.Varc.type = ArcVFBasic;
+      empedge.Varc.child_id = mpchild_id;
+      empedge.Varc.basic_dat.ei = objequ;
+      empedge.Varc.basic_dat.cst = 1.;
+      empedge.Varc.basic_dat.vi = IdxNA;
 
-   } else if (edge->type == EdgeVFcons) {
-
-      TO_IMPLEMENT("VF edge in constraint");
-
-   } else if (edge->type == EdgeNash) {
+   } else if (edge->type == ArcNash) {
 
       assert(uidisMPE(daguid));
       if (!uidisMP(child_daguid)) {
@@ -139,14 +132,14 @@ static int addedge(Interpreter *interp, daguid_t daguid, daguid_t child_daguid,
          return Error_EMPIncorrectSyntax;
       }
 
-   } else if (edge->type == EdgeCtrl) {
+   } else if (edge->type == ArcCtrl) {
       /* Do nothing, we allow any MP, including VI, to have a lower level */
    } else {
       TO_IMPLEMENT("VF edge Type not implemented");
    }
 
 
-   return empdag_addedge_byuids(empdag, daguid, child_daguid, &empedge);
+   return empdag_addarc(empdag, daguid, child_daguid, &empedge);
 }
 
 static int dag_resolve_labels(Interpreter *interp)
@@ -177,7 +170,7 @@ static int dag_resolve_labels(Interpreter *interp)
          continue;
       }
 
-      ProblemEdge edge = {.type = dagl->edge_type,  .dim = dagl->dim,
+      ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,
          .basename_len = dagl->basename_len, .basename = dagl->basename};
       memcpy(edge.uels, dagl->data, sizeof(int)*dim);
 
@@ -234,7 +227,7 @@ static int dag_resolve_label(Interpreter *interp)
       UIntArray *arcs = &empdag->mps.Carcs[i];
 
 
-      ProblemEdge edge = {.type = dagl->edge_type,  .dim = dagl->dim,
+      ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,
          .basename_len = dagl->basename_len, .basename = dagl->basename};
 
       memcpy(edge.uels, dagl->uels, dim*sizeof(int));
@@ -282,7 +275,7 @@ int empinterp_set_empdag_root(Interpreter *interp)
 
    unsigned n_roots = roots.len;
    if (roots.len == 1) {
-      root_daguid = roots.list[0];
+      root_daguid = roots.arr[0];
       goto _add_root;
    }
 
@@ -294,7 +287,7 @@ int empinterp_set_empdag_root(Interpreter *interp)
          error("[empinterp] ERROR: %u root nodes found but EMPDAG expects "
                "only 1! List of root nodes:\n", n_roots);
          for (unsigned i = 0; i < n_roots; ++i) {
-            daguid_t uid = roots.list[i];
+            daguid_t uid = roots.arr[i];
             const char *nodetype = uidisMP(uid) ? "MP" : "MPE";
             error("%*c %s(%s)\n", 12, ' ', nodetype, empdag_getname(empdag, uid));
          }
@@ -307,7 +300,7 @@ int empinterp_set_empdag_root(Interpreter *interp)
    const DagRegister * restrict dagregister = &interp->dagregister;
    DagLabel *dagl = interp->dag_root_label;
 
-   ProblemEdge edge = {.type = dagl->edge_type,  .dim = dagl->dim,
+   ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,
       .basename_len = dagl->basename_len, .basename = dagl->basename};
 
    root_daguid = dagregister_find(dagregister, &edge);

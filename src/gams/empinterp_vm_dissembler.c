@@ -30,7 +30,7 @@ enum OpCodeArgType {
    OPARG_IDENT_IDX,
    OPARG_DAGL_SYNCANDSTORE,
    OPARG_GMSSYMITER,
-   OPARG_EDGEOBJ,
+   OPARG_ARCOBJ,
    OPARG_REGENTRY,
    OPARG_CUSTOM,
 };
@@ -57,7 +57,7 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_FALSE] = {OPARG_NONE,},
    [OP_LOCAL_COPYFROM_GIDX] = {OPARG_LIDX_ASSIGN, OPARG_GIDX,},
    [OP_GMSSYMITER_SETFROM_LOOPVAR] = {OPARG_GMSSYMITER, OPARG_IDX, OPARG_LIDX},
-   [OP_EDGEOBJ_SETFROM_LOOPVAR] = {OPARG_EDGEOBJ, OPARG_IDX, OPARG_LIDX},
+   [OP_EDGEOBJ_SETFROM_LOOPVAR] = {OPARG_ARCOBJ, OPARG_IDX, OPARG_LIDX},
    [OP_REGENTRY_SETFROM_LOOPVAR] = {OPARG_REGENTRY, OPARG_IDX, OPARG_LIDX},
    [OP_LOCAL_COPYTO_LOCAL] = {OPARG_LIDX, OPARG_LIDX},
    [OP_LOCAL_COPYOBJLEN] = {OPARG_LIDX, OPARG_IDENT_TYPE, OPARG_IDENT_IDX},
@@ -266,14 +266,14 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
    printstr(mode, "\nGlobal table\n");
 
    for (unsigned i = 0, len = vm->globals.len; i < len; ++i) {
-      VmValue v = vm->globals.list[i];
+      VmValue v = vm->globals.arr[i];
       printout(mode, "[%5d] %20s", i, vmval_typename(v));
       if (IS_STR(v)) { printout(mode, "%30s\n", AS_STR(v));
       } else if (IS_REGENTRY(v)) {
          DagRegisterEntry *regentry = AS_REGENTRY(v);
          printout(mode, "%30.*s\n", regentry->basename_len, regentry->basename);
-      } else if (IS_EDGEOBJ(v)) {
-         DagLabels *dagl = AS_EDGEOBJ(v);
+      } else if (IS_ARCOBJ(v)) {
+         DagLabels *dagl = AS_ARCOBJ(v);
          printout(mode, "%30.*s\n", dagl->basename_len, dagl->basename);
       } else if (IS_GMSSYMITER(v)) {
          VmGmsSymIterator *symiter = AS_GMSSYMITER(v);
@@ -341,7 +341,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          case OPARG_GIDX: {
             val = READ_GIDX(vm);
             VM_CHK(valid_vmidx(val, vm->globals.len, "vm->globals"));
-            VmValue v = vm->globals.list[val];
+            VmValue v = vm->globals.arr[val];
             print_vmval_short(mode, v, vm);
             break;
          }
@@ -460,7 +460,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          case OPARG_GMSSYMITER: {
             val = READ_GIDX(vm);
             VM_CHK(valid_vmidx(val, vm->globals.len, "vm->globals"));
-            VmValue v = vm->globals.list[val];
+            VmValue v = vm->globals.arr[val];
             if (!IS_GMSSYMITER(v)) {
                error("\n\nERROR: argument should be a GmsSymbIterator, it is rather a %s\n\n", vmval_typename(v));
                status = Error_EMPRuntimeError;
@@ -468,11 +468,11 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
             print_vmval_short(mode, v, vm);
             break;
          }
-         case OPARG_EDGEOBJ: {
+         case OPARG_ARCOBJ: {
             val = READ_GIDX(vm);
             VM_CHK(valid_vmidx(val, vm->globals.len, "vm->globals"));
-            VmValue v = vm->globals.list[val];
-            if (!IS_EDGEOBJ(v)) {
+            VmValue v = vm->globals.arr[val];
+            if (!IS_ARCOBJ(v)) {
                error("\n\nERROR: argument should be an edge object, it is rather a %s\n\n", vmval_typename(v));
                status = Error_EMPRuntimeError;
             }
@@ -482,7 +482,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          case OPARG_REGENTRY: {
             val = READ_GIDX(vm);
             VM_CHK(valid_vmidx(val, vm->globals.len, "vm->globals"));
-            VmValue v = vm->globals.list[val];
+            VmValue v = vm->globals.arr[val];
             if (!IS_REGENTRY(v)) {
                error("\n\nERROR: argument should be a register entry, it is rather a %s\n\n", vmval_typename(v));
                status = Error_EMPRuntimeError;

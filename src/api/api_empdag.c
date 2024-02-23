@@ -186,42 +186,42 @@ int rhp_ensure_mp(Model *mdl, unsigned reserve)
    return OK;
 }
 
-EdgeVF * rhp_edgeVF_new(void)
+ArcVFData * rhp_edgeVF_new(void)
 {
-   EdgeVF *edgeVF;
-   MALLOC_NULL(edgeVF, EdgeVF, 1);
+   ArcVFData *edgeVF;
+   MALLOC_NULL(edgeVF, ArcVFData, 1);
    return edgeVF;
 }
 
-int rhp_edgeVF_init(EdgeVF *edgeVF, rhp_idx ei)
+int rhp_edgeVF_init(ArcVFData *edgeVF, rhp_idx ei)
 {
    S_CHECK(chk_arg_nonnull(edgeVF, 1, __func__));
-   edgeVFb_init(edgeVF, ei);
+   arcVFb_init(edgeVF, ei);
    return OK;
 }
 
-int rhp_edgeVF_free(EdgeVF *edgeVF)
+int rhp_edgeVF_free(ArcVFData *edgeVF)
 {
    FREE(edgeVF);
    return OK;
 }
 
-int rhp_edgeVF_setvar(EdgeVF *edgeVF, rhp_idx vi)
+int rhp_edgeVF_setvar(ArcVFData *edgeVF, rhp_idx vi)
 {
    S_CHECK(chk_arg_nonnull(edgeVF, 1, __func__));
-   edgeVFb_setvar(edgeVF, vi);
+   arcVFb_setvar(edgeVF, vi);
    return OK;
 }
 
-int rhp_edgeVF_setcst(EdgeVF *edgeVF, double cst)
+int rhp_edgeVF_setcst(ArcVFData *edgeVF, double cst)
 {
    S_CHECK(chk_arg_nonnull(edgeVF, 1, __func__));
-   edgeVFb_setcst(edgeVF, cst);
+   arcVFb_setcst(edgeVF, cst);
    return OK;
 }
 
 int rhp_empdag_mpaddmpVF(Model *mdl, MathPrgm *mp,
-                         MathPrgm *mp_child, EdgeVF *edgeVF)
+                         MathPrgm *mp_child, ArcVFData *edgeVF)
 {
    S_CHECK(chk_rmdldag(mdl, __func__));
    S_CHECK(chk_arg_nonnull(mp, 2, __func__));

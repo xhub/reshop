@@ -15,7 +15,7 @@
  *  @brief Representation of a mathematical programm
  */
 
-struct rhp_empdag_Varc;
+struct rhp_empdag_arcVF;
 
 
 struct mp_mps {
@@ -94,10 +94,10 @@ int mp_addconstraint(MathPrgm *mp, rhp_idx ei);
 int mp_addconstraints(MathPrgm *mp, Aequ *e);
 int mp_addequ(MathPrgm *mp, rhp_idx ei);
 NONNULL OWNERSHIP_TAKES(3)
-int mp_addobjexprbylabel(MathPrgm *mp, const struct rhp_empdag_Varc *expr,
+int mp_addobjexprbylabel(MathPrgm *mp, const struct rhp_empdag_arcVF *expr,
                                const char *label);
 int mp_addobjexprbyid(MathPrgm *mp,
-                            const struct rhp_empdag_Varc *expr) NONNULL;
+                            const struct rhp_empdag_arcVF *expr) NONNULL;
 int mp_addvar(MathPrgm *mp, rhp_idx vi);
 int mp_addvars(MathPrgm *mp, Avar *v);
 int mp_addvipair(MathPrgm *mp, rhp_idx ei, rhp_idx vi);

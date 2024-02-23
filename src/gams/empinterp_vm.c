@@ -51,14 +51,14 @@ static inline VmValue read_global(EmpVm *vm)
 {
    GIDX_TYPE gidx = READ_GIDX(vm);
    assert(gidx < vm->globals.len);
-   return vm->globals.list[gidx];
+   return vm->globals.arr[gidx];
 }
 
 static inline unsigned READ_VMUINT(EmpVm *vm)
 {
    GIDX_TYPE gidx = READ_GIDX(vm);
    assert(gidx < vm->uints.len);
-   return vm->uints.list[gidx];
+   return vm->uints.arr[gidx];
 }
 
 //#define DEBUGVMRUN(fmt, ...) \
@@ -69,8 +69,8 @@ printout(PO_TRACE_EMPINTERP, __VA_ARGS__);
 #define DEBUGVMRUN_EXEC(EXPR) EXPR
 #else
 
-#define read_global(vm) (vm->globals.list[READ_GIDX(vm)])
-#define READ_VMINT(vm)  (vm->ints.list[READ_GIDX(vm)])
+#define read_global(vm) (vm->globals.arr[READ_GIDX(vm)])
+#define READ_VMINT(vm)  (vm->ints.arr[READ_GIDX(vm)])
 #define DEBUGVMRUN(...) 
 #define DEBUGVMRUN_EXEC(EXPR)
 #endif
@@ -180,9 +180,9 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       trace_empinterp("%*s: %.*s\n", pad, "RegEntry", regentry->basename_len, regentry->basename);
       break;
    }
-   case SIGNATURE_EDGEOBJ: {
-      DagLabels *edgeobj = AS_EDGEOBJ(val_);
-      trace_empinterp("%*s: %.*s\n", pad, "EdgeObj", edgeobj->basename_len, edgeobj->basename);
+   case SIGNATURE_ARCOBJ: {
+      DagLabels *arcobj = AS_ARCOBJ(val_);
+      trace_empinterp("%*s: %.*s\n", pad, "ArcObj", arcobj->basename_len, arcobj->basename);
       break;
    }
    case SIGNATURE_GMSSYMITER: {
@@ -273,9 +273,9 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
       printout(mode, "%20.*s", regentry->basename_len, regentry->basename);
       break;
    }
-   case SIGNATURE_EDGEOBJ: {
-      DagLabels *edgeobj = AS_EDGEOBJ(v);
-      printout(mode, "%20.*s", edgeobj->basename_len, edgeobj->basename);
+   case SIGNATURE_ARCOBJ: {
+      DagLabels *arcobj = AS_ARCOBJ(v);
+      printout(mode, "%20.*s", arcobj->basename_len, arcobj->basename);
       break;
    }
    case SIGNATURE_GMSSYMITER: {
@@ -529,7 +529,7 @@ struct empvm* empvm_new(Interpreter *interp)
    vm->data.e_current = NULL;
    vm->data.v_current = NULL;
 
-   edgevfobjs_init(&vm->data.edgevfobjs);
+   arcvfobjs_init(&vm->data.arcvfobjs);
 
    vm->data.mdl = interp->mdl;
    vm->data.globals = &interp->globals;
@@ -557,7 +557,7 @@ void empvm_free(struct empvm* vm)
     * --------------------------------------------------------------------- */
 
    for (unsigned i = 0, len = vm->globals.len; i < len; ++i) {
-      VmValue val = vm->globals.list[i];
+      VmValue val = vm->globals.arr[i];
       if (IS_PTR(val)) {
          void *obj = AS_PTR(val);
          FREE(obj);
@@ -632,12 +632,12 @@ int empvm_run(struct empvm *vm)
       }
       case OP_PUSH_VMUINT: {
          GIDX_TYPE slot = READ_GIDX(vm);
-         push(vm, UINT_VAL(vm->uints.list[slot]));
+         push(vm, UINT_VAL(vm->uints.arr[slot]));
          break;
       }
       case OP_PUSH_VMINT: {
          GIDX_TYPE slot = READ_GIDX(vm);
-         push(vm, INT_VAL(vm->ints.list[slot]));
+         push(vm, INT_VAL(vm->ints.arr[slot]));
          break;
       }
       case OP_UPDATE_LOOPVAR: {
@@ -671,8 +671,8 @@ int empvm_run(struct empvm *vm)
          }
 
          assert(valid_set(set) && idx < set.len);
-         vm->locals[lidx_loopvar] = LOOPVAR_VAL(set.list[idx]);
-         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, (set.list[idx]), PO_TRACE_EMPINTERP, &offset2);});
+         vm->locals[lidx_loopvar] = LOOPVAR_VAL(set.arr[idx]);
+         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, (set.arr[idx]), PO_TRACE_EMPINTERP, &offset2);});
          DEBUGVMRUN("%*s%s#%u[lvar%u = %u]\n", getpadding(offset0 + offset1 + offset2), "",
                     type == IdentSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
          break;
@@ -856,7 +856,7 @@ int empvm_run(struct empvm *vm)
          assert(param_gidx < vm->globals.len);
 
          VmVector * restrict vmvec = AS_OBJ(vm->locals[vmvec_lidx]);
-         OvfParam * param = AS_OBJ(vm->globals.list[param_gidx]);
+         OvfParam * param = AS_OBJ(vm->globals.arr[param_gidx]);
          unsigned size = vmvec->len;
          param->type = ARG_TYPE_VEC;
          param->size_vector = size;
@@ -1089,9 +1089,9 @@ int empvm_run(struct empvm *vm)
       case OP_EDGE_DUP_DAGL: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          assert(gidx < vm->globals.len);
-         assert(IS_EDGEOBJ(vm->globals.list[gidx]));
+         assert(IS_ARCOBJ(vm->globals.arr[gidx]));
 
-         DagLabels *dagl_src = AS_EDGEOBJ(vm->globals.list[gidx]);
+         DagLabels *dagl_src = AS_ARCOBJ(vm->globals.arr[gidx]);
          DagLabel *dagl_cpy;
          A_CHECK(dagl_cpy, dag_labels_dupaslabel(dagl_src));
          dagl_cpy->daguid = vm->data.uid_parent;
@@ -1103,9 +1103,9 @@ int empvm_run(struct empvm *vm)
       case OP_EDGE_INIT: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          assert(gidx < vm->globals.len);
-         assert(IS_EDGEOBJ(vm->globals.list[gidx]));
+         assert(IS_ARCOBJ(vm->globals.arr[gidx]));
 
-         DagLabels *dagl_src = AS_EDGEOBJ(vm->globals.list[gidx]);
+         DagLabels *dagl_src = AS_ARCOBJ(vm->globals.arr[gidx]);
          DagLabels *dagl_cpy;
          A_CHECK(dagl_cpy, dag_labels_dup(dagl_src));
          dagl_cpy->daguid = vm->data.uid_parent;

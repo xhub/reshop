@@ -51,18 +51,18 @@ int compute_all_rosettas(Model *mdl_mcp, Rosettas *r)
    }
 
    MALLOC_(r->data, rhp_idx, total_n);
-   unsigned cur_idx = r->mdl_n.list[0];
+   unsigned cur_idx = r->mdl_n.arr[0];
    memcpy(r->data, mdl_mcp->mdl_up->ctr.rosetta_vars, cur_idx*sizeof(rhp_idx));
 
    for (unsigned i = 1; i < num_mdl; ++i) {
       rhp_idx *rosetta_cur = &r->data[cur_idx];
 
-      unsigned mdl_total_n = r->mdl_n.list[i];
+      unsigned mdl_total_n = r->mdl_n.arr[i];
 
-      const Model * restrict mdl = r->mdls.list[i];
+      const Model * restrict mdl = r->mdls.arr[i];
       rhp_idx * restrict rosetta_vars = mdl->ctr.rosetta_vars;
 
-      rhp_idx *rosetta_prev = &r->data[r->rosetta_starts.list[i-1]];
+      rhp_idx *rosetta_prev = &r->data[r->rosetta_starts.arr[i-1]];
 
       /* If we have a rosetta, we copy it and update it */
       if (rosetta_vars) {
@@ -78,7 +78,7 @@ int compute_all_rosettas(Model *mdl_mcp, Rosettas *r)
          }
 
       } else { /* If we had no rosetta_var, just */ 
-         assert(r->mdl_n.list[i] >= mdl_total_n);
+         assert(r->mdl_n.arr[i] >= mdl_total_n);
          memcpy(rosetta_cur, rosetta_prev, mdl_total_n * sizeof(rhp_idx));
       } 
 

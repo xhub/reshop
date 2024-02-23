@@ -297,7 +297,7 @@ nidx_t nidx_parent(const EmpDagDfsData *dfsdata, nidx_t node_idx)
    unsigned num_parents = parents->len;
 
    if (num_parents == 1) {
-      daguid_t uid_parent = parents->list[0];
+      daguid_t uid_parent = parents->arr[0];
       unsigned id = uid2id(uid_parent);
       return uidisMP(uid_parent) ? id : id + dfsdata->num_mps;
    }
@@ -518,7 +518,7 @@ NONNULL static int process_Carcs(EmpDagDfsData *dfsdata, UIntArray *Carcs,
 {
    int rc = 0;
    for (unsigned i = 0, len = Carcs->len; i < len; ++i) {
-      daguid_t uid_child = Carcs->list[i];
+      daguid_t uid_child = Carcs->arr[i];
 
       pathdata_child.pathtype = DfsPathCtrl;
       pathdata_child.saddle_path_start = UINT_MAX;
@@ -552,7 +552,7 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
    DagPathType cur_pathtype = pathdata.pathtype;
 
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      const EdgeVF *edgeVF = &Varcs->arr[i];
+      const ArcVFData *edgeVF = &Varcs->arr[i];
 
       /* ------------------------------------------------------------------
        * If we have an adversarial MP, we add it to a list of MP to reformulate
@@ -826,7 +826,7 @@ int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
    pathdata_child.pathtype = DfsPathEquil;
 
    for (unsigned i = 0, len = arcs->len; i < len; ++i) {
-      daguid_t uid_child = arcs->list[i];
+      daguid_t uid_child = arcs->arr[i];
       assert(uidisMP(uid_child));
 
       int rc = dfs_mpNashOrRoot(uid2id(uid_child), dfsdata, pathdata_child);
@@ -901,7 +901,7 @@ int tree_get_path_backward(EmpDagDfsData *dfsdata, mpid_t mp_parent, mpid_t mp_c
          rarcs = &mpes->rarcs[uid2id(uid)];
       }
 
-      uid = rarcs->len > 0 ? rarcs->list[0] : EMPDAG_UID_NONE;
+      uid = rarcs->len > 0 ? rarcs->arr[0] : EMPDAG_UID_NONE;
 
       if (!valid_uid(uid)) {
          error("[empdag] Invalid uid when going from MP(%s) to MP(%s)\n",
@@ -923,7 +923,7 @@ bool is_parent(const UIntArray *rarcs, mpid_t mp_id, daguid_t *uid)
    if (rarcs->len == 0) { return false; }
    assert(rarcs->len == 1);
 
-   daguid_t uid_ = rarcs->list[0];
+   daguid_t uid_ = rarcs->arr[0];
 
    if (uid2id(uid_) != mp_id) { return false; };
 
@@ -936,7 +936,7 @@ NONNULL static inline
 bool is_child_Carcs(const UIntArray *arcs, mpid_t mp_id)
 {
    for (unsigned i = 0, len = arcs->len; i < len; ++i) {
-      if (uid2id(arcs->list[i]) == mp_id) return true;
+      if (uid2id(arcs->arr[i]) == mp_id) return true;
    }
 
    return false;
@@ -1113,7 +1113,7 @@ int report_error_foreign_equ(const Model *mdl, rhp_idx ei, mpid_t mp_id)
 
    if (mps.len == 1) {
       error("%*sSuggestion: assign the equation to the MP(%s) to fix this error\n",
-            pos, "", empdag_getmpname(empdag, mps.list[0]));
+            pos, "", empdag_getmpname(empdag, mps.arr[0]));
    } else {
       error("%*sAssign this equation to another MP.\n", pos, "");
    }
@@ -1141,7 +1141,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
    MpType type = mp_gettype(mp);
 
    if (mps->rarcs[mp_id].len > 0) {
-      daguid_t uid = mps->rarcs[mp_id].list[0];
+      daguid_t uid = mps->rarcs[mp_id].arr[0];
       dagid_t pid = uid2id(uid);
 
       bool parent_is_MP = uidisMP(uid);
@@ -1158,7 +1158,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
    }
 
    for (unsigned i = 1, len = mps->rarcs[mp_id].len; i < len; ++i) {
-      daguid_t uid = mps->rarcs[mp_id].list[i];
+      daguid_t uid = mps->rarcs[mp_id].arr[i];
       dagid_t pid = uid2id(uid);
       unsigned l = dfsdata->mp_ppty[pid].level;
 
@@ -1197,7 +1197,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
    const Fops * restrict fops = mdl_is_rhp_ ? rmdl_getfops(mdl) : NULL;
 
    for (unsigned i = 0, len = equs->len; i < len; ++i) {
-      rhp_idx ei = equs->list[i];
+      rhp_idx ei = equs->arr[i];
       assert(valid_ei(ei));
       bool equ_has_owned_var = false, equ_is_cst = false;
 
@@ -1403,7 +1403,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
    bool mp_parent_opt = false, mp_parent_vi = false;
 
    if (mpes->rarcs[mpe_id].len > 0) {
-      daguid_t uid = mpes->rarcs[mpe_id].list[0];
+      daguid_t uid = mpes->rarcs[mpe_id].arr[0];
       dagid_t pid = uid2id(uid);
       assert(uidisMP(pid));
 
@@ -1420,7 +1420,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
    }
 
    for (unsigned i = 1, len = mpes->rarcs[mpe_id].len; i < len; ++i) {
-      daguid_t uid = mpes->rarcs[mpe_id].list[i];
+      daguid_t uid = mpes->rarcs[mpe_id].arr[i];
       dagid_t pid = uid2id(uid);
       assert(uidisMP(pid));
       unsigned l = dfsdata->mp_ppty[pid].level;
@@ -1488,7 +1488,7 @@ int empdag_analysis(EmpDag * restrict empdag)
       return Error_EMPIncorrectInput;
    }
 
-   daguid_t root_uid =  empdag->roots.list[0];
+   daguid_t root_uid =  empdag->roots.arr[0];
    if (uidisMP(root_uid)) {
       mpid_t mpid = uid2id(root_uid);
       assert(mpid < empdag->mps.len);
@@ -1516,7 +1516,7 @@ int empdag_analysis(EmpDag * restrict empdag)
 
 
    for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
-      daguid_t uid = empdag->roots.list[i], idx = uid2id(uid);
+      daguid_t uid = empdag->roots.arr[i], idx = uid2id(uid);
 
       DfsPathDataFwd pathdata = {.depth = 0, .has_ctrl_edges = false,
                                  .pathtype = DfsPathUnset,
@@ -1603,7 +1603,7 @@ int empdag_analysis(EmpDag * restrict empdag)
 
    if (num_adversarial > 0) {
 
-      unsigned * restrict mps_id = dfsdata.adversarial_mps.list;
+      unsigned * restrict mps_id = dfsdata.adversarial_mps.arr;
       struct sort_obj * restrict mps2reformulate;
       CALLOC_(mps2reformulate, struct sort_obj, num_adversarial);
 
@@ -1617,7 +1617,7 @@ int empdag_analysis(EmpDag * restrict empdag)
       empdag_sort_tim_sort(mps2reformulate, num_adversarial);
 
       rhp_uint_reserve(&empdag->mps2reformulate, num_adversarial);
-      unsigned * restrict mps2r = empdag->mps2reformulate.list;
+      unsigned * restrict mps2r = empdag->mps2reformulate.arr;
 
 
       for (unsigned i = 0; i < num_adversarial; ++i) {

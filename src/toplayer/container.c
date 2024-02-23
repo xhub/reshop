@@ -566,7 +566,7 @@ int ctr_fixedvars(Container *ctr)
   }
 
    if (dat.len > 0) {
-      avar_setandownsortedlist(fv, dat.len, dat.list);
+      avar_setandownsortedlist(fv, dat.len, dat.arr);
    } else {
       avar_setcompact(fv, 0, IdxNA);
    }

@@ -241,7 +241,7 @@ int ovf_transform(Model *mdl)
     * ---------------------------------------------------------------------- */
 
    for (size_t i = 0; i < ovfinfo->num_ovf; ++i) {
-      ovf = (OvfDef *)topo_order.list[i];
+      ovf = (OvfDef *)topo_order.arr[i];
 
       S_CHECK_EXIT(ovf_finalize(mdl, ovf));
 

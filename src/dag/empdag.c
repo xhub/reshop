@@ -91,22 +91,22 @@ const char *empdag_typename(enum empdag_type type)
    }
 }
 
-static const char* edgeVFType2str(EdgeVFType type)
+static const char* edgeVFType2str(ArcVFType type)
 {
    switch(type) {
-   case EdgeVFUnset:
+   case ArcVFUnset:
       return "EdgeVFUnset";
-   case EdgeVFBasic:
+   case ArcVFBasic:
       return "EdgeVFBasic";
-   case EdgeVFMultipleBasic:
+   case ArcVFMultipleBasic:
       return "EdgeVFMultipleBasic";
-   case EdgeVFLequ:
+   case ArcVFLequ:
       return "EdgeVFLequ";
-   case EdgeVFMultipleLequ:
+   case ArcVFMultipleLequ:
       return "EdgeVFMultipleLequ";
-   case EdgeVFEqu:
+   case ArcVFEqu:
       return "EdgeVFEqu";
-   case EdgeVFMultipleEqu:
+   case ArcVFMultipleEqu:
       return "EdgeVFMultipleEqu";
    default:
       return "ERROR unknown edgeVFType";
@@ -135,10 +135,11 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    empdag->mdl = mdl;
 }
 
+/* TODO UNUSED */
 int empdag_next(EmpDag *empdag)
 {
    if (empdag->empdag_next) {
-      error("%s :: EMPDAG has already a derived DAG", __func__);
+      error("%s ERROR: EMPDAG has already a derived DAG", __func__);
       return Error_RuntimeError;
    }
 
@@ -270,7 +271,7 @@ int empdag_fini(EmpDag *empdag)
       S_CHECK(empdag_collectroots(empdag, &roots));
 
       if (roots.len == 1) {
-         daguid_t rootuid = roots.list[0];
+         daguid_t rootuid = roots.arr[0];
          S_CHECK(empdag_rootsadd(empdag, rootuid));
       } else if (roots.len == 0) {
          errormsg("[empdag] ERROR: EMPDAG has no root. The EMPDAG must have one root\n");
@@ -687,7 +688,7 @@ int empdag_mpeaddmpbyid(EmpDag *empdag, mpeid_t mpe_id, mpid_t mp_id)
    S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mp_id], mpeid2uid(mpe_id)));
 
    trace_empdag("[empdag] adding an edge of type %s from MPE(%s) to MP(%s)\n",
-                edgetype_str(EdgeNash), empdag_getmpename(empdag, mpe_id),
+                arctype_str(ArcNash), empdag_getmpename(empdag, mpe_id),
                 empdag_getmpname(empdag, mp_id));
 
    empdag->finalized = false;
@@ -695,13 +696,13 @@ int empdag_mpeaddmpbyid(EmpDag *empdag, mpeid_t mpe_id, mpid_t mp_id)
    return OK;
 }
 
-int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const EdgeVF *edgeVF)
+int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const ArcVFData *edgeVF)
 {
    unsigned id_child = edgeVF->child_id;
    S_CHECK(chk_mpid(empdag, id_parent));
    S_CHECK(chk_mpid(empdag, id_child));
    assert(id_parent != id_child);
-   assert(valid_edgeVF(edgeVF));
+   assert(valid_arcVF(edgeVF));
 
    S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[id_child], edgeVFuid(mpid2uid(id_parent))));
 
@@ -728,7 +729,7 @@ int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t id_parent, mpid_t id_child)
    S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[id_child], edgeCTRLuid(mpid2uid(id_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
-                edgetype_str(EdgeCtrl), empdag_getmpname(empdag, id_parent),
+                arctype_str(ArcCtrl), empdag_getmpname(empdag, id_parent),
                 empdag_getmpname(empdag, id_child));
 
    empdag->finalized = false;
@@ -745,7 +746,7 @@ int empdag_mpCTRLmpebyid(EmpDag *empdag, mpid_t mp_id, mpeid_t mpe_id)
    S_CHECK(rhp_uint_adduniq(&empdag->mpes.rarcs[mpe_id], edgeCTRLuid(mpid2uid(mp_id))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MPE(%s)\n",
-                edgetype_str(EdgeCtrl), empdag_getmpname(empdag, mp_id),
+                arctype_str(ArcCtrl), empdag_getmpname(empdag, mp_id),
                 empdag_getmpename(empdag, mpe_id));
 
    empdag->finalized = false;
@@ -754,26 +755,26 @@ int empdag_mpCTRLmpebyid(EmpDag *empdag, mpid_t mp_id, mpeid_t mpe_id)
 }
 
 int empdag_mpeaddmpsbyid(EmpDag *empdag, mpeid_t mpe_id,
-                         const UIntArray *l)
+                         const MpIdArray *arr)
 {
 
    S_CHECK(chk_mpeid(empdag, mpe_id));
 
-   for (unsigned i = 0, len = l->len; i < len; ++i) {
-      unsigned mp_id = l->list[i];
+   for (unsigned i = 0, len = arr->len; i < len; ++i) {
+      unsigned mp_id = arr->arr[i];
       S_CHECK(chk_mpid(empdag, mp_id));
       S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mp_id], mpe_id));
    }
 
-   S_CHECK(rhp_uint_addset(&empdag->mpes.arcs[mpe_id], l));
+   S_CHECK(rhp_uint_addset(&empdag->mpes.arcs[mpe_id], arr));
 
    empdag->finalized = false;
 
    return OK;
 }
 
-int empdag_addedge_byuids(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
-                          EmpDagEdge *edge)
+int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
+                  EmpDagArc *arc)
 {
 
    unsigned id_parent = uid2id(uid_parent);
@@ -783,22 +784,19 @@ int empdag_addedge_byuids(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_chil
       if (uidisMP(uid_child)) {
          assert(id_parent != id_child);
 
-         if (edge->type == EdgeVFcons) {
-            return empdag_mpCTRLmpbyid(empdag, id_parent, id_child);
+         if (arc->type == ArcVF) {
+            return empdag_mpVFmpbyid(empdag, id_parent, &arc->Varc);
          }
-         if (edge->type == EdgeVFobjSimple) {
-            return empdag_mpVFmpbyid(empdag, id_parent, &edge->edgeVF);
-         }
-         if (edge->type == EdgeCtrl) {
+         if (arc->type == ArcCtrl) {
             return empdag_mpCTRLmpbyid(empdag, id_parent, id_child);
          }
 
          error("[empdag] ERROR: while processing an edge, unknown type %d\n",
-               edge->type);
+               arc->type);
          return Error_RuntimeError;
       }
 
-      assert(edge->type == EdgeCtrl);
+      assert(arc->type == ArcCtrl);
       return empdag_mpCTRLmpebyid(empdag, id_parent, id_child);
    }
 
@@ -997,7 +995,7 @@ int empdag_check(EmpDag *empdag)
  *
  * @return             NULL if there is no such edge, otherwise the edge
  */
-const EdgeVF* empdag_find_edgeVF(const EmpDag *empdag, unsigned mpid_parent,
+const ArcVFData* empdag_find_edgeVF(const EmpDag *empdag, unsigned mpid_parent,
                                  unsigned mpid_child)
 {
    SN_CHECK(chk_mpid(empdag, mpid_parent));
@@ -1214,7 +1212,7 @@ static int dfs_mplist(const EmpDag *empdag, daguid_t uid, UIntArray *mplist)
       mpid_t id = uid2id(uid);
       S_CHECK(rhp_uint_addsorted(mplist, id));
       UIntArray *Carcs = &empdag->mps.Carcs[id];
-      children = Carcs->list;
+      children = Carcs->arr;
       num_children = Carcs->len;
 
       Varcs = &empdag->mps.Varcs[id];
@@ -1223,7 +1221,7 @@ static int dfs_mplist(const EmpDag *empdag, daguid_t uid, UIntArray *mplist)
 
       mpeid_t id = uid2id(uid);
       UIntArray *mpe_children = &empdag->mpes.arcs[id];
-      children = mpe_children->list;
+      children = mpe_children->arr;
       num_children = mpe_children->len;
 
       assert(num_children > 0);
@@ -1238,7 +1236,7 @@ static int dfs_mplist(const EmpDag *empdag, daguid_t uid, UIntArray *mplist)
 
    if (!Varcs) { return OK; }
 
-   struct rhp_empdag_Varc *Vlist = Varcs->arr;
+   struct rhp_empdag_arcVF *Vlist = Varcs->arr;
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
       S_CHECK(dfs_mplist(empdag, mpid2uid(Vlist[i].child_id), mplist));
    }

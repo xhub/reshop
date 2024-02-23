@@ -9,9 +9,9 @@
 #define RHP_LOCAL_SCOPE 1
 #define RHP_ARRAY_PREFIX _edgeVFs
 #define RHP_ARRAY_TYPE VFedges
-#define RHP_ELT_TYPE struct rhp_empdag_Varc
+#define RHP_ELT_TYPE struct rhp_empdag_arcVF
 #define RHP_ELT_SORT child_id
-#define RHP_ELT_INVALID ((struct rhp_empdag_Varc) {.child_id = UINT_MAX, .type = EdgeVFUnset});
+#define RHP_ELT_INVALID ((struct rhp_empdag_arcVF) {.child_id = UINT_MAX, .type = ArcVFUnset});
 #include "array_generic.inc"
 
 static int _edgeVFs_copy(VarcArray * restrict dat,

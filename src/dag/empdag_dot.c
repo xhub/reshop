@@ -44,7 +44,7 @@ typedef struct {
    bool do_free_weight;
 } EdgeVFStrings;
 
-static int edgeVF_basic_arcdat(const EdgeVF *edgeVF, MathPrgm *mp,
+static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
                                const Model *mdl, EdgeVFStrings *strs)
 {
    rhp_idx ei = edgeVF->basic_dat.ei;
@@ -98,7 +98,7 @@ static int _print_edges_mps(const EmpDag* empdag, FILE* f)
 
       for (unsigned j = 0, alen = Carcs->len; j < alen; ++j) {
 
-         unsigned uid = Carcs->list[j];
+         unsigned uid = Carcs->arr[j];
          bool isMP = uidisMP(uid);
          unsigned id = uid2id(uid);
        
@@ -111,17 +111,17 @@ static int _print_edges_mps(const EmpDag* empdag, FILE* f)
 
       for (unsigned j = 0, alen = Varcs->len; j < alen; ++j) {
 
-         const struct rhp_empdag_Varc* edgeVF = &Varcs->arr[j];
+         const struct rhp_empdag_arcVF* edgeVF = &Varcs->arr[j];
          unsigned mpchild_id = edgeVF->child_id;
 
          MathPrgm *mp = mps->arr[i];
          EdgeVFStrings VFstrings = {.do_free_weight = false};
 
          switch (edgeVF->type) {
-         case EdgeVFBasic:
+         case ArcVFBasic:
             edgeVF_basic_arcdat(edgeVF, mp, empdag->mdl, &VFstrings);
             break;
-         case EdgeVFUnset:
+         case ArcVFUnset:
             VFstrings.labelcolor = "red";
             VFstrings.equname = "INVALID edgeVF";
             break;
@@ -154,7 +154,7 @@ static int _print_edges_mpes(const struct mpe_namedarray* mpes, FILE* f)
 
       for (unsigned j = 0, alen = arcs->len; j < alen; ++j) {
 
-         unsigned uid = arcs->list[j];
+         unsigned uid = arcs->arr[j];
          bool isMP = uidisMP(uid);
          assert(isMP);
          unsigned id = uid2id(uid);

@@ -231,7 +231,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
 
    } else {
 
-      unsigned parent_uid = mp_parents->list[0];
+      unsigned parent_uid = mp_parents->arr[0];
       if (!uidisMPE(parent_uid)) {
          TO_IMPLEMENT("The MP has an MP parent; only MPE parent are currently supported.");
       }

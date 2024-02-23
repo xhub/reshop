@@ -54,7 +54,7 @@ static GDX_CALLCONV void store_vector_filt(const int Indx[], const double Vals[]
    if (gdxerr != OK) return;
 
    int idx = Indx[vector_pos];
-   int * restrict indices = vector_filter->list;
+   int * restrict indices = vector_filter->arr;
    assert(indices);
 
    for (unsigned i = 0, len = vector_filter->len; i < len; ++i) {

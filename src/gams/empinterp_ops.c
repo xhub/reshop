@@ -234,7 +234,7 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
 
 
 NONNULL static
-int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, EdgeType edge_type)
+int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
 {
    const char* basename = emptok_getstrstart(&interp->cur);
    unsigned basename_len = emptok_getstrlen(&interp->cur);
@@ -320,8 +320,8 @@ static int imm_mp_finalize(UNUSED Interpreter *interp, MathPrgm *mp)
       
       EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
-      EdgeVF edgevf;
-      edgeVFb_init(&edgevf, objequ);
+      ArcVFData edgevf;
+      arcVFb_init(&edgevf, objequ);
       mpid_t mp_id = mp->id;
 
       for (unsigned i = 0, len = interp->edgevfovjs.len; i < len; ++i) {

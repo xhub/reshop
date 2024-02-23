@@ -270,19 +270,17 @@ DagRegisterEntry* regentry_dup(DagRegisterEntry *regentry)
    return regentry_;
 }
 
-const char *edgetype_str(EdgeType type)
+const char *arctype_str(ArcType type)
 {
    switch (type) {
-   case EdgeVFobjSimple:
-      return "EdgeVFobjSimple";
-   case EdgeVFcons:
-      return "EdgeVFcons";
-   case EdgeCtrl:
-      return "EdgeCtrl";
-   case EdgeNash:
-      return "EdgeNash";
+   case ArcVF:
+      return "ArcVF";
+   case ArcCtrl:
+      return "ArcCtrl";
+   case ArcNash:
+      return "ArcNash";
    default:
-      return "ERROR: invalid Edge type";
+      return "ERROR: invalid arc type";
    }
 }
 

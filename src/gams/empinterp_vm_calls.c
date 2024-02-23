@@ -225,9 +225,9 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
 
    N_CHECK(mp_parent, AS_MPOBJ(values[-1]));
 
-   EdgeVFObj obj = {.id_parent = mp_parent->id, .id_child = mp->id};
+   ArcVFObj obj = {.id_parent = mp_parent->id, .id_child = mp->id};
 
-   S_CHECK(edgevfobjs_add(&data->edgevfobjs, obj))
+   S_CHECK(arcvfobjs_add(&data->arcvfobjs, obj))
 
    assert(mp->ccflib.ccf);
 
@@ -328,26 +328,26 @@ static int vm_mp_finalize(UNUSED VmData *data, unsigned argc, const VmValue *val
     * corresponding EMPDAG edges. We need to do this as 
     * --------------------------------------------------------------------- */
 
-   unsigned num_edgevfobj = data->edgevfobjs.len;
-   if (num_edgevfobj > 0) {
+   unsigned num_arcvfobj = data->arcvfobjs.len;
+   if (num_arcvfobj > 0) {
       mpid_t mp_id = mp->id;
-      EdgeVFObj *o = data->edgevfobjs.list;
+      ArcVFObj *o = data->arcvfobjs.arr;
       rhp_idx objequ = mp_getobjequ(mp);
       assert(valid_ei(objequ)); // TODO support the case where there is no objequ
       
       EmpDag *empdag = &data->mdl->empinfo.empdag;
 
-      EdgeVF edgevf;
-      edgeVFb_init(&edgevf, objequ);
+      ArcVFData arcvf;
+      arcVFb_init(&arcvf, objequ);
 
-      for (unsigned i = 0; i < num_edgevfobj; ++i, o++) {
+      for (unsigned i = 0; i < num_arcvfobj; ++i, o++) {
          assert(o->id_parent == mp_id);
 
-         edgevf.child_id = o->id_child;
-         S_CHECK(empdag_mpVFmpbyid(empdag, mp_id, &edgevf));
+         arcvf.child_id = o->id_child;
+         S_CHECK(empdag_mpVFmpbyid(empdag, mp_id, &arcvf));
 
       }
-      data->edgevfobjs.len = 0;
+      data->arcvfobjs.len = 0;
    }
 
    return vm_common_nodefini(data);

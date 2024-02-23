@@ -3,11 +3,9 @@
 
 #include <limits.h>
 #include <math.h>
-#include <stddef.h>
 
 #include "compat.h"
 #include "empdag_data.h"
-#include "empinterp_data.h"
 #include "equ.h"
 #include "macros.h"
 #include "printout.h"
@@ -23,27 +21,34 @@ typedef enum {
    EmpDag_Subset,
 } EmpDagStage;
 
-/** Type of VF edge  */
+/** Type of arc */
 typedef enum {
-   EdgeVFUnset,          /**< Unset edge VF type  */
-   EdgeVFBasic,          /**< child VF appears in one equation with basic weight */
-   EdgeVFMultipleBasic,  /**< child VF appears in equations with basic weight */
-   EdgeVFLequ,           /**< child VF appears in one equation with linear sum weight */
-   EdgeVFMultipleLequ,   /**< child VF appears in equations with linear sum weight */
-   EdgeVFEqu,            /**< child VF appears in one equation with general weight */
-   EdgeVFMultipleEqu,    /**< child VF appears in equations with general weight */
-   EdgeVFLast = EdgeVFMultipleEqu,
-} EdgeVFType;
+   ArcVF,
+   ArcCtrl,
+   ArcNash,
+} ArcType;
 
-/** edge VF weight of the form:   b y  */
-typedef struct EdgeVFBasicData {
+/** Type of VF arc  */
+typedef enum {
+   ArcVFUnset,          /**< Unset arc VF type  */
+   ArcVFBasic,          /**< child VF appears in one equation with basic weight */
+   ArcVFMultipleBasic,  /**< child VF appears in equations with basic weight */
+   ArcVFLequ,           /**< child VF appears in one equation with linear sum weight */
+   ArcVFMultipleLequ,   /**< child VF appears in equations with linear sum weight */
+   ArcVFEqu,            /**< child VF appears in one equation with general weight */
+   ArcVFMultipleEqu,    /**< child VF appears in equations with general weight */
+   ArcVFLast = ArcVFMultipleEqu,
+} ArcVFType;
+
+/** arc VF weight of the form:   b y  */
+typedef struct ArcVFBasicData {
    rhp_idx ei;            /**< mapping where the term appears */
    rhp_idx vi;            /**< variable index   */
    double cst;            /**< constant part */
 } EdgeVFBasicData;
 
 
-/** edge VF weight of the form: Σᵢ bᵢ yᵢ   */
+/** arc VF weight of the form: Σᵢ bᵢ yᵢ   */
 typedef struct EdgeVFLequData {
    rhp_idx   ei;          /**< mapping where the term appears */
    unsigned  len;         /**< Number of linear terms         */
@@ -51,13 +56,13 @@ typedef struct EdgeVFLequData {
    double *  vals;        /**<  Coefficients                  */
 } EdgeVFLequData;
 
-/** General simple edge VF */
-typedef struct EdgeVFEquData {
+/** General simple arc VF */
+typedef struct ArcVFEquData {
    rhp_idx ei;            /**< mapping where the term appears */
    Equ *e;                /**< equation capturing the VF weight */
 } EdgeVFEquData;
 
-/** edge VF when a child VF appears in different equations of a given MP VF */
+/** arc VF when a child VF appears in different equations of a given MP VF */
 typedef struct EdgeVFMultipleBasicData {
    unsigned len;
    unsigned max;
@@ -66,9 +71,9 @@ typedef struct EdgeVFMultipleBasicData {
 
 
 
-/** VF edge data */
-typedef struct rhp_empdag_Varc {
-   EdgeVFType type;       /**< edgeVF type */
+/** VF arc data */
+typedef struct rhp_empdag_arcVF {
+   ArcVFType type;       /**< arcVF type */
    mpid_t child_id;       /**< MP index */
    union {
       EdgeVFBasicData basic_dat;
@@ -76,133 +81,133 @@ typedef struct rhp_empdag_Varc {
       EdgeVFEquData equ_dat;
       EdgeVFLequData lequ_dat;
    };
-} EdgeVF;
+} ArcVFData;
 
-/** Generic EMPDAG edge */
+/** Generic EMPDAG arc */
 typedef struct empdag_edge {
-   EdgeType type;
+   ArcType type;
    union {
-      struct rhp_empdag_Varc edgeVF;
+      ArcVFData Varc;
    };
-} EmpDagEdge;
+} EmpDagArc;
 
-NONNULL static inline bool valid_edgeVF(const EdgeVF *edge)
+NONNULL static inline bool valid_arcVF(const ArcVFData *arc)
 {
-   return edge->type != EdgeVFUnset;
+   return arc->type != ArcVFUnset;
 }
 
 /* ----------------------------------------------------------------------
- * Start of the functions for dealing with edge VFs. The general interface
- * edgeVF_XXX then dispatches depending on the type of edgeVF
+ * Start of the functions for dealing with arc VFs. The general interface
+ * arcVF_XXX then dispatches depending on the type of arcVF
  *
  * Conventions:
- *   - edgeVFb_XXX is for EdgeVFBasic
- *   - edgeVFl_XXX is for EdgeVFLequ
- *   - edgeVFg_XXX is for EdgeVFEqu, the general form
+ *   - arcVFb_XXX is for arcVFBasic
+ *   - arcVFl_XXX is for arcVFLequ
+ *   - arcVFg_XXX is for arcVFEqu, the general form
  * ---------------------------------------------------------------------- */
 
 
 
 /**
- * @brief Initialize a basic edgeVF
+ * @brief Initialize a basic arcVF
  *
- * @param edgeVF the edge
- * @param ei     the equation where the edgeVf appears
+ * @param arcVF the arc
+ * @param ei     the equation where the arcVf appears
  */
-static inline void edgeVFb_init(struct rhp_empdag_Varc *edgeVF, rhp_idx ei)
+static inline void arcVFb_init(struct rhp_empdag_arcVF *arcVF, rhp_idx ei)
 {
-   edgeVF->type = EdgeVFBasic;
-   edgeVF->child_id = UINT_MAX;
-   edgeVF->basic_dat.cst = 1.;
-   edgeVF->basic_dat.vi = IdxNA;
-   edgeVF->basic_dat.ei = ei;
+   arcVF->type = ArcVFBasic;
+   arcVF->child_id = UINT_MAX;
+   arcVF->basic_dat.cst = 1.;
+   arcVF->basic_dat.vi = IdxNA;
+   arcVF->basic_dat.ei = ei;
 
 }
 
-NONNULL static inline void edgeVFb_setvar(struct rhp_empdag_Varc *edge, rhp_idx vi)
+NONNULL static inline void arcVFb_setvar(struct rhp_empdag_arcVF *arcVF, rhp_idx vi)
 {
-   edge->basic_dat.vi = vi;
+   arcVF->basic_dat.vi = vi;
 }
 
-NONNULL static inline void edgeVFb_setequ(struct rhp_empdag_Varc *edge, rhp_idx ei)
+NONNULL static inline void arcVFb_setequ(struct rhp_empdag_arcVF *arcVF, rhp_idx ei)
 {
-   edge->basic_dat.ei = ei;
+   arcVF->basic_dat.ei = ei;
 }
 
-NONNULL static inline void edgeVFb_setcst(struct rhp_empdag_Varc *edge, double cst)
+NONNULL static inline void arcVFb_setcst(struct rhp_empdag_arcVF *arcVF, double cst)
 {
-   edge->basic_dat.cst = cst;
+   arcVF->basic_dat.cst = cst;
 }
 
-NONNULL static inline void edgeVFb_setmp(struct rhp_empdag_Varc *edge, unsigned mp_id)
+NONNULL static inline void arcVFb_setmp(struct rhp_empdag_arcVF *arcVF, unsigned mp_id)
 {
-   edge->child_id = mp_id;
+   arcVF->child_id = mp_id;
 }
 
-NONNULL static inline rhp_idx edgeVFb_getequ(const EdgeVF *edge)
+NONNULL static inline rhp_idx arcVFb_getequ(const ArcVFData *arcVF)
 {
-   assert(edge->type == EdgeVFBasic);
-   return edge->basic_dat.ei;
+   assert(arcVF->type == ArcVFBasic);
+   return arcVF->basic_dat.ei;
 }
 
-static inline void edgeVF_empty(struct rhp_empdag_Varc *edge)
+static inline void arcVF_empty(struct rhp_empdag_arcVF *arcVF)
 {
-   edge->type = EdgeVFUnset;
-   edge->child_id = UINT_MAX;
-   edge->basic_dat.cst = NAN;
-   edge->basic_dat.vi = IdxInvalid;
-   edge->basic_dat.ei = IdxInvalid;
+   arcVF->type = ArcVFUnset;
+   arcVF->child_id = UINT_MAX;
+   arcVF->basic_dat.cst = NAN;
+   arcVF->basic_dat.vi = IdxInvalid;
+   arcVF->basic_dat.ei = IdxInvalid;
 
 }
 
 NONNULL static inline
-int edgeVFb_copy(EdgeVF *dst, const EdgeVF *src)
+int arcVFb_copy(ArcVFData *dst, const ArcVFData *src)
 {
-   dst->type = EdgeVFBasic;
+   dst->type = ArcVFBasic;
    memcpy(&dst->basic_dat, &src->basic_dat, sizeof(EdgeVFBasicData));
 
    return OK;
 }
 
 NONNULL static inline
-int edgeVF_copy(EdgeVF *dst, const EdgeVF *src)
+int arcVF_copy(ArcVFData *dst, const ArcVFData *src)
 {
    dst->child_id = src->child_id;
 
    switch (src->type) {
-   case EdgeVFBasic:
-      return edgeVFb_copy(dst, src);
+   case ArcVFBasic:
+      return arcVFb_copy(dst, src);
    default:
-      error("%s :: Unsupported edgeVF type %u", __func__, src->type);
+      error("%s :: Unsupported arcVF type %u", __func__, src->type);
       return Error_NotImplemented;
    }
 }
 
 NONNULL static inline
-int edgeVFb_mul_edgeVFb(EdgeVF *edgeVF1, const EdgeVF *edgeVF2)
+int arcVFb_mul_arcVFb(ArcVFData *arcVF1, const ArcVFData *arcVF2)
 {
-   if (valid_vi(edgeVF1->basic_dat.vi) && valid_vi(edgeVF2->basic_dat.vi)) {
-      TO_IMPLEMENT("edgeVFb_mul_edgeVFb yielding polynomial");
+   if (valid_vi(arcVF1->basic_dat.vi) && valid_vi(arcVF2->basic_dat.vi)) {
+      TO_IMPLEMENT("arcVFb_mul_arcVFb yielding polynomial");
    }
 
-   if (!valid_vi(edgeVF1->basic_dat.vi)) {
-      edgeVF1->basic_dat.vi = edgeVF2->basic_dat.vi;
+   if (!valid_vi(arcVF1->basic_dat.vi)) {
+      arcVF1->basic_dat.vi = arcVF2->basic_dat.vi;
    }
 
-   edgeVF1->basic_dat.cst *= edgeVF2->basic_dat.cst;
+   arcVF1->basic_dat.cst *= arcVF2->basic_dat.cst;
 
    return OK;
 }
 
 
 NONNULL static inline
-int edgeVFb_mul_edgeVF(EdgeVF *edgeVF1, const EdgeVF *edgeVF2)
+int arcVFb_mul_arcVF(ArcVFData *edgeVF1, const ArcVFData *edgeVF2)
 {
-   assert(valid_edgeVF(edgeVF1) && valid_edgeVF(edgeVF2));
+   assert(valid_arcVF(edgeVF1) && valid_arcVF(edgeVF2));
 
    switch (edgeVF2->type) {
-   case EdgeVFBasic:
-      return edgeVFb_mul_edgeVFb(edgeVF1, edgeVF2);
+   case ArcVFBasic:
+      return arcVFb_mul_arcVFb(edgeVF1, edgeVF2);
    default:
       error("%s :: Unsupported edgeVF type %u", __func__, edgeVF2->type);
       return Error_NotImplemented;
@@ -211,25 +216,25 @@ int edgeVFb_mul_edgeVF(EdgeVF *edgeVF1, const EdgeVF *edgeVF2)
 
 
 NONNULL static inline
-int edgeVF_mul_edgeVF(EdgeVF *edgeVF1, const EdgeVF *edgeVF2)
+int arcVF_mul_arcVF(ArcVFData *arcVF1, const ArcVFData *arcVF2)
 {
-   assert(valid_edgeVF(edgeVF1) && valid_edgeVF(edgeVF2));
+   assert(valid_arcVF(arcVF1) && valid_arcVF(arcVF2));
 
-   switch (edgeVF1->type) {
-   case EdgeVFBasic:
-      return edgeVFb_mul_edgeVF(edgeVF1, edgeVF2);
+   switch (arcVF1->type) {
+   case ArcVFBasic:
+      return arcVFb_mul_arcVF(arcVF1, arcVF2);
    default:
-      error("%s :: Unsupported edgeVF type %u", __func__, edgeVF1->type);
+      error("%s :: Unsupported arcVF type %u", __func__, arcVF1->type);
       return Error_NotImplemented;
    }
 }
 
 /**
- * @brief Multiply a basic edge VF by a linear equation
+ * @brief Multiply a basic arc VF by a linear equation
  *
- * This transform the edgeVFBasic into an edgeVFLequ
+ * This transform the arcVFBasic into an arcVFLequ
  *
- * @param edgeVF the VF edge
+ * @param arcVF the VF arc
  * @param len    the number of linear terms
  * @param idxs   the variable indices
  * @param vals   the values
@@ -237,33 +242,33 @@ int edgeVF_mul_edgeVF(EdgeVF *edgeVF1, const EdgeVF *edgeVF2)
  * @return       the error code
  */
 NONNULL static inline
-int edgeVFb_mul_lequ(EdgeVF *edgeVF, unsigned len, unsigned *idxs, double * restrict vals)
+int arcVFb_mul_lequ(ArcVFData *arcVF, unsigned len, unsigned *idxs, double * restrict vals)
 {
-   if (valid_vi(edgeVF->basic_dat.vi)) {
-      error("%s :: polynomial edgeVF are not yet supported", __func__);
+   if (valid_vi(arcVF->basic_dat.vi)) {
+      error("%s :: polynomial arcVF are not yet supported", __func__);
       return Error_NotImplemented;
    }
 
    if (len == 1) {
-      edgeVF->basic_dat.cst *= vals[0];
-      edgeVF->basic_dat.vi = idxs[0];
+      arcVF->basic_dat.cst *= vals[0];
+      arcVF->basic_dat.vi = idxs[0];
       return OK;
    }
 
-   double cst = edgeVF->basic_dat.cst;
-   rhp_idx ei = edgeVF->basic_dat.ei;
+   double cst = arcVF->basic_dat.cst;
+   rhp_idx ei = arcVF->basic_dat.ei;
 
-   edgeVF->type = EdgeVFLequ;
-   edgeVF->lequ_dat.ei = ei;
-   edgeVF->lequ_dat.len = len;
-   MALLOC_(edgeVF->lequ_dat.vis, rhp_idx, len);
-   MALLOC_(edgeVF->lequ_dat.vals, double, len);
-   memcpy(edgeVF->lequ_dat.vis, idxs, len*sizeof(unsigned));
+   arcVF->type = ArcVFLequ;
+   arcVF->lequ_dat.ei = ei;
+   arcVF->lequ_dat.len = len;
+   MALLOC_(arcVF->lequ_dat.vis, rhp_idx, len);
+   MALLOC_(arcVF->lequ_dat.vals, double, len);
+   memcpy(arcVF->lequ_dat.vis, idxs, len*sizeof(unsigned));
 
    if (cst == 1.) {
-      memcpy(edgeVF->lequ_dat.vals, vals, len*sizeof(double));
+      memcpy(arcVF->lequ_dat.vals, vals, len*sizeof(double));
    } else {
-      double *dst = edgeVF->lequ_dat.vals;
+      double *dst = arcVF->lequ_dat.vals;
       for (unsigned i = 0; i < len; ++i) {
          dst[i] = cst*vals[i];
       }
@@ -273,9 +278,9 @@ int edgeVFb_mul_lequ(EdgeVF *edgeVF, unsigned len, unsigned *idxs, double * rest
 }
 
 /**
- * @brief Multiply an edge VF by a linear equation
+ * @brief Multiply an arc VF by a linear equation
  *
- * @param edgeVF the VF edge
+ * @param arcVF the VF arc
  * @param len    the number of linear terms
  * @param idxs   the variable indices
  * @param vals   the values
@@ -283,19 +288,19 @@ int edgeVFb_mul_lequ(EdgeVF *edgeVF, unsigned len, unsigned *idxs, double * rest
  * @return       the error code
  */
 NONNULL static inline
-int edgeVF_mul_lequ(EdgeVF *edgeVF, unsigned len, unsigned *idxs, double *vals)
+int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, unsigned *idxs, double *vals)
 {
-   assert(valid_edgeVF(edgeVF));
+   assert(valid_arcVF(arcVF));
 
-   switch (edgeVF->type) {
-   case EdgeVFBasic:
-      return edgeVFb_mul_lequ(edgeVF, len, idxs, vals);
+   switch (arcVF->type) {
+   case ArcVFBasic:
+      return arcVFb_mul_lequ(arcVF, len, idxs, vals);
    default:
-      error("%s :: Unsupported edgeVF type %u", __func__, edgeVF->type);
+      error("%s :: Unsupported arcVF type %u", __func__, arcVF->type);
       return Error_NotImplemented;
    }
 }
 
-
+const char *arctype_str(ArcType type);
 
 #endif /* EMPDAG_COMMON_H */

@@ -162,26 +162,24 @@ enum EmpObjNew {
    FN_OVF_NEW,
 };
 
-enum { VMDATA_FILTER_MAX = 10 };
-
-typedef struct edgevf_obj {
+typedef struct arcvfobj {
    mpid_t id_parent;
    mpid_t id_child;
-} EdgeVFObj;
+} ArcVFObj;
 
 
-typedef struct EdgeVFObjs {
+typedef struct arcvfobj_array {
    unsigned len;
    unsigned max;
-   EdgeVFObj *list;
-} EdgeVFObjs;
+   ArcVFObj *arr;
+} ArcVFObjArray;
 
 #define RHP_LOCAL_SCOPE
-#define RHP_LIST_PREFIX edgevfobjs
-#define RHP_LIST_TYPE EdgeVFObjs
-#define RHP_ELT_TYPE struct edgevf_obj
-#define RHP_ELT_INVALID ((EdgeVFObj){.id_parent = MpId_NA, .id_child = MpId_NA})
-#include "list_generic.inc"
+#define RHP_ARRAY_PREFIX arcvfobjs
+#define RHP_ARRAY_TYPE arcvfobj_array
+#define RHP_ELT_TYPE struct arcvfobj
+#define RHP_ELT_INVALID ((ArcVFObj){.id_parent = MpId_NA, .id_child = MpId_NA})
+#include "array_generic.inc"
 
 typedef struct {
    Aequ e;
@@ -191,7 +189,7 @@ typedef struct {
    IntScratch e_data;
    IntScratch v_data;
    DblScratch dscratch;
-   EdgeVFObjs edgevfobjs;
+   ArcVFObjArray arcvfobjs;
    daguid_t uid_grandparent;    /**< uid of the parent node                */
    daguid_t uid_parent;         /**< uid of the parent node                */
 
@@ -244,35 +242,36 @@ typedef struct {
 typedef struct VmValueArray {
    unsigned len;
    unsigned max;
-   VmValue *list;
+   VmValue *arr;
 } VmValueArray;
 
 VmValue vmvals_getnil(void);
 
+/* TODO: delete? */
 typedef struct {
    unsigned depth;
    void *obj;
 } VmObj;
 
 #define RHP_LOCAL_SCOPE
-#define RHP_LIST_PREFIX vmvals
-#define RHP_LIST_TYPE VmValueArray
+#define RHP_ARRAY_PREFIX vmvals
+#define RHP_ARRAY_TYPE VmValueArray
 #define RHP_ELT_TYPE VmValue
 #define RHP_ELT_INVALID (vmvals_getnil())
-#include "list_generic.inc"
+#include "array_generic.inc"
 
 typedef struct VmObjArray {
    unsigned len;
    unsigned max;
-   void **list;
+   void **arr;
 } VmObjArray;
 
 #define RHP_LOCAL_SCOPE
-#define RHP_LIST_PREFIX vmobjs
-#define RHP_LIST_TYPE VmObjArray
+#define RHP_ARRAY_PREFIX vmobjs
+#define RHP_ARRAY_TYPE VmObjArray
 #define RHP_ELT_TYPE void*
 #define RHP_ELT_INVALID NULL
-#include "list_generic.inc"
+#include "array_generic.inc"
 
 /** EMP VM struct */
 typedef struct empvm {

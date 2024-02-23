@@ -45,7 +45,7 @@
 #define MASK_TYPE_OVFOBJ       ((uint64_t)0x0004000000000000)
 #define MASK_TYPE_GMSSYMITER   ((uint64_t)0x0005000000000000)
 #define MASK_TYPE_REGENTRY     ((uint64_t)0x0006000000000000)
-#define MASK_TYPE_EDGEOBJ      ((uint64_t)0x0007000000000000)
+#define MASK_TYPE_ARCOBJ      ((uint64_t)0x0007000000000000)
 
 // SNAN would be MASK_EXPONENT
 #define QNAN                (MASK_EXPONENT | MASK_QUIET)
@@ -65,7 +65,7 @@
 #define SIGNATURE_OVFOBJ      (SIGNATURE_POINTER | MASK_TYPE_OVFOBJ)
 #define SIGNATURE_GMSSYMITER  (SIGNATURE_POINTER | MASK_TYPE_GMSSYMITER)
 #define SIGNATURE_REGENTRY    (SIGNATURE_POINTER | MASK_TYPE_REGENTRY)
-#define SIGNATURE_EDGEOBJ     (SIGNATURE_POINTER | MASK_TYPE_EDGEOBJ)
+#define SIGNATURE_ARCOBJ     (SIGNATURE_POINTER | MASK_TYPE_ARCOBJ)
 
 
 #define TAG_FALSE           1
@@ -97,7 +97,7 @@
 #define IS_OVFOBJ(value)     (((value) & MASK_SIGNATURE) == SIGNATURE_OVFOBJ)
 #define IS_GMSSYMITER(value) (((value) & MASK_SIGNATURE) == SIGNATURE_GMSSYMITER)
 #define IS_REGENTRY(value)   (((value) & MASK_SIGNATURE) == SIGNATURE_REGENTRY)
-#define IS_EDGEOBJ(value)    (((value) & MASK_SIGNATURE) == SIGNATURE_EDGEOBJ)
+#define IS_ARCOBJ(value)    (((value) & MASK_SIGNATURE) == SIGNATURE_ARCOBJ)
 
 #define AS_BOOL(value)      ((value) == TRUE_VAL)
 #define AS_NUMBER(value)    (value)
@@ -115,7 +115,7 @@
 #define AS_OVFOBJ(value)     (OvfDef*)AS_OBJ((value))
 #define AS_GMSSYMITER(value) (void *)AS_OBJ((value))
 #define AS_REGENTRY(value)   (void *)AS_OBJ((value))
-#define AS_EDGEOBJ(value)    (void *)AS_OBJ((value))
+#define AS_ARCOBJ(value)    (void *)AS_OBJ((value))
 
 
 #define BOOL_VAL(b)         ((b) ? TRUE_VAL : FALSE_VAL)
@@ -138,8 +138,8 @@
    (VmValue)(SIGNATURE_GMSSYMITER  | (uint64_t)(uintptr_t)(obj)) 
 #define REGENTRY_VAL(obj) \
    (VmValue)(SIGNATURE_REGENTRY    | (uint64_t)(uintptr_t)(obj)) 
-#define EDGEOBJ_VAL(obj) \
-  (VmValue)(SIGNATURE_EDGEOBJ     |  (uint64_t)(uintptr_t)(obj)) 
+#define ARCOBJ_VAL(obj) \
+  (VmValue)(SIGNATURE_ARCOBJ     |  (uint64_t)(uintptr_t)(obj)) 
 
 
 #define VM_VALUE_INC(value)  ((value))++
@@ -183,32 +183,32 @@ typedef struct vm_gms_sym_iterator {
 
 const char* vmval_typename(VmValue vmval);
 int vmval_is_regentry(VmValueArray * vmvals, unsigned idx) NONNULL;
-int vmval_is_edgeobj(VmValueArray * vmvals, unsigned idx) NONNULL;
+int vmval_is_arcobj(VmValueArray * vmvals, unsigned idx) NONNULL;
 int vmval_is_gmssymiter(VmValueArray * vmvals, unsigned idx) NONNULL;
 
 
 static inline VmGmsSymIterator * getgmssymiter(VmValueArray * globals, unsigned gidx)
 {
    assert(gidx < globals->len);
-   assert(IS_GMSSYMITER(globals->list[gidx]));
+   assert(IS_GMSSYMITER(globals->arr[gidx]));
 
-   return AS_GMSSYMITER(globals->list[gidx]);
+   return AS_GMSSYMITER(globals->arr[gidx]);
 }
 
 static inline DagLabels* getdaglabels(VmValueArray * globals, unsigned gidx)
 {
    assert(gidx < globals->len);
-   assert(IS_EDGEOBJ(globals->list[gidx]));
+   assert(IS_ARCOBJ(globals->arr[gidx]));
 
-   return AS_EDGEOBJ(globals->list[gidx]);
+   return AS_ARCOBJ(globals->arr[gidx]);
 }
 
 static inline DagRegisterEntry* getregentry(VmValueArray * globals, unsigned gidx)
 {
    assert(gidx < globals->len);
-   assert(IS_REGENTRY(globals->list[gidx]));
+   assert(IS_REGENTRY(globals->arr[gidx]));
 
-   return AS_REGENTRY(globals->list[gidx]);
+   return AS_REGENTRY(globals->arr[gidx]);
 }
 
 #endif

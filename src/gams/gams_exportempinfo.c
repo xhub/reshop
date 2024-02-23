@@ -89,7 +89,7 @@ static int _print_all_vars(struct empinfo_dat *file, IntArray *vars,
   char bufout[2 * GMS_SSSIZE];
 
   for (size_t vi = 0; vi < vars->len; ++vi) {
-    rhp_idx vidx = vars->list[vi];
+    rhp_idx vidx = vars->arr[vi];
     if (vidx != objvaridx) {
       assert(vidx < ctr->n);
       GET_PROPER_COLNAME(ctr, vidx, buf, bufout);
@@ -106,7 +106,7 @@ static int _print_all_equs(struct empinfo_dat *file, IntArray *equs,
   char bufout[2 * GMS_SSSIZE];
 
   for (size_t ei = 0; ei < equs->len; ++ei) {
-    rhp_idx eidx = equs->list[ei];
+    rhp_idx eidx = equs->arr[ei];
     assert(eidx < ctr->m);
     GET_PROPER_ROWNAME(ctr, eidx, buf, bufout);
     S_CHECK(_add_empinfo(file, bufout));
@@ -121,7 +121,7 @@ static int _print_vars(struct empinfo_dat *file, IntArray *vars,
   char bufout[2 * GMS_SSSIZE];
 
   for (size_t vi = 0; vi < vars->len; ++vi) {
-    rhp_idx vidx = mdl_getcurrentvi(mdl, vars->list[vi]);
+    rhp_idx vidx = mdl_getcurrentvi(mdl, vars->arr[vi]);
     if (valid_vi(vidx) && vidx != objvaridx) {
       GET_PROPER_COLNAME(&mdl->ctr, vidx, buf, bufout);
       S_CHECK(_add_empinfo(file, bufout));
@@ -137,7 +137,7 @@ static int _print_equs(struct empinfo_dat *file, IntArray *equs,
   char bufout[2 * GMS_SSSIZE];
 
   for (size_t ei = 0; ei < equs->len; ++ei) {
-    rhp_idx eidx = mdl_getcurrentei(mdl, equs->list[ei]);
+    rhp_idx eidx = mdl_getcurrentei(mdl, equs->arr[ei]);
     if (valid_ei(eidx)) {
       GET_PROPER_ROWNAME(&mdl->ctr, eidx, buf, bufout);
       S_CHECK(_add_empinfo(file, bufout));
@@ -232,7 +232,7 @@ static int _print_mp_vi(struct empinfo_dat *file, MathPrgm *mp,
 
   if (nb_zerofunc > 0) {
     for (size_t vi = 0; vi < vars->len; ++vi) {
-      rhp_idx vidx = vars->list[vi];
+      rhp_idx vidx = vars->arr[vi];
       if (var_md[vidx].ppty == VarPerpToZeroFunctionVi) {
         rhp_idx new_vidx = mdl_getcurrentvi(mdl, vidx);
         GET_PROPER_COLNAME(&mdl->ctr, new_vidx, buf, bufout);
@@ -246,7 +246,7 @@ static int _print_mp_vi(struct empinfo_dat *file, MathPrgm *mp,
    * ---------------------------------------------------------------------- */
 
   for (size_t vi = 0; vi < vars->len; ++vi) {
-    rhp_idx vidx = vars->list[vi];
+    rhp_idx vidx = vars->arr[vi];
     rhp_idx eidx = var_md[vidx].dual;
     if (!valid_ei(eidx)) {
       if (var_md[vidx].ppty == VarPerpToZeroFunctionVi) {
@@ -276,7 +276,7 @@ static int _print_mp_vi(struct empinfo_dat *file, MathPrgm *mp,
 
   if (mp_getnumcons(mp) > 0) {
     for (size_t ei = 0; ei < equs->len; ++ei) {
-      rhp_idx eidx = equs->list[ei];
+      rhp_idx eidx = equs->arr[ei];
       assert(valid_ei(eidx));
       if (equ_md[eidx].role == EquConstraint) {
         rhp_idx new_eidx = mdl_getcurrentei(mdl, eidx);

@@ -18,19 +18,19 @@ struct rhp_stack_idx;
 typedef struct rhp_int_data {
    unsigned len;     /**< number of elements in the container  */
    unsigned max;     /**< maximum number of elements            */
-   int *list;        /**< list of elements                     */
+   int *arr;         /**< elements                     */
 } IntArray;
 
 typedef struct rhp_uint_data {
    unsigned len;     /**< number of elements in the container  */
    unsigned max;     /**< maximum number of elements            */
-   unsigned *list;   /**< list of elements                     */
+   unsigned *arr;   /**< elements                     */
 } UIntArray;
 
 typedef struct rhp_obj_data {
    unsigned len;
    unsigned max;
-   void** list;
+   void** arr;
    int (*sort)(const void *a, const void *b);
 } ObjArray;
 
@@ -50,7 +50,7 @@ int rhp_int_rm(IntArray *dat, int v) NONNULL;
 
 static inline unsigned rhp_int_at(const IntArray *dat, unsigned i)
 {
-  return i < dat->len ? dat->list[i] : IdxNotFound;
+  return i < dat->len ? dat->arr[i] : IdxNotFound;
 }
 
 void rhp_obj_init(ObjArray *dat) NONNULL;
@@ -83,7 +83,7 @@ int rhp_int_set(IntArray *dat, unsigned idx, int v) NONNULL;
 
 static inline unsigned rhp_uint_at(const UIntArray *dat, unsigned i)
 {
-  return i < dat->len ? dat->list[i] : IdxNotFound;
+  return i < dat->len ? dat->arr[i] : IdxNotFound;
 }
 
 #define rhp_idx_data rhp_int_data

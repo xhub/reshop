@@ -623,7 +623,7 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
    if (uidisMP(uid)) {
       mpid_t id = uid2id(uid);
       UIntArray *Carcs = &empdag->mps.Carcs[id];
-      children = Carcs->list;
+      children = Carcs->arr;
       num_children = Carcs->len;
 
       Varcs = &empdag->mps.Varcs[id];
@@ -632,19 +632,19 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
 
       IdxArray mpvars = mp->vars;
       Avar v;
-      avar_setlist(&v, mpvars.len, mpvars.list);
+      avar_setlist(&v, mpvars.len, mpvars.arr);
       S_CHECK(avar_list_add(vars, v));
 
       IdxArray mpequs = mp->equs;
       Aequ e;
-      aequ_setlist(&e, mpequs.len, mpequs.list);
+      aequ_setlist(&e, mpequs.len, mpequs.arr);
       S_CHECK(aequ_list_add(equs, e));
 
    } else {
 
       mpeid_t id = uid2id(uid);
       UIntArray *mpe_children = &empdag->mpes.arcs[id];
-      children = mpe_children->list;
+      children = mpe_children->arr;
       num_children = mpe_children->len;
 
       assert(num_children > 0);
@@ -659,7 +659,7 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
 
    if (!Varcs) { return OK; }
 
-   struct rhp_empdag_Varc *Vlist = Varcs->arr;
+   struct rhp_empdag_arcVF *Vlist = Varcs->arr;
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
       S_CHECK(dfs_equvar(empdag, mpid2uid(Vlist[i].child_id), vars, equs));
    }

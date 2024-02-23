@@ -454,7 +454,7 @@ int rctr_get_var_sos1(Container *ctr, rhp_idx vi, unsigned **grps)
       }
    }
 
-   *grps = l.list;
+   *grps = l.arr;
    return OK;
 }
 
@@ -472,7 +472,7 @@ int rctr_get_var_sos2(Container *ctr, rhp_idx vi, unsigned **grps)
       }
    }
 
-   *grps = l.list;
+   *grps = l.arr;
    return OK;
 }
 

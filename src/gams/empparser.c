@@ -1545,7 +1545,7 @@ static int imm_set_dagrootlabel(Interpreter * restrict interp, const char *ident
    return OK;
 }
 
-static int imm_add_daglabel(Interpreter * restrict interp, EdgeType edge_type,
+static int imm_add_daglabel(Interpreter * restrict interp, ArcType edge_type,
                             const char *identname, unsigned identname_len,
                             GmsIndicesData *indices)
 {
@@ -1557,7 +1557,7 @@ static int imm_add_daglabel(Interpreter * restrict interp, EdgeType edge_type,
 
    DagLabel *dagl;
    A_CHECK(dagl, dag_label_new(identname, identname_len, indices->nargs));
-   dagl->edge_type = edge_type;
+   dagl->arc_type = edge_type;
 
    DagRegister *dagreg = &interp->dagregister;
    unsigned dagreg_len = dagreg->len;
@@ -1613,19 +1613,19 @@ typedef int (*imm_fn_label2resolve)(Interpreter * interp, const char* argname,
 static int imm_add_Nash_edge(Interpreter * interp, const char* identname,
                              unsigned identname_len, GmsIndicesData* gmsindices)
 {
-   return imm_add_daglabel(interp, EdgeNash, identname, identname_len, gmsindices);
+   return imm_add_daglabel(interp, ArcNash, identname, identname_len, gmsindices);
 }
 
 static int imm_add_VFobjSimple_edge(Interpreter * interp, const char* identname,
                                     unsigned identname_len, GmsIndicesData* gmsindices)
 {
-   return imm_add_daglabel(interp, EdgeVFobjSimple, identname, identname_len, gmsindices);
+   return imm_add_daglabel(interp, ArcVF, identname, identname_len, gmsindices);
 }
 
 static int imm_add_Ctrl_edge(Interpreter * interp, const char* identname,
                              unsigned identname_len, GmsIndicesData* gmsindices)
 {
-   return imm_add_daglabel(interp, EdgeCtrl, identname, identname_len, gmsindices);
+   return imm_add_daglabel(interp, ArcCtrl, identname, identname_len, gmsindices);
 }
 
 static int imm_set_dagroot(Interpreter * interp, const char* identname,
@@ -3318,7 +3318,7 @@ int parse_load(Interpreter* restrict interp, unsigned * restrict p)
 
       switch ((GdxSymType)type) {
       case dt_set: {
-         assert(gdxreader->setobj.len > 0 && gdxreader->setobj.list);
+         assert(gdxreader->setobj.len > 0 && gdxreader->setobj.arr);
          int symdim = gdxreader->cursym.dim;
 
          if (gdxreader->cursym.dim == 1) {
@@ -3843,7 +3843,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
 
       for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
          error("%*s[%5u]%s\n", offset, "", i,
-               empdag_getname(empdag, empdag->roots.list[i]));
+               empdag_getname(empdag, empdag->roots.arr[i]));
       }
 
       return runtime_error(interp->linenr);
@@ -3858,7 +3858,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
 
       for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
          error("%*s[%5u]%s\n", offset, "", i,
-               empdag_getname(empdag, empdag->roots.list[i]));
+               empdag_getname(empdag, empdag->roots.arr[i]));
       }
 
       return runtime_error(interp->linenr);
@@ -3872,7 +3872,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
 
    mpeid_t root;
    if (empdag->roots.len == 1) {
-      daguid_t r = empdag->roots.list[0];
+      daguid_t r = empdag->roots.arr[0];
       if (uidisMP(r)) {
          error("[empinterp] ERROR: EMPDAG root is an MP node, rather than "
                "expected MPE: %s\n", empdag_getname(empdag, r));
