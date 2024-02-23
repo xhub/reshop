@@ -964,7 +964,7 @@ static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
    EquMeta * restrict equmeta = NULL;
    VarMeta * restrict varmeta = NULL;
    unsigned mp_len = mdl_src->empinfo.empdag.mps.len;
-   MathPrgm ** const mps = mdl_src->empinfo.empdag.mps.list;
+   MathPrgm ** const mps = mdl_src->empinfo.empdag.mps.arr;
 
    switch (objsense) {
    case RhpMin:

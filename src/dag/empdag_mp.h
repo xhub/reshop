@@ -7,15 +7,15 @@
 #include "mathprgm.h"
 
 #define RHP_LOCAL_SCOPE 1
-#define RHP_LIST_PREFIX _edgeVFs
-#define RHP_LIST_TYPE VFedges
-#define RHP_ELT_TYPE struct rhp_edgeVF
+#define RHP_ARRAY_PREFIX _edgeVFs
+#define RHP_ARRAY_TYPE VFedges
+#define RHP_ELT_TYPE struct rhp_empdag_Varc
 #define RHP_ELT_SORT child_id
-#define RHP_ELT_INVALID ((struct rhp_edgeVF) {.child_id = UINT_MAX, .type = EdgeVFUnset});
-#include "list_generic.inc"
+#define RHP_ELT_INVALID ((struct rhp_empdag_Varc) {.child_id = UINT_MAX, .type = EdgeVFUnset});
+#include "array_generic.inc"
 
-static int _edgeVFs_copy(struct VFedges * restrict dat,
-                         const struct VFedges * restrict dat_src)
+static int _edgeVFs_copy(VarcArray * restrict dat,
+                         const VarcArray * restrict dat_src)
 {
    /* ---------------------------------------------------------------------
     * The semantics of this function is to overwrite, without reading,
@@ -28,42 +28,42 @@ static int _edgeVFs_copy(struct VFedges * restrict dat,
    dat->len = dat->max = len;
 
    if (len == 0) {
-      dat->list = NULL;
+      dat->arr = NULL;
       return OK;
    }
 
-   MALLOC_(dat->list, struct rhp_edgeVF, len);
-   memcpy(dat->list, dat_src->list, len*sizeof(struct rhp_edgeVF));
+   MALLOC_(dat->arr, Varc, len);
+   memcpy(dat->arr, dat_src->arr, len*sizeof(Varc));
 
    return OK;
 }
 
 
-static inline void _mp_namedlist_init(struct mp_namedlist *dat)
+static inline void _mp_namedarray_init(struct mp_namedarray *dat)
 {
    assert(dat);
    dat->len = 0;
    dat->max = 0;
 
-   dat->list = NULL;
+   dat->arr = NULL;
    dat->names = NULL;
    dat->Carcs = NULL;
    dat->Varcs = NULL;
    dat->rarcs = NULL;
 }
 
-static inline int _mp_namedlist_resize(struct mp_namedlist *dat, unsigned size)
+static inline int _mp_namedarray_resize(struct mp_namedarray *dat, unsigned size)
 {
-   CALLOC_(dat->list, MathPrgm*, size);
+   CALLOC_(dat->arr, MathPrgm*, size);
    CALLOC_(dat->names, const char*, size);
    CALLOC_(dat->Carcs, UIntArray, size);
-   CALLOC_(dat->Varcs, struct VFedges, size);
+   CALLOC_(dat->Varcs, VarcArray, size);
    CALLOC_(dat->rarcs, UIntArray, size);
 
    return OK;
 }
 
-static inline int _mp_namedlist_reserve(struct mp_namedlist *dat, unsigned reserve)
+static inline int _mp_namedarray_reserve(struct mp_namedarray *dat, unsigned reserve)
 {
    unsigned max_lb = reserve + dat->len;
    if (max_lb > dat->max) {
@@ -71,16 +71,16 @@ static inline int _mp_namedlist_reserve(struct mp_namedlist *dat, unsigned reser
       unsigned new_elts = max_lb - old_max;
       dat->max = max_lb;
 
-      REALLOC_(dat->list, MathPrgm*, max_lb);
+      REALLOC_(dat->arr, MathPrgm*, max_lb);
       REALLOC_(dat->names, const char*, max_lb);
       REALLOC_(dat->Carcs, UIntArray, max_lb);
-      REALLOC_(dat->Varcs, struct VFedges, max_lb);
+      REALLOC_(dat->Varcs, VarcArray, max_lb);
       REALLOC_(dat->rarcs, UIntArray, max_lb);
 
-      memset(&dat->list[old_max], 0, new_elts * sizeof(unsigned));
+      memset(&dat->arr[old_max], 0, new_elts * sizeof(unsigned));
       memset(&dat->names[old_max], 0, new_elts * sizeof(const char*));
       memset(&dat->Carcs[old_max], 0, new_elts * sizeof(UIntArray));
-      memset(&dat->Varcs[old_max], 0, new_elts * sizeof(struct VFedges));
+      memset(&dat->Varcs[old_max], 0, new_elts * sizeof(VarcArray));
       memset(&dat->rarcs[old_max], 0, new_elts * sizeof(UIntArray));
    }
 
@@ -88,7 +88,7 @@ static inline int _mp_namedlist_reserve(struct mp_namedlist *dat, unsigned reser
 }
 
 static inline OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
-int _mp_namedlist_add(struct mp_namedlist *dat, MathPrgm* elt, const char *name)
+int _mp_namedarray_add(struct mp_namedarray *dat, MathPrgm* elt, const char *name)
 {
 
    if (dat->len >= dat->max) {
@@ -96,47 +96,47 @@ int _mp_namedlist_add(struct mp_namedlist *dat, MathPrgm* elt, const char *name)
       unsigned max = dat->max = MAX(2*dat->max, dat->len+1);
       unsigned new_elts = max - old_max;
 
-      REALLOC_(dat->list, MathPrgm*, max);
+      REALLOC_(dat->arr, MathPrgm*, max);
       REALLOC_(dat->names, const char*, max);
       REALLOC_(dat->Carcs, UIntArray, max);
-      REALLOC_(dat->Varcs, struct VFedges, max);
+      REALLOC_(dat->Varcs, VarcArray, max);
       REALLOC_(dat->rarcs, UIntArray, max);
 
-      memset(&dat->list[old_max], 0, new_elts * sizeof(unsigned));
+      memset(&dat->arr[old_max], 0, new_elts * sizeof(unsigned));
       memset(&dat->names[old_max], 0, new_elts * sizeof(const char*));
       memset(&dat->Carcs[old_max], 0, new_elts * sizeof(UIntArray));
-      memset(&dat->Varcs[old_max], 0, new_elts * sizeof(struct VFedges));
+      memset(&dat->Varcs[old_max], 0, new_elts * sizeof(VarcArray));
       memset(&dat->rarcs[old_max], 0, new_elts * sizeof(UIntArray));
    }
 
-   dat->list[dat->len] = elt;
+   dat->arr[dat->len] = elt;
    dat->names[dat->len++] = name;
 
    return OK;
 }
 
-static inline int _mp_namedlist_copy(struct mp_namedlist * restrict dat,
-                                const struct mp_namedlist * restrict dat_src,
+static inline int _mp_namedarray_copy(struct mp_namedarray * restrict dat,
+                                const struct mp_namedarray * restrict dat_src,
                                 Model *mdl)
 {
    unsigned size = dat_src->len;
    if (size == 0) {
-      _mp_namedlist_init(dat);
+      _mp_namedarray_init(dat);
       return OK;
    }
 
    dat->len = size;
    dat->max = size;
 
-   MALLOC_(dat->list, MathPrgm*, size);
+   MALLOC_(dat->arr, MathPrgm*, size);
    MALLOC_(dat->names, const char*, size);
    MALLOC_(dat->Carcs, UIntArray, size);
-   MALLOC_(dat->Varcs, struct VFedges, size);
+   MALLOC_(dat->Varcs, VarcArray, size);
    MALLOC_(dat->rarcs, UIntArray, size);
 
    for (unsigned i = 0; i < size; i++) {
-      if (dat_src->list[i]) {
-         A_CHECK(dat->list[i], mp_dup(dat_src->list[i], mdl));
+      if (dat_src->arr[i]) {
+         A_CHECK(dat->arr[i], mp_dup(dat_src->arr[i], mdl));
          
          if (dat_src->names[i]) {
               A_CHECK(dat->names[i], strdup(dat_src->names[i]));
@@ -150,7 +150,7 @@ static inline int _mp_namedlist_copy(struct mp_namedlist * restrict dat,
          S_CHECK(rhp_uint_copy(&dat->rarcs[i], &dat_src->rarcs[i]));
 
       } else {
-         dat->list[i] = NULL;
+         dat->arr[i] = NULL;
          dat->names[i] = NULL;
       }
 
@@ -159,19 +159,19 @@ static inline int _mp_namedlist_copy(struct mp_namedlist * restrict dat,
    return OK;
 }
 
-static inline void _mp_namedlist_free(struct mp_namedlist *dat)
+static inline void _mp_namedarray_free(struct mp_namedarray *dat)
 {
    unsigned len = dat->len;
    if (len > 0) {
       for (unsigned i = 0; i < len; ++i) {
-         mp_free(dat->list[i]);
+         mp_free(dat->arr[i]);
          FREE(dat->names[i]);
          rhp_uint_empty(&dat->Carcs[i]);
          rhp_uint_empty(&dat->rarcs[i]);
          _edgeVFs_free(&dat->Varcs[i]);
       }
 
-      FREE(dat->list);
+      FREE(dat->arr);
       FREE(dat->names);
       FREE(dat->Carcs);
       FREE(dat->Varcs);

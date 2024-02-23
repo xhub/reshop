@@ -67,7 +67,7 @@ typedef struct EdgeVFMultipleBasicData {
 
 
 /** VF edge data */
-typedef struct rhp_edgeVF {
+typedef struct rhp_empdag_Varc {
    EdgeVFType type;       /**< edgeVF type */
    mpid_t child_id;       /**< MP index */
    union {
@@ -78,12 +78,13 @@ typedef struct rhp_edgeVF {
    };
 } EdgeVF;
 
+/** Generic EMPDAG edge */
 typedef struct empdag_edge {
    EdgeType type;
    union {
-      struct rhp_edgeVF edgeVF;
+      struct rhp_empdag_Varc edgeVF;
    };
-} EmpEdge;
+} EmpDagEdge;
 
 NONNULL static inline bool valid_edgeVF(const EdgeVF *edge)
 {
@@ -108,7 +109,7 @@ NONNULL static inline bool valid_edgeVF(const EdgeVF *edge)
  * @param edgeVF the edge
  * @param ei     the equation where the edgeVf appears
  */
-static inline void edgeVFb_init(struct rhp_edgeVF *edgeVF, rhp_idx ei)
+static inline void edgeVFb_init(struct rhp_empdag_Varc *edgeVF, rhp_idx ei)
 {
    edgeVF->type = EdgeVFBasic;
    edgeVF->child_id = UINT_MAX;
@@ -118,22 +119,22 @@ static inline void edgeVFb_init(struct rhp_edgeVF *edgeVF, rhp_idx ei)
 
 }
 
-NONNULL static inline void edgeVFb_setvar(struct rhp_edgeVF *edge, rhp_idx vi)
+NONNULL static inline void edgeVFb_setvar(struct rhp_empdag_Varc *edge, rhp_idx vi)
 {
    edge->basic_dat.vi = vi;
 }
 
-NONNULL static inline void edgeVFb_setequ(struct rhp_edgeVF *edge, rhp_idx ei)
+NONNULL static inline void edgeVFb_setequ(struct rhp_empdag_Varc *edge, rhp_idx ei)
 {
    edge->basic_dat.ei = ei;
 }
 
-NONNULL static inline void edgeVFb_setcst(struct rhp_edgeVF *edge, double cst)
+NONNULL static inline void edgeVFb_setcst(struct rhp_empdag_Varc *edge, double cst)
 {
    edge->basic_dat.cst = cst;
 }
 
-NONNULL static inline void edgeVFb_setmp(struct rhp_edgeVF *edge, unsigned mp_id)
+NONNULL static inline void edgeVFb_setmp(struct rhp_empdag_Varc *edge, unsigned mp_id)
 {
    edge->child_id = mp_id;
 }
@@ -144,7 +145,7 @@ NONNULL static inline rhp_idx edgeVFb_getequ(const EdgeVF *edge)
    return edge->basic_dat.ei;
 }
 
-static inline void edgeVF_empty(struct rhp_edgeVF *edge)
+static inline void edgeVF_empty(struct rhp_empdag_Varc *edge)
 {
    edge->type = EdgeVFUnset;
    edge->child_id = UINT_MAX;

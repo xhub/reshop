@@ -628,7 +628,7 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
 
       Varcs = &empdag->mps.Varcs[id];
 
-      MathPrgm *mp = empdag->mps.list[id];
+      MathPrgm *mp = empdag->mps.arr[id];
 
       IdxArray mpvars = mp->vars;
       Avar v;
@@ -659,7 +659,7 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
 
    if (!Varcs) { return OK; }
 
-   struct rhp_edgeVF *Vlist = Varcs->list;
+   struct rhp_empdag_Varc *Vlist = Varcs->arr;
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
       S_CHECK(dfs_equvar(empdag, mpid2uid(Vlist[i].child_id), vars, equs));
    }

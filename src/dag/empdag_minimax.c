@@ -35,7 +35,7 @@ int empdag_minimax_reformulate(Model *mdl)
    for (unsigned i = 0, len = mps2reform->len; i < len; ++i) {
       unsigned mp_id = mps2reform->list[i];
 
-      MathPrgm *mp = empdag->mps.list[mp_id];
+      MathPrgm *mp = empdag->mps.arr[mp_id];
 
       MpType mptype = mp_gettype(mp);
       if (mptype != RHP_MP_CCFLIB) {

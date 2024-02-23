@@ -81,7 +81,7 @@ static int addedge(Interpreter *interp, daguid_t daguid, daguid_t child_daguid,
                 edgetype_str(edge->type), empdag_getname(empdag, daguid),
                 empdag_getname(empdag, child_daguid));
 
-   EmpEdge empedge = { .type = edge->type };
+   EmpDagEdge empedge = { .type = edge->type };
    if (edge->type == EdgeVFobjSimple) {
 
       if (!uidisMP(daguid)) {

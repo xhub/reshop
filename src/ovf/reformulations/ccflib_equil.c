@@ -57,10 +57,10 @@ typedef struct {
    const struct ovf_ops *ops;
 } DualData;
 
-static int ccflib_equil_dfs_dual(dagid_t mpid, DfsData *dfsdat, DagMpList *mps,
-                                 const DagMpList *mps_old);
-static int ccflib_equil_dfs_primal(dagid_t mpid, DfsData *dfsdat, DagMpList *mps,
-                                   const DagMpList *mps_old);
+static int ccflib_equil_dfs_dual(dagid_t mpid, DfsData *dfsdat, DagMpArray *mps,
+                                 const DagMpArray *mps_old);
+static int ccflib_equil_dfs_primal(dagid_t mpid, DfsData *dfsdat, DagMpArray *mps,
+                                   const DagMpArray *mps_old);
 
 
 static void ws_init(DfsWorkspace *ws)
@@ -103,8 +103,8 @@ static int mp_ccflib_instantiate(EmpDag *empdag, unsigned mpid, DfsData *dfsdat,
    Model *mdl = empdag->mdl;
    RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
 
-   const DagMpList *mps_old = &empdag->empdag_up->mps;
-   MathPrgm *mp_ovf_old = empdag->empdag_up->mps.list[mpid];
+   const DagMpArray *mps_old = &empdag->empdag_up->mps;
+   MathPrgm *mp_ovf_old = empdag->empdag_up->mps.arr[mpid];
 
    unsigned n_children = mps_old->Varcs[mpid].len;
    OvfDef *ovf_def = mp_ovf_old->ccflib.ccf;
@@ -114,7 +114,7 @@ static int mp_ccflib_instantiate(EmpDag *empdag, unsigned mpid, DfsData *dfsdat,
    ovf_def->num_empdag_children = n_children;
 
    /* Change the MP to an OPT one */
-   MathPrgm *mp_ovf = empdag->mps.list[mpid];
+   MathPrgm *mp_ovf = empdag->mps.arr[mpid];
    mp_ovf->sense = ovf_def->sense;
    mp_ovf->type = MpTypeOpt;
    mpopt_init(&mp_ovf->opt);
@@ -281,7 +281,7 @@ int dual_objequ_add_by(MathPrgm *mp, double *b, Avar *y)
 
 NONNULL static
 int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, SpMat *B,
-                                   const DagMpList *mps_old, NlNode ***child_nodes)
+                                   const DagMpArray *mps_old, NlNode ***child_nodes)
 {
    /* ---------------------------------------------------------------------
     * This function prepares the NlTree of the objequ to copy the expression
@@ -292,14 +292,14 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, SpMat *B,
 
    const struct VFedges *edgesVFs = &mps_old->Varcs[mp->id];
    unsigned n_arcs = edgesVFs->len;
-   EdgeVF * restrict children = edgesVFs->list;
-   const MathPrgm *mp_old = mps_old->list[mp->id];
+   EdgeVF * restrict children = edgesVFs->arr;
+   const MathPrgm *mp_old = mps_old->arr[mp->id];
 
    unsigned n_primal_children = 0;
    for (unsigned i = 0; i < n_arcs; ++i) {
       assert(children[i].child_id < mps_old->len);
 
-      if (mp_getsense(mps_old->list[children[i].child_id]) != primal_sense) {
+      if (mp_getsense(mps_old->arr[children[i].child_id]) != primal_sense) {
          continue;
       }
 
@@ -411,8 +411,8 @@ static int copy_objequ_as_nlnode(DualObjEquData *dualobjequdat, Model *mdl,
    return OK;
 }
 
-static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpList *mps,
-                                   const DagMpList *mps_old)
+static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpArray *mps,
+                                   const DagMpArray *mps_old)
 {
    /* ---------------------------------------------------------------------
     * Each processed MP has its Varcs (children on VF edge) reset.
@@ -420,7 +420,7 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpLi
     * The Carcs are left untouched
     * --------------------------------------------------------------------- */
 
-   MathPrgm *mp = mps->list[mpid_primal];
+   MathPrgm *mp = mps->arr[mpid_primal];
    RhpSense parent_sense = mp_getsense(mp);
    EmpDag *empdag = dfsdat->empdag;
 
@@ -453,7 +453,7 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpLi
    * Iterate over the children. 
    * ---------------------------------------------------------------------- */
 
-   const EdgeVF *edgeVFs_primal = mps_old->Varcs[mpid_primal].list;
+   const EdgeVF *edgeVFs_primal = mps_old->Varcs[mpid_primal].arr;
    struct VFedges *children = &mps->Varcs[mpid_primal];
    children->len = 0;
    RhpSense path_sense = dfsdat->path_sense;
@@ -467,7 +467,7 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpLi
       const EdgeVF *edgeVF_primal = &edgeVFs_primal[i];
       unsigned child_id = edgeVF_primal->child_id;
 
-      MathPrgm *mp_child = mps->list[child_id];
+      MathPrgm *mp_child = mps->arr[child_id];
       RhpSense child_sense = mp_getsense(mp_child);
       assert(child_sense == RhpMin || child_sense == RhpMax);
 
@@ -536,8 +536,8 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpLi
    return OK;
 }
 
-static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpList *mps,
-                                 const DagMpList *mps_old)
+static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray *mps,
+                                 const DagMpArray *mps_old)
 {
    int status = OK;
 
@@ -557,7 +557,7 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpList *
    assert(mpid_dual < mps->len);
    assert(dfsdat->mpid_primal < mps->len);
 
-   MathPrgm *mp_dual = mps->list[mpid_dual];
+   MathPrgm *mp_dual = mps->arr[mpid_dual];
    RhpSense mp_sense = mp_getsense(mp_dual);
 
    DualData dualdat;
@@ -573,7 +573,7 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpList *
    S_CHECK(dualdat.ops->get_lin_transformation(dualdat.ovfd, &B, &b));
 
    unsigned n_arcs = mps_old->Varcs[mpid_dual].len;
-   const EdgeVF *edgeVFs_old = mps_old->Varcs[mpid_dual].list;
+   const EdgeVF *edgeVFs_old = mps_old->Varcs[mpid_dual].arr;
    struct VFedges *children = &mps->Varcs[mpid_dual];
    children->len = 0;
 
@@ -595,7 +595,7 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpList *
       const EdgeVF *edgeVF_old = &edgeVFs_old[i];
       unsigned child_id = edgeVF_old->child_id;
 
-      MathPrgm *mp_child = mps->list[child_id];
+      MathPrgm *mp_child = mps->arr[child_id];
       RhpSense child_sense = mp_getsense(mp_child);
       assert(child_sense == RhpMin || child_sense == RhpMax);
 
@@ -699,7 +699,7 @@ int ccflib_equil(Model *mdl)
       edgeVF_empty(&dfsdat.edgeVFprimal);
       edgeVFb_init(&dfsdat.edgeVFdual, IdxNA);
 
-      dfsdat.path_sense = mp_getsense(empdag_up->mps.list[mpid]);
+      dfsdat.path_sense = mp_getsense(empdag_up->mps.arr[mpid]);
 
       UIntArray *primal_parents = &empdag_up->mps.rarcs[mpid];
 

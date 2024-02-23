@@ -113,7 +113,7 @@ static int mdl_exportasmpec_gmo(Model *mdl, Model *mdl_solver)
    mpid_t upper_id = uid2id(root_uid);
    assert(upper_id < empdag->mps.len);
 
-   MathPrgm *mp_upper = empdag->mps.list[upper_id];
+   MathPrgm *mp_upper = empdag->mps.arr[upper_id];
    RhpSense sense = mp_getsense(mp_upper);
 
    if (empdag->mps.Carcs[upper_id].len != 1) {
@@ -172,7 +172,7 @@ static int mdl_exportasmpec_gmo(Model *mdl, Model *mdl_solver)
    * one in the temporary fooc model to get the changes there
    * ---------------------------------------------------------------------- */
 
-   mp_upper = mdl_rhp_for_fooc->empinfo.empdag.mps.list[upper_id];
+   mp_upper = mdl_rhp_for_fooc->empinfo.empdag.mps.arr[upper_id];
    IdxArray mpvars = mp_upper->vars;
    IdxArray mpequs = mp_upper->equs;
    Avar v_upper;

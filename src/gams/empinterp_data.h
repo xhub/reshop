@@ -1,10 +1,7 @@
 #ifndef EMPPARSER_DATA_H
 #define EMPPARSER_DATA_H
 
-#include <stdint.h>
-
-#include "rhpidx.h"
-
+#include <stdbool.h>
 #include "gclgms.h"
 
 struct gdx_reader;

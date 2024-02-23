@@ -427,7 +427,7 @@ int empinterp_finalize(Interpreter *interp)
 
    if (mpid_regularmp(mp_equs)) {
       /* All unassigned equations now belong to mp_equs */
-      DagMpList *mplist = &interp->mdl->empinfo.empdag.mps;
+      DagMpArray *mplist = &interp->mdl->empinfo.empdag.mps;
 
       if (mp_equs >= mplist->len) {
          error("[empinterp] ERROR in finalization: MP id for remaining equations "
@@ -435,7 +435,7 @@ int empinterp_finalize(Interpreter *interp)
          return Error_EMPRuntimeError;
       }
 
-      MathPrgm *mp = mplist->list[mp_equs];
+      MathPrgm *mp = mplist->arr[mp_equs];
 
       EquMeta * restrict emeta = interp->mdl->ctr.equmeta; assert(emeta);
 
@@ -449,7 +449,7 @@ int empinterp_finalize(Interpreter *interp)
 
    if (mpid_regularmp(mp_vars)) {
       /* All unassigned variables now belong to mp_vars */
-      DagMpList *mplist = &interp->mdl->empinfo.empdag.mps;
+      DagMpArray *mplist = &interp->mdl->empinfo.empdag.mps;
 
       if (mp_vars >= mplist->len) {
          error("[empinterp] ERROR in finalization: MP id for remaining variables "
@@ -457,7 +457,7 @@ int empinterp_finalize(Interpreter *interp)
          return Error_EMPRuntimeError;
       }
 
-      MathPrgm *mp = mplist->list[mp_vars];
+      MathPrgm *mp = mplist->arr[mp_vars];
 
       VarMeta * restrict vmeta = interp->mdl->ctr.varmeta; assert(vmeta);
 
@@ -470,11 +470,11 @@ int empinterp_finalize(Interpreter *interp)
    }
 
    if (mpid_regularmp(mp_equs)) {
-      S_CHECK(mp_finalize(interp->mdl->empinfo.empdag.mps.list[mp_equs]));
+      S_CHECK(mp_finalize(interp->mdl->empinfo.empdag.mps.arr[mp_equs]));
    }
 
    if (mpid_regularmp(mp_vars) && mp_equs != mp_vars) {
-      S_CHECK(mp_finalize(interp->mdl->empinfo.empdag.mps.list[mp_vars]));
+      S_CHECK(mp_finalize(interp->mdl->empinfo.empdag.mps.arr[mp_vars]));
    }
    return OK;
 }

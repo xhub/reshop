@@ -665,7 +665,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
       S_CHECK_EXIT(rhp_idx_add(&objequs, objequ));
    } else if (probtype == MdlProbType_emp) {
       const EmpDag *empdag = &mdl->empinfo.empdag;
-      MathPrgm **mplist = empdag->mps.list;
+      MathPrgm **mplist = empdag->mps.arr;
 
       if (empdag->mps.len == 0) {
          error("[export2gmo] ERROR while exporting %s model '%.*s' #%u: EMPDAG "

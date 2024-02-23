@@ -13,6 +13,7 @@ typedef unsigned mpid_t;
 typedef unsigned mpeid_t;
 
 typedef UIntArray DagUidArray;
+typedef UIntArray MpIdArray;
 
 /* use macro since C requires enum to fit into an int ... */
 #define MpId_NA UINT_MAX

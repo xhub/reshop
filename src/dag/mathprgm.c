@@ -179,7 +179,7 @@ static int _chk_mpid(const Model *mdl, unsigned mp_id, const char * fn)
 static unsigned mp_getnamelen_(const MathPrgm * mp, unsigned mp_id)
 {
    assert(mp->mdl);
-   const struct mp_namedlist *mps = &mp->mdl->empinfo.empdag.mps;
+   const struct mp_namedarray *mps = &mp->mdl->empinfo.empdag.mps;
    const char *mp_name = mp_id < mps->len ? mps->names[mp_id] : NULL;
 
    return mp_name ? strlen(mp_name) : 0;

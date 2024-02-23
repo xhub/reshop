@@ -88,13 +88,13 @@ static int edgeVF_basic_arcdat(const EdgeVF *edgeVF, MathPrgm *mp,
 
 static int _print_edges_mps(const EmpDag* empdag, FILE* f)
 {
-   const struct mp_namedlist* mps = &empdag->mps;
+   const struct mp_namedarray* mps = &empdag->mps;
 
    for (unsigned i = 0, len = mps->len; i < len; ++i) {
       if (mps->Carcs[i].len == 0 && mps->Varcs[i].len == 0) continue;
 
       const UIntArray *Carcs = &mps->Carcs[i];
-      unsigned mp_id = mps->list[i]->id;
+      unsigned mp_id = mps->arr[i]->id;
 
       for (unsigned j = 0, alen = Carcs->len; j < alen; ++j) {
 
@@ -111,10 +111,10 @@ static int _print_edges_mps(const EmpDag* empdag, FILE* f)
 
       for (unsigned j = 0, alen = Varcs->len; j < alen; ++j) {
 
-         const struct rhp_edgeVF* edgeVF = &Varcs->list[j];
+         const struct rhp_empdag_Varc* edgeVF = &Varcs->arr[j];
          unsigned mpchild_id = edgeVF->child_id;
 
-         MathPrgm *mp = mps->list[i];
+         MathPrgm *mp = mps->arr[i];
          EdgeVFStrings VFstrings = {.do_free_weight = false};
 
          switch (edgeVF->type) {
@@ -143,13 +143,13 @@ static int _print_edges_mps(const EmpDag* empdag, FILE* f)
    return OK;
 }
 
-static int _print_edges_mpes(const struct mpe_namedlist* mpes, FILE* f)
+static int _print_edges_mpes(const struct mpe_namedarray* mpes, FILE* f)
 {
    for (unsigned i = 0, len = mpes->len; i < len; ++i) {
       if (mpes->arcs[i].len == 0) continue;
 
       const UIntArray *arcs = &mpes->arcs[i];
-      unsigned mpe_id = mpes->list[i]->id;
+      unsigned mpe_id = mpes->arr[i]->id;
 
 
       for (unsigned j = 0, alen = arcs->len; j < alen; ++j) {
@@ -169,12 +169,12 @@ static int _print_edges_mpes(const struct mpe_namedlist* mpes, FILE* f)
    return OK;
 }
 
-static int _print_mp_graph(const struct mp_namedlist* mps, FILE* f, const Container *ctr)
+static int _print_mp_graph(const struct mp_namedarray* mps, FILE* f, const Container *ctr)
 {
    for (unsigned i = 0, len = mps->len; i < len; ++i) {
-      if (!mps->list[i]) continue;
+      if (!mps->arr[i]) continue;
 
-      const MathPrgm *mp = mps->list[i];
+      const MathPrgm *mp = mps->arr[i];
 
       const char *nodestyle_mp, *prefix;
       RhpSense sense = mp_getsense(mp);
@@ -233,12 +233,12 @@ static int _print_mp_graph(const struct mp_namedlist* mps, FILE* f, const Contai
    return OK;
 }
 
-static int _print_mpe_graph(const struct mpe_namedlist* mpes, FILE* f, const Container *ctr)
+static int _print_mpe_graph(const struct mpe_namedarray* mpes, FILE* f, const Container *ctr)
 {
    for (unsigned i = 0, len = mpes->len; i < len; ++i) {
-      if (!mpes->list[i]) continue;
+      if (!mpes->arr[i]) continue;
 
-      const Mpe *mpe = mpes->list[i];
+      const Mpe *mpe = mpes->arr[i];
       const char *name = mpes->names[i];
       if (!name) {
          char *lname;

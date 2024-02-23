@@ -14,7 +14,7 @@ struct rhp_mathprgm;
 struct rhp_equilibrium;
 struct rhp_ovf_def;
 struct rhp_spmat;
-struct rhp_edgeVF;
+struct rhp_empdag_Varc;
 
 /** @brief backend type */
 enum rhp_backendtype {
@@ -427,7 +427,7 @@ RHP_PUBLIB
 struct rhp_mathprgm *rhp_empdag_newmp(struct rhp_mdl *mdl, unsigned sense);
 RHP_PUBLIB
 int rhp_empdag_mpaddmpVF(struct rhp_mdl *mdl, struct rhp_mathprgm *mp,
-                         struct rhp_mathprgm *mp_child, struct rhp_edgeVF *edgeVF);
+                         struct rhp_mathprgm *mp_child, struct rhp_empdag_Varc *edgeVF);
 RHP_PUBLIB
 int rhp_empdag_mpaddmpCTRL(struct rhp_mdl *mdl,  struct rhp_mathprgm *mp,
                            struct rhp_mathprgm *mp_child);
@@ -446,15 +446,15 @@ int rhp_empdag_mpeaddmp(struct rhp_mdl *mdl, struct rhp_equilibrium* mpe, struct
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-struct rhp_edgeVF * rhp_edgeVF_new(void);
+struct rhp_empdag_Varc * rhp_edgeVF_new(void);
 RHP_PUBLIB
-int rhp_edgeVF_init(struct rhp_edgeVF *edgeVF, rhp_idx ei);
+int rhp_edgeVF_init(struct rhp_empdag_Varc *edgeVF, rhp_idx ei);
 RHP_PUBLIB
-int rhp_edgeVF_free(struct rhp_edgeVF *edgeVF);
+int rhp_edgeVF_free(struct rhp_empdag_Varc *edgeVF);
 RHP_PUBLIB
-int rhp_edgeVF_setvar(struct rhp_edgeVF *edgeVF, rhp_idx vi);
+int rhp_edgeVF_setvar(struct rhp_empdag_Varc *edgeVF, rhp_idx vi);
 RHP_PUBLIB
-int rhp_edgeVF_setcst(struct rhp_edgeVF *edgeVF, double cst);
+int rhp_edgeVF_setcst(struct rhp_empdag_Varc *edgeVF, double cst);
 
 
 /* -------------------------------------------------------------------------

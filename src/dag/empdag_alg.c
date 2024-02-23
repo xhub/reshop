@@ -552,7 +552,7 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
    DagPathType cur_pathtype = pathdata.pathtype;
 
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      const EdgeVF *edgeVF = &Varcs->list[i];
+      const EdgeVF *edgeVF = &Varcs->arr[i];
 
       /* ------------------------------------------------------------------
        * If we have an adversarial MP, we add it to a list of MP to reformulate
@@ -561,7 +561,7 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
        * ------------------------------------------------------------------ */
 
       dagid_t mpid_child = edgeVF->child_id;
-      RhpSense sense = mp_getsense(empdag->mps.list[mpid_child]);
+      RhpSense sense = mp_getsense(empdag->mps.arr[mpid_child]);
 
       if ((sense == RhpMax && cur_pathtype == DfsPathVFMin) ||
           (sense == RhpMin && cur_pathtype == DfsPathVFMax)) {
@@ -637,7 +637,7 @@ int dfs_mpC(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
    assert(!pathtype_is_VF(pathdata.pathtype));
 
    if (Vlen > 0) {
-      RhpSense sense_parent = mp_getsense(empdag->mps.list[mpid_parent]);
+      RhpSense sense_parent = mp_getsense(empdag->mps.arr[mpid_parent]);
       assert(sense_parent == RhpMax || sense_parent == RhpMin);
       DagPathType cur_pathtype = sense_parent == RhpMin ? DfsPathVFMin : DfsPathVFMax;
 
@@ -764,7 +764,7 @@ int dfs_mpNashOrRoot(dagid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd
     * --------------------------------------------------------------------- */
 
    if (Vlen > 0) {
-      RhpSense sense_parent = mp_getsense(empdag->mps.list[mpid_parent]);
+      RhpSense sense_parent = mp_getsense(empdag->mps.arr[mpid_parent]);
       assert(sense_parent == RhpMax || sense_parent == RhpMin);
       DagPathType cur_pathtype = sense_parent == RhpMin ? DfsPathVFMin : DfsPathVFMax;
       pathdata_child.pathtype = cur_pathtype;
@@ -877,8 +877,8 @@ int tree_get_path_backward(EmpDagDfsData *dfsdata, mpid_t mp_parent, mpid_t mp_c
    assert(mp_child != mp_parent);
    assert(mp_parent < dfsdata->num_mps && mp_child < dfsdata->num_mps);
 
-   const DagMpList *mps = &dfsdata->empdag->mps;
-   const DagMpeList *mpes = &dfsdata->empdag->mpes;
+   const DagMpArray *mps = &dfsdata->empdag->mps;
+   const DagMpeArray *mpes = &dfsdata->empdag->mpes;
 
    /* ---------------------------------------------------------------------
     * To get the path between 2 nodes, the easiest is to go up from the
@@ -946,7 +946,7 @@ NONNULL static inline
 bool is_child_Varcs(const struct VFedges *Varcs, mpid_t mp_id)
 {
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      if (Varcs->list[i].child_id == mp_id) return true;
+      if (Varcs->arr[i].child_id == mp_id) return true;
    }
 
    return false;
@@ -1123,8 +1123,8 @@ int report_error_foreign_equ(const Model *mdl, rhp_idx ei, mpid_t mp_id)
 NONNULL static
 int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
 {
-   const DagMpList *mps = &dfsdata->empdag->mps;
-   const MathPrgm * restrict mp = mps->list[mp_id]; assert(mp);
+   const DagMpArray *mps = &dfsdata->empdag->mps;
+   const MathPrgm * restrict mp = mps->arr[mp_id]; assert(mp);
    DagMpPpty * restrict mp_ppty = &dfsdata->mp_ppty[mp_id];
    const IdxArray * restrict equs = &mp->equs;
    const Model *mdl = dfsdata->empdag->mdl;
@@ -1149,7 +1149,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
       /* If the parent is an equilibrium, the */
       if (parent_is_MP && rarcTypeCtrl(uid)) {
          level += 1;
-         MpType parent_type = mp_gettype(mps->list[pid]);
+         MpType parent_type = mp_gettype(mps->arr[pid]);
          S_CHECK(mp_ctrledge(dfsdata->empdag, level, parent_type, type));
       }
 
@@ -1164,7 +1164,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
 
       if (uidisMP(uid) && rarcTypeCtrl(uid)) {
          l += 1;
-         MpType parent_type = mp_gettype(mps->list[pid]);
+         MpType parent_type = mp_gettype(mps->arr[pid]);
          S_CHECK(mp_ctrledge(dfsdata->empdag, level, parent_type, type));
       }
 
@@ -1336,11 +1336,11 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
                unsigned child_lvl = path->ctrl_edges + level;
 
                if (level <= 1 && child_lvl > 1) {
-                  const MathPrgm *mp_child = mps->list[mp_var];
+                  const MathPrgm *mp_child = mps->arr[mp_var];
                   MpType child_type = mp_gettype(mp_child);
                   S_CHECK(mp_ctrledge(dfsdata->empdag, child_lvl, type, child_type));
                } else if (level == 0 && child_lvl == 1) {
-                  const MathPrgm *mp_child = mps->list[mp_var];
+                  const MathPrgm *mp_child = mps->arr[mp_var];
                   MpType child_type = mp_gettype(mp_child);
                   S_CHECK(mp_ctrledge(dfsdata->empdag, 1, type, child_type));
                }
@@ -1389,7 +1389,7 @@ NONNULL static
 int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
 {
    EmpDag *empdag = dfsdata->empdag;
-   const DagMpeList *mpes = &empdag->mpes;
+   const DagMpeArray *mpes = &empdag->mpes;
    DagMpePpty * restrict mpe_ppty = &dfsdata->mpe_ppty[mpe_id];
    unsigned num_err = 0;
 
@@ -1399,7 +1399,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
     * --------------------------------------------------------------------- */
 
    unsigned level;
-   const DagMpList *mps = &empdag->mps;
+   const DagMpArray *mps = &empdag->mps;
    bool mp_parent_opt = false, mp_parent_vi = false;
 
    if (mpes->rarcs[mpe_id].len > 0) {
@@ -1408,7 +1408,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
       assert(uidisMP(pid));
 
       level = dfsdata->mp_ppty[pid].level;
-      MpType type = mp_gettype(mps->list[pid]);
+      MpType type = mp_gettype(mps->arr[pid]);
       switch (type) {
       case MpTypeVi:  mp_parent_vi  = true; break;
       case MpTypeOpt: mp_parent_opt = true; break;
@@ -1431,7 +1431,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
          return Error_NotImplemented;
       }
 
-      MpType type = mp_gettype(mps->list[pid]);
+      MpType type = mp_gettype(mps->arr[pid]);
       switch (type) {
       case MpTypeVi:  mp_parent_vi  = true; break;
       case MpTypeOpt: mp_parent_opt = true; break;
@@ -1493,7 +1493,7 @@ int empdag_analysis(EmpDag * restrict empdag)
       mpid_t mpid = uid2id(root_uid);
       assert(mpid < empdag->mps.len);
 
-      MpType mptype = mp_gettype(empdag->mps.list[mpid]);
+      MpType mptype = mp_gettype(empdag->mps.arr[mpid]);
       switch (mptype) {
       case MpTypeOpt:
       case MpTypeCcflib:

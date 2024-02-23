@@ -225,7 +225,7 @@ int rmdl_reset_modeltype(Model *mdl, Fops *fops)
 
       if (empdag_singleprob(empdag)) {
 
-         MathPrgm *mp = mdl->empinfo.empdag.mps.list[0];
+         MathPrgm *mp = mdl->empinfo.empdag.mps.arr[0];
          if (!mp) { return error_runtime(); }
 
          rhp_idx objvar = mp_getobjvar(mp);
@@ -725,10 +725,10 @@ int rmdl_fix_objequ_value(Model *mdl)
                       mdl_fmtargs(mdl), val);
    }
 
-   struct mp_namedlist *mps = &mdl->empinfo.empdag.mps;
+   struct mp_namedarray *mps = &mdl->empinfo.empdag.mps;
 
    for (unsigned i = 0, len = mps->len; i < len; ++i) {
-      MathPrgm *mp = mps->list[i];
+      MathPrgm *mp = mps->arr[i];
       if (!mp) continue;
 
       S_CHECK(mp_fixobjequval(mp));

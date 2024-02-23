@@ -122,7 +122,7 @@ void empdag_init(EmpDag *empdag, Model *mdl)
 
    rhp_uint_init(&empdag->roots);
    rhp_uint_init(&empdag->mps2reformulate);
-   _mp_namedlist_init(&empdag->mps);
+   _mp_namedarray_init(&empdag->mps);
    _mpe_namedlist_init(&empdag->mpes);
 
    empdag->empdag_next = NULL;
@@ -258,7 +258,7 @@ int empdag_fini(EmpDag *empdag)
 
    unsigned mp_len = empdag->mps.len;
 
-   MathPrgm **mps = empdag->mps.list;
+   MathPrgm **mps = empdag->mps.arr;
    for (unsigned i = 0; i < mp_len; ++i) {
       S_CHECK(mp_finalize(mps[i]));
    }
@@ -304,7 +304,7 @@ int empdag_fini(EmpDag *empdag)
 
    unsigned n_opt = 0, n_vi = 0, n_ccflib = 0;
    for (unsigned i = 0, len = empdag->mps.len; i < len; ++i) {
-      MathPrgm *mp = empdag->mps.list[i]; assert(mp);
+      MathPrgm *mp = empdag->mps.arr[i]; assert(mp);
       if (mp_isopt(mp)) { n_opt++; }
       else if (mp_isvi(mp)) { n_vi++; }
       else if (mp_isccflib(mp)) { n_ccflib++; }
@@ -339,7 +339,7 @@ void empdag_rel(EmpDag *empdag)
    * Free MP and MPE data structures
    ****************************************************************************/
 
-   _mp_namedlist_free(&empdag->mps);
+   _mp_namedarray_free(&empdag->mps);
    _mpe_namedlist_free(&empdag->mpes);
 
    if (empdag->empdag_next) {
@@ -519,7 +519,7 @@ int empdag_initfromDAG(EmpDag * restrict empdag,
    /* TODO(xhub) should this be done elsewhere? */
    S_CHECK(mdl_setprobtype(mdl, MdlProbType_emp));
 
-   S_CHECK(_mp_namedlist_copy(&empdag->mps, &empdag_up->mps, empdag->mdl));
+   S_CHECK(_mp_namedarray_copy(&empdag->mps, &empdag_up->mps, empdag->mdl));
    S_CHECK(_mpe_namedlist_copy(&empdag->mpes, &empdag_up->mpes, empdag->mdl));
 
    S_CHECK(rhp_uint_copy(&empdag->roots, &empdag_up->roots));
@@ -532,7 +532,7 @@ int empdag_addmp(EmpDag *empdag, RhpSense sense, unsigned *id)
    MathPrgm *mp;
    A_CHECK(mp, mp_new(empdag->mps.len, sense, empdag->mdl));
 
-   S_CHECK(_mp_namedlist_add(&empdag->mps, mp, NULL));
+   S_CHECK(_mp_namedarray_add(&empdag->mps, mp, NULL));
 
    *id = mp->id;
 
@@ -543,7 +543,7 @@ MathPrgm *empdag_newmp(EmpDag *empdag, RhpSense sense)
 {
    unsigned mp_id;
    SN_CHECK(empdag_addmp(empdag, sense, &mp_id));
-   return empdag->mps.list[mp_id];
+   return empdag->mps.arr[mp_id];
 }
 
 int empdag_addmpnamed(EmpDag *empdag, RhpSense sense,
@@ -554,7 +554,7 @@ int empdag_addmpnamed(EmpDag *empdag, RhpSense sense,
 
    *id = mp->id;
 
-   return _mp_namedlist_add(&empdag->mps, mp, name);
+   return _mp_namedarray_add(&empdag->mps, mp, name);
 }
 
 MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense,
@@ -562,7 +562,7 @@ MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense,
 {
    unsigned mp_id;
    SN_CHECK(empdag_addmpnamed(empdag, sense, name, &mp_id));
-   return empdag->mps.list[mp_id];
+   return empdag->mps.arr[mp_id];
 }
 
 int empdag_addmpe(EmpDag *empdag, unsigned *id)
@@ -598,7 +598,7 @@ Mpe* empdag_newmpe(EmpDag *empdag)
 
    empdag->finalized = false;
 
-   return empdag->mpes.list[mpe_id];
+   return empdag->mpes.arr[mpe_id];
 }
 
 Mpe* empdag_newmpenamed(EmpDag *empdag, const char* name)
@@ -608,7 +608,7 @@ Mpe* empdag_newmpenamed(EmpDag *empdag, const char* name)
 
    empdag->finalized = false;
 
-   return empdag->mpes.list[mpe_id];
+   return empdag->mpes.arr[mpe_id];
 }
 
 int empdag_rootsaddmpe(EmpDag *empdag, mpeid_t mpe_id)
@@ -676,7 +676,7 @@ int empdag_mpeaddmpbyid(EmpDag *empdag, mpeid_t mpe_id, mpid_t mp_id)
    S_CHECK(chk_mpeid(empdag, mpe_id));
    S_CHECK(chk_mpid(empdag, mp_id));
 
-   MathPrgm *mp = empdag->mps.list[mp_id];
+   MathPrgm *mp = empdag->mps.arr[mp_id];
    if (mp->type == MpTypeUndef) {
       error("[empdag] ERROR: the MP(%s) has an undefined type",
             empdag_getmpname(empdag, mp_id));
@@ -773,7 +773,7 @@ int empdag_mpeaddmpsbyid(EmpDag *empdag, mpeid_t mpe_id,
 }
 
 int empdag_addedge_byuids(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
-                          EmpEdge *edge)
+                          EmpDagEdge *edge)
 {
 
    unsigned id_parent = uid2id(uid_parent);
@@ -825,7 +825,7 @@ int empdag_getmpbyname(const EmpDag *empdag, const char * const name,
       return Error_NotFound;
    }
 
-   *mp = empdag->mps.list[idx];
+   *mp = empdag->mps.arr[idx];
 
    return OK;
 }
@@ -850,7 +850,7 @@ int empdag_getmpbyid(const EmpDag *empdag, unsigned id,
 {
    S_CHECK(chk_mpid(empdag, id));
 
-   *mp = empdag->mps.list[id];
+   *mp = empdag->mps.arr[id];
 
    return OK;
 }
@@ -862,7 +862,7 @@ unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp)
       if (chk_mpid(empdag, next_id)) {
          return UINT_MAX;
       }
-      MathPrgm *mp_next = empdag->mps.list[next_id];
+      MathPrgm *mp_next = empdag->mps.arr[next_id];
       mp = mp_next;
    }
 
@@ -880,7 +880,7 @@ int empdag_getmpebyname(const EmpDag *empdag, const char * const name,
       return Error_NotFound;
    }
 
-   *mpe = empdag->mpes.list[idx];
+   *mpe = empdag->mpes.arr[idx];
 
    return OK;
 }
@@ -903,7 +903,7 @@ int empdag_getmpebyid(const EmpDag *empdag, unsigned id, Mpe **mpe)
 {
    S_CHECK(chk_mpeid(empdag, id));
 
-   *mpe = empdag->mpes.list[id];
+   *mpe = empdag->mpes.arr[id];
 
    return OK;
 }
@@ -931,8 +931,8 @@ int empdag_check(EmpDag *empdag)
    int status = OK;
 
    const UIntArray *roots = &empdag->roots;
-   const struct mp_namedlist *mps = &empdag->mps;
-   const struct mpe_namedlist *mpes = &empdag->mpes;
+   const struct mp_namedarray *mps = &empdag->mps;
+   const struct mpe_namedarray *mpes = &empdag->mpes;
 
    unsigned mp_len = empdag_getmplen(empdag);
    unsigned mpe_len = empdag_getmpelen(empdag);
@@ -951,7 +951,7 @@ int empdag_check(EmpDag *empdag)
     * - are finalized
     * - have parents or are roots */
    for (unsigned i = 0; i < mp_len; ++i) {
-      const MathPrgm *mp = mps->list[i];
+      const MathPrgm *mp = mps->arr[i];
       if (!mp) continue;
 
       if (!(mp->status & MpFinalized)) {
@@ -971,7 +971,7 @@ int empdag_check(EmpDag *empdag)
 
    /* Check if all MPE node have parents or are roots */
    for (unsigned i = 0; i < mpe_len; ++i) {
-      const Mpe *mpe = mpes->list[i];
+      const Mpe *mpe = mpes->arr[i];
       if (!mpe) continue;
 
       /* If we have no parent and are not in the root set, we error */
@@ -1011,7 +1011,7 @@ const EdgeVF* empdag_find_edgeVF(const EmpDag *empdag, unsigned mpid_parent,
 
    if (edgeVF_idx == UINT_MAX) { return NULL; }
    
-   return &Varcs->list[edgeVF_idx];
+   return &Varcs->arr[edgeVF_idx];
 }
 
 /**
@@ -1060,7 +1060,7 @@ const char* empdag_printid(const EmpDag *empdag)
 
 int empdag_reserve_mp(EmpDag *empdag, unsigned reserve)
 {
-   return _mp_namedlist_reserve(&empdag->mps, reserve);
+   return _mp_namedarray_reserve(&empdag->mps, reserve);
 }
 
 static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
@@ -1194,7 +1194,7 @@ int empdag_single_MP_to_Nash(EmpDag* empdag)
 
    mdl_setprobtype(empdag->mdl, MdlProbType_emp);
    
-   MathPrgm *mp = empdag->mps.list[0];
+   MathPrgm *mp = empdag->mps.arr[0];
    char *name;
    mpeid_t mpe_id;
    A_CHECK(name, strdup("equilibrium"));
@@ -1238,7 +1238,7 @@ static int dfs_mplist(const EmpDag *empdag, daguid_t uid, UIntArray *mplist)
 
    if (!Varcs) { return OK; }
 
-   struct rhp_edgeVF *Vlist = Varcs->list;
+   struct rhp_empdag_Varc *Vlist = Varcs->arr;
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
       S_CHECK(dfs_mplist(empdag, mpid2uid(Vlist[i].child_id), mplist));
    }
@@ -1257,10 +1257,10 @@ int empdag_subdag_getmplist(const EmpDag *empdag, daguid_t subdag_root,
 int empdag_finalize(Model *mdl)
 {
    EmpDag *empdag = &mdl->empinfo.empdag;
-   DagMpList *mps = &empdag->mps;
+   DagMpArray *mps = &empdag->mps;
    
    for (unsigned i = 0, len = mps->len; i < len; ++i) {
-      MathPrgm *mp = mps->list[i];
+      MathPrgm *mp = mps->arr[i];
 
       if (!mp || mp->status & MpFinalized) { continue; }
 
@@ -1273,7 +1273,7 @@ int empdag_finalize(Model *mdl)
 int empdag_collectroots(EmpDag *empdag, UIntArray *roots)
 {
    rhp_uint_init(roots);
-   MathPrgm **mps =  empdag->mps.list;
+   MathPrgm **mps =  empdag->mps.arr;
    UIntArray * restrict rarcs = empdag->mps.rarcs;
    for (unsigned i = 0, n_mps = empdag->mps.len; i < n_mps; ++i) {
       if (rarcs[i].len == 0) {
@@ -1281,7 +1281,7 @@ int empdag_collectroots(EmpDag *empdag, UIntArray *roots)
       }
    }
 
-   Mpe **mpes =  empdag->mpes.list;
+   Mpe **mpes =  empdag->mpes.arr;
    rarcs = empdag->mpes.rarcs;
    for (unsigned i = 0, n_mpes = empdag->mpes.len; i < n_mpes; ++i) {
       if (rarcs[i].len == 0) {

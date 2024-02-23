@@ -15,34 +15,33 @@
  *
  */
 
-struct rhp_edgeVF;
 struct empdag_edge;
 
 /** Edges for value function */
-struct VFedges {
+typedef struct VFedges {
   unsigned len;
   unsigned max;
-  struct rhp_edgeVF *list;
-};
+  Varc *arr;
+} VarcArray;
 
-typedef struct mp_namedlist {
+typedef struct mp_namedarray {
   unsigned len;
   unsigned max;
   const char **names;
-  MathPrgm **list;
+  MathPrgm **arr;
   DagUidArray *Carcs;                 /**< Control edges                        */
-  struct VFedges *Varcs;            /**< VF edges                             */
+  VarcArray *Varcs;                   /**< VF edges                             */
   DagUidArray *rarcs;                 /**< Parents (reverse arcs) indices       */
-} DagMpList;
+} DagMpArray;
 
-typedef struct mpe_namedlist {
+typedef struct mpe_namedarray {
   unsigned len;
   unsigned max;
   const char **names;
-  Mpe **list;
+  Mpe **arr;
   DagUidArray *arcs;       /**< Children indices                     */
   DagUidArray *rarcs;      /**< EMPDAG Parents (reverse arcs) indices       */
-} DagMpeList;
+} DagMpeArray;
 
 /** @brief Variational Equilibrium details */
 struct vi_equil {
@@ -130,12 +129,12 @@ typedef struct empdag {
    EmpDagEdgeStats edge_stats;
    bool finalized;
 
-   DagMpList mps;
-   DagMpeList mpes;
-   UIntArray roots;
+   DagMpArray mps;
+   DagMpeArray mpes;
+   DagUidArray roots;
 
-   UIntArray mps2reformulate;
-   UIntArray saddle_path_starts;
+   MpIdArray mps2reformulate;
+   MpIdArray saddle_path_starts;
 
    struct {
       RhpSense sense;
@@ -231,7 +230,7 @@ int empdag_getmpeidbyname(const EmpDag *empdag, const char *name,
  * -------------------------------------------------------------------------- */
 
 int empdag_mpVFmpbyid(EmpDag *empdag, unsigned id_parent,
-                      const struct rhp_edgeVF *edgeVF) NONNULL;
+                      const struct rhp_empdag_Varc *edgeVF) NONNULL;
 int empdag_mpCTRLmpbyid(EmpDag *empdag, unsigned id_parent, unsigned id_child)
                         NONNULL;
 int empdag_mpCTRLmpebyid(EmpDag *empdag, mpid_t mpid, mpeid_t mpeid)
@@ -242,7 +241,7 @@ int empdag_mpeaddmpsbyid(EmpDag *empdag, mpeid_t mpeid,
                          const UIntArray *mps) NONNULL;
 
 int empdag_mpVFmpbyname(EmpDag *empdag, const char *mp1_name,
-                        const struct rhp_edgeVF *vf_info) NONNULL;
+                        const struct rhp_empdag_Varc *vf_info) NONNULL;
 int empdag_mpCTRLmpbyname(EmpDag *empdag, const char *mp1_name,
                           const char *mp2_name) NONNULL;
 int empdag_mpCTRLmpebyname(EmpDag *empdag, const char *mp_name,
@@ -293,7 +292,7 @@ const char *empdag_getmpname(const EmpDag *empdag, mpid_t mpid);
 const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getmpename(const EmpDag *empdag, mpeid_t mpeid);
 unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp) NONNULL;
-const struct rhp_edgeVF* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
+const struct rhp_empdag_Varc* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
                                             mpid_t mpid_child) NONNULL;
 
 /* --------------------------------------------------------------------------
@@ -359,7 +358,7 @@ int empdag2dotenvname(const EmpDag* empdag, const char *envname) NONNULL;
 static inline MathPrgm* empdag_getmpfast(const EmpDag *empdag, mpid_t mpid)
 {
    assert(mpid < empdag->mps.len);
-   return empdag->mps.list[mpid];
+   return empdag->mps.arr[mpid];
 }
 
 static inline unsigned empdag_getmplen(const EmpDag *empdag)
@@ -370,7 +369,7 @@ static inline unsigned empdag_getmplen(const EmpDag *empdag)
 static inline Mpe* empdag_getmpefast(const EmpDag *empdag, mpeid_t mpeid)
 {
    assert(mpeid < empdag->mpes.len);
-   return empdag->mpes.list[mpeid];
+   return empdag->mpes.arr[mpeid];
 }
 
 static inline unsigned empdag_getmpelen(const EmpDag *empdag)
