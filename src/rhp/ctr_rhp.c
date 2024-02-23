@@ -224,7 +224,7 @@ int rctr_ensure_pool(Container *ctr, Container *ctr_src)
 
    if (ctr_src) {
       if (ctr->pool) {
-         pool_rel(ctr->pool);
+         pool_release(ctr->pool);
          ctr->pool = NULL;
       }
 
@@ -265,7 +265,7 @@ int rctr_ensure_pool(Container *ctr, Container *ctr_src)
       ctr->pool = p;
    } else {
      if (p) {
-       pool_rel(p);
+       pool_release(p);
      }
      A_CHECK(ctr->pool, pool_create_gams());
    }

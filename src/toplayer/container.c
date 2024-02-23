@@ -52,7 +52,7 @@ static void dealloc_(Container *ctr)
    FREE(ctr->varmeta);
    FREE(ctr->equmeta);
 
-   pool_dealloc(ctr->pool);
+   pool_release(ctr->pool);
 
    aequ_empty(&ctr->transformations.flipped_equs);
    aequ_free(ctr->func2eval);

@@ -1,11 +1,12 @@
-#include "instr.h"
 #include "reshop_config.h"
-#include <float.h>
+
 /* For M_PI and such  */
 #define _USE_MATH_DEFINES
 
 #include <math.h>
+#include <float.h>
 
+#include "instr.h"
 #include "macros.h"
 #include "pool.h"
 #include "printout.h"
@@ -17,10 +18,10 @@
  *
  *  @return the allocated pool
  */
-struct nltree_pool* pool_alloc(void)
+NlPool* pool_new(void)
 {
-   struct nltree_pool *pool;
-   MALLOC_NULL(pool, struct nltree_pool, 1);
+   NlPool *pool;
+   MALLOC_NULL(pool, NlPool, 1);
 
    pool->data = NULL;
    pool->cnt = 1;
@@ -37,7 +38,7 @@ struct nltree_pool* pool_alloc(void)
  *
  *  @param  pool  the pool to deallocate
  */
-void pool_dealloc(struct nltree_pool* pool)
+void pool_release(NlPool* pool)
 {
    if (!pool) {
       return;
@@ -46,7 +47,7 @@ void pool_dealloc(struct nltree_pool* pool)
    if (pool->cnt > 0) {
       pool->cnt--;
    } else {
-      error("%s :: cnt is already 0!\n", __func__);
+      error("%s ERROR: cnt is already 0!\n", __func__);
    }
 
    if (pool->cnt == 0) {
@@ -68,12 +69,12 @@ void pool_dealloc(struct nltree_pool* pool)
  *
  * @return    the newly created pool
  */
-struct nltree_pool* pool_copy_and_own(struct nltree_pool* p)
+NlPool* pool_copy_and_own(NlPool* p)
 {
    assert(p->data);
 
-   struct nltree_pool* pcopy; 
-   AA_CHECK(pcopy, pool_alloc());
+   NlPool* pcopy; 
+   AA_CHECK(pcopy, pool_new());
 
    MALLOC_EXIT_NULL(pcopy->data, double, p->max);
    memcpy(pcopy->data, p->data, p->len*sizeof(double));
@@ -85,7 +86,7 @@ struct nltree_pool* pool_copy_and_own(struct nltree_pool* p)
    return pcopy;
 
 _exit:
-   pool_dealloc(pcopy);
+   pool_release(pcopy);
    return NULL;
 }
 
@@ -95,10 +96,10 @@ _exit:
  *
  *  @return a GAMS pool or NULL if there is an error
  */
-struct nltree_pool* pool_create_gams(void)
+NlPool* pool_create_gams(void)
 {
-   struct nltree_pool *p;
-   AA_CHECK(p, pool_alloc());
+   NlPool *p;
+   AA_CHECK(p, pool_new());
 
    MALLOC_EXIT_NULL(p->data, double, 20);
 
@@ -130,7 +131,7 @@ struct nltree_pool* pool_create_gams(void)
    return p;
 
 _exit:
-   pool_dealloc(p);
+   pool_release(p);
    return NULL;
 }
 
@@ -141,7 +142,7 @@ _exit:
  *
  *  @return   a pointer to the pool
  */
-struct nltree_pool* pool_get(struct nltree_pool* p)
+NlPool* pool_get(NlPool* p)
 {
    if (p) {
       p->cnt++;
@@ -150,20 +151,6 @@ struct nltree_pool* pool_get(struct nltree_pool* p)
    return p;
 }
 
-
-/** 
- *  @brief  decrease the reference counter
- *
- *  @warning  this function should be used only by experts
- *
- */
-void pool_rel(struct nltree_pool* p)
-{
-   if (p) {
-      assert(p->cnt > 0);
-      p->cnt--;
-   }
-}
 
 unsigned pool_getidx(NlPool *pool, double val)
 {
@@ -211,20 +198,25 @@ unsigned pool_getidx(NlPool *pool, double val)
              pool->max = MAX(2*pool->max, pool->len + 10);
              REALLOC_(pool->data, double, pool->max);
           } else {
-             double *orig_data = pool->data;
-             struct nltree_pool *p = pool_alloc();
+
+             NlPool *p = pool_new();
              p->max = MAX(2*pool->max, pool->len + 10);
-             p->len = pool->len;
 
              MALLOC_(p->data, double, p->max);
-             memcpy(p->data, orig_data, p->len*sizeof(double));
+             memcpy(p->data, pool->data, pool->len*sizeof(double));
              p->own = true;
-             p->cnt = pool->cnt;
+             p->len = pool->len;
 
-             /* TODO(xhub) why not use pool_dealloc? */
-             pool_rel(pool);
+            /* Copy counter value and decrease the counter of the original one
+             * We do not need to free here has the data was not owned and the
+             * ownership of the NlPool object is transfered
+             */
+             p->cnt = pool->cnt;
+             pool->cnt--;
 
              memcpy(pool, p, sizeof(*p));
+
+            FREE(p);
           }
       }
 

@@ -950,7 +950,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
          REALLOC_(ctr->pool->data, double, ctr->pool->max);
       } else {
          struct nltree_pool *p;
-         A_CHECK(p, pool_alloc());
+         A_CHECK(p, pool_new());
          p->own = true;
          p->len = ctr->pool->len;
          p->max = new_max;
@@ -962,7 +962,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
           * switch pools
           * ----------------------------------------------------------------- */
 
-         pool_dealloc(ctr->pool);
+         pool_release(ctr->pool);
          ctr->pool = p;
       }
    }

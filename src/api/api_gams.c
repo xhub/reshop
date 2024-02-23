@@ -143,9 +143,13 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
       return Error_NullPointer;
    }
 
-   if (fabs(gms_pool[0] - 1.) > DBL_EPSILON) { ctr->pool = NULL; return OK; }
+   /* TODO: this should disappear */
+   if (fabs(gms_pool[0] - 1.) > DBL_EPSILON) {
+      ctr->pool = NULL;
+      return OK;
+   }
 
-   A_CHECK(ctr->pool, pool_alloc());
+   A_CHECK(ctr->pool, pool_new());
 
    ctr->pool->data = gms_pool;
    ctr->pool->len = size;
@@ -481,7 +485,17 @@ int rhp_gms_fillmdl(Model *mdl)
    ctr->n = n;
    ctr->m = m;
 
-   S_CHECK(gams_initpool_from_gmo(ctr, gmoPPool(gmo), gmoNLConst(gmo)));
+  /* ----------------------------------------------------------------------
+   * We have to circumvent that the pool is not initialized when there is no
+   * NL equations (2024.02.22)
+   * ---------------------------------------------------------------------- */
+
+   int pool_size = gmoNLConst(gmo);
+   if (gmoNLM(gmo) == 0) {
+      pool_size = 0;
+   }
+
+   S_CHECK(gams_initpool_from_gmo(ctr, gmoPPool(gmo), pool_size));
 
    double gms_pinf = gmoPinf(gmo);
    double gms_minf = gmoMinf(gmo);

@@ -22,13 +22,12 @@ typedef struct nltree_pool {
    bool own;                 /**< true if the array is managed by the program */
 } NlPool;
 
-void pool_dealloc(NlPool* pool);
-NlPool* pool_alloc(void) MALLOC_ATTR(pool_dealloc,1);
+void pool_release(NlPool* pool);
+NlPool* pool_new(void) MALLOC_ATTR(pool_release,1);
 
 NlPool* pool_copy_and_own(NlPool* p) NONNULL;
 NlPool* pool_create_gams(void);
 NlPool* pool_get(NlPool* p);
-void pool_rel(NlPool* p);
 
 unsigned pool_getidx(NlPool *pool, double val) NONNULL;
 
