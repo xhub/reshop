@@ -76,7 +76,7 @@ gams_test:
   before_script:
     - export RESHOP_MAKESELF_UNATTENDED=1
     - apt-get update
-    - apt-get install numdiff wget -y
+    - apt-get install numdiff wget xz-utils -y
     - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xfZ libvrepr.tar.xz -C /tmp/
   script:
     - bash build/*.run
