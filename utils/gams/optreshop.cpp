@@ -134,9 +134,6 @@ int main(int argc, char** argv)
 
    gmsopt.writeDef();
 
-#ifdef GAMS_BUILD
    gmsopt.writeDoxygen(true);
-#else
    gmsopt.writeMarkdown();
-#endif
 }
