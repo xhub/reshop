@@ -1033,7 +1033,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
     * need to generate the pool. rmdl_compress should already have allocated
     * the pool ... */
    if (!ctr_src->pool) {
-     A_CHECK_EXIT(ctr_src->pool, pool_create_gams());
+     A_CHECK_EXIT(ctr_src->pool, pool_new_gams());
    }
 
    /* ----------------------------------------------------------------------

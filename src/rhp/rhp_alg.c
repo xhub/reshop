@@ -625,6 +625,10 @@ int rmdl_prepare_export(Model * restrict mdl_src, Model * restrict mdl_dst)
     * when we want to use it.
     * ---------------------------------------------------------------------- */
 
+   if (ctr_dst->pool) {
+      pool_release(ctr_dst->pool);
+   }
+
    ctr_dst->pool = pool_get(ctr->pool); 
 
    /* ----------------------------------------------------------------------
@@ -935,7 +939,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 
    double start = get_walltime();
 
-   S_CHECK(rctr_ensure_pool(ctr, NULL));
+   S_CHECK(rctr_ensure_pool(ctr));
 
    offset_pool = ctr->pool->len;
 
@@ -944,26 +948,13 @@ int rmdl_presolve(Model *mdl, unsigned backend)
     * ---------------------------------------------------------------------- */
 
    if (ctr->pool->len + cdat->total_n > ctr->pool->max) {
-      size_t new_max = ctr->pool->len + cdat->total_n;
+      unsigned new_max = ctr->pool->len + cdat->total_n;
+
       if (ctr->pool->own) {
          ctr->pool->max = new_max;
          REALLOC_(ctr->pool->data, double, ctr->pool->max);
       } else {
-         struct nltree_pool *p;
-         A_CHECK(p, pool_new());
-         p->own = true;
-         p->len = ctr->pool->len;
-         p->max = new_max;
-         double *orig_data = ctr->pool->data;
-         MALLOC_(p->data, double, p->max);
-         memcpy(p->data, orig_data, ctr->pool->len*sizeof(double));
-
-         /* -----------------------------------------------------------------
-          * switch pools
-          * ----------------------------------------------------------------- */
-
-         pool_release(ctr->pool);
-         ctr->pool = p;
+         S_CHECK(pool_copy_and_own_data(ctr->pool, new_max));
       }
    }
 

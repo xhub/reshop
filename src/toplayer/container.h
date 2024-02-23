@@ -57,7 +57,7 @@ typedef struct container {
       bool inuse;               /**< true if the memory is inuse (for debugging) */
    } workspace;                 /**< workspace memory area                   */
 
-   struct nltree_pool *pool;    /**< pool of numerical values */
+   NlPool *pool;                /**< pool of numerical values */
 
    Equ *equs;                   /**< an array of equations */
    Var *vars;                   /**< an array of variables */

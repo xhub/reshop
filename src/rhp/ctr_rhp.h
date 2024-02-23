@@ -55,24 +55,12 @@ typedef struct equ_info EquInfo;
  * rmdl_ensure_pool is known to look for uninit memory
  * ------------------------------------------------------------------------- */
 
-#if defined(__has_feature)
-#  if __has_feature(address_sanitizer)
-#define NO_ASAN __attribute__((no_sanitize("address")))
-#  endif
-#endif
-
-#ifndef NO_ASAN
-#ifdef __SANITIZE_ADDRESS__
-#define NO_ASAN __attribute__((no_sanitize_address))
-#else
-#define NO_ASAN
-#endif
-#endif
 
 int rhp_chk_ctr(const Container *ctr, const char *fn);
 
 int rctr_delete_var(Container *ctr, rhp_idx vi);
-int rctr_ensure_pool(Container *ctr, Container *ctr_src) NO_ASAN;
+int rctr_ensure_pool(Container *ctr);
+int rctr_inherit_pool(Container *ctr, Container *ctr_src);
 NONNULL ACCESS_ATTR(write_only, 3)
 int rctr_evalfunc(Container *ctr, rhp_idx ei, double * restrict F);
 NONNULL ACCESS_ATTR(read_only, 3) ACCESS_ATTR(write_only, 4)

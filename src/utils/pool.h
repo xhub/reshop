@@ -25,10 +25,11 @@ typedef struct nltree_pool {
 void pool_release(NlPool* pool);
 NlPool* pool_new(void) MALLOC_ATTR(pool_release,1);
 
-NlPool* pool_copy_and_own(NlPool* p) NONNULL;
-NlPool* pool_create_gams(void);
-NlPool* pool_get(NlPool* p);
+NlPool* pool_copy_and_own(NlPool* pool) NONNULL;
+NlPool* pool_new_gams(void);
+NlPool* pool_get(NlPool* pool);
 
+int pool_copy_and_own_data(NlPool* pool, size_t size) NONNULL;
 unsigned pool_getidx(NlPool *pool, double val) NONNULL;
 
 #endif

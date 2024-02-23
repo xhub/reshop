@@ -43,7 +43,7 @@ static void dealloc_(Container *ctr)
    }
 
    if (ctr->workspace.inuse) {
-      error("%s :: workspace memory was still tagged as used\n", __func__);
+      error("%s ERROR: workspace memory was still tagged as used\n", __func__);
    }
    FREE(ctr->workspace.mem);
 

@@ -326,7 +326,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
    mdl->timings = mdl_timings_borrow(mdl_up->timings);
   
    /* Not always necessary  */
-   S_CHECK(rctr_ensure_pool(ctr, ctr_up));
+   S_CHECK(rctr_inherit_pool(ctr, ctr_up));
 
    /* ----------------------------------------------------------------------
     * Copy the options

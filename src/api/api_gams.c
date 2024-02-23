@@ -120,8 +120,10 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
       return Error_RuntimeError;
    }
 
+   if (ctr->pool) { pool_release(ctr->pool); }
+
    if (size == 0) {
-      A_CHECK(ctr->pool, pool_create_gams());
+      A_CHECK(ctr->pool, pool_new_gams());
       return OK;
    }
 

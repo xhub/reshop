@@ -315,6 +315,10 @@ int main(int argc, char **argv)
          if (!equs) { status = EXIT_FAILURE; goto _exit; };
 
          struct nltree_pool pool = {equs->pool, equs->pool_len, equs->pool_len, RHP_BACKEND_GAMS_GMO, 1, true };
+         if (ctr->pool) {
+            pool_release(ctr->pool);
+         }
+
          ctr->pool = &pool;
          for (size_t j = 0; j < equs->nb_equs; ++j) {
             size_t start = equs->indx_start[j];

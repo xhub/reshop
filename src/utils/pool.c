@@ -93,11 +93,11 @@ _exit:
 
 
 /** 
- *  @brief Create a GAMS pool
+ *  @brief Create a new GAMS-compatible pool
  *
  *  @return a GAMS pool or NULL if there is an error
  */
-NlPool* pool_create_gams(void)
+NlPool* pool_new_gams(void)
 {
    NlPool *p;
    AA_CHECK(p, pool_new());
@@ -152,6 +152,18 @@ NlPool* pool_get(NlPool* p)
    return p;
 }
 
+int pool_copy_and_own_data(NlPool* pool, size_t size)
+{
+   double *data;
+   MALLOC_(data, double, size);
+   memcpy(data, pool->data, pool->len*sizeof(double));
+
+   pool->data = data;
+   pool->max = size;
+   pool->own = true;
+
+   return OK;
+}
 
 unsigned pool_getidx(NlPool *pool, double val)
 {
@@ -196,29 +208,15 @@ unsigned pool_getidx(NlPool *pool, double val)
 
        if (pool->len >= pool->max) {
           if (pool->own) {
+
              pool->max = MAX(2*pool->max, pool->len + 10);
              REALLOC_(pool->data, double, pool->max);
+
           } else {
 
-             NlPool *p = pool_new();
-             p->max = MAX(2*pool->max, pool->len + 10);
-
-             MALLOC_(p->data, double, p->max);
-             memcpy(p->data, pool->data, pool->len*sizeof(double));
-             p->own = true;
-             p->len = pool->len;
-
-            /* Copy counter value and decrease the counter of the original one
-             * We do not need to free here has the data was not owned and the
-             * ownership of the NlPool object is transfered
-             */
-             p->cnt = pool->cnt;
-             pool->cnt--;
-
-             memcpy(pool, p, sizeof(*p));
-
-            FREE(p);
-          }
+            size_t size = MAX(2*pool->max, pool->len + 10);
+            S_CHECK(pool_copy_and_own_data(pool, size));
+         }
       }
 
        pool->data[pool->len++] = val;

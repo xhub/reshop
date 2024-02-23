@@ -218,56 +218,30 @@ int rctr_delete_var(Container *ctr, rhp_idx vi)
    return OK;
 }
 
-int rctr_ensure_pool(Container *ctr, Container *ctr_src)
+int rctr_inherit_pool(Container *ctr, Container *ctr_src)
 {
-  struct nltree_pool *p = NULL;
+   if (ctr->pool) {
+      pool_release(ctr->pool);
+      ctr->pool = NULL;
+   }
 
-   if (ctr_src) {
-      if (ctr->pool) {
-         pool_release(ctr->pool);
-         ctr->pool = NULL;
-      }
+   NlPool *p = pool_get(ctr_src->pool);
 
-      p = pool_get(ctr_src->pool);
-      if (!p) {
-         A_CHECK(ctr->pool, pool_create_gams());
-         return OK;
-      }
-      if (p->len > 0) {
-         ctr->pool = p;
-         return OK;
-      }
-   } else if (ctr->pool) {
-      return OK;
-   } else {
-      A_CHECK(ctr->pool, pool_create_gams());
+   if (!p) {
+      A_CHECK(ctr->pool, pool_new_gams());
       return OK;
    }
 
-   bool res = (p && (p->data && fabs(p->data[0] - 1.0) <= DBL_EPSILON));
-   /*  The following is true whenever we get the pool from the modeling
-    *  language. XXX(xhub) this is a hack */
+   ctr->pool = p;
 
-   if (res && (p->len == 0 || p->max == 0)) {
-      size_t i = 0;
-      size_t zero_idx = _pool_zero(p->type);
-      if (zero_idx == SSIZE_MAX)
-      {
-         return Error_NotImplemented;
-      }
-      while (p->data[i] != 0. || i == zero_idx) {
-         i++;
-      }
-      p->len = i;
-      p->max = i;
-      p->own = false;
+   return OK;
+}
 
-      ctr->pool = p;
-   } else {
-     if (p) {
-       pool_release(p);
-     }
-     A_CHECK(ctr->pool, pool_create_gams());
+int rctr_ensure_pool(Container *ctr)
+{
+
+   if (!ctr->pool) {
+      A_CHECK(ctr->pool, pool_new_gams());
    }
 
    return OK;
@@ -532,7 +506,7 @@ unsigned rctr_poolidx(Container *ctr, double val)
     * Make sure that a pool exists ...
     * ---------------------------------------------------------------------- */
 
-   if (rctr_ensure_pool(ctr, NULL) != OK) return UINT_MAX;
+   if (rctr_ensure_pool(ctr) != OK) return UINT_MAX;
 
    return pool_getidx(ctr->pool, val);
 }

@@ -1691,7 +1691,8 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
 
   S_CHECK_EXIT(mdl_setprobtype(mdl_mcp, MdlProbType_mcp));
 
-  S_CHECK_EXIT(rctr_ensure_pool(ctr_mcp, ctr_src));
+   /* TODO: delete? This should already be done when creating the ctr_mcp? */
+  S_CHECK_EXIT(rctr_inherit_pool(ctr_mcp, ctr_src));
 
    if (!ctr_src->rosetta_vars) {
       MALLOC_EXIT(ctr_src->rosetta_vars, rhp_idx, ctr_nvars_total(ctr_src));
