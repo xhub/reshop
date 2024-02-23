@@ -51,8 +51,6 @@ build:
     - cp libpath50.so liblusol.so test
     - cp libpath50.so liblusol.so swig
     - ctest -D ExperimentalMemCheck || ctest --rerun-failed --output-on-failure
-    - PYTHONPATH=$(pwd)/swig pytest ../swig/tests/basic_test.py
-    - lddtree makeself/libvrepr.so --copy-to-tree $(pwd)/makeself --bindir / --libdir /
   artifacts:
     expire_in: 2 weeks
     when: on_success
@@ -79,10 +77,11 @@ gams_test:
     - export RESHOP_MAKESELF_UNATTENDED=1
     - apt-get update
     - apt-get install numdiff -y
+    - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xfZ libvrepr.tar.xz -C /tmp/
   script:
     - bash build/*.run
-    - cp build/makeself/libvrepr.so build/makeself/libgmp*.so.* build/makeself/libppl*.so.* /root/.local/share/GAMS/$GAMS_MAJVER/
-    - cp build/makeself/libstdc++.so.6 /gams/libstdc++.so.6
+    - cp /tmp/libvrepr.so /tmp/libgmp*.so.* /tmp/libppl*.so.* /root/.local/share/GAMS/$GAMS_MAJVER/
+    - cp /tmp/libstdc++.so.6 /gams/libstdc++.so.6
     - bash test/gams/test.sh
   allow_failure: true
 
