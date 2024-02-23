@@ -48,6 +48,7 @@ _err1:
          error("%s RUNTIME ERROR (code = %u)", err);
       }
       return Error_SystemError;
+
    } else if (ret > bufsize) {
       bufsize = ret;
       REALLOC_(pathval, char, bufsize);
@@ -56,23 +57,7 @@ _err1:
       if (!ret) { goto _err1; }
    }
 
-
-#if 0
-      char*  envStrings = GetEnvironmentStringsA();
-      if (!envStrings) {
-         error("%s ERROR: GetEnvironmentStringsA() failed with error code %lu\n", GetLastError());
-      } else {
-         errormsg("\tList of environment variables:\n");
-         while (*envStrings) {
-            error("\t%s\n", envStrings);
-            envStrings += strlen(envStrings) + 1;
-         }
-         FreeEnvironmentStringsA(envStrings);
-      }
-      return Error_SystemError;
-#endif
-
-#else
+#else /* _WIN32 */
    const char* pathval = getenv("PATH");
    if (!pathval) {
       error("%s ERROR: could not get the PATH environment variable!\n", __func__);
@@ -96,11 +81,13 @@ _err1:
    }
 
    strcpy(new_path, dir);
+
 #ifdef _WIN32
    strcat(new_path, ";");
 #else
    strcat(new_path, ":");
 #endif
+
    strcat(new_path, pathval);
 
 #if defined(_WIN32) || defined(_WIN64)
