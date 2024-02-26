@@ -154,7 +154,18 @@ enum func_code {
 
 extern const char * const func_code_name[fndummy+1];
 
-typedef double (*reshop_fxptr)(void);
+
+/* Due to microsoft calling convention peculiarities, we specify
+ * the calling convention here. It seems that the libc/libm functions
+ * on windows are __cdecl (and not __stdcall) */
+
+#ifdef _WIN32
+#define RHP_FXPTR_CALLCONV __cdecl
+#else
+#define RHP_FXPTR_CALLCONV 
+#endif
+
+typedef double (RHP_FXPTR_CALLCONV *reshop_fxptr)(void);
 
 extern const reshop_fxptr func_call[fndummy+1];
 

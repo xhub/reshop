@@ -13,7 +13,8 @@ static double _notimpl(const char *fn, ...)
 
 #define NOTIMPL_PREFIX _ni_
 
-#define _NOTIMPL(X)  static double NOTIMPL_PREFIX ## X(double x, ...) { \
+#define _NOTIMPL(X)  static double RHP_FXPTR_CALLCONV \
+   NOTIMPL_PREFIX ## X(double x, ...) { \
    va_list ap; va_start(ap, x); double res = _notimpl(#X, ap); va_end(ap); return res;}
 
 _NOTIMPL(mapval)
@@ -100,40 +101,42 @@ _NOTIMPL(heaplimit)
 _NOTIMPL(dummy)
 
 
-static double _frac(double x1)
+static double RHP_FXPTR_CALLCONV _frac(double x1)
 {
    return fmod(x1, 1);
 }
 
-static double _sign(double x1)
+static double RHP_FXPTR_CALLCONV _sign(double x1)
 {
    if (x1 > 0.) {
       return 1.;
-   } else if (x1 < 0.) {
-      return -1.;
-   } else {
-      return 0.;
    }
+
+   if (x1 < 0.) {
+      return -1.;
+   }
+
+   return 0.;
 }
 
-static double _min(double x1, double x2)
+static double RHP_FXPTR_CALLCONV _min(double x1, double x2)
 {
    return x1 < x2 ? x1 : x2;
 }
 
-static double _max(double x1, double x2)
+static double RHP_FXPTR_CALLCONV _max(double x1, double x2)
 {
    return x1 > x2 ? x1 : x2;
 }
 
-static double _sqr(double x1)
+static double RHP_FXPTR_CALLCONV _sqr(double x1)
 {
    return x1*x1;
 }
 
-static double _rpower(double x, double exponent)
+static double RHP_FXPTR_CALLCONV _rpower(double x, double exponent)
 {
-   /* erreur checking is done elsewhere*/
+   /* error checking is done elsewhere*/
    return pow(x,exponent);
 }
 
@@ -145,11 +148,6 @@ static double _rpower(double x, double exponent)
  * overloaded in C++. This would need to be changed for a possible compilation
  * in C++ mode.
  * ------------------------------------------------------------------------- */
-
-#ifdef _MSC_VER
-#pragma float_control(push)
-#pragma float_control(precise, off)
-#endif
 
 const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(mapval),
@@ -266,9 +264,3 @@ const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(heaplimit),
    (reshop_fxptr)&_NOTIMPL(dummy),
 };
-
-#ifdef _MSC_VER
-#pragma float_control(pop)
-#endif
-
-
