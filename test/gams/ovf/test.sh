@@ -146,9 +146,9 @@ popd > /dev/null
 # temporary (famous last word) hack: libvrepr is not easily available right now
 
 if [ -z ${HAS_VREPR+x} ]; then
-   OVF_METHODS="equilibrium fenchel conjugate"
-else
    OVF_METHODS="equilibrium fenchel"
+else
+   OVF_METHODS="equilibrium fenchel conjugate"
 fi
 
 for i in $(ls -1 Risk*_ecvar.gms cvarup_OVF.gms crm-multistage{,_max}.gms) # crm-multistage_labels.gms)
