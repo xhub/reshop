@@ -712,7 +712,7 @@ int ccflib_equil(Model *mdl)
 
      if (primal_parents->len == 0) {
          Mpe *equil;
-         A_CHECK(equil, empdag_newmpenamed(empdag, "CCF equilibrium reformulation"));
+         A_CHECK(equil, empdag_newmpenamed(empdag, strdup("CCF equilibrium reformulation")));
 
          unsigned root_idx = rhp_uint_find(&empdag->roots, mpid2uid(mpid));
 
@@ -734,7 +734,7 @@ int ccflib_equil(Model *mdl)
           * ---------------------------------------------------------------------- */
 
          Mpe *equil;
-         A_CHECK(equil, empdag_newmpenamed(empdag, "CCF equilibrium reformulation"));
+         A_CHECK(equil, empdag_newmpenamed(empdag, strdup("CCF equilibrium reformulation")));
 
          S_CHECK(empdag_mpeaddmpbyid(empdag, equil->id, mpid));
          dfsdat.mpeid = equil->id;

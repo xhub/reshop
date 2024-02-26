@@ -604,7 +604,7 @@ Mpe* empdag_newmpe(EmpDag *empdag)
    return empdag->mpes.arr[mpe_id];
 }
 
-Mpe* empdag_newmpenamed(EmpDag *empdag, const char* name)
+Mpe* empdag_newmpenamed(EmpDag *empdag, char* name)
 {
    mpeid_t mpe_id;
    SN_CHECK(empdag_addmpenamed(empdag, name, &mpe_id));

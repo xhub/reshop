@@ -196,7 +196,7 @@ int empdag_addmpenamed(EmpDag *empdag, const char *name, unsigned *id);
 
 Mpe *empdag_newmpe(EmpDag *empdag) NONNULL;
 NONNULL_ONEIDX(1) OWNERSHIP_TAKES(2) 
-Mpe *empdag_newmpenamed(EmpDag *empdag, const char* name);
+Mpe *empdag_newmpenamed(EmpDag *empdag, char* name);
 
 int empdag_reserve_mp(EmpDag *empdag, unsigned reserve) NONNULL;
 
