@@ -539,7 +539,7 @@ skip:
       S_CHECK(kludge_jams_equilibrium(ctr, mdldat, gms));
    }
 
-   /* TODO: review this.
+   // TODO: review this.
    /* ---------------------------------------------------------------------
     * We now have the basis information. Thus we set it to true.
     * --------------------------------------------------------------------- */
