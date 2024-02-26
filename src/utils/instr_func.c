@@ -146,6 +146,11 @@ static double _rpower(double x, double exponent)
  * in C++ mode.
  * ------------------------------------------------------------------------- */
 
+#ifdef _MSC_VER
+#pragma float_control(push)
+#pragma float_control(precise, off)
+#endif
+
 const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(mapval),
    (reshop_fxptr)&ceil,
@@ -261,5 +266,9 @@ const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(heaplimit),
    (reshop_fxptr)&_NOTIMPL(dummy),
 };
+
+#ifdef _MSC_VER
+#pragma float_control(pop)
+#endif
 
 
