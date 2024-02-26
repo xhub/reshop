@@ -9,7 +9,7 @@
 
 void rhp_banner(void)
 {
-  printout(PO_ALLDEST, "ReSHOP %s\n", rhp_git_hash);
+  printout(PO_INFO, "ReSHOP %s\n", rhp_git_hash);
 }
 
 const char* rhp_version(void)
@@ -127,9 +127,9 @@ int rhp_syncenv(void)
       {"stack", rhp_show_stackinfo},
       {"solreport", rhp_show_solreporttrace},
    };
-   const char* loglevel_vals[]   = {"all",   "error", "info",   "v",  "vv",  "vvv", "silent"};
-   const unsigned loglevel_num[] = {INT_MAX, PO_ERROR, PO_INFO, PO_V, PO_VV, PO_VVV, PO_SILENT};
-   const unsigned n_loglevels = sizeof(loglevel_num)/sizeof(loglevel_num[0]);
+   const char* loglevel_vals[]   = {"all",   "error", "info",   "v",  "vv",  "vvv"};
+   const unsigned loglevel_num[] = {INT_MAX, PO_ERROR, PO_INFO, PO_V, PO_VV, PO_VVV};
+   const unsigned n_loglevels = ARRAY_SIZE(loglevel_num);
 
    const unsigned n_opts = sizeof(log_opts)/sizeof(log_opts[0]);
 
@@ -171,7 +171,7 @@ int rhp_syncenv(void)
             for (unsigned i = 0; i < n_loglevels; ++i) {
                const char *loglevel = loglevel_vals[i];
                if (!strncmp(loglevel, loglevel_env, strlen(loglevel))) {
-                  O_Output = (O_Output & ~(unsigned)PO_SILENT) + loglevel_num[i];
+                  O_Output = (O_Output & ~(unsigned)PO_MASK_LEVEL) + loglevel_num[i];
                   goto _continue;
                }
             }
@@ -180,7 +180,7 @@ int rhp_syncenv(void)
          /* the 'all' keyword does turn on everything */
          if (!strncmp("all", envopt, 3)) {
             for (unsigned i = 0; i < n_opts; ++i) { log_opts[i].fn(val); }
-            O_Output |= PO_MAX_VERBOSITY;
+            O_Output |= PO_MAX_VERBOSITY | PO_ALLDEST;
          }
 
 _continue:

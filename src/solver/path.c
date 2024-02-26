@@ -527,7 +527,7 @@ int solver_path(Model * restrict mdl, struct jacdata * restrict jac)
    Information path_info;
    memset(&path_info, 0, sizeof(Information));
 
-   unsigned print_level = O_Output & PO_LEVEL;
+   unsigned print_level = O_Output & PO_MASK_LEVEL;
    if (print_level >= PO_VV) {
       path_info.generate_output = Output_Log | Output_Status | Output_Listing;
    } else if (print_level >= PO_V) {

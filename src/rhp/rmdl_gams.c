@@ -71,6 +71,27 @@
 #define SOLREPORT_DEBUG(...)
 #endif
 
+/** @brief print function for GAMS
+ *
+ * @param msg   message to print
+ * @param mode  type of message
+ * @param data  user data (not used for us)
+ */
+static void GEV_CALLCONV reshop_printfn_gams(const char *msg, int mode, UNUSED void *data)
+{
+   /* TODO(GAMS) review this:
+    * - where is the value of mode documented?
+    * - it seems that the string in msg is not NUL-terminated. Is that correct?
+    */
+   size_t i = 0;
+   while(msg[i] != '\n') { i++; }
+   ((char*)msg)[i+1] = '\0';
+
+   printstr(mode << 2 | PO_ALLDEST, msg);
+}
+
+
+
 static int _debug_check_nlcode(int opcode, int value, size_t nvars, size_t poolen)
 {
 #ifndef NDEBUG

@@ -178,7 +178,7 @@ int empinterp_process(Model *mdl, const char *fname)
 
    bool eof = skip_spaces_commented_lines(&interp, &p);
    if (eof) {
-      printout(PO_LOGF, "[empinterp] Empinfo file %s has no statement\n", fname);
+      printout(PO_LOGFIFLE, "[empinterp] Empinfo file %s has no statement\n", fname);
       goto _exit;
    }
 

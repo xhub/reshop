@@ -12,7 +12,6 @@
 
 void printout(unsigned mode, const char *format, ...) FORMAT_CHK(2,3);
 void printstr(unsigned mode, const char *str);
-void reshop_printfn_gams(const char *msg, int mode, void *data);
 void logging_syncenv(void);
 
 #define error(format, ...) printout(PO_ERROR, format, __VA_ARGS__)

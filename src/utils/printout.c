@@ -320,7 +320,7 @@ _exit:
 static inline bool do_print(unsigned mode, bool *mode_has_color)
 {
    /* This is normal output */
-   if ( !(mode & ~PO_NONTRACING) && (mode & PO_LEVEL) <= (O_Output & PO_LEVEL) ) {
+   if ( !(mode & ~PO_NONTRACING) && (mode & PO_MASK_LEVEL) <= (O_Output & PO_MASK_LEVEL) ) {
       *mode_has_color = false;
       return true;
    }
@@ -375,12 +375,13 @@ void printout(unsigned mode, const char *format, ...)
          return;
       }
 
+      unsigned mode_ops = mode & PO_ALLDEST;
       if (print_ops.use_asciicolors && mode_has_color) {
-         print_ops.print(print_ops.data, mode, get_mode_color(mode));
-         print_ops.print(print_ops.data, mode, buf);
-         print_ops.print(print_ops.data, mode, ANSI_COLOR_RESET);
+         print_ops.print(print_ops.data, mode_ops, get_mode_color(mode));
+         print_ops.print(print_ops.data, mode_ops, buf);
+         print_ops.print(print_ops.data, mode_ops, ANSI_COLOR_RESET);
       } else {
-         print_ops.print(print_ops.data, mode, buf);
+         print_ops.print(print_ops.data, mode_ops, buf);
       }
 
       FREE(buf);
@@ -401,12 +402,13 @@ void printstr(unsigned mode, const char *str)
    bool mode_has_color = true;
    if (do_print(mode, &mode_has_color) && str) {
 
+      unsigned mode_ops = mode & PO_ALLDEST;
       if (print_ops.use_asciicolors && mode_has_color) {
-         print_ops.print(print_ops.data, mode, get_mode_color(mode));
-         print_ops.print(print_ops.data, mode, str);
-         print_ops.print(print_ops.data, mode, ANSI_COLOR_RESET);
+         print_ops.print(print_ops.data, mode_ops, get_mode_color(mode));
+         print_ops.print(print_ops.data, mode_ops, str);
+         print_ops.print(print_ops.data, mode_ops, ANSI_COLOR_RESET);
       } else {
-         print_ops.print(print_ops.data, mode, str);
+         print_ops.print(print_ops.data, mode_ops, str);
       }
 
    }
@@ -451,18 +453,4 @@ void rhp_set_printopsdefault(void)
    print_ops.use_asciicolors = printops_default.use_asciicolors;
 }
 
-/** @brief print function for GAMS
- *
- * @param msg   message to print
- * @param mode  type of message
- * @param data  user data (not used for us)
- */
-void reshop_printfn_gams(const char *msg, int mode, UNUSED void *data)
-{
-   /* TODO(GAMS) review this */
-   size_t i = 0;
-   while(msg[i] != '\n') { i++; }
-   ((char*)msg)[i+1] = '\0';
 
-   print_ops.print(print_ops.data, mode, msg);
-}
