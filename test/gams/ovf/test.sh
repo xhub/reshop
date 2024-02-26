@@ -143,7 +143,13 @@ if [[ $? == 0 && -z $NOCOMP ]]; then
 fi
 popd > /dev/null
 
-OVF_METHODS="equilibrium fenchel conjugate"
+# temporary (famous last word) hack: libvrepr is not easily available right now
+
+if [ -z ${HAS_VREPR+x} ]; then
+   OVF_METHODS="equilibrium fenchel conjugate"
+else
+   OVF_METHODS="equilibrium fenchel"
+fi
 
 for i in $(ls -1 Risk*_ecvar.gms cvarup_OVF.gms crm-multistage{,_max}.gms) # crm-multistage_labels.gms)
 do
