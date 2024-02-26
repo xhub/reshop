@@ -124,9 +124,6 @@ int rhp_solve(Model *mdl)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
-   /* This may have to go somewhere else  */
-   //S_CHECK(rhp_checkmetadata(mdl));
-
    if (!mdl->mdl_up) { TO_IMPLEMENT("rhp_solve without upstream model"); }
    S_CHECK(mdl_check(mdl->mdl_up));
 

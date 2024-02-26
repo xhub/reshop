@@ -35,11 +35,6 @@ int chk_aequ(const Aequ *e, const char *fn)
       return Error_NullPointer;
    }
 
-//   if (e->size == 0) {
-//      error("%s ERROR: the equation object is empty!\n", fn);
-//      return Error_InvalidValue;
-//   }
-
    if (e->type == EquVar_Unset) {
       error("%s ERROR: the equation object doesn't have a type set!\n", fn);
       return Error_InvalidValue;
@@ -64,11 +59,6 @@ int chk_avar(const Avar *v, const char *fn)
       error("%s ERROR: the given variable object is NULL!\n", fn);
       return Error_NullPointer;
    }
-
-//   if (v->size == 0) {
-//      error("%s ERROR: the variable object is empty!\n", fn);
-//      return Error_InvalidValue;
-//   }
 
    if (v->type == EquVar_Unset) {
       error("%s ERROR: the variable object doesn't have a type set!\n", fn);

@@ -199,8 +199,6 @@ int rhp_opt_gettype(const char *name, unsigned *type)
  */
 int rhp_opt_setfromstr(char *optstring)
 {
-
-   { GDB_STOP(); }
    S_CHECK(chk_arg_nonnull(optstring, 1, __func__));
 
    if (optstring[0] == '*') {
