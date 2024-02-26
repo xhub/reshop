@@ -54,7 +54,7 @@ function(CheckGitVersion)
         set(GIT_HASH_CACHE "INVALID")
     endif ()
 
-    # Only update the git_version.cpp if the hash has changed. This will
+    # Only update the git_version.c if the hash has changed. This will
     # prevent us from rebuilding the project more than we need to.
     if (${RC} EQUAL 0 AND (NOT "${GIT_HASH}" STREQUAL "${GIT_HASH_CACHE}" OR NOT EXISTS ${post_configure_file}))
         # Set che GIT_HASH_CACHE variable the next build won't have
