@@ -247,11 +247,12 @@ if (WITH_BACKTRACE)
     add_subdirectory (external/backward)
     include_directories (external/backward)
     add_compile_definitions(WITH_BACKWARD)
-  elseif (WITH_BACKWARD)
-    find_package (unwind REQUIRED)
+  else (WITH_BACKWARD)
+    find_package (Unwind REQUIRED)
     include_directories("${LIBUNWIND_INCLUDE_DIR}")
     LIST(APPEND EXTRA_LIBS "${LIBUNWIND_LIBRARIES}")
   endif(WITH_BACKWARD)
+
 endif (WITH_BACKTRACE)
 
 
