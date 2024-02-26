@@ -783,7 +783,7 @@ int fitting_equil_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const ch
   RESHOP_CHECK(rhp_mdl_resize(mdl, 3+nb_equ, nb_equ+1));
 
   struct rhp_equilibrium *mpe = rhp_empdag_newmpe(mdl);
-  RESHOP_CHECK(rhp_empdag_rootsaddmpe(mdl, mpe));
+  RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
 
   struct rhp_mathprgm *mp_v1 = rhp_empdag_newmp(mdl, RHP_MIN);
   struct rhp_mathprgm *mp_v2 = rhp_empdag_newmp(mdl, RHP_MIN);

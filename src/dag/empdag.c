@@ -125,6 +125,8 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    _mp_namedarray_init(&empdag->mps);
    _mpe_namedlist_init(&empdag->mpes);
 
+   empdag->uid_root = EMPDAG_UID_NONE;
+
    empdag->empdag_next = NULL;
    empdag->empdag_up = NULL;
 
@@ -272,7 +274,7 @@ int empdag_fini(EmpDag *empdag)
 
       if (roots.len == 1) {
          daguid_t rootuid = roots.arr[0];
-         S_CHECK(empdag_rootsadd(empdag, rootuid));
+         S_CHECK(empdag_rootset(empdag, rootuid));
       } else if (roots.len == 0) {
          errormsg("[empdag] ERROR: EMPDAG has no root. The EMPDAG must have one root\n");
          return Error_EMPIncorrectInput;
@@ -612,22 +614,22 @@ Mpe* empdag_newmpenamed(EmpDag *empdag, const char* name)
    return empdag->mpes.arr[mpe_id];
 }
 
-int empdag_rootsaddmpe(EmpDag *empdag, mpeid_t mpe_id)
+int empdag_rootsaddmpe(EmpDag *empdag, mpeid_t mpeid)
 {
-   S_CHECK(chk_mpeid(empdag, mpe_id));
+   S_CHECK(chk_mpeid(empdag, mpeid));
 
    empdag->finalized = false;
 
-   return rhp_uint_addsorted(&empdag->roots, mpeid2uid(mpe_id));
+   return rhp_uint_addsorted(&empdag->roots, mpeid2uid(mpeid));
 }
 
-int empdag_rootsaddmp(EmpDag *empdag, unsigned mp_id)
+int empdag_rootsaddmp(EmpDag *empdag, mpid_t mpid)
 {
-   S_CHECK(chk_mpid(empdag, mp_id));
+   S_CHECK(chk_mpid(empdag, mpid));
 
    empdag->finalized = false;
 
-   return rhp_uint_addsorted(&empdag->roots, mpid2uid(mp_id));
+   return rhp_uint_addsorted(&empdag->roots, mpid2uid(mpid));
 }
 
 int empdag_rootsadd(EmpDag *empdag, daguid_t uid)
@@ -641,13 +643,11 @@ int empdag_rootsadd(EmpDag *empdag, daguid_t uid)
 
 int empdag_rootset(EmpDag *empdag, daguid_t uid)
 {
-   empdag->roots.len = 0;
+   S_CHECK(empdag_rootsadd(empdag, uid));
 
-   if (uidisMP(uid)) {
-      return empdag_rootsaddmp(empdag, uid2id(uid));
-   }
+   empdag->uid_root = uid;
 
-   return empdag_rootsaddmpe(empdag, uid2id(uid));
+   return OK;
 }
 
 int empdag_getmpparents(const EmpDag *empdag, const MathPrgm *mp,

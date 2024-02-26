@@ -205,8 +205,8 @@ void backtrace_(const char *expr, int status);
 
 #define AA_CHECK_EXIT(D,EXPR) { (D) = EXPR; if (RHP_UNLIKELY(!(D))) { BACKTRACE(EXPR, Error_NullPointer); goto _exit; } }
 
-#define TO_IMPLEMENT(STR) { error("%s :: " STR "\n", __func__); return Error_NotImplemented; }
-#define TO_IMPLEMENT_EXIT(STR) { error("%s :: " STR "\n", __func__); status = Error_NotImplemented; goto _exit; }
+#define TO_IMPLEMENT(STR) { error("%s NOT IMPLEMENTED (yet): " STR "\n", __func__); return Error_NotImplemented; }
+#define TO_IMPLEMENT_EXIT(STR) { error("%s NOT IMPLEMENTED (yet): " STR "\n", __func__); status = Error_NotImplemented; goto _exit; }
 
 
 /* Glibc provides a handy strerror_r */

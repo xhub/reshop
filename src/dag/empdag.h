@@ -133,6 +133,8 @@ typedef struct empdag {
    DagMpeArray mpes;
    DagUidArray roots;
 
+   daguid_t uid_root;
+
    MpIdArray mps2reformulate;
    MpIdArray saddle_path_starts;
 

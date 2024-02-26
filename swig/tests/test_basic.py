@@ -410,7 +410,7 @@ def test_tragedy_common():
     rhp.mdl_resize(mdl, n_players, 2 * n_players)
 
     mpe = rhp.empdag_newmpe(mdl)
-    rhp.empdag_rootsaddmpe(mdl, mpe)
+    rhp.empdag_rootsetmpe(mdl, mpe)
 
     v = rhp.add_varsinbox(mdl, n_players, 0.0, 1.0)
 

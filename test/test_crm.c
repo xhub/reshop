@@ -326,7 +326,7 @@ static int _DFS_dag(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
 
    /* if depth = 0, we are at the root and we set it as such in the EMPDAG */
    if (depth == 0) {
-      RESHOP_CHECK(rhp_empdag_rootsaddmp(mdl, mp));
+      RESHOP_CHECK(rhp_empdag_rootsetmp(mdl, mp));
    }
 
    if (n_children == 0) {

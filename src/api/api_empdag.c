@@ -59,7 +59,7 @@ static int ensure_EMP_mdl_type(Model *mdl)
  *
  * @return     the error code
  */
-int rhp_empdag_rootsaddmp(Model *mdl, MathPrgm *mp)
+int rhp_empdag_rootsetmp(Model *mdl, MathPrgm *mp)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
@@ -81,7 +81,7 @@ int rhp_empdag_rootsaddmp(Model *mdl, MathPrgm *mp)
  *
  * @return     the error code
  */
-int rhp_empdag_rootsaddmpe(Model *mdl, Mpe *mpe)
+int rhp_empdag_rootsetmpe(Model *mdl, Mpe *mpe)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
@@ -98,7 +98,6 @@ int rhp_empdag_rootsaddmpe(Model *mdl, Mpe *mpe)
 
    return empdag_rootsaddmpe(&mdl->empinfo.empdag, mpe->id);
 }
-
 /**
  * @brief Allocate an mathprgm object
  *

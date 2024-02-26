@@ -854,7 +854,7 @@ int gnep_tragedy_common(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, N_PLAYERS, 2*N_PLAYERS));
 
-  RESHOP_CHECK(rhp_empdag_rootsaddmpe(mdl, mpe));
+  RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
 
   RESHOP_CHECK(rhp_add_varsinbox(mdl, N_PLAYERS, v, 0., 1.));
 
@@ -959,7 +959,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, 7, 10));
 
-  RESHOP_CHECK(rhp_empdag_rootsaddmpe(mdl, mpe));
+  RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
 
   RESHOP_CHECK(rhp_add_posvars(mdl, 3, x));
   RESHOP_CHECK(rhp_add_posvars(mdl, 3, p));

@@ -336,9 +336,9 @@ int rhp_ensure_mp(struct rhp_mdl *mdl, unsigned reserve);
 RHP_PUBLIB
 void rhp_print_emp(const struct rhp_mdl *mdl);
 RHP_PUBLIB
-int rhp_empdag_rootsaddmp(struct rhp_mdl *mdl, struct rhp_mathprgm *mp);
+int rhp_empdag_rootsetmp(struct rhp_mdl *mdl, struct rhp_mathprgm *mp);
 RHP_PUBLIB
-int rhp_empdag_rootsaddmpe(struct rhp_mdl *mdl, struct rhp_equilibrium *mpe);
+int rhp_empdag_rootsetmpe(struct rhp_mdl *mdl, struct rhp_equilibrium *mpe);
 
 /* -------------------------------------------------------------------------
  * GAMS specific functions
