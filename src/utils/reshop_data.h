@@ -101,6 +101,38 @@ static inline unsigned rhp_uint_at(const UIntArray *dat, unsigned i)
 #define rhp_idx_rm rhp_int_rm
 #define rhp_idx_set rhp_int_set
 
+#define mpidarray_data rhp_uint_data
+#define mpidarray_init rhp_uint_init
+#define mpidarray_add rhp_uint_add
+#define mpidarray_addsorted rhp_uint_addsorted
+#define mpidarray_addseq rhp_uint_addseq
+#define mpidarray_at rhp_uint_at
+#define mpidarray_copy rhp_uint_copy
+#define mpidarray_empty rhp_uint_empty
+#define mpidarray_find rhp_uint_find
+#define mpidarray_findsorted rhp_uint_findsorted
+#define mpidarray_reserve rhp_uint_reserve
+#define mpidarray_rmsorted rhp_uint_rmsorted
+#define mpidarray_rm rhp_uint_rm
+#define mpidarray_set rhp_uint_set
+
+#define daguidarray_data rhp_uint_data
+#define daguidarray_init rhp_uint_init
+#define daguidarray_add rhp_uint_add
+#define daguidarray_addsorted rhp_uint_addsorted
+#define daguidarray_addseq rhp_uint_addseq
+#define daguidarray_at rhp_uint_at
+#define daguidarray_copy rhp_uint_copy
+#define daguidarray_empty rhp_uint_empty
+#define daguidarray_find rhp_uint_find
+#define daguidarray_findsorted rhp_uint_findsorted
+#define daguidarray_reserve rhp_uint_reserve
+#define daguidarray_rmsorted rhp_uint_rmsorted
+#define daguidarray_rm rhp_uint_rm
+#define daguidarray_set rhp_uint_set
+
+
+
 typedef struct {
    int *data;
    unsigned size;
