@@ -1,5 +1,9 @@
 obj/
 
+# visual studio
+.vs
+out
+
 # GAMS stuff
 *.lst
 *.opt
