@@ -67,7 +67,7 @@ DagLabel * dag_labels_dupaslabel(const DagLabels * dagl_src)
    return dagc;
 }
 
-int dag_labels_add(DagLabels *dagl, int uels[static 1])
+int dag_labels_add(DagLabels *dagl, int *uels)
 {
    uint8_t dim = dagl->dim;
    uint8_t num_var = dagl->num_var;
