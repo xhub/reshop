@@ -426,7 +426,7 @@ static int filter_subset_gamsopcode(void *data, rhp_idx ei, int * restrict instr
              * 3. there is an error
              * ------------------------------------------------------------- */
 
-            if (opcode >= 0 && opcode < __instr_code_size) {
+            if (opcode >= 0 && opcode < nlOpcode_size) {
                instrs[i] = opcode;
                args[i]   = fs->offset_vars_pool + vi;
             } else if (opcode == -1) {
