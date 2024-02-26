@@ -77,11 +77,11 @@ gams_test:
     - export RESHOP_MAKESELF_UNATTENDED=1
     - apt-get update
     - apt-get install numdiff wget xz-utils -y
-    - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xf libvrepr.tar.xz -C /tmp/
+      # - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xf libvrepr.tar.xz -C /tmp/
   script:
     - bash build/*.run
-    - cp /tmp/libvrepr.so /tmp/libgmp*.so.* /tmp/libppl*.so.* /root/.local/share/GAMS/$GAMS_MAJVER/
-    - cp /tmp/libstdc++.so.6 /gams/libstdc++.so.6
+      # - cp /tmp/libvrepr.so /tmp/libgmp*.so.* /tmp/libppl*.so.* /root/.local/share/GAMS/$GAMS_MAJVER/
+      # - cp /tmp/libstdc++.so.6 /gams/libstdc++.so.6
     - bash test/gams/test.sh
   allow_failure: true
 
