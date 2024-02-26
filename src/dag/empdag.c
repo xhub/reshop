@@ -252,6 +252,8 @@ err_rootnode:
 
 int empdag_fini(EmpDag *empdag)
 {
+   if (empdag->finalized) { return OK; }
+
    /* Reset Empdag type */
    empdag->type = EmpDag_Unset;
 
