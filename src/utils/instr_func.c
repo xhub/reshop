@@ -143,6 +143,66 @@ static double RHP_FXPTR_CALLCONV _rpower(double x, double exponent)
 #undef _NOTIMPL
 #define _NOTIMPL(X) NOTIMPL_PREFIX ## X
 
+
+/* -------------------------------------------------------------------------
+ * MSVC seems to struggle compiling func_call with C2099 error.
+ * Since the latter is related to floating-point, we have to reverse-engineer
+ * its struggles ... 
+ *
+ * It is most likely related to the factor that the libc/libm functions are
+ * obtained from DLL. So let's wrap from them for MSVC.
+ *
+ * Clang-cl seems to do just fine here
+ * ------------------------------------------------------------------------- */
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#define LIBM_WRAPPER(X)  wrapped_ ## (X)
+
+#define MSVC_WRAPPER1(X) static double RHP_FXPTR_CALLCONV \
+   wrapped_ ## X(double x) { return X(x); }
+
+#define MSVC_WRAPPER2(X) static double RHP_FXPTR_CALLCONV \
+   wrapped_ ## X(double x, double y) { return X(x, y); }
+
+MSVC_WRAPPER1(ceil)
+MSVC_WRAPPER1(floor)
+MSVC_WRAPPER1(round)
+MSVC_WRAPPER1(trunc)
+
+MSVC_WRAPPER1(exp)
+MSVC_WRAPPER1(log)
+MSVC_WRAPPER1(log10)
+MSVC_WRAPPER1(sqrt)
+MSVC_WRAPPER1(fabs)
+MSVC_WRAPPER1(cos)
+MSVC_WRAPPER1(sin)
+MSVC_WRAPPER1(atan)
+MSVC_WRAPPER1(erf)
+
+MSVC_WRAPPER1(log2)
+
+MSVC_WRAPPER1(tgamma)
+MSVC_WRAPPER1(lgamma)
+
+MSVC_WRAPPER1(sinh)
+MSVC_WRAPPER1(cosh)
+MSVC_WRAPPER1(tanh)
+MSVC_WRAPPER1(tan)
+MSVC_WRAPPER1(acos)
+MSVC_WRAPPER1(asin)
+
+
+MSVC_WRAPPER2(fmod)
+MSVC_WRAPPER2(pow)
+MSVC_WRAPPER2(atan2)
+
+#undef MSVC_WRAPPER1
+#undef MSVC_WRAPPER2
+
+#else
+#define LIBM_WRAPPER(X) (X)
+#endif
+
 /* -------------------------------------------------------------------------
  * This is super unlikely to compile as C++ code since many math function are
  * overloaded in C++. This would need to be changed for a possible compilation
@@ -151,27 +211,27 @@ static double RHP_FXPTR_CALLCONV _rpower(double x, double exponent)
 
 const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(mapval),
-   (reshop_fxptr)&ceil,
-   (reshop_fxptr)&floor,
-   (reshop_fxptr)&round,
-   (reshop_fxptr)&fmod,
-   (reshop_fxptr)&trunc,
+   (reshop_fxptr)&LIBM_WRAPPER(ceil),
+   (reshop_fxptr)&LIBM_WRAPPER(floor),
+   (reshop_fxptr)&LIBM_WRAPPER(round),
+   (reshop_fxptr)&LIBM_WRAPPER(fmod),
+   (reshop_fxptr)&LIBM_WRAPPER(trunc),
    (reshop_fxptr)&_sign,
    (reshop_fxptr)&_min,
    (reshop_fxptr)&_max,
    (reshop_fxptr)&_sqr,
-   (reshop_fxptr)&exp,
-   (reshop_fxptr)&log,
-   (reshop_fxptr)&log10,
-   (reshop_fxptr)&sqrt,
-   (reshop_fxptr)&fabs,
-   (reshop_fxptr)&cos,
-   (reshop_fxptr)&sin,
-   (reshop_fxptr)&atan,
-   (reshop_fxptr)&erf,
+   (reshop_fxptr)&LIBM_WRAPPER(exp),
+   (reshop_fxptr)&LIBM_WRAPPER(log),
+   (reshop_fxptr)&LIBM_WRAPPER(log10),
+   (reshop_fxptr)&LIBM_WRAPPER(sqrt),
+   (reshop_fxptr)&LIBM_WRAPPER(fabs),
+   (reshop_fxptr)&LIBM_WRAPPER(cos),
+   (reshop_fxptr)&LIBM_WRAPPER(sin),
+   (reshop_fxptr)&LIBM_WRAPPER(atan),
+   (reshop_fxptr)&LIBM_WRAPPER(erf),
    (reshop_fxptr)&_NOTIMPL(dunfm),
    (reshop_fxptr)&_NOTIMPL(dnorm),
-   (reshop_fxptr)&pow,
+   (reshop_fxptr)&LIBM_WRAPPER(pow),
    (reshop_fxptr)&_NOTIMPL(jdate),
    (reshop_fxptr)&_NOTIMPL(jtime),
    (reshop_fxptr)&_NOTIMPL(jstart),
@@ -200,7 +260,7 @@ const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(ncpcm),
    (reshop_fxptr)&_NOTIMPL(entropy),
    (reshop_fxptr)&_NOTIMPL(sigmoid),
-   (reshop_fxptr)&log2,
+   (reshop_fxptr)&LIBM_WRAPPER(log2),
    (reshop_fxptr)&_NOTIMPL(boolnot),
    (reshop_fxptr)&_NOTIMPL(booland),
    (reshop_fxptr)&_NOTIMPL(boolor),
@@ -230,15 +290,15 @@ const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(gmillisec),
    (reshop_fxptr)&_NOTIMPL(maxerror),
    (reshop_fxptr)&_NOTIMPL(timeel),
-   (reshop_fxptr)&tgamma,
-   (reshop_fxptr)&lgamma,
+   (reshop_fxptr)&LIBM_WRAPPER(tgamma),
+   (reshop_fxptr)&LIBM_WRAPPER(lgamma),
    (reshop_fxptr)&_NOTIMPL(beta),
    (reshop_fxptr)&_NOTIMPL(logbeta),
    (reshop_fxptr)&_NOTIMPL(gammareg),
    (reshop_fxptr)&_NOTIMPL(betareg),
-   (reshop_fxptr)&sinh,
-   (reshop_fxptr)&cosh,
-   (reshop_fxptr)&tanh,
+   (reshop_fxptr)&LIBM_WRAPPER(sinh),
+   (reshop_fxptr)&LIBM_WRAPPER(cosh),
+   (reshop_fxptr)&LIBM_WRAPPER(tanh),
    (reshop_fxptr)&_NOTIMPL(mathlastrc),
    (reshop_fxptr)&_NOTIMPL(mathlastec),
    (reshop_fxptr)&_NOTIMPL(mathoval),
@@ -250,10 +310,10 @@ const reshop_fxptr func_call[fndummy+1] = {
    (reshop_fxptr)&_NOTIMPL(rehandle),
    (reshop_fxptr)&_NOTIMPL(gamsver),
    (reshop_fxptr)&_NOTIMPL(delhandle),
-   (reshop_fxptr)&tan,
-   (reshop_fxptr)&acos,
-   (reshop_fxptr)&asin,
-   (reshop_fxptr)&atan2,
+   (reshop_fxptr)&LIBM_WRAPPER(tan),
+   (reshop_fxptr)&LIBM_WRAPPER(acos),
+   (reshop_fxptr)&LIBM_WRAPPER(asin),
+   (reshop_fxptr)&LIBM_WRAPPER(atan2),
    (reshop_fxptr)&_NOTIMPL(sleep),
    (reshop_fxptr)&_NOTIMPL(heapf),
    (reshop_fxptr)&_NOTIMPL(cohandle),
