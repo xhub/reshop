@@ -91,6 +91,11 @@ static DESTRUCTOR_ATTR void cleanup_bck(void)
    }
 }
 
+static CONSTRUCTOR_ATTR void register_signals(void)
+{
+   bck_obj = regsig();
+}
+
 #else /* WITH_BACKWARD  */
 
 #ifdef WITH_BACKTRACE
@@ -103,9 +108,9 @@ static DESTRUCTOR_ATTR void cleanup_bck(void)
 static void backtrace(void)
 {
    unw_cursor_t cursor;
-   unw_container_t container;
+   unw_context_t container;
 
-   unw_getcontainer(&container);
+   unw_getcontext(&container);
    unw_init_local(&cursor, &container);
 
    int n=0;
@@ -146,10 +151,7 @@ static void backtrace(void) {};
 
 #endif /*  WITH_BACKWARD  */
 
-static CONSTRUCTOR_ATTR void register_signals(void)
-{
-   bck_obj = regsig();
-}
+
 
 #else /* __linux__  */
 
