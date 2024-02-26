@@ -3,6 +3,15 @@
 
 #include "reshop_config.h"
 
+/* Note: _WIN32 is depfined for all targets of interest
+ *       _WIN64 is defined for amd64 and arm64
+ */
+#ifdef _WIN32
+# define DIRSEP "\\"
+#else
+# define DIRSEP "/"
+#endif
+
 #ifdef _WIN32
   #define DLLPRE ""
   #define DLLEXT ".dll"
@@ -16,10 +25,14 @@
 
 #define DLL_FROM_NAME(X) DLLPRE X  DLLEXT
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
+#define GMS_CONFIG_FILE "gmscmpNT.txt"
+#else
+#define GMS_CONFIG_FILE "gmscmpun.txt"
+#endif
+
+#if defined(_WIN32)
   #include <string.h>
-//  #define snprintf _snprintf
-//  #define vsnprintf _vsnprintf
   #define strcasecmp _stricmp
   #define strncasecmp _strnicmp
   #define strdup _strdup
@@ -44,20 +57,28 @@
 
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-#define CHECK_RESULT __attribute__ ((warn_unused_result))
-#elif defined(_MSC_VER) && (_MSC_VER >= 1700)
-#define CHECK_RESULT _Must_inspect_result_
-#else
-#define CHECK_RESULT
-#endif
+/**
+ * @brief Recursively remove a directory
+ *
+ * @param pathname the directory to remove
+ *
+ * @return the error code 
+ */
+int rmfn(const char *pathname);
 
-
+/* ----------------------------------------------------------------------
+ * To get environment variables
+ * ---------------------------------------------------------------------- */
 #ifdef _WIN32
-#define GMS_CONFIG_FILE "gmscmpNT.txt"
+const char * mygetenv(const char *envvar);
+void myfreeenvval(const char *envval);
 #else
-#define GMS_CONFIG_FILE "gmscmpun.txt"
+#include <stdlib.h>
+#define mygetenv getenv
+#define myfreeenvval(X) 
 #endif
+
+
 
 #ifdef COMPAT_GLIBC
 /* Gen by objdump -T /lib/x86_64-linux-gnu/libm.so.6  |
@@ -110,23 +131,6 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #define RESHOP_STATIC_ASSERT(EXPR, STR)
 #endif
 
-/**
- * @brief Recursively remove a directory
- *
- * @param pathname the directory to remove
- *
- * @return the error code 
- */
-int rmfn(const char *pathname);
-
-#ifdef _WIN32
-const char * mygetenv(const char *envvar);
-void myfreeenvval(const char *envval);
-#else
-#include <stdlib.h>
-#define mygetenv getenv
-#define myfreeenvval(X) 
-#endif
 
 #ifdef __GNUC__
 
@@ -137,28 +141,29 @@ void myfreeenvval(const char *envval);
 #define NONNULL_ONEIDX(IDX) __attribute__ ((nonnull(IDX)))
 #define NONNULL_IDX(E1, ...) __attribute__ ((nonnull(E1, __VA_ARGS__)))
 #define NONNULL __attribute__ ((nonnull))
-#define UNUSED __attribute__((unused))
-#define __maybe_unused  __attribute__((unused))
+#define CHECK_RESULT __attribute__ ((warn_unused_result))
 #define FORMAT_CHK(S,A) __attribute__ ((format (printf, S, A)))
 // TODO: DUPLICATE!
+#define UNUSED __attribute__((unused))
+#define __maybe_unused  __attribute__((unused))
 
 #ifndef NDEBUG
-#define CTRMEM __attribute__ ((cleanup(ctr_memclean)))
-#define RHP_HAS_CLEANUP
+#  define CTRMEM __attribute__ ((cleanup(ctr_memclean)))
+#  define RHP_HAS_CLEANUP
 #else
- #define CTRMEM
+#  define CTRMEM
 #endif
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L
-#define FALLTHRU [[fallthrough]];
+#  define FALLTHRU [[fallthrough]];
 #else
-#define FALLTHRU __attribute__((fallthrough));
+#  define FALLTHRU __attribute__((fallthrough));
 #endif
 
 #if !defined(__clang__) && (__GNUC__ >= 11)
-#define MALLOC_ATTR(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
+#  define MALLOC_ATTR(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
 #else
-#define MALLOC_ATTR(...) __attribute__ ((malloc))
+#  define MALLOC_ATTR(...) __attribute__ ((malloc))
 #endif
 
 #define MALLOC_ATTR_SIMPLE __attribute__ ((malloc))
@@ -173,6 +178,12 @@ void myfreeenvval(const char *envval);
 #define READ_ONLY(...) ACCESS_ATTR(read_only, __VA_ARGS__)
 
 #else /* NOT __GNUC__ */
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#  define CHECK_RESULT _Must_inspect_result_
+#else
+#  define CHECK_RESULT
+#endif
 
 #define RHP_LIKELY(x) (x)
 #define RHP_UNLIKELY(x) (x)
@@ -212,8 +223,6 @@ void myfreeenvval(const char *envval);
 #define OWNERSHIP_RETURNS 
 
 #endif
-
-
 
 #define rhp_idx int
 

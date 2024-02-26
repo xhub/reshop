@@ -31,7 +31,7 @@
     #define tlsvar
 
   // clang does not support threads.h but does not define __STDC_NO_THREADS__
-  #elif __STDC_VERSION__ >= 201112L && !defined(_WIN32) && !defined(_WIN64) && (!defined(__STDC_NO_THREADS__) || __STDC_NO_THREADS__ == 0)
+  #elif __STDC_VERSION__ >= 201112L && !defined(_WIN32) && (!defined(__STDC_NO_THREADS__) || __STDC_NO_THREADS__ == 0)
     #include <threads.h>
     #define tlsvar thread_local
   #else

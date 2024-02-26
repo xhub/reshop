@@ -12,12 +12,6 @@
 #include "compat.h"
 #include "status.h"
 
-#ifdef _WIN32
-# define DIRSEP "\\"
-#else
-# define DIRSEP "/"
-#endif
-
 //#define ABS(a)          (((a) >= 0)  ? (a) : (-(a)))
 #define MIN(a,b)        (((a) < (b)) ? (a) : (b))
 #define MAX(a,b)        (((a) < (b)) ? (b) : (a))
@@ -28,12 +22,12 @@
 #define RHP_CAT3(x, y, z) RHP_CAT2(RHP_CAT2(x, y), z)
 
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
+#define MACRO_STR(...) #__VA_ARGS__
+#define XMACRO_STR(x) MACRO_STR(x)
+
 /* See https://en.wikibooks.org/wiki/C_Programming/C_Reference/nonstandard/strlcpy  */
 #define STRNCPY(dst, src, n) strncpy (dst, src, n)
 #define STRNCPY_FIXED(dst, src) strncpy(dst, src, sizeof (dst)-1); dst[sizeof (dst)-1] = '\0';
-
-#define MACRO_STR(...) #__VA_ARGS__
-#define XMACRO_STR(x) MACRO_STR(x)
 
 #define MALLOCBYTES(ptr,type,bytes) ((ptr) = (type*)malloc(bytes)); assert((ptr))
 

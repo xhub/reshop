@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
 //  #define snprintf _snprintf
 //  #define vsnprintf _vsnprintf
   #define strcasecmp _stricmp

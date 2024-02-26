@@ -9,7 +9,7 @@
 //const char* gams_lp_solvers[] = {"baron", "cbc", "conopt", "cplex", "knitro", "minos", "pathnlp", "mosek", "xpress"};
 //// TODO: what breaks here?
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
 
 const char* gams_lp_solvers[] = {"baron", "conopt", "cplex",  "pathnlp", "mosek"};
 const char* gams_nlp_solvers[] = {"conopt", "knitro",  "pathnlp", "snopt", "mosek"};

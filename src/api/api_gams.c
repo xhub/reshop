@@ -90,7 +90,7 @@ _err1:
 
    strcat(new_path, pathval);
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
    FREE(pathval);
    if (!SetEnvironmentVariableA("PATH", new_path)) {
        error("%s ERROR: EnvironmentVariable failed (%d)\n", GetLastError());

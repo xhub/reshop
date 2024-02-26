@@ -69,7 +69,7 @@ static inline const char *get_mode_color(unsigned mode)
 
 }
 
-#if !defined(STDERR_FILENO) && (defined(_WIN32) || defined(_WIN64))
+#if !defined(STDERR_FILENO) && defined(_WIN32)
 #define STDERR_FILENO _fileno( stderr )
 #endif
 
