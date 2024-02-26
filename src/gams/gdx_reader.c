@@ -24,13 +24,13 @@ static tlsvar IntArray *subset = NULL;
 static tlsvar unsigned subset_pos = UINT_MAX;
 
 /* function of type TDataStoreProc_t */
-static GDX_CALLCONV void _test_membership(UNUSED const int Indx[],
-                                          UNUSED const double Vals[])
+static void GDX_CALLCONV _test_membership(UNUSED const int *Indx,
+                                          UNUSED const double *Vals)
 {
    test_result = true;
 }
 
-static GDX_CALLCONV void store_vector(const int Indx[], const double Vals[])
+static void GDX_CALLCONV store_vector(const int *Indx, const double *Vals)
 {
    assert(vector_pos < GMS_MAX_INDEX_DIM && vector_global);
    if (gdxerr != OK) return;
@@ -38,7 +38,7 @@ static GDX_CALLCONV void store_vector(const int Indx[], const double Vals[])
    gdxerr = lequ_add(vector_global, Indx[vector_pos], Vals[GMS_VAL_LEVEL]);
 }
 
-static GDX_CALLCONV void store_subset(const int Indx[], UNUSED const double Vals[])
+static void GDX_CALLCONV store_subset(const int Indx[], UNUSED const double Vals[])
 {
    assert(subset_pos < GMS_MAX_INDEX_DIM && subset);
    if (gdxerr != OK) return;
@@ -46,7 +46,7 @@ static GDX_CALLCONV void store_subset(const int Indx[], UNUSED const double Vals
    gdxerr = rhp_int_addsorted(subset, Indx[subset_pos]);
 }
 
-static GDX_CALLCONV void store_vector_filt(const int Indx[], const double Vals[])
+static void GDX_CALLCONV store_vector_filt(const int Indx[], const double Vals[])
 {
    assert(vector_pos < GMS_MAX_INDEX_DIM);
    assert(vector_filter);
