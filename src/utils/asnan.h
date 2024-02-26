@@ -10,13 +10,7 @@
 #if !defined(issignaling) 
 //|| defined(COMPAT_GLIBC)
 
-#ifdef SNAN
-#undef SNAN
-#endif
-
 #define issignaling(x) false
-#define SNAN NAN
-
 #else /*  !defined(issignaling)*/
 
 
@@ -33,15 +27,20 @@ const char *nansstr(const char *func, unsigned char code);
 #     define SNAN_UNINIT (__builtin_nans("01"))
 #     define SNAN_UNDEF  (__builtin_nans("02"))
 #     define SNAN_NA     (__builtin_nans("03"))
+#     ifndef SNAN
+#       define SNAN (__builtin_nans(""))
+#     endif
 #  endif
 #endif
 
 /*  TODO(xhub) investigate this */
 #if !defined(SNAN_FROM_BUILTIN)
-#define MKSNAN(code)
+#include <stdint.h>
+#define MKSNAN(code)  (0x7FF4000000000000ULL + (uint64_t)(code))
 #define SNAN          0x7FF4000000000000ULL
 #define SNAN_UNINIT   0x7FF4000000000001ULL
 #define SNAN_UNDEF    0x7FF4000000000002ULL
+#define SNAN_NA       0x7FF4000000000003ULL
 #endif
 
 #endif /* RESHOP_SNAN_H */
