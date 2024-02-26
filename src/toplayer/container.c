@@ -523,7 +523,7 @@ int ctr_setequrhs(Container *ctr, rhp_idx ei, double val)
             __func__, ctr_printequname(ctr, ei), cone_name(e->cone));
       return Error_InvalidValue;
    case CONE_NONE:
-   case __CONES_LEN:
+   case CONE_LEN:
    default:
       error( "%s :: equation %s has an invalid cone %u\n", __func__,
             ctr_printequname(ctr, ei), e->cone);

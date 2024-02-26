@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "status.h"
+#include "macros.h"
 #include "reshop.h"
 
 #define DEFINE_ERRMSGS() \
@@ -79,18 +80,18 @@ DEFINE_ERRMSGS()
 #undef ERRMSG
 
 #define ERRMSG(id, str) [id] = offsetof(ErrMsgs, id),
-static const unsigned errmsgs_offsets[__Error_NumErrors] = {
+static const unsigned errmsgs_offsets[Error_LastError+1] = {
 DEFINE_ERRMSGS()
 };
 
-static_assert(sizeof(errmsgs_offsets)/sizeof(errmsgs_offsets[0]) == __Error_NumErrors,
-              "Check the sizze of rules and enum emptok_type");
+static_assert(ARRAY_SIZE(errmsgs_offsets) == Error_LastError+1,
+              "Check the size of error messages");
 
 
 
 const char *rhp_status_descr(int status)
 {
-   if (status < 0 || status >= __Error_NumErrors) {
+   if (status < 0 || status > Error_LastError) {
       return "unknown error";
    }
 
@@ -99,7 +100,7 @@ const char *rhp_status_descr(int status)
 
 const char *status_descr(int status)
 {
-   if (status < 0 || status >= __Error_NumErrors) {
+   if (status < 0 || status > Error_LastError) {
       return "unknown error";
    }
 

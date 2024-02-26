@@ -62,7 +62,7 @@ void solve_params_init(struct solver_params *params)
   params->dotest = NULL;
 }
 
-static int _cmp_var_val(const struct rhp_mdl *mdl, double refval, double val, rhp_idx i, const char* typ)
+static int cmp_var_val(const struct rhp_mdl *mdl, double refval, double val, rhp_idx i, const char* typ)
 {
   if (isfinite(refval)) {
     double delta = fabs(val-refval);
@@ -77,7 +77,7 @@ static int _cmp_var_val(const struct rhp_mdl *mdl, double refval, double val, rh
   return 0;
 }
 
-static int _cmp_equ_val(const struct rhp_mdl *mdl, double refval, double val, rhp_idx i, const char* typ)
+static int cmp_equ_val(const struct rhp_mdl *mdl, double refval, double val, rhp_idx i, const char* typ)
 {
   if (isfinite(refval)) {
     double delta = fabs(val-refval);
@@ -193,7 +193,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
     for (rhp_idx i = 0; i < (rhp_idx)n; ++i) {
       double refval = xvals[i], val;
       rhp_mdl_getvarval(mdl, i, &val);
-      int rc = _cmp_var_val(mdl, refval, val, i, "val");
+      int rc = cmp_var_val(mdl, refval, val, i, "val");
       if (rc != 0) {
         status = rc;
       }
@@ -204,7 +204,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
     for (rhp_idx i = 0; i < (rhp_idx)n; ++i) {
       double sol = xduals[i], val;
       rhp_mdl_getvarmult(mdl, i, &val);
-      int rc = _cmp_var_val(mdl, sol, val, i, "dual");
+      int rc = cmp_var_val(mdl, sol, val, i, "dual");
       if (rc != 0) {
         status = rc;
       }
@@ -231,7 +231,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
       if (rhp_aequ_contains(objequs, i)) continue;
       double sol = evals[j], val;
       rhp_mdl_getequval(mdl, i, &val);
-      int rc = _cmp_equ_val(mdl, sol, val, i, "val");
+      int rc = cmp_equ_val(mdl, sol, val, i, "val");
       if (rc != 0) {
         status = rc;
       }
@@ -244,7 +244,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
       if (rhp_aequ_contains(objequs, i)) continue;
       double sol = eduals[j], val;
       rhp_mdl_getequmult(mdl, i, &val);
-      int rc = _cmp_equ_val(mdl, sol, val, i, "dual");
+      int rc = cmp_equ_val(mdl, sol, val, i, "dual");
       if (rc != 0) {
         status = rc;
       }

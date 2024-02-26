@@ -1,5 +1,5 @@
-#ifndef _RESHOP_COMPAT
-#define _RESHOP_COMPAT
+#ifndef RESHOP_COMPAT_H
+#define RESHOP_COMPAT_H
 
 #include "reshop_config.h"
 
@@ -217,4 +217,4 @@ void myfreeenvval(const char *envval);
 
 #define rhp_idx int
 
-#endif /* _RESHOP_COMPAT  */
+#endif /* RESHOP_COMPAT_H  */

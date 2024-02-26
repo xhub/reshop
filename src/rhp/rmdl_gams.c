@@ -200,7 +200,7 @@ static void _debug_var_util(Var *v, int indx, double* jacval, int vidx,
                             int *equidx, int *isvarNL, char *buffer)
 {
 #ifndef NDEBUG
-         assert(v->type < __VAR_TYPE_SIZE);
+         assert(v->type < VAR_TYPE_LEN);
          _track_NAN(indx, jacval, vidx, v->idx, equidx, isvarNL);
          DPRINT("Adding variable %s #%d (original index = %d) of type %d; lo = %e; lvl = %e; up = %e\n",
                  buffer, vidx, v->idx, v->type, v->bnd.lb, v->level, v->bnd.ub);

@@ -7,7 +7,7 @@
 /**
  * @brief Cone description
  */
-const char * const _cone_descr[__CONES_LEN] = {
+const char * const _cone_descr[CONE_LEN] = {
    "None",
    "R_+",
    "R_-",
@@ -31,7 +31,7 @@ const char * const _cone_descr[__CONES_LEN] = {
  */
 const char *cone_name(unsigned cone)
 {
-   if (cone < __CONES_LEN) {
+   if (cone < CONE_LEN) {
       return _cone_descr[cone];
    }
 

@@ -61,7 +61,7 @@ static const unsigned varnames_offsets[] = {
 DEFINE_STR()
 };
 
-RESHOP_STATIC_ASSERT(sizeof(varnames_offsets)/sizeof(varnames_offsets[0]) ==  __VAR_TYPE_SIZE,
+RESHOP_STATIC_ASSERT(sizeof(varnames_offsets)/sizeof(varnames_offsets[0]) ==  VAR_TYPE_LEN,
                      "var_type and var_type_latex must be synchronized")
 
 
@@ -255,7 +255,7 @@ static int nltree_latex(Container *ctr, NlTree *tree, FILE *f)
 }
 static const char * var_type_latex(enum var_type typ)
 {
-   if (typ >= __VAR_TYPE_SIZE) { return "unknown var type"; }   
+   if (typ >= VAR_TYPE_LEN) { return "unknown var type"; }   
 
    return varnames.dummystr + varnames_offsets[typ];
 }

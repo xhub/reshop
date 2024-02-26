@@ -39,7 +39,7 @@ enum var_type {
    VAR_DEXP       = 12,       /**< variable in a dual EXP         */
    VAR_POWER      = 13,       /**< variable in a POWER cone       */
    VAR_DPOWER     = 14,       /**< variable in a dual POWER cone  */
-   __VAR_TYPE_SIZE
+   VAR_TYPE_LEN
 };
 
 /**
@@ -282,7 +282,7 @@ static inline void var_init(struct var *v, rhp_idx idx, enum var_type type)
 
 
 static inline bool var_validtype(unsigned type) {
-   if (type < __VAR_TYPE_SIZE) return true;
+   if (type < VAR_TYPE_LEN) return true;
    
    return false;
 }

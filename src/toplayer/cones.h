@@ -24,7 +24,7 @@ typedef enum cone {
    CONE_DEXP,        /**< Dual Exponential cone */
    CONE_POWER,       /**< Power cone */
    CONE_DPOWER,      /**< Dual Power cone */
-   __CONES_LEN
+   CONE_LEN
 } Cone;
 
 /** Cone descriptions */

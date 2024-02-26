@@ -236,7 +236,7 @@ static inline void equ_add_cst(Equ *e, double val)
    case CONE_DEXP:
    case CONE_POWER:
    case CONE_DPOWER:
-   case __CONES_LEN:
+   case CONE_LEN:
    default:
       equ_err_cone(__func__, e);
    }
@@ -262,10 +262,10 @@ static inline double equ_get_cst(const Equ * restrict e)
    case CONE_DEXP:
    case CONE_POWER:
    case CONE_DPOWER:
-   case __CONES_LEN:
+   case CONE_LEN:
    default:
       equ_err_cone(__func__, e);
-      return _rhp_asnan(Error_NotImplemented);
+      return rhp_asnan(Error_NotImplemented);
    }
 }
 
@@ -291,7 +291,7 @@ static inline void equ_set_cst(Equ *e, double val)
    case CONE_DEXP:
    case CONE_POWER:
    case CONE_DPOWER:
-   case __CONES_LEN:
+   case CONE_LEN:
    default:
       equ_err_cone(__func__, e);
    }

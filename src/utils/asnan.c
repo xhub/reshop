@@ -112,7 +112,7 @@ static void find_snan(double snan)
 
 }
 
-double _rhp_asnan(unsigned code)
+double rhp_asnan(unsigned code)
 {
    return MKSNAN(code);
 }

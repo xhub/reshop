@@ -1330,7 +1330,7 @@ static int rctr_setequtype(Container *ctr, rhp_idx eidx, unsigned type, unsigned
       error("%s :: invalid equation type value %u\n", __func__, type);
    }
 
-   if (cone >= __CONES_LEN) {
+   if (cone >= CONE_LEN) {
       error("%s :: invalid cone value %u\n", __func__, cone);
       return Error_InvalidValue;
    }

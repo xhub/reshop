@@ -57,7 +57,7 @@ enum status {
    Error_WrongNumericalValue,
    Error_WrongOptionValue,
    Error_WrongParameterValue,
-   __Error_NumErrors
+   Error_LastError
 };
 
 static inline enum status status_update(enum status status, enum status error)

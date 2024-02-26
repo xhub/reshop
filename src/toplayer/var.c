@@ -28,7 +28,7 @@ static const char* var_type_names[] = {
    "dual POWER cone",
 };
 
-RESHOP_STATIC_ASSERT(sizeof(var_type_names)/sizeof(char*) ==  __VAR_TYPE_SIZE,
+RESHOP_STATIC_ASSERT(sizeof(var_type_names)/sizeof(char*) ==  VAR_TYPE_LEN,
                      "var_type and var_type_names must be synchronized")
 
 /**

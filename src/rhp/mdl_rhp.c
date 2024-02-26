@@ -107,9 +107,9 @@ int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
  */
 int rmdl_analyze_modeltype(const Model *mdl, Fops *fops)
 {
-   bool var_types[__VAR_TYPE_SIZE] = {false};
-   bool var_cones[__CONES_LEN] = {false};
-   bool equ_cones[__CONES_LEN] = {false};
+   bool var_types[VAR_TYPE_LEN] = {false};
+   bool var_cones[CONE_LEN] = {false};
+   bool equ_cones[CONE_LEN] = {false};
    bool has_quad = false;
    bool has_nl = false;
    bool has_perp = false;
