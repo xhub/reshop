@@ -26,7 +26,7 @@ target_include_directories (${RESHOP_GAMS_INTERFACE} PRIVATE ".")
 
 SET_C_WARNINGS(${RESHOP_GAMS_INTERFACE})
 
-if (NOT MSVC)
+if (C_COMPILER_GNU_LIKE)
   set_source_files_properties(${GAMS_C_FILES} PROPERTIES COMPILE_OPTIONS
     "-Wno-error=shadow;-Wformat-overflow=0;-Wno-shadow;-Wno-error=pedantic;-Wno-pedantic")
 endif()

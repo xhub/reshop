@@ -16,7 +16,7 @@ project (ReSHOP LANGUAGES C CXX VERSION "0.1.8")
 include(compiler_flags)
 
 # Keep that on top
-set (CMAKE_C_STANDARD 11)
+set (CMAKE_C_STANDARD 17)
 set (CMAKE_C_STANDARD_REQUIRED ON)
 set (CMAKE_C_EXTENSIONS OFF)
 set (CMAKE_C_VISIBILITY_PRESET hidden)
@@ -24,6 +24,11 @@ set (CMAKE_C_VISIBILITY_PRESET hidden)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif ()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    set(WINDOWS 1)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
 
 # Use C++14 (for PPL and backward)
 set(CMAKE_CXX_STANDARD 14)
@@ -62,14 +67,14 @@ option(BUILD_GAMS_SOLVER
   "Build the GAMS glue to use ReSHOP within GAMS" OFF)
  
 option(GAMSSYSDIR 
-   "GAMS system directory (as string)" OFF)
+   "GAMS system directory (as string)" "")
  
 option(DISTRIB
   "Build for the distribution of files: on Linux, disables recent glibc symbols" OFF)
 
 CMAKE_DEPENDENT_OPTION (WITH_BACKTRACE 
   "Build with backtracing facilities" ON
-  "NOT DISTRIB" OFF)
+  "NOT WINDOWS;NOT DISTRIB" OFF)
 
 CMAKE_DEPENDENT_OPTION (WITH_BACKWARD
   "Build with the backward backtracing library" ON
@@ -126,6 +131,10 @@ endif()
 set (pre_configure_dir "${CMAKE_SOURCE_DIR}/src/conf")
 include (CheckGit)
 CheckGitSetup()
+if (NOT EXISTS ${CMAKE_BINARY_DIR}/git-state.txt)
+  set(GIT_HASH ${CMAKE_PROJECT_VERSION})
+  configure_file(${pre_configure_dir}/git_version.c.in ${CMAKE_BINARY_DIR}/generated/git_version.c @ONLY)
+endif()
 
 
 # Some sanity
@@ -199,7 +208,7 @@ endif ()
 
 if (CMAKE_C_COMPILER_TARGET)
   FILE(WRITE "${CMAKE_BINARY_DIR}/target" "${CMAKE_C_COMPILER_TARGET}")
-else()
+elseif(C_COMPILER_GNU_LIKE)
   execute_process (
     COMMAND     ${CMAKE_C_COMPILER} -dumpmachine
     OUTPUT_FILE "${CMAKE_BINARY_DIR}/target"
@@ -228,7 +237,7 @@ endif (APPLE OR UNIX)
 
 if (WITH_BACKTRACE)
   add_compile_definitions(WITH_BACKTRACE)
-  if (CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+  if (C_COMPILER_GNU_LIKE)
     add_compile_options("-fno-omit-frame-pointer")
     add_compile_options("-ggdb")
   endif()
@@ -357,7 +366,7 @@ endif(GAMSSYSDIR)
 
 if(NOT GAMSDIR)
   MESSAGE(FATAL_ERROR "No valid GAMS installation OR GAMS C apifiles found. Possible fix include:
-  - Fix your GAMS install
+  - Fix your GAMS install: the gams executable must be in the PATH
   - Specify a gams directory with the C apifiles via the GAMSSYSDIR cmake variable")
 endif (NOT GAMSDIR)
 
@@ -371,7 +380,7 @@ include_directories ("${GAMSDIR}")
 
 FILE(GLOB_RECURSE GAMS_C_FILES src/gams/wrapped/*.c)
 
-if (NOT MSVC)
+if (C_COMPILER_GNU_LIKE)
   set_source_files_properties(${GAMS_C_FILES} PROPERTIES COMPILE_OPTIONS
     "-Wno-error=shadow;-Wformat-overflow=0;-Wno-shadow;-Wno-pedantic;-Wno-error=pedantic")
 endif()
@@ -402,7 +411,10 @@ if (NOT SANITIZE_ADDRESS OR NOT SANITIZE_MEMORY OR NOT SANITIZE_THREAD OR NOT
   target_compile_definitions(${RESHOP_LIBNAME_OBJ} PRIVATE ${RESHOP_LIBNAME}_EXPORTS)
   # Put functions and data in separate sections to enable GC of unused parts
   # TODO: test this
-  target_compile_options(${RESHOP_LIBNAME_OBJ} PRIVATE -ffunction-sections -fdata-sections)
+  if (C_COMPILER_GNU_LIKE)
+    target_compile_options(${RESHOP_LIBNAME_OBJ} PRIVATE -ffunction-sections -fdata-sections)
+  endif()
+
   SET(RESHOP_INTERNAL_TESTS ON)
 else ()
   add_library (${RESHOP_LIBNAME} SHARED ${RESHOP_C_FILES})

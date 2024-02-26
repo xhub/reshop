@@ -1,5 +1,10 @@
 include(CheckCCompilerFlag)
 
+if ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" MATCHES "GNU")
+  set(C_COMPILER_GNU_LIKE 1)  
+endif()
+
+
 # --- Append some options (list OPT) to c compiler flags. ---
 # Update :
 # - CMAKE_C_FLAGS
@@ -38,9 +43,9 @@ macro(ADD_C_OPTIONS OPT _TARGETS)
 endmacro()
 
 macro(SET_C_WARNINGS _TARGETS)
-  if (MSVC)
-    # TODO
-  else (MSVC)
+  if (NOT C_COMPILER_GNU_LIKE)
+    add_compile_options (/Wall /wd4061 /wd4710 /wd4100 /wd4820 /wd5045)
+  else ()
     # to enable: cast-function-type
     add_compile_options (-Wall -Wuninitialized -Wextra)
     set (_just_warnings  "no-cast-function-type;format-overflow=2;format=2")
