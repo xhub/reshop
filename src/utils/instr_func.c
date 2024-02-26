@@ -156,7 +156,7 @@ static double RHP_FXPTR_CALLCONV _rpower(double x, double exponent)
  * ------------------------------------------------------------------------- */
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#define LIBM_WRAPPER(X)  wrapped_ ## (X)
+#define LIBM_WRAPPER(X)  wrapped_ ## X
 
 #define MSVC_WRAPPER1(X) static double RHP_FXPTR_CALLCONV \
    wrapped_ ## X(double x) { return X(x); }
