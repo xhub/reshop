@@ -1,7 +1,7 @@
 #ifndef INSTR_H
 #define INSTR_H
 
-enum instr_code {
+enum nlopcode {
    nlNoOp    = 0,    /**< no operation                              */
    nlPushV,          /**< push variable                             */
    nlPushI,          /**< push immediate (constant)                 */
@@ -33,23 +33,7 @@ enum instr_code {
    nlPushO,
    nlInvoc,
    nlStackIn,
-   __instr_code_size
-};
-
-enum optype {
-   opError    = 0,
-   opIgnore,
-   opStore,
-   opAlpha,
-   opFuncU,
-   opFuncB,
-   opMult,
-   opAdd,
-   opUnary,
-   opNewFunc,
-   opArg,
-   opPushS,
-   __optype_size
+   nlOpcode_size
 };
 
 enum func_code {
@@ -168,7 +152,6 @@ enum func_code {
    fndummy
 };
 
-extern const char * const nlopt_name[__instr_code_size];
 extern const char * const func_code_name[fndummy+1];
 
 typedef double (*reshop_fxptr)(void);
@@ -192,11 +175,11 @@ enum nlconst {
    nlconst_sqrt2     = 14,   /**< sqrt(2)      */
    nlconst_three     = 15,
    nlconst_five      = 16,
-   _gams_nlconst_size
+   nlconst_size      = nlconst_five,
 };
 
 const char* instr_getfuncname(unsigned ifunc);
-const char* instr_code_name(enum instr_code instr);
+const char* instr_code_name(enum nlopcode instr);
 void gams_opcode_print(unsigned mode, int *instrs, int *args, int len);
 
 #endif /* INSTR_H */

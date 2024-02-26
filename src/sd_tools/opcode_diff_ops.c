@@ -21,7 +21,7 @@ struct opcode_diff_data {
 
 static inline void addcode(int ** restrict deriv_instrs, int ** restrict deriv_args,
                            int * restrict len, unsigned * restrict max_len,
-                           enum instr_code c, int f)
+                           enum nlopcode c, int f)
 {
    assert(*max_len > 0);
 
@@ -159,7 +159,7 @@ int opcode_diff(int ** restrict deriv_instrs,
    }
 
    for (int k = 0; k < codelen; k++) {
-      enum instr_code key = instrs[k];
+      enum nlopcode key = instrs[k];
 
       switch (key) {
       case nlNoOp:

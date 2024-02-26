@@ -206,9 +206,9 @@ bool chk_gms_opcode(int *instr, int *args, unsigned len, const char* equname)
    }
 
    for (int i = 0; i < len; ++i) {
-      if (instr[i] >= __instr_code_size) {
+      if (instr[i] >= nlOpcode_size) {
          error("[%s] opcode @%d has value %d (max is %d)\n", __func__, i,
-               instr[i], __instr_code_size-1);
+               instr[i], nlOpcode_size-1);
          res = false;
       }
 
@@ -275,7 +275,7 @@ NlTree* nltree_buildfromgams(unsigned codelen, const int * restrict instrs,
    while (k < codelen) {
 skip_k_incr:
      {
-      const enum instr_code key = instrs[k];
+      const enum nlopcode key = instrs[k];
 
       switch (key) {
       case nlNoOp:

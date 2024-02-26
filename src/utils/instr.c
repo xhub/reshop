@@ -2,6 +2,7 @@
 #include <stddef.h>
 
 #include "instr.h"
+#include "macros.h"
 #include "printout.h"
 
 #define DEFINE_STR() \
@@ -62,50 +63,16 @@ static const unsigned opnames_offsets[] = {
 DEFINE_STR()
 };
 
-static_assert(sizeof(opnames_offsets)/sizeof(opnames_offsets[0]) == __instr_code_size,
+static_assert(ARRAY_SIZE(opnames_offsets) == nlOpcode_size,
               "Incompatible sizes!");
 
-const char * instr_code_name(enum instr_code instr)
+
+const char * instr_code_name(enum nlopcode opcode)
 {
-   if (instr >= __instr_code_size) { return "unknown GAMS opcode"; }   
+   if (opcode >= nlOpcode_size) { return "unknown GAMS opcode"; }   
 
-   return opnames.dummystr + opnames_offsets[instr];
+   return opnames.dummystr + opnames_offsets[opcode];
 }
-
-
-const char * const nlopt_name[__instr_code_size] = {
-   "NoOp",
-   "PushV",
-   "PushI",
-   "Store",
-   " + ",
-   "AddV",
-   "AddI",
-   " - ",
-   "SubV",
-   "SubI",
-   "*",
-   "MulV",
-   "MulI",
-   "/",
-   "DivV",
-   "DivI",
-   "-",
-   "UMinV",
-   "Header",
-   "End",
-   "CallArg1",
-   "CallArg2",
-   "CallArgN",
-   "FuncArgN",
-   "MulIAdd",
-   "PushZero",
-   "Chk",
-   "AddO",
-   "PushO",
-   "Invoc",
-   "StackIn"
-};
 
 const char * const func_code_name[fndummy+1] = {
    "mapval",
