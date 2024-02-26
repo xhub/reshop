@@ -748,8 +748,7 @@ int empvm_run(struct empvm *vm)
          Lexeme *lexeme = &symiter->symbol.lexeme;
          DEBUGVMRUN("%.*s[%u] <- %n", lexeme->len, lexeme->start, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
-         int pad = getpadding(offset1 + offset2); 
-         DEBUGVMRUN("%*sloopvar@%u\n", pad, "", lidx);
+         DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
 
          break;
