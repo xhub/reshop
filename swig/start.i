@@ -19,6 +19,14 @@ _Pragma("GCC diagnostic error \"-Wimplicit-function-declaration\"")
 _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
 #define UNUSED __attribute__((unused))
 
+#elif __clang__
+
+_Pragma("clang diagnostic error \"-Wimplicit-function-declaration\"")
+_Pragma("clang diagnostic ignored \"-Wunused-parameter\"")
+_Pragma("clang diagnostic ignored \"-Wunused-function\"")
+#define UNUSED __attribute__((unused))
+
+
 #else
 
 #define UNUSED 
