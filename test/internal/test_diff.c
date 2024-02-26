@@ -134,9 +134,9 @@ _exit:
 
 static int run_ex2(int *instrs, int *args)
 {
-   size_t codelen = (size_t)args[0];
+   int codelen = args[0];
 
-   for (size_t i = 0; i < codelen; ++i)
+   for (int i = 0; i < codelen; ++i)
    {
       switch (instrs[i])
       {

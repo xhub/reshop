@@ -1035,7 +1035,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   RESHOP_CHECK(rhp_nltree_arithm(tree, &root_node, 2, 3));
   add_node = root_node;
 
-  for (size_t i = 0; i < 3; ++i) {
+  for (unsigned i = 0; i < 3; ++i) {
     rhp_idx xi;
     RESHOP_CHECK(rhp_avar_get(x, i, &xi));
 

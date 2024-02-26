@@ -121,7 +121,7 @@ int rhpReadyAPI(rhpRec_t *jh, gmoHandle_t gh, optHandle_t oh)
    * Read the cfg file from the gams sysdir
    * ---------------------------------------------------------------------- */
 
-   unsigned sysdir_len = strlen(sysdir);
+   size_t sysdir_len = strlen(sysdir);
    if (sizeof(sysdir) <= sysdir_len + sizeof(GMS_CONFIG_FILE)) {
       gevLogStat(jh->eh, "*** ReSHOP: SysDir is too long");
       rc = 1; goto _exit;

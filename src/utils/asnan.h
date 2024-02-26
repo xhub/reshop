@@ -36,11 +36,11 @@ const char *nansstr(const char *func, unsigned char code);
 /*  TODO(xhub) investigate this */
 #if !defined(SNAN_FROM_BUILTIN)
 #include <stdint.h>
-#define MKSNAN(code)  (0x7FF4000000000000ULL + (uint64_t)(code))
-#define SNAN          0x7FF4000000000000ULL
-#define SNAN_UNINIT   0x7FF4000000000001ULL
-#define SNAN_UNDEF    0x7FF4000000000002ULL
-#define SNAN_NA       0x7FF4000000000003ULL
+#define MKSNAN(code)  (double)(0x7FF4000000000000ULL + (uint64_t)(code))
+#define SNAN          (double)0x7FF4000000000000ULL
+#define SNAN_UNINIT   (double)0x7FF4000000000001ULL
+#define SNAN_UNDEF    (double)0x7FF4000000000002ULL
+#define SNAN_NA       (double)0x7FF4000000000003ULL
 #endif
 
 #endif /* RESHOP_SNAN_H */
