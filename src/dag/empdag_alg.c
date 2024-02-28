@@ -18,6 +18,7 @@
 #include "rhp_graph_data.h"
 #include "status.h"
 #include "timings.h"
+#include "toplayer_utils.h"
 
 
 typedef unsigned nidx_t;
@@ -546,13 +547,17 @@ NONNULL static int process_Carcs(EmpDagDfsData *dfsdata, UIntArray *Carcs,
 }
 
 NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
-                                DfsPathDataFwd pathdata, unsigned nidx)
+                                 DfsPathDataFwd pathdata, mpid_t mpid_parent)
 {
    EmpDag *empdag = dfsdata->empdag;
    DagPathType cur_pathtype = pathdata.pathtype;
 
+   dfsdata->hasVFPath = true;
+
+   assert(Varcs->len > 0);
+
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      const ArcVFData *edgeVF = &Varcs->arr[i];
+      const ArcVFData *arcVF = &Varcs->arr[i];
 
       /* ------------------------------------------------------------------
        * If we have an adversarial MP, we add it to a list of MP to reformulate
@@ -560,19 +565,29 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
        * path and the child MP are opposite.
        * ------------------------------------------------------------------ */
 
-      dagid_t mpid_child = edgeVF->child_id;
-      RhpSense sense = mp_getsense(empdag->mps.arr[mpid_child]);
+      mpid_t mpid_child = arcVF->child_id;
+      const MathPrgm *mp_child = empdag->mps.arr[mpid_child];
+      RhpSense sense = mp_getsense(mp_child);
 
       if ((sense == RhpMax && cur_pathtype == DfsPathVFMin) ||
           (sense == RhpMin && cur_pathtype == DfsPathVFMax)) {
 
-         S_CHECK(rhp_uint_add(&dfsdata->adversarial_mps, mpid_child));
+         S_CHECK(mpidarray_add(&dfsdata->adversarial_mps, mpid_child));
 
          if (!pathdata.saddle_path_registered) {
-            S_CHECK(rhp_uint_add(&dfsdata->saddle_path_starts, pathdata.saddle_path_start));
+            S_CHECK(mpidarray_add(&dfsdata->saddle_path_starts, pathdata.saddle_path_start));
             pathdata.saddle_path_registered = true;
          }
-
+      } else if (sense == RhpFeasibility) {
+         error("[empdag] ERROR: MP(%s), of type %s, is linked via a VF arc to "
+               "its parent MP(%s). This is nonsensical.\n",
+               empdag_getmpname(empdag, mpid_child), mp_gettypestr(mp_child),
+               empdag_getmpname(empdag, mpid_parent));
+         return Error_EMPIncorrectInput;
+      } else if (sense != RhpMax && sense != RhpMin) {
+         error("[empdag] ERROR: MP(%s) has unknown/unsupported sense %s\n",
+               empdag_getmpname(empdag, mpid_child), sense2str(sense));
+         return Error_EMPRuntimeError;
       }
 
       int rc = dfs_mpV(mpid_child, dfsdata, pathdata);
@@ -592,19 +607,19 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
 }
 
 NONNULL static
-int dfs_mpC(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
+int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
-   unsigned node_idx = mpid_parent; assert(mpid_parent < empdag->mps.len);
-   UIntArray *Carcs = &empdag->mps.Carcs[mpid_parent];
-   struct VFedges *Varcs = &empdag->mps.Varcs[mpid_parent];
+   unsigned node_idx = mpid; assert(mpid < empdag->mps.len);
+   UIntArray *Carcs = &empdag->mps.Carcs[mpid];
+   struct VFedges *Varcs = &empdag->mps.Varcs[mpid];
 
    assert(pathdata.pathtype == DfsPathCtrl);
    DfsPathDataFwd pathdata_child = pathdata;
    pathdata_child.depth++;
 
 
-   DfsState state = process_node_state(dfsdata, mpid2uid(mpid_parent), node_idx);
+   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), node_idx);
    switch (state) {
    case InProgress:
       break;
@@ -637,15 +652,15 @@ int dfs_mpC(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
    assert(!pathtype_is_VF(pathdata.pathtype));
 
    if (Vlen > 0) {
-      RhpSense sense_parent = mp_getsense(empdag->mps.arr[mpid_parent]);
+      RhpSense sense_parent = mp_getsense(empdag->mps.arr[mpid]);
       assert(sense_parent == RhpMax || sense_parent == RhpMin);
       DagPathType cur_pathtype = sense_parent == RhpMin ? DfsPathVFMin : DfsPathVFMax;
 
       pathdata_child.pathtype = cur_pathtype;
-      pathdata_child.saddle_path_start = mpid_parent;
+      pathdata_child.saddle_path_start = mpid;
       pathdata_child.saddle_path_registered = false;
 
-      S_CHECK(process_Varcs(dfsdata, Varcs, pathdata_child, node_idx));
+      S_CHECK(process_Varcs(dfsdata, Varcs, pathdata_child, mpid));
    }
 
    /* ---------------------------------------------------------------------
@@ -668,77 +683,19 @@ int dfs_mpC(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
  * --------------------------------------------------------------------- */
 
 NONNULL static
-int dfs_mpV(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
+int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
-   unsigned node_idx = mpid_parent;
-   assert(mpid_parent < empdag->mps.len);
-   UIntArray *Carcs = &empdag->mps.Carcs[mpid_parent];
-   struct VFedges *Varcs = &empdag->mps.Varcs[mpid_parent];
+   unsigned node_idx = mpid;
+   assert(mpid < empdag->mps.len);
+   UIntArray *Carcs = &empdag->mps.Carcs[mpid];
+   struct VFedges *Varcs = &empdag->mps.Varcs[mpid];
 
    assert(pathtype_is_VF(pathdata.pathtype));
    DfsPathDataFwd pathdata_child = pathdata;
    pathdata_child.depth++;
 
-   DfsState state = process_node_state(dfsdata, mpid2uid(mpid_parent), node_idx);
-   switch (state) {
-   case InProgress:
-      break;
-   case CycleStart:
-      return -DagErrDagCycle;
-   case Processed:
-      return OK;
-   default:
-      return runtime_error_state(state);
-   }
-
-   dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
-
-   /* We are at a leaf node */
-   if (Carcs->len == 0 && Varcs->len == 0) {
-      dfsdata->max_depth = MAX(dfsdata->max_depth, pathdata.depth);
-   }
-
-   DagPathType cur_pathtype = pathdata.pathtype;
-
-   /* ---------------------------------------------------------------------
-    * Children on VF arc: we need to determine whether we have a saddle path
-    * --------------------------------------------------------------------- */
-
-   S_CHECK(process_Varcs(dfsdata, Varcs, pathdata_child, node_idx));
-
-   /* ---------------------------------------------------------------------
-    * Children on CTRL arc: reset pathtype
-    * --------------------------------------------------------------------- */
-
-   pathdata_child.pathtype = DfsPathCtrl;
-   S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, node_idx));
-
-   dfsdata->topo_order_revidx[node_idx] = dfsdata->num_visited;
-   dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
-
-   dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
-
-   /* Mark node as processed so that no further exploration is required */
-   mark_as_processed(dfsdata, node_idx);
-
-   return OK;
-}
-
-NONNULL static
-int dfs_mpNashOrRoot(dagid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
-{
-   const EmpDag * restrict empdag = dfsdata->empdag;
-   unsigned node_idx = mpid_parent;
-   assert(mpid_parent < empdag->mps.len);
-   UIntArray *Carcs = &empdag->mps.Carcs[mpid_parent];
-   struct VFedges *Varcs = &empdag->mps.Varcs[mpid_parent];
-
-   assert(pathdata.pathtype == DfsPathEquil || pathdata.pathtype == DfsPathUnset);
-   DfsPathDataFwd pathdata_child = pathdata;
-   pathdata_child.depth++;
-
-   DfsState state = process_node_state(dfsdata, mpid2uid(mpid_parent), node_idx);
+   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), node_idx);
    switch (state) {
    case InProgress:
       break;
@@ -754,24 +711,85 @@ int dfs_mpNashOrRoot(dagid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd
 
    /* We are at a leaf node */
    unsigned Vlen = Varcs->len;
-   if (Carcs->len == 0 && Vlen == 0) {
+   unsigned Clen = Carcs->len;
+   if (Clen == 0 && Vlen == 0) {
       dfsdata->max_depth = MAX(dfsdata->max_depth, pathdata.depth);
    }
 
+   /* ---------------------------------------------------------------------
+    * Children on VF arc: we need to determine whether we have a saddle path
+    * --------------------------------------------------------------------- */
+
+   if (Vlen > 0 ) {
+      S_CHECK(process_Varcs(dfsdata, Varcs, pathdata_child, mpid));
+   }
+
+   /* ---------------------------------------------------------------------
+    * Children on CTRL arc: reset pathtype
+    * --------------------------------------------------------------------- */
+
+   if (Clen > 0) {
+      pathdata_child.pathtype = DfsPathCtrl;
+      S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, node_idx));
+   }
+
+   dfsdata->topo_order_revidx[node_idx] = dfsdata->num_visited;
+   dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
+
+   dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
+
+   /* Mark node as processed so that no further exploration is required */
+   mark_as_processed(dfsdata, node_idx);
+
+   return OK;
+}
+
+NONNULL static
+int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
+{
+   const EmpDag * restrict empdag = dfsdata->empdag;
+   unsigned node_idx = mpid;
+   assert(mpid < empdag->mps.len);
+   UIntArray *Carcs = &empdag->mps.Carcs[mpid];
+   struct VFedges *Varcs = &empdag->mps.Varcs[mpid];
+
+   assert(pathdata.pathtype == DfsPathEquil || pathdata.pathtype == DfsPathUnset);
+   DfsPathDataFwd pathdata_child = pathdata;
+   pathdata_child.depth++;
+
+   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), node_idx);
+   switch (state) {
+   case InProgress:
+      break;
+   case CycleStart:
+      return -DagErrDagCycle;
+   case Processed:
+      return OK;
+   default:
+      return runtime_error_state(state);
+   }
+
+   dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
+
+   /* Are we at a leaf node? */
+   unsigned Vlen = Varcs->len;
+   if (Carcs->len == 0 && Vlen == 0) {
+      dfsdata->max_depth = MAX(dfsdata->max_depth, pathdata.depth);
+   }
 
    /* ---------------------------------------------------------------------
     * Children on VF arc: we need to determine whether we have a saddle path
     * --------------------------------------------------------------------- */
 
    if (Vlen > 0) {
-      RhpSense sense_parent = mp_getsense(empdag->mps.arr[mpid_parent]);
-      assert(sense_parent == RhpMax || sense_parent == RhpMin);
-      DagPathType cur_pathtype = sense_parent == RhpMin ? DfsPathVFMin : DfsPathVFMax;
+      RhpSense sense = mp_getsense(empdag->mps.arr[mpid]);
+      assert(sense == RhpMax || sense == RhpMin);
+      DagPathType cur_pathtype = sense == RhpMin ? DfsPathVFMin : DfsPathVFMax;
       pathdata_child.pathtype = cur_pathtype;
-      pathdata_child.saddle_path_start = mpid_parent;
+      pathdata_child.saddle_path_start = mpid;
       pathdata_child.saddle_path_registered = false;
 
-      S_CHECK(process_Varcs(dfsdata, Varcs, pathdata_child, node_idx));
+      S_CHECK(process_Varcs(dfsdata, Varcs, pathdata_child, mpid));
    }
 
    /* ---------------------------------------------------------------------
@@ -829,7 +847,7 @@ int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
       daguid_t uid_child = arcs->arr[i];
       assert(uidisMP(uid_child));
 
-      int rc = dfs_mpNashOrRoot(uid2id(uid_child), dfsdata, pathdata_child);
+      int rc = dfs_mpInNashOrRoot(uid2id(uid_child), dfsdata, pathdata_child);
 
       if (rc == 0) continue;
       if (rc > 0) { return rc; }
@@ -1524,7 +1542,7 @@ int empdag_analysis(EmpDag * restrict empdag)
 
       int rc;
       if (uidisMP(uid)) {
-         rc = dfs_mpNashOrRoot(uid2id(uid), &dfsdata, pathdata);
+         rc = dfs_mpInNashOrRoot(uid2id(uid), &dfsdata, pathdata);
       } else {
          rc = dfs_mpe(uid2id(uid), &dfsdata, pathdata);
       }
@@ -1616,7 +1634,7 @@ int empdag_analysis(EmpDag * restrict empdag)
 
       empdag_sort_tim_sort(mps2reformulate, num_adversarial);
 
-      rhp_uint_reserve(&empdag->mps2reformulate, num_adversarial);
+      mpidarray_reserve(&empdag->mps2reformulate, num_adversarial);
       unsigned * restrict mps2r = empdag->mps2reformulate.arr;
 
 

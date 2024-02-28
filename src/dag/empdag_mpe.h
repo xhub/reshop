@@ -8,7 +8,7 @@
 
 
 
-static inline void _mpe_namedlist_init(struct mpe_namedarray *dat)
+static inline void _mpe_namedlist_init(DagMpeArray *dat)
 {
    assert(dat);
    dat->len = 0;
@@ -20,7 +20,7 @@ static inline void _mpe_namedlist_init(struct mpe_namedarray *dat)
    dat->rarcs = NULL;
 }
 
-static inline int _mpe_namedlist_resize(struct mpe_namedarray *dat, unsigned size)
+static inline int _mpe_namedlist_resize(DagMpeArray *dat, unsigned size)
 {
    CALLOC_(dat->arr, Mpe*, size);
    CALLOC_(dat->names, const char*, size);
@@ -30,7 +30,7 @@ static inline int _mpe_namedlist_resize(struct mpe_namedarray *dat, unsigned siz
    return OK;
 }
 
-static inline int _mpe_namedlist_reserve(struct mpe_namedarray *dat, unsigned reserve)
+static inline int _mpe_namedlist_reserve(DagMpeArray *dat, unsigned reserve)
 {
    unsigned max_lb = reserve + dat->len;
    if (max_lb > dat->max) {
@@ -53,7 +53,7 @@ static inline int _mpe_namedlist_reserve(struct mpe_namedarray *dat, unsigned re
 }
 
 static inline OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
-int _mpe_namedlist_add(struct mpe_namedarray *dat, Mpe* elt, const char *name)
+int _mpe_namedlist_add(DagMpeArray *dat, Mpe* elt, const char *name)
 {
 
    if (dat->len >= dat->max) {
@@ -78,8 +78,8 @@ int _mpe_namedlist_add(struct mpe_namedarray *dat, Mpe* elt, const char *name)
    return OK;
 }
 
-static inline int _mpe_namedlist_copy(struct mpe_namedarray * restrict dat,
-                                const struct mpe_namedarray * restrict dat_src,
+static inline int _mpe_namedlist_copy(DagMpeArray * restrict dat,
+                                const DagMpeArray * restrict dat_src,
                                 Model *mdl)
 {
    unsigned size = dat_src->len;
@@ -119,7 +119,7 @@ static inline int _mpe_namedlist_copy(struct mpe_namedarray * restrict dat,
    return OK;
 }
 
-static inline void _mpe_namedlist_free(struct mpe_namedarray *dat)
+static inline void _mpe_namedlist_free(DagMpeArray *dat)
 {
    unsigned len = dat->len;
    if (len > 0) {

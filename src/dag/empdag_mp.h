@@ -39,7 +39,7 @@ static int _edgeVFs_copy(VarcArray * restrict dat,
 }
 
 
-static inline void _mp_namedarray_init(struct mp_namedarray *dat)
+static inline void _mp_namedarray_init(DagMpArray *dat)
 {
    assert(dat);
    dat->len = 0;
@@ -52,7 +52,7 @@ static inline void _mp_namedarray_init(struct mp_namedarray *dat)
    dat->rarcs = NULL;
 }
 
-static inline int _mp_namedarray_resize(struct mp_namedarray *dat, unsigned size)
+static inline int _mp_namedarray_resize(DagMpArray *dat, unsigned size)
 {
    CALLOC_(dat->arr, MathPrgm*, size);
    CALLOC_(dat->names, const char*, size);
@@ -63,7 +63,7 @@ static inline int _mp_namedarray_resize(struct mp_namedarray *dat, unsigned size
    return OK;
 }
 
-static inline int _mp_namedarray_reserve(struct mp_namedarray *dat, unsigned reserve)
+static inline int _mp_namedarray_reserve(DagMpArray *dat, unsigned reserve)
 {
    unsigned max_lb = reserve + dat->len;
    if (max_lb > dat->max) {
@@ -88,7 +88,7 @@ static inline int _mp_namedarray_reserve(struct mp_namedarray *dat, unsigned res
 }
 
 static inline OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
-int _mp_namedarray_add(struct mp_namedarray *dat, MathPrgm* elt, const char *name)
+int _mp_namedarray_add(DagMpArray *dat, MathPrgm* elt, const char *name)
 {
 
    if (dat->len >= dat->max) {
@@ -115,8 +115,8 @@ int _mp_namedarray_add(struct mp_namedarray *dat, MathPrgm* elt, const char *nam
    return OK;
 }
 
-static inline int _mp_namedarray_copy(struct mp_namedarray * restrict dat,
-                                const struct mp_namedarray * restrict dat_src,
+static inline int _mp_namedarray_copy(DagMpArray * restrict dat,
+                                const DagMpArray * restrict dat_src,
                                 Model *mdl)
 {
    unsigned size = dat_src->len;
@@ -159,7 +159,7 @@ static inline int _mp_namedarray_copy(struct mp_namedarray * restrict dat,
    return OK;
 }
 
-static inline void _mp_namedarray_free(struct mp_namedarray *dat)
+static inline void _mp_namedarray_free(DagMpArray *dat)
 {
    unsigned len = dat->len;
    if (len > 0) {

@@ -120,8 +120,8 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    memset(&empdag->node_stats, 0, sizeof (empdag->node_stats));
    memset(&empdag->edge_stats, 0, sizeof (empdag->edge_stats));
 
-   rhp_uint_init(&empdag->roots);
-   rhp_uint_init(&empdag->mps2reformulate);
+   mpidarray_init(&empdag->roots);
+   mpidarray_init(&empdag->mps2reformulate);
    _mp_namedarray_init(&empdag->mps);
    _mpe_namedlist_init(&empdag->mpes);
 
@@ -930,9 +930,9 @@ int empdag_check(EmpDag *empdag)
 {
    int status = OK;
 
-   const UIntArray *roots = &empdag->roots;
-   const struct mp_namedarray *mps = &empdag->mps;
-   const struct mpe_namedarray *mpes = &empdag->mpes;
+   const DagUidArray *roots = &empdag->roots;
+   const DagMpArray *mps = &empdag->mps;
+   const DagMpeArray *mpes = &empdag->mpes;
 
    unsigned mp_len = empdag_getmplen(empdag);
    unsigned mpe_len = empdag_getmpelen(empdag);

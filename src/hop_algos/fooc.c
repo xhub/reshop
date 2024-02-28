@@ -2105,8 +2105,7 @@ static NONNULL int fooc_mcp_analyze_emp(Model *mdl, daguid_t *uid)
 
    assert(empinfo_hasempdag(empinfo_src));
 
-   rhp_idx _uid;
-   const UIntArray *roots = &empdag->roots;
+   const DagUidArray *roots = &empdag->roots;
    unsigned roots_len = roots->len;
 
    if (roots_len == 1) {

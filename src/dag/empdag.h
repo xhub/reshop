@@ -323,12 +323,13 @@ static inline bool empdag_mphaschild(const EmpDag *empdag, mpid_t mpid) {
 
 
 NONNULL static inline bool empdag_rootismpe(const EmpDag *empdag) {
-   return empdag->roots.len == 1 && uidisMPE(empdag->roots.arr[0]);
+   assert(valid_uid(empdag->uid_root));
+   return uidisMPE(empdag->uid_root);
 }
 
  NONNULL static inline bool empdag_rootismp(const EmpDag *empdag) {
-   return empdag->roots.len == 1 && uidisMP(empdag->roots.arr[0]);
-
+   assert(valid_uid(empdag->uid_root));
+   return uidisMP(empdag->uid_root);
 }
 
 int empdag_simple_init(EmpDag *empdag);
