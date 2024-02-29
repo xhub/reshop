@@ -2179,7 +2179,7 @@ static int fooc_mcp_emp(Model *mdl, McpStats *restrict mcpdata) {
    daguid_t uid;
    S_CHECK(fooc_mcp_analyze_emp(mdl, &uid));
 
-   McpDef mcpdef = {.uid = uid}; //, .fops_vars = NULL};
+   McpDef mcpdef = {.uid = uid};
    return fooc_mcp(mdl, &mcpdef, mcpdata);
 }
 

@@ -121,14 +121,6 @@ static int solve_mcp(Model *mdl, struct jacdata *jacdata)
   _output_equs(mdl);
 
    switch (mdldata->solver) {
-#ifdef TO_BE_DELETED
-   case RMDL_SOLVER_PATHVI_GE:
-   {
-      struct reshop_print rp = { .printout = &printout, .printstr = &printstr };
-      S_CHECK(_load_pathvi());
-      return solver_pathvi(&mdl->ctr, jacdata, &rp);
-   }
-#endif
    case RMDL_SOLVER_GAMS:
    {
      Model *mdl_gams;
@@ -184,9 +176,6 @@ int rmdl_solve_asmcp(Model *mdl)
 
 _exit:
    jacdata_free(&jacdata);
-
-   /*  TODO(xhub) make the code in path generic? */
-//   S_CHECK(_report_dual_info_into_primal(mdl));
 
    return status;
 }
