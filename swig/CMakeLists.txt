@@ -8,6 +8,11 @@ cmake_minimum_required(VERSION 3.22)
 find_package(SWIG REQUIRED)
 include(UseSWIG)
 
+# linux target for python wheel
+if (LINUX AND DISTRIB)
+   set(PYTHON_WHEEL_PLAT "manylinux_2_17_x86_64")
+endif()
+
 
 # We generate the python bindings in 2 steps:
 # - 1. Use SWIG to generate the wrapper (just python for now)
@@ -78,7 +83,6 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
                        OUTPUT_VARIABLE Python3_platform
                        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-      message(STATUS "DEBUG: Python3_platform=${Python3_platform}")
    endif()
 
 

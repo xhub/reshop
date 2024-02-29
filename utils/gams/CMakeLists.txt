@@ -1,5 +1,5 @@
 # WE use add_compile_definitions
-cmake_minimum_required (VERSION 3.20)
+cmake_minimum_required (VERSION 3.25)
 
 # This needs to be set at the top
 # We need that for TLS
@@ -22,7 +22,7 @@ set (CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 # Start options
 option(GamsOptionsSpecWriter_DIR
-  "Directory containing the GamsOptionsSpecWriter files" OFF)
+  "Directory containing the GamsOptionsSpecWriter files" "")
  
 #################################################
 # Platform-specific part
