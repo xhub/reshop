@@ -347,8 +347,6 @@ int rhp_empdag_rootsetmpe(struct rhp_mdl *mdl, struct rhp_equilibrium *mpe);
 RHP_PUBLIB
 struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile);
 RHP_PUBLIB
-int rhp_gms_readmodel(struct rhp_mdl *mdl, const char *gmsfile);
-RHP_PUBLIB
 int rhp_gms_setgamscntr(struct rhp_mdl *mdl, const char *cntrfile);
 RHP_PUBLIB
 int rhp_gms_setgamsdir(struct rhp_mdl *mdl, const char *gamsdir);

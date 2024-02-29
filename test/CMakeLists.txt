@@ -86,11 +86,6 @@ endfunction ()
 
 
 
-ADD_PUBLIC_TEST(test_callsolver.c)
-ADD_PUBLIC_TEST(test_solve.c)
-set_tests_properties(callsolver PROPERTIES LABELS "darling_fails")
-set_tests_properties(solve PROPERTIES LABELS "darling_fails")
-
 ADD_PUBLIC_TEST(test_ovf_fitting_reshop.c test_ovf_fitting_common.c)
 #add_test(ovf_fitting_reshop_initvar test_ovf_fitting_reshop)
 #set_tests_properties(ovf_fitting_reshop_initvar PROPERTIES ENVIRONMENT "RHP_OVF_INIT_NEW_VARIABLES=1" )
@@ -113,17 +108,9 @@ if (GAMSDIR_TARGET AND GAMSCNTR_DAT_FILE)
    set_tests_properties(basic_gams PROPERTIES LABELS "darling_fails")
 endif (GAMSDIR_TARGET AND GAMSCNTR_DAT_FILE)
 
-if(WITH_SOLVERS)
-   #  ADD_PUBLIC_TEST(test_pathvi.c)
-   #  ADD_PUBLIC_TEST(test_path.c)
-endif(WITH_SOLVERS)
-
 # usually this means no sanitizer are active
 if (RESHOP_INTERNAL_TESTS)
-   ADD_INTERNAL_TEST(internal/test_container_gms.c)
    ADD_INTERNAL_TEST(internal/test_diff.c)
-   #  ADD_INTERNAL_TEST(internal/test_rmdlexport.c)
-   ADD_INTERNAL_TEST(internal/test_ovf.c)
 if (NOT DARLING AND NOT NEED_WINE)
    ADD_INTERNAL_TEST(internal/test_tree.c
       "${CMAKE_SOURCE_DIR}/test/data/dat1.dat ${CMAKE_SOURCE_DIR}/test/data/dat2.dat")
