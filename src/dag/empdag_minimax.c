@@ -25,11 +25,14 @@ int empdag_minimax_reformulate(Model *mdl)
 
    S_CHECK(rmdl_incstage(mdl));
 
+   empdag->finalized = false;
+
    trace_process("[process] EMPDAG: there are %u MP to reformulate\n", mps2reform->len);
 
    if (O_Ovf_Reformulation == OVF_Equilibrium) {
       trace_processmsg("[process] EMPDAG: using Equilibrium reformulation\n");
-      return ccflib_equil(mdl);
+      S_CHECK(ccflib_equil(mdl));
+      goto _exit;
    }
 
    for (unsigned i = 0, len = mps2reform->len; i < len; ++i) {
@@ -61,6 +64,9 @@ int empdag_minimax_reformulate(Model *mdl)
             return Error_NotImplemented;
       }
    }
+
+_exit:
+   S_CHECK(empdag_fini(empdag));
 
    return empdag_exportasdot(mdl);
 }
