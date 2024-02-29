@@ -126,6 +126,7 @@ int rhp_solve(Model *mdl)
 
    if (!mdl->mdl_up) { TO_IMPLEMENT("rhp_solve without upstream model"); }
    S_CHECK(mdl_check(mdl->mdl_up));
+   S_CHECK(mdl_solvable(mdl->mdl_up));
 
    return mdl_solve(mdl);
 }

@@ -124,6 +124,35 @@ int mdl_check(Model *mdl)
    return status;
 }
 
+/**
+ * @brief Check if the given model is solvable
+ *
+ * - For now, check that the empdag, if present, has a root
+ *
+ * @param mdl  the model to check
+ *
+ * @return     the error code
+ */
+int mdl_solvable(Model *mdl)
+{
+   ProbType probtype;
+   S_CHECK(mdl_getprobtype(mdl, &probtype));
+
+   if (probtype != MdlProbType_emp) {
+      return OK;
+   }
+
+   const EmpDag *empdag = &mdl->empinfo.empdag;
+   if (empdag->mps.len == 0 || valid_uid(empdag->uid_root)) {
+      return OK;
+   }
+
+   error("[empdag] ERROR in %s model '%.*s' #%u: No valid root of the EMPDAG\n",
+         mdl_fmtargs(mdl));
+
+   return Error_EMPIncorrectInput;
+}
+
 static int mdl_chk_mcpmetadata(const Model *mdl)
 {
    int status = OK;

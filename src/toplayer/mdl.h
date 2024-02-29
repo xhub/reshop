@@ -68,6 +68,7 @@ int mdl_postprocess(Model *mdl) NONNULL;
 int mdl_check(Model *mdl) NONNULL;
 int mdl_checkmetadata(Model *mdl) NONNULL;
 int mdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ) NONNULL;
+int mdl_solvable(Model *mdl) NONNULL;
 
 int mdl_finalize(Model *mdl) NONNULL;
 
