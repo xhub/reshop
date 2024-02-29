@@ -5,7 +5,7 @@ display_timings boolean 0 0 1 1 Display timing information
 dump_scalar_model boolean 0 0 1 1 Dump every scalar model via convert
 EMPInfoFile string 0 "empinfo.dat" 1 1 EMPinfo file to use
 expensive_checks boolean 0 0 1 1 Perform time consuming consistency checks
-output integer 0 4 0 maxint 1 1 Output level
+output integer 0 7 0 maxint 1 1 Output level
 output_subsolver_log boolean 0 0 1 1 whether to output subsolver logs
 ovf_init_new_variables boolean 0 0 1 1 initialize the new variables introduced during OVF transformation
 ovf_reformulation enumstr 0 "equilibrium" 1 1 scheme for reformulating OVF variables
