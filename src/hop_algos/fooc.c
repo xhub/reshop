@@ -2202,8 +2202,8 @@ int fooc_create_mcp(Model *mdl, McpStats *restrict mcpdata)
   enum mdl_probtype probtype = mdldata_up->probtype;
 
   if (probtype == MdlProbType_mcp) {
-    error("%s :: the problem type is MCP, which already represents optimality "
-          "conditions\n", __func__);
+    error("[fooc] ERROR in %s model '%.*s' #%u: the problem type is MCP, which "
+          "already represents optimality conditions\n", mdl_fmtargs(mdl));
     return Error_UnExpectedData;
   }
 

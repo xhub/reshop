@@ -207,7 +207,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
 
       S_CHECK(empdag_mpeaddmpbyid(empdag, mpe->id, mp->id));
 
-      S_CHECK(empdag_rootset(empdag, mpeid2uid(mpe->id)));
+      S_CHECK(empdag_setroot(empdag, mpeid2uid(mpe->id)));
 
       /* --------------------------------------------------------------------
        * The objective variable of the original problem won't have the correct

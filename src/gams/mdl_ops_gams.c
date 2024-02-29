@@ -510,7 +510,7 @@ skip:
 #include <execinfo.h>
          errormsg("Providing another backtrace:\n");
          void *array[90];
-         int size = sizeof array / sizeof array[0];
+         int size = ARRAY_SIZE(array);
 
          size = backtrace(array, size);
 

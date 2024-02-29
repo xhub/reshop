@@ -13,7 +13,7 @@ static tlsvar char bufMP[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char bufMP2[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char msg[3*sizeof(unsigned)*CHAR_BIT/8+41];
 
-const char *uid2typename(unsigned uid)
+const char *daguid_type2str(unsigned uid)
 {
    return uidisMP(uid) ? "MP" : "MPE";
 }

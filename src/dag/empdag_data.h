@@ -21,9 +21,9 @@ typedef UIntArray MpIdArray;
 
 #define MpId_MaxRegular (MpId_NA >> 1)
 
-#define MpId_SpecialValueMask (UINT_MAX & (~MpId_MaxRegular))
-#define MpId_SharedEquMask (MpId_SpecialValueMask | (MpId_SpecialValueMask >> 1))
-#define MpId_SharedVarMask (MpId_SpecialValueMask | (MpId_SpecialValueMask >> 2))
+#define MpId_SpecialValueMask  (UINT_MAX & (~MpId_MaxRegular))
+#define MpId_SharedEquMask     (MpId_SpecialValueMask | (MpId_SpecialValueMask >> 1))
+#define MpId_SharedVarMask     (MpId_SpecialValueMask | (MpId_SpecialValueMask >> 2))
 #define MpId_OvfDataMask       (MpId_SpecialValueMask | (MpId_SpecialValueMask >> 3))
 
 #define MpId_SpecialValueTag (MpId_SharedEquMask | MpId_SharedVarMask | MpId_OvfDataMask)
@@ -65,4 +65,6 @@ RESHOP_STATIC_ASSERT(MpId_SpecialValueMask > MpId_MaxRegular, "Error in mpid_t")
 RESHOP_STATIC_ASSERT(MpId_SharedEquMask > MpId_MaxRegular, "Error in mpid_t")
 RESHOP_STATIC_ASSERT(MpId_SharedVarMask > MpId_MaxRegular, "Error in mpid_t")
 RESHOP_STATIC_ASSERT(MpId_OvfDataMask > MpId_MaxRegular, "Error in mpid_t")
+
+
 #endif

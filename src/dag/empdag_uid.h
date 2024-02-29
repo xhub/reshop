@@ -40,7 +40,7 @@ typedef enum {
 
 static inline bool valid_uid(unsigned uid) { return uid != EMPDAG_UID_NONE; }
 
-const char *uid2typename(unsigned uid);
+const char *daguid_type2str(unsigned uid);
 
 static inline unsigned mpeid2uid(unsigned id)
 {

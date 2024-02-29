@@ -256,7 +256,7 @@ DfsState process_node_state(EmpDagDfsData *dfsdat, daguid_t uid, nidx_t node_idx
       break;
    case InProgress: {
       error("[empdag/analysis] Cycle detected! It involves the problem %s(%s)\n",
-            uid2typename(uid), empdag_getname(dfsdat->empdag, uid));
+            daguid_type2str(uid), empdag_getname(dfsdat->empdag, uid));
       dfsdat->nodes_stat[node_idx] = CycleStart;
       return CycleStart;
    }
@@ -266,7 +266,7 @@ DfsState process_node_state(EmpDagDfsData *dfsdat, daguid_t uid, nidx_t node_idx
    }
    default:
       error("[empdag/analysis] ERROR (unknown) It involves the problem %s(%s)\n",
-            uid2typename(uid), empdag_getname(dfsdat->empdag, uid));
+            daguid_type2str(uid), empdag_getname(dfsdat->empdag, uid));
       dfsdat->nodes_stat[node_idx] = ErrorState;
       return runtime_error_state(state);
    }
@@ -362,7 +362,7 @@ void report_error_badlca(const EmpDag *empdag, rhp_idx vi, rhp_idx ei,
          " between the two MP is not an MPE, as it should be.\n",
          ctr_printequname(&empdag->mdl->ctr, ei),
          empdag_getname(empdag, mp_id), ctr_printvarname(&empdag->mdl->ctr, vi),
-         empdag_getname(empdag, mp_vi), uid2typename(uid_lca),
+         empdag_getname(empdag, mp_vi), daguid_type2str(uid_lca),
          empdag_getname(empdag, uid_lca));
 }
 

@@ -2567,7 +2567,7 @@ int parse_equilibrium(Interpreter *interp)
    char *name;
    A_CHECK(name, strdup("equilibrium"));
    S_CHECK(empdag_addmpenamed(empdag, name, &equil_id));
-   S_CHECK(empdag_rootsaddmpe(empdag, equil_id));
+   S_CHECK(empdag_setroot(empdag, mpeid2uid(equil_id)));
 
    trace_empinterp("[empinterp] line %u: Found 'equilibrium' keyword. Adding MPE root node\n",
                    interp->linenr);

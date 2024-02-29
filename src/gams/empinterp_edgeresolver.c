@@ -319,11 +319,13 @@ _exit:
    if (status != OK) { return status; }
 
 _add_root:
+   rhp_uint_empty(&roots);
+
    trace_empinterp("[empinterp] setting %s(%s) as EMPDAG root\n",
-                   uid2typename(root_daguid),
+                   daguid_type2str(root_daguid),
                    empdag_getname(empdag, root_daguid));
 
-   return empdag_rootset(empdag, root_daguid);
+   return empdag_setroot(empdag, root_daguid);
 }
 
 int empinterp_resolve_empdag_edges(struct interpreter *interp)

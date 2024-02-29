@@ -68,7 +68,7 @@ int rhp_empdag_rootsetmp(Model *mdl, MathPrgm *mp)
       return Error_NullPointer;
    }
 
-   return empdag_rootsaddmp(&mdl->empinfo.empdag, mp->id);
+   return empdag_setroot(&mdl->empinfo.empdag, mpid2uid(mp->id));
 }
 
 /**
@@ -96,7 +96,7 @@ int rhp_empdag_rootsetmpe(Model *mdl, Mpe *mpe)
       mdl_setprobtype(mdl, MdlProbType_emp);
    }
 
-   return empdag_rootsaddmpe(&mdl->empinfo.empdag, mpe->id);
+   return empdag_setroot(&mdl->empinfo.empdag, mpeid2uid(mpe->id));
 }
 /**
  * @brief Allocate an mathprgm object

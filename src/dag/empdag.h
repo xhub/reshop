@@ -259,10 +259,7 @@ int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
  * Roots related functions
  * -------------------------------------------------------------------------- */
 
-int empdag_rootsaddmpe(EmpDag *empdag, mpeid_t mpeid) NONNULL;
-int empdag_rootsaddmp(EmpDag *empdag, mpid_t mpid) NONNULL;
-int empdag_rootsadd(EmpDag *empdag, daguid_t uid) NONNULL;
-int empdag_rootset(EmpDag *empdag, daguid_t uid) NONNULL;
+int empdag_setroot(EmpDag *empdag, daguid_t uid) NONNULL;
 int empdag_collectroots(EmpDag *empdag, UIntArray *roots) NONNULL;
 
 int empdag_getmpparents(const EmpDag *empdag, const MathPrgm *mp,

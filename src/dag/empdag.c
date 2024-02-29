@@ -25,6 +25,16 @@
 #include "empdag_mpe.h"
 #include "toplayer_utils.h"
 
+
+/* TODO: On 2024.02.29, removed these from header. Could be converted to
+ * static function if the need for theses does not appear soon
+ */
+int empdag_rootsaddmpe(EmpDag *empdag, mpeid_t mpeid) NONNULL;
+int empdag_rootsaddmp(EmpDag *empdag, mpid_t mpid) NONNULL;
+int empdag_rootsadd(EmpDag *empdag, daguid_t uid) NONNULL;
+
+
+
 static int chk_mpid(const EmpDag *empdag, unsigned mp_id)
 {
    if (mp_id >= empdag->mps.len) {
@@ -527,7 +537,7 @@ int empdag_initfromDAG(EmpDag * restrict empdag,
    S_CHECK(_mp_namedarray_copy(&empdag->mps, &empdag_up->mps, empdag->mdl));
    S_CHECK(_mpe_namedlist_copy(&empdag->mpes, &empdag_up->mpes, empdag->mdl));
 
-   S_CHECK(rhp_uint_copy(&empdag->roots, &empdag_up->roots));
+   S_CHECK(daguidarray_copy(&empdag->roots, &empdag_up->roots));
 
    return OK;
 }
@@ -643,7 +653,7 @@ int empdag_rootsadd(EmpDag *empdag, daguid_t uid)
    return empdag_rootsaddmpe(empdag, uid2id(uid));
 }
 
-int empdag_rootset(EmpDag *empdag, daguid_t uid)
+int empdag_setroot(EmpDag *empdag, daguid_t uid)
 {
    S_CHECK(empdag_rootsadd(empdag, uid));
 
@@ -1200,6 +1210,7 @@ int empdag_single_MP_to_Nash(EmpDag* empdag)
    A_CHECK(name, strdup("equilibrium"));
    S_CHECK(empdag_addmpenamed(empdag, name, &mpe_id));
    S_CHECK(empdag_mpeaddmpbyid(empdag, mpe_id, mp->id));
+   S_CHECK(empdag_setroot(empdag, mpeid2uid(mpe_id)));
 
    return OK;
 }
