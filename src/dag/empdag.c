@@ -127,6 +127,8 @@ void empdag_init(EmpDag *empdag, Model *mdl)
 {
    empdag->type = EmpDag_Unset;
    empdag->finalized = false;
+   empdag->features.istree = false;
+
    memset(&empdag->node_stats, 0, sizeof (empdag->node_stats));
    memset(&empdag->edge_stats, 0, sizeof (empdag->edge_stats));
 
@@ -280,21 +282,16 @@ int empdag_fini(EmpDag *empdag)
 
    /* Outside of the empinfo file, need to do this*/
    if (mp_len > 0 && empdag->roots.len == 0) {
-      assert(empdag);
       UIntArray roots;
       S_CHECK(empdag_collectroots(empdag, &roots));
 
       if (roots.len == 1) {
          daguid_t rootuid = roots.arr[0];
-         S_CHECK(empdag_rootset(empdag, rootuid));
+         S_CHECK(empdag_setroot(empdag, rootuid));
       } else if (roots.len == 0) {
          errormsg("[empdag] ERROR: EMPDAG has no root. The EMPDAG must have one root\n");
          return Error_EMPIncorrectInput;
-      } else {
-         error("[empdag] ERROR: EMPDAG has %u roots. Please specify the EMPDAG root\n",
-               roots.len);
-         return Error_EMPIncorrectInput;
-      }
+      } 
    } else {
       //S_CHECK(empdag_checkroot());
    }
@@ -328,7 +325,8 @@ int empdag_fini(EmpDag *empdag)
    
    struct lineppty l = {.colw = 70, .mode = PO_INFO, .ident = 2 };
 
-   printuint(&l, "Total number of MPs", empdag->mps.len);
+   unsigned n_mps = empdag->mps.len;
+   printuint(&l, "Total number of MPs", n_mps);
    l.ident += 2;
    printuint(&l, "Number of OPT MPs", n_opt);
    printuint(&l, "Number of VI MPs", n_vi);
@@ -338,6 +336,32 @@ int empdag_fini(EmpDag *empdag)
    printuint(&l, "Number of VF edges", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
    printuint(&l, "Number of CTRL edges", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
    printuint(&l, "Number of children of Nash nodes", empdag->mpes.arcs ? empdag->mpes.arcs->len : 0);
+
+   if (n_mps > 1 && valid_uid(empdag->uid_root)) {
+      printout(PO_INFO, "%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(empdag->uid_root),
+               empdag_getname(empdag, empdag->uid_root));
+   }
+
+   unsigned n_roots = empdag->roots.len;
+
+   if (n_roots == 1) {
+      daguid_t root = empdag->roots.arr[0];
+      printout(PO_INFO, "\n%*sRoot is %s(%s)", l.ident, "", daguid_type2str(root),
+                empdag_getname(empdag, root));
+   } else if (n_roots > 1) {
+      printout(PO_INFO, "\n%*sRoots are:\n", l.ident, "");
+      l.ident += 2;
+
+      for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
+         daguid_t root =  empdag->roots.arr[i];
+         printout(PO_INFO, "%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(root),
+                  empdag_getname(empdag, root));
+      }
+
+      l.ident -= 2;
+   }
+
+
 
    printstr(PO_INFO, "\n");
 
@@ -515,6 +539,12 @@ int empdag_initfromDAG(EmpDag * restrict empdag,
    assert(empdag_up->type != EmpDag_Empty && empdag_up->type != EmpDag_Unset);
 
    empdag->type = empdag_up->type;
+   memcpy(&empdag->features, &empdag_up->features, sizeof(EmpDagFeatures));
+   memcpy(&empdag->node_stats, &empdag_up->node_stats, sizeof(EmpDagNodeStats));
+   memcpy(&empdag->edge_stats, &empdag_up->edge_stats, sizeof(EmpDagEdgeStats));
+   empdag->finalized = empdag_up->finalized;
+   empdag->uid_root = empdag_up->uid_root;
+
    /* Do not borrow to avoid circular reference */
    empdag->mdl = mdl;
 
@@ -946,15 +976,23 @@ int empdag_check(EmpDag *empdag)
 
    unsigned mp_len = empdag_getmplen(empdag);
    unsigned mpe_len = empdag_getmpelen(empdag);
+   unsigned roots_len = empdag->roots.len;
 
-   if (empdag->roots.len == 0) {
+   if (roots_len == 0) {
       if (mp_len > 0) {
-         error("[empdag:check] ERROR: There are %u MPs, but no root in the EMPDAG\n",
-               mp_len);
+         error("[empdag:check] ERROR in %s model '%.*s' #%u: There are %u MPs, "
+               "but no root in the EMPDAG\n", mdl_fmtargs(empdag->mdl), mp_len);
          return Error_EMPRuntimeError;
       }
 
       return OK;
+   }
+
+   if (roots_len == 1 && !valid_uid(empdag->uid_root)) {
+      error("[empdag:check] ERROR in %s model '%.*s' #%u: there is 1 root, but "
+            "it as not been tagged as the root of the empdag\n",
+            mdl_fmtargs(empdag->mdl));
+      return Error_EMPRuntimeError;
    }
 
    /* Check if all MP node:

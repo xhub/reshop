@@ -156,9 +156,10 @@ typedef struct empdag_dfs {
    DagMpPpty * restrict mp_ppty;
    DagMpePpty * restrict mpe_ppty;
    bool * restrict processed_vi;
-   UIntArray adversarial_mps;
+   MpIdArray adversarial_mps;
+   MpIdArray saddle_path_starts;
    unsigned processed_vi_len;
-   UIntArray saddle_path_starts;
+   bool hasVFPath;
 } EmpDagDfsData;
 
 typedef struct {
@@ -373,6 +374,7 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    dfsdata->empdag = empdag;
 
    dfsdata->isTree = true;
+   dfsdata->hasVFPath = false;
 
    dfsdata->n_nonleaf = 0;
    dfsdata->timestamp = 0;
@@ -1649,6 +1651,9 @@ int empdag_analysis(EmpDag * restrict empdag)
 
       FREE(mps2reformulate);
    }
+
+   empdag->features.istree = dfsdata.isTree;
+   empdag->features.hasVFpath = dfsdata.hasVFPath;
 
 _exit_analysis_loop:
    analysis_data_free(&analysis_data);

@@ -105,6 +105,8 @@ typedef struct {
    EmpDagRootType          rootnode;
    EmpDagOptEdgeFeatures   constraint;
    EmpDagViEdgeFeatures    vicons;
+   bool istree;                        /**< True if the DAG is a tree         */
+   bool hasVFpath;                     /**< True if the DAG has VF paths      */
 } EmpDagFeatures;
 
 typedef struct {

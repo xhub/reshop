@@ -714,10 +714,21 @@ int ccflib_equil(Model *mdl)
          Mpe *equil;
          A_CHECK(equil, empdag_newmpenamed(empdag, strdup("CCF equilibrium reformulation")));
 
-         unsigned root_idx = rhp_uint_find(&empdag->roots, mpid2uid(mpid));
+         /* ----------------------------------------------------------------------
+          * If MP was a root, then put the MPE as root at its place.
+          * Ditto for the EMPDAG root.
+          * ---------------------------------------------------------------------- */
+
+         daguid_t mpid_uid = mpid2uid(mpid);
+         unsigned root_idx = rhp_uint_find(&empdag->roots, mpid_uid);
 
          if (root_idx < UINT_MAX) {
             empdag->roots.arr[root_idx] = mpeid2uid(equil->id);
+         }
+
+         if (empdag->uid_root == mpid_uid) {
+            assert(root_idx < UINT_MAX);
+            empdag->uid_root = mpeid2uid(equil->id);
          }
 
          S_CHECK(empdag_mpeaddmpbyid(empdag, equil->id, mpid));

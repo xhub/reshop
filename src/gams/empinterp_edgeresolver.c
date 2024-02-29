@@ -268,7 +268,7 @@ int empinterp_set_empdag_root(Interpreter *interp)
 
    /* TODO CHECK that this makes sense */
    unsigned n_mps = empdag->mps.len, n_mpes = empdag->mpes.len;
-   if (n_mps == 0 && n_mpes == 0) { return OK; }
+   if (n_mps == 0) { return OK; }
 
    UIntArray roots;
    S_CHECK_EXIT(empdag_collectroots(empdag, &roots));
