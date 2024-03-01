@@ -1,5 +1,6 @@
 #include "reshop_config.h"
 #include "asnan.h"
+#include "asprintf.h"
 
 #include <string.h>
 
@@ -2108,34 +2109,42 @@ static NONNULL int fooc_mcp_analyze_emp(Model *mdl, daguid_t *uid)
    const DagUidArray *roots = &empdag->roots;
    unsigned roots_len = roots->len;
 
-   if (roots_len == 1) {
+   if (roots_len > 1) {
+      TO_IMPLEMENT("EMPDAG with multiple roots: need to implement DAG filtering");
+   }
 
-      _uid = roots->arr[0];
+  /* ----------------------------------------------------------------------
+   * FOOC requires that no VF path are present
+   * ---------------------------------------------------------------------- */
 
-   } else if (roots_len == 0) {
-      error("[fooc] ERROR: No root in the EMPDAG for %s model '%.*s' #%u\n",
-            mdl_fmtargs(mdl));
-      return Error_EMPIncorrectInput;
+   if (empdag->features.hasVFpath) {
+      Model *mdl_up = mdl->mdl_up;
+      Model *mdl4fooc = rhp_mdl_new(RHP_BACKEND_RHP);
+      char *mdlname;
+      IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_up)));
 
-   } else {
-      error("[fooc] ERROR: %u roots in EMPDAG for %s model '%.*s' #%u, only one "
-            "is expected\n", roots_len, mdl_fmtargs(mdl));
-      return Error_EMPIncorrectInput;
+      TO_IMPLEMENT("rmdl_contract_along_Vpaths() needs to be finished");
+//      S_CHECK(rmdl_contract_along_Vpaths(mdl4fooc, mdl_up));
+
+   }
+
+   daguid_t root = empdag->uid_root;
+   *uid = root;
+
+   if (!valid_uid(root)) {
+      error("[fooc] ERROR in %s model '%.*s' #%u, no valid EMPDAG root\n", mdl_fmtargs(mdl));
+      return Error_EMPRuntimeError;
    }
 
    MathPrgm *mp = NULL;
    Mpe *mpe = NULL;
-   if (_uid != EMPDAG_UID_NONE) {
-      unsigned id = uid2id(_uid);
+   dagid_t id = uid2id(root);
 
-      if (uidisMP(_uid)) {
-         S_CHECK(empdag_getmpbyid(empdag, id, &mp));
-      } else {
-         S_CHECK(empdag_getmpebyid(empdag, id, &mpe));
-      }
+   if (uidisMP(root)) {
+      S_CHECK(empdag_getmpbyid(empdag, id, &mp));
+   } else {
+      S_CHECK(empdag_getmpebyid(empdag, id, &mpe));
    }
-
-   *uid = _uid;
 
    if (mpe) {
       UIntArray mps;
