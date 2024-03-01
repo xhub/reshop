@@ -59,7 +59,8 @@ int rhp_gms_readempinfo(Model *mdl, const char *fname)
       bool absolute_path;
 #ifdef _WIN32
       /* TODO: This is quite an assumption, room for improvement */
-      absolute_path = (empinfofile[0] >= 'A' && empinfofile[0] <= 'Z') && empinfofile[1] == ':';
+      char c1 = empinfofile[0], c2 = empinfofile[1];
+      absolute_path = ((c1 >= 'A' && c1 <= 'Z') || (c1 >= 'a' && c1 <= 'z')) && c2 == ':';
 #else
       absolute_path = empinfofile[0] == '/';
 #endif
