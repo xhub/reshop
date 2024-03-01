@@ -193,7 +193,7 @@ int rhpReadyAPI(rhpRec_t *jh, gmoHandle_t gh, optHandle_t oh)
 
    jh->mdl = mdl;
 
-   struct gams_handles gset;
+   struct rhp_gams_handles gset;
    gset.oh = jh->oh;
    gset.gh = jh->gh;
    gset.eh = jh->eh;

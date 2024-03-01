@@ -10,7 +10,7 @@
 
 struct rhp_mdl;
 
-struct gams_handles {
+struct rhp_gams_handles {
    optHandle_t oh;
    gmoHandle_t gh;
    gevHandle_t eh;
@@ -49,7 +49,7 @@ struct gams_handles {
 RHP_PUBLIB
 int rhp_gms_readempinfo(struct rhp_mdl *mdl, const char *fname);
 RHP_PUBLIB
-int rhp_gms_fillgmshandles(struct rhp_mdl *mdl, struct gams_handles *gmsh);
+int rhp_gms_fillgmshandles(struct rhp_mdl *mdl, struct rhp_gams_handles *gmsh);
 RHP_PUBLIB
 int rhp_gms_loadlibs(const char* sysdir);
 RHP_PUBLIB

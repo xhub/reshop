@@ -143,7 +143,7 @@ int rhp_gms_readempinfo(Model *mdl, const char *fname)
  *
  * @return     the error code
  */
-int rhp_gms_fillgmshandles(Model *mdl, struct gams_handles *gmsh)
+int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
 {
    GmsModelData *mdldat = mdl->data;
    GmsContainerData *gms = mdl->ctr.data;
