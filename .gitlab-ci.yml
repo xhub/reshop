@@ -88,7 +88,7 @@ gams_test:
 scan-build:
   stage: scan-build
   script:
-    - mkdir build-scan-build && cd build-scan-build && sh ../utils/scan-build-ci.sh -DGAMSDIR="$(pwd)/.." ..
+    - mkdir build-scan-build && cd build-scan-build && sh ../utils/scan-build-ci.sh -DGAMSSYSDIR="$(pwd)/.." ..
   artifacts:
     expire_in: 2 weeks
     when: always

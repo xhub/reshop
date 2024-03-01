@@ -317,7 +317,15 @@ if(NOT GAMSSYSDIR)
    file(MAKE_DIRECTORY "${SCRDIR}")
 
    # Get GAMS sys on HOST first
-   execute_process (COMMAND gams "${CMAKE_SOURCE_DIR}/cmake/gams_sysdir.gms" "lo=3" "scrdir=${SCRDIR}") 
+   execute_process (COMMAND gams "${CMAKE_SOURCE_DIR}/cmake/gams_sysdir.gms" "lo=3" "scrdir=${SCRDIR}"
+                    RESULT_VARIABLE GAMS_RC
+                    ERROR_VARIABLE GAMS_STDERR)
+
+   if (GAMS_RC GREATER 0)
+   message(FATAL_ERROR "Could not execute GAMS. Stderr content is ${GAMS_STDERR}."
+                       "Use the GAMSSYSDIR to specify the GAMS system directory")
+   endif()
+
    file(READ ${SCRDIR}/gams_data GAMS_OUTPUT)
    # TODO this should not be executed if the gams command fails
    if (GAMS_OUTPUT)
@@ -348,7 +356,16 @@ if(NOT GAMSSYSDIR)
       set(GAMS_EXE_TARGET "gams")
    endif(NEED_WINE)
 
-   execute_process (COMMAND ${GAMS_EXE_TARGET} "${CMAKE_SOURCE_DIR}/cmake/gams_sysdir.gms" "lo=3" "scrdir=${SCRDIR}") 
+   execute_process (COMMAND ${GAMS_EXE_TARGET} "${CMAKE_SOURCE_DIR}/cmake/gams_sysdir.gms" "lo=3" "scrdir=${SCRDIR}"
+                    RESULT_VARIABLE GAMS_RC
+                    ERROR_VARIABLE GAMS_STDERR)
+
+   if (GAMS_RC GREATER 0)
+   message(FATAL_ERROR "Could not execute target GAMS executable ${GAMS_EXE_TARGET}."
+                       "Stderr content is ${GAMS_STDERR}."
+                       "Use the GAMSSYSDIR to specify the GAMS system directory")
+   endif()
+
    file(READ ${SCRDIR}/gams_data GAMS_OUTPUT)
    # TODO this should not be executed if the gams command fails
    if (GAMS_OUTPUT)
