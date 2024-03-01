@@ -43,4 +43,6 @@ int gams_setgamscntr(const char *fname);
 int gmdl_ensuresimpleprob(Model *mdl) NONNULL;
 
 void gams_unload_libs(void);
+int gams_load_libs(const char *sysdir) NONNULL;
+
 #endif

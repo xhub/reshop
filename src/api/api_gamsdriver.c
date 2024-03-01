@@ -9,6 +9,7 @@
 #include <unistd.h>
 #endif
 
+#include "checks.h"
 #include "ctrdat_gams.h"
 #include "gams_empinfofile_reader.h"
 #include "gams_libver.h"
@@ -25,49 +26,13 @@
  *
  * @param sysdir   the GAMS sysdir
  *
- * @return  the error code
+ * @return         the error code
  */
 int rhp_gms_loadlibs(const char* sysdir)
 {
-   char msg[GMS_SSSIZE];
+   S_CHECK(chk_arg_nonnull(sysdir, 1, __func__));
 
-   if (!gmoGetReadyD(sysdir, msg, sizeof(msg))) {
-      error("%s\n", msg);
-      return 1;
-   }
-   CHK_CORRECT_LIBVER(gmo, GMO, msg);
-
-   if (!gevGetReadyD(sysdir, msg, sizeof(msg))) {
-      error("%s\n", msg);
-      return 1;
-   }
-   CHK_CORRECT_LIBVER(gev, GEV, msg);
-
-   if (!dctGetReadyD(sysdir, msg, sizeof(msg))) {
-      error("%s\n", msg);
-      return 1;
-   }
-   CHK_CORRECT_LIBVER(dct, DCT, msg);
-
-   if (!cfgGetReadyD(sysdir, msg, sizeof(msg))) {
-      error("%s\n", msg);
-      return 1;
-   }
-   CHK_CORRECT_LIBVER(cfg, CFG, msg);
-
-   if (!optGetReadyD(sysdir, msg, sizeof(msg))) {
-      error("%s\n", msg);
-      return 1;
-   }
-   CHK_CORRECT_LIBVER(opt, OPT, msg);
-
-   if (!gdxGetReadyD(sysdir, msg, sizeof(msg))) {
-      error("%s\n", msg);
-      return 1;
-   }
-   CHK_CORRECT_LIBVER(gdx, GDX, msg);
-
-   return 0; 
+   return gams_load_libs(sysdir); 
 }
 
 /**
@@ -153,15 +118,10 @@ int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
    gms->dct = gmsh->dh;
    gms->cfg = gmsh->ch;
 
-   mdldat->solvername[0] = '\0';
-   mdldat->logname[0] = '\0';
-   mdldat->statusname[0] = '\0';
-   mdldat->last_solverid = -1;
-   mdldat->delete_scratch = false;
-   mdldat->slvptr = NULL;
-
    gevGetStrOpt(gms->gev, gevNameSysDir, mdldat->gamsdir);
    gevGetStrOpt(gms->gev, gevNameScrDir, mdldat->scrdir);
+
+   mdldat->delete_scratch = false;
 
    gms->owning_handles = false;
    gms->owndct = false;

@@ -431,7 +431,7 @@ int static setup_gams_objects(Model *mdl_gms, Model *mdl, char *scrdir_new)
    /* ----------------------------------------------------------------------
     * Deal with the GAMS Control File crazyness
     *
-    * This is required before calling gctrdata_init
+    * This is required before calling gcdat_init
     * ---------------------------------------------------------------------- */
 
    bool has_gmsdata = false;
@@ -533,7 +533,7 @@ int static setup_gams_objects(Model *mdl_gms, Model *mdl, char *scrdir_new)
    Container *ctr_gms = &mdl_gms->ctr;
    GmsContainerData *gms_dst = (GmsContainerData *)ctr_gms->data;
 
-   S_CHECK(gctrdata_init(mdl_gms->ctr.data, mdldat_gms, true));
+   S_CHECK(gcdat_init(mdl_gms->ctr.data, mdldat_gms));
 
    gmoHandle_t gmo = gms_dst->gmo;
    dctHandle_t dct = gms_dst->dct;

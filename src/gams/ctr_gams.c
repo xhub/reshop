@@ -50,20 +50,9 @@ int gams_chk_ctr(const Container *ctr, const char *fn)
    return gams_chk_ctrdata(ctr, fn);
 }
 
-
-/**
- * @brief create the GAMS objects (GMO, GEV, DCT and CFG)
- *
- * @param gms       the GAMS container object
- * @param new_model if true, create an empty model (GMO and DCT).
- *                  if false, fill the gmo and dct from the existing data
- *
- * @return          the error code
- */
-int gctrdata_init(GmsContainerData * restrict gms, GmsModelData * restrict mdldat,
-                  bool new_model)
+static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
 {
-   char buffer[2048];
+   char buffer[GMS_SSSIZE];
 
    /* ---------------------------------------------------------------------
     * Fail if gamsdir has not already being given
@@ -75,6 +64,9 @@ int gctrdata_init(GmsContainerData * restrict gms, GmsModelData * restrict mdlda
       return Error_RuntimeError;
    }
 
+   /* Load all the libs */
+   S_CHECK(gams_load_libs(mdldat->gamsdir));
+
    /* ---------------------------------------------------------------------
     * Initialize GMO and GEV libraries.
     * --------------------------------------------------------------------- */
@@ -85,8 +77,6 @@ int gctrdata_init(GmsContainerData * restrict gms, GmsModelData * restrict mdlda
             buffer);
       return Error_RuntimeError;
    }
-   CHK_CORRECT_LIBVER(gmo, GMO, buffer);
-   CHK_CORRECT_LIBVER(gev, GEV, buffer);
 
    /* ---------------------------------------------------------------------
     * Load control file.
@@ -115,39 +105,6 @@ int gctrdata_init(GmsContainerData * restrict gms, GmsModelData * restrict mdlda
       return Error_GAMSCallFailed;
    }
 
-      /* ------------------------------------------------------------------
-       * Read instance from scratch files - Legacy mode.
-       * ------------------------------------------------------------------ */
-
-   if (!new_model) {
-      if (gmoLoadDataLegacy(gms->gmo, buffer)) {
-         error("[GAMS] ERROR: Loading model data failed with message '%s'\n",
-               buffer);
-         return Error_GAMSCallFailed;
-      }
-   }
-
-   /* ---------------------------------------------------------------------
-    * Load dictionary.
-    * --------------------------------------------------------------------- */
-
-   if (!dctLibraryLoaded()) {
-      if (!dctGetReadyD(mdldat->gamsdir, buffer, sizeof(buffer))) {
-         error("[GAMS] ERROR: Loading dct GAMS library failed with message '%s'\n",
-               buffer);
-         return Error_GAMSCallFailed;
-      }
-   }
-   CHK_CORRECT_LIBVER(dct, DCT, buffer);
-
-   if (new_model) {
-      GAMS_CHECK1(dctCreate, &gms->dct, buffer);
-      gms->owndct = true;
-   } else {
-      gms->dct = gmoDict(gms->gmo);
-      gevGetStrOpt(gms->gev, gevNameScrDir, mdldat->scrdir);
-   }
-
    /* ---------------------------------------------------------------------
     * Create a configuration object.
     * --------------------------------------------------------------------- */
@@ -157,7 +114,6 @@ int gctrdata_init(GmsContainerData * restrict gms, GmsModelData * restrict mdlda
             buffer);
       return Error_GAMSCallFailed;
    }
-   CHK_CORRECT_LIBVER(cfg, CFG, buffer);
 
    /* ---------------------------------------------------------------------
     * Read the configuration file.
@@ -183,39 +139,115 @@ int gctrdata_init(GmsContainerData * restrict gms, GmsModelData * restrict mdlda
 
    /* TODO: GAMS review*/
 
-   if (has_dirsep) {
-      snprintf(buffer, sizeof(buffer)-1, "%s" GMS_CONFIG_FILE, mdldat->gamsdir);
-   } else {
-      snprintf(buffer, sizeof(buffer)-1, "%s" DIRSEP GMS_CONFIG_FILE, mdldat->gamsdir);
+   size_t slen = len + dirsep_len + strlen(GMS_CONFIG_FILE);
+   if (slen > sizeof(buffer)-1) {
+      error("[GAMS] ERROR: filename '%s%s%s' has size %zu, max is %zu",
+            mdldat->gamsdir, DIRSEP, GMS_CONFIG_FILE, slen, sizeof(buffer)-1);
+      return Error_NameTooLong4Gams;
    }
+
+   strcpy(buffer, mdldat->gamsdir);
+   if (!has_dirsep) {
+      strcat(buffer, DIRSEP);
+   }
+   strcat(buffer, GMS_CONFIG_FILE);
 
    if (cfgReadConfig(gms->cfg, buffer)) {
       error("[GAMS] ERROR: could not read configuration file %s\n", buffer);
       return Error_GAMSCallFailed;
    }
 
-   /* ---------------------------------------------------------------------
-    * Load the GDX library
-    * --------------------------------------------------------------------- */
+   gms->owning_handles = true;
+   gms->initialized = true;
 
-   if (!gdxGetReadyD(mdldat->gamsdir, buffer, sizeof(buffer))) {
-      error("[GAMS] ERROR: loading the gdx library failed with message '%s'\n",
-            buffer);
-      return Error_GAMSCallFailed;
-   }
-   CHK_CORRECT_LIBVER(gdx, GDX, buffer);
+   return OK;
+}
+
+/**
+ * @brief create the GAMS objects (GMO, GEV, DCT and CFG)
+ *
+ * @param gms       the GAMS container object
+ *
+ * @return          the error code
+ */
+int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
+{
+   char buffer[GMS_SSSIZE];
+
+   S_CHECK(gcdat_new(gms, mdldat));
+
+   GAMS_CHECK1(dctCreate, &gms->dct, buffer);
+   gms->owndct = true;
+
 
    trace_stack("[GAMS] Successful initialization GAMS model with "
                "gamsdir='%s'; gamscntr='%s'\n", mdldat->gamsdir, mdldat->gamscntr);
 
-   if (!new_model) {
-      gmoNameModel(gms->gmo, buffer);
-      trace_process("[GAMS] Loaded GMO model named '%s' has %u vars, %u equs\n",
-                    buffer, gmoN(gms->gmo), gmoM(gms->gmo));
+   return OK;
+}
+
+int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
+{
+   char buffer[GMS_SSSIZE];
+
+   S_CHECK(gcdat_new(gms, mdldat));
+
+   if (gmoLoadDataLegacy(gms->gmo, buffer)) {
+      error("[GAMS] ERROR: Loading model data failed with message '%s'\n",
+            buffer);
+      return Error_GAMSCallFailed;
    }
 
-   gms->owning_handles = true;
-   gms->initialized = true;
+   gms->dct = gmoDict(gms->gmo);
+   gevGetStrOpt(gms->gev, gevNameScrDir, mdldat->scrdir);
+
+   gmoNameModel(gms->gmo, buffer);
+   trace_process("[GAMS] Loaded GMO model named '%s' with %u vars and %u equs "
+                 "from %s\n", buffer, gmoN(gms->gmo), gmoM(gms->gmo),
+                 mdldat->gamscntr);
+
+   return OK;
+}
+
+int gams_load_libs(const char *sysdir)
+{
+   char msg[GMS_SSSIZE];
+
+   if (!gmoLibraryLoaded() && !gmoGetReadyD(sysdir, msg, sizeof(msg))) {
+      error("%s\n", msg);
+      return 1;
+   }
+   CHK_CORRECT_LIBVER(gmo, GMO, msg);
+
+   if (!gevLibraryLoaded() && !gevGetReadyD(sysdir, msg, sizeof(msg))) {
+      error("%s\n", msg);
+      return 1;
+   }
+   CHK_CORRECT_LIBVER(gev, GEV, msg);
+
+   if (!dctLibraryLoaded() && !dctGetReadyD(sysdir, msg, sizeof(msg))) {
+      error("%s\n", msg);
+      return 1;
+   }
+   CHK_CORRECT_LIBVER(dct, DCT, msg);
+
+   if (!cfgLibraryLoaded() && !cfgGetReadyD(sysdir, msg, sizeof(msg))) {
+      error("%s\n", msg);
+      return 1;
+   }
+   CHK_CORRECT_LIBVER(cfg, CFG, msg);
+
+   if (!optLibraryLoaded() && !optGetReadyD(sysdir, msg, sizeof(msg))) {
+      error("%s\n", msg);
+      return 1;
+   }
+   CHK_CORRECT_LIBVER(opt, OPT, msg);
+
+   if (!gdxLibraryLoaded() && !gdxGetReadyD(sysdir, msg, sizeof(msg))) {
+      error("%s\n", msg);
+      return 1;
+   }
+   CHK_CORRECT_LIBVER(gdx, GDX, msg);
 
    return OK;
 }

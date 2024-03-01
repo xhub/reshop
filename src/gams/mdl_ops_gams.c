@@ -46,7 +46,7 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
    SNPRINTF_CHECK(mdldatatmp.gamscntr, GMS_SSSIZE, "%s" DIRSEP "empcntr.dat", buf);
    STRNCPY_FIXED(mdldatatmp.gamsdir, mdldat->gamsdir);
 
-   S_CHECK(gctrdata_init(&gmstmp, &mdldatatmp, false));
+   S_CHECK(gcdat_loadmdl(&gmstmp, &mdldatatmp));
 
    gevGetCurrentSolver(gmstmp.gev, gmstmp.gmo, buf);
 

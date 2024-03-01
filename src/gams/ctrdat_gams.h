@@ -31,7 +31,8 @@ typedef struct ctrdata_gams {
    cfgHandle_t cfg;
 } GmsContainerData;
 
-int gctrdata_init(GmsContainerData *gms, struct gams_modeldata *mdldat, bool new_model) NONNULL;
+int gcdat_init(GmsContainerData *gms, struct gams_modeldata *mdldat) NONNULL;
+int gcdat_loadmdl(GmsContainerData *gms, struct gams_modeldata *mdldat) NONNULL;
 void gctrdata_rel(GmsContainerData *gms) NONNULL;
 
 #endif

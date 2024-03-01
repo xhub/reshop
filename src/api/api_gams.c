@@ -207,7 +207,7 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
    SN_CHECK_EXIT(rhp_gms_setgamsdir(mdl, buffer));
    SN_CHECK_EXIT(rhp_gms_setgamscntr(mdl, cntrfile));
 
-   SN_CHECK_EXIT(gctrdata_init(mdl->ctr.data, mdl->data, false));
+   SN_CHECK_EXIT(gcdat_loadmdl(mdl->ctr.data, mdl->data));
 
    SN_CHECK_EXIT(rhp_gms_fillmdl(mdl));
 
