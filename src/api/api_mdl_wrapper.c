@@ -151,7 +151,7 @@ int rhp_mdl_exportmodel(struct rhp_mdl *mdl, struct rhp_mdl *mdl_dst)
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_rmdl(mdl_dst, __func__));
 
-   return mdl->ops->exportmodel(mdl, mdl_dst);
+   return mdl_exportmodel(mdl, mdl_dst);
 }
 
 
