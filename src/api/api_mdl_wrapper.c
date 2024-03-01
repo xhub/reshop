@@ -61,7 +61,7 @@ int rhp_mdl_setprobtype(Model *mdl, unsigned probtype)
 {
    S_CHECK(chk_mdl(mdl, __func__));
    if (!valid_probtype(probtype)) {
-      error("%s :: ERROR: invalid probtype value %u\n", __func__, probtype);
+      error("%s ERROR: invalid probtype value %u\n", __func__, probtype);
       return Error_InvalidValue;
    }
 
@@ -72,7 +72,7 @@ int rhp_mdl_setobjsense(Model *mdl, unsigned objsense)
 {
    S_CHECK(chk_mdl(mdl, __func__));
    if (!valid_sense(objsense)) {
-      error("%s :: ERROR: invalid objsense value %u\n", __func__, objsense);
+      error("%s ERROR: invalid objsense value %u\n", __func__, objsense);
       return Error_InvalidValue;
    }
 

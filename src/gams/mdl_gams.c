@@ -102,7 +102,7 @@ int gmdl_setprobtype(Model *mdl, enum mdl_probtype probtype)
    if (gms->initialized) {
       enum gmoProcType gams_probtype = probtype_to_gams(probtype);
       if (gams_probtype == gmoProc_none) {
-         error("[model] ERROR: GAMS does not support modeltype %d\n", probtype);
+         error("[model] ERROR: GAMS does not support modeltype %s\n", probtype_name(probtype));
          return Error_NotImplemented;
       }
 
