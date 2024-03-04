@@ -262,7 +262,7 @@ void gams_unload_libs(void)
    if (optLibraryLoaded()) optLibraryUnload();
 }
 
-void gctrdata_rel(GmsContainerData *gms)
+void gcdat_rel(GmsContainerData *gms)
 {
    if (gms->cfg) {
       cfgFree(&gms->cfg);
@@ -323,7 +323,7 @@ int gctr_getopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
       int *linstrs = *instrs;
       int *largs = *args;
 
-      GAMS_CHECK(gmoDirtyGetRowFNLInstr(gmo, ei, codelen, linstrs, largs));
+      GMSCHK(gmoDirtyGetRowFNLInstr(gmo, ei, codelen, linstrs, largs));
 
       break;
    }

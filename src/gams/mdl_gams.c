@@ -166,7 +166,7 @@ int gmdl_writesol2gdx(Model *mdl, const char *gdxname)
    assert(gams_chk_mdl(mdl, __func__) == OK);
 
    GmsContainerData *gms = mdl->ctr.data;
-   GAMS_CHECK(gmoUnloadSolutionGDX(gms->gmo, gdxname, 1, 1, 1));
+   GMSCHK(gmoUnloadSolutionGDX(gms->gmo, gdxname, 1, 1, 1));
 
    return OK;
 }

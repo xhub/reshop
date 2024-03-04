@@ -33,6 +33,6 @@ typedef struct ctrdata_gams {
 
 int gcdat_init(GmsContainerData *gms, struct gams_modeldata *mdldat) NONNULL;
 int gcdat_loadmdl(GmsContainerData *gms, struct gams_modeldata *mdldat) NONNULL;
-void gctrdata_rel(GmsContainerData *gms) NONNULL;
+void gcdat_rel(GmsContainerData *gms) NONNULL;
 
 #endif

@@ -78,7 +78,7 @@ static void gams_deallocdata(Container *ctr)
    }
 
    if (gms->owning_handles) {
-      gctrdata_rel(gms);
+      gcdat_rel(gms);
    }
 
 
@@ -312,7 +312,7 @@ static int gams_getequsmult(const Container *ctr, double *mult)
 
    double gms_pinf = gmoPinf(gmo), gms_minf = gmoMinf(gmo), gms_na = gmoValNA(gmo);
 
-   GAMS_CHECK(gmoGetEquM(gmo, mult));
+   GMSCHK(gmoGetEquM(gmo, mult));
 
    bool flip = gmoSense(gmo) == gmoObj_Max;
 
@@ -337,7 +337,7 @@ static int gams_getequsval(const Container *ctr, double *vals)
 
    double gms_pinf = gmoPinf(gmo), gms_minf = gmoMinf(gmo), gms_na = gmoValNA(gmo);
 
-   GAMS_CHECK(gmoGetEquL(gmo, vals));
+   GMSCHK(gmoGetEquL(gmo, vals));
 
    for (int i = 0, len = gmoM(gmo); i < len; ++i) {
       vals[i] = dbl_from_gams(vals[i], gms_pinf, gms_minf, gms_na) - gmoGetRhsOne(gmo, i); 
@@ -771,7 +771,7 @@ static int gams_getvarsmult(const Container *ctr, double *mult)
 
    double gms_pinf = gmoPinf(gmo), gms_minf = gmoMinf(gmo), gms_na = gmoValNA(gmo);
 
-   GAMS_CHECK(gmoGetVarM(gmo, mult));
+   GMSCHK(gmoGetVarM(gmo, mult));
 
    bool flip = gmoSense(gmo) == gmoObj_Max;
 
@@ -798,7 +798,7 @@ static int gams_getvarsval(const Container *ctr, double *vals)
 
    double gms_pinf = gmoPinf(gmo), gms_minf = gmoMinf(gmo), gms_na = gmoValNA(gmo);
 
-   GAMS_CHECK(gmoGetVarL(gmo, vals));
+   GMSCHK(gmoGetVarL(gmo, vals));
 
    for (int i = 0, len = gmoN(gmo); i < len; ++i) {
       vals[i] = dbl_from_gams(vals[i], gms_pinf, gms_minf, gms_na); 

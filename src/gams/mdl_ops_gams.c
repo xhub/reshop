@@ -51,14 +51,14 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
    gevGetCurrentSolver(gmstmp.gev, gmstmp.gmo, buf);
 
    if (!strcasecmp(buf, "path") && !strcasecmp(buf, "pathvi")) {
-      gctrdata_rel(&gmstmp);
+      gcdat_rel(&gmstmp);
       return OK;
    }
 
    if (!gmoDictionary(gmstmp.gmo)) {
       trace_solreport("[GAMS] WARNING: no dictionary in the GAMS EMP control file. "
                       "Values can't be reported and some may be missing\n");
-      gctrdata_rel(&gmstmp);
+      gcdat_rel(&gmstmp);
       return OK;
    }
 
@@ -121,7 +121,7 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
        * Close the GMO
        * ------------------------------------------------------------------- */
 
-   gctrdata_rel(&gmstmp);
+   gcdat_rel(&gmstmp);
    return OK;
 }
 
@@ -1012,7 +1012,7 @@ static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
       }
 
       double marginal = flip_multiplier ? -v->multiplier : v->multiplier;
-      GAMS_CHECK(gmoSetSolutionVarRec(gms->gmo,
+      GMSCHK(gmoSetSolutionVarRec(gms->gmo,
                                       i,
                                       dbl_to_gams(v->value, gms_pinf, gms_minf, gms_na),
                                       dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na),
@@ -1042,7 +1042,7 @@ static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
 
 
 
-      GAMS_CHECK(gmoSetSolutionEquRec(gms->gmo,
+      GMSCHK(gmoSetSolutionEquRec(gms->gmo,
                                       i,
                                       dbl_to_gams(value, gms_pinf, gms_minf, gms_na),
                                       dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na),

@@ -132,7 +132,7 @@ void backtrace_(const char *expr, int status);
 #endif
 #endif
 
-#define GAMS_CHECK(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
+#define GMSCHK(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
   error("%s ERROR: call " #EXPR " failed with error = %d\n", __func__, \
            status42); \
   return Error_GamsCallFailed; } }
