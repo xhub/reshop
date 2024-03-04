@@ -107,7 +107,7 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          error("%s :: incompatible size: the number of arguments (%d) and the "
                "number of columns in B (%d) should be the same\n", __func__,
                n_args, n_args2);
-         return Error_Unconsistency;
+         return Error_Inconsistency;
       }
    } else {
       n_u = n_args;

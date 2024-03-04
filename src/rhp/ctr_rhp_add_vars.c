@@ -32,7 +32,7 @@ static int add_multiplier_common_(Container *ctr, enum cone mcone,
    if (mcone == CONE_0) {
       if (valid_vi(lvi)) {
          error("%s :: requested multiplier %d is zero!\n", __func__, lvi);
-         return Error_Unconsistency;
+         return Error_Inconsistency;
       }
       *vi = IdxInvalid;
 

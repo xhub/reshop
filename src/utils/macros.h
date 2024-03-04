@@ -135,23 +135,23 @@ void backtrace_(const char *expr, int status);
 #define GAMS_CHECK(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
   error("%s ERROR: call " #EXPR " failed with error = %d\n", __func__, \
            status42); \
-  return Error_GAMSCallFailed; } }
+  return Error_GamsCallFailed; } }
 
 #define G_CHK_EXIT(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
   error("%s ERROR: call " #EXPR " failed with error = %d\n", __func__, \
-           status42); status = Error_GAMSCallFailed; goto _exit; } }
+           status42); status = Error_GamsCallFailed; goto _exit; } }
 
 #define GAMS_CHECK1(FN, obj, buf) { int status42 = FN(obj, buf, sizeof(buf)); \
   if (RHP_UNLIKELY(!status42)) { BACKTRACE(#FN, !status42); \
     error("%s ERROR: call to " #FN " failed with error = %d\n" \
         "Gams msg is: %s\n", __func__, status42, buf); \
-  return Error_GAMSCallFailed; } }
+  return Error_GamsCallFailed; } }
 
 #define GAMS_CHECK1_EXIT(FN, obj, buf) { int status42 = FN(obj, buf); \
   if (RHP_UNLIKELY(status42)) { BACKTRACE(#FN, status42); \
     error("%s ERROR: call to " #FN " failed with error = %d\n" \
         "Gams msg is: %s\n", __func__, status42, buf); \
-  status = Error_GAMSCallFailed; goto _exit;} }
+  status = Error_GamsCallFailed; goto _exit;} }
 
 #define GAMS_CHECK0(FN, buf) { int status42 = FN(buf, sizeof(buf)); \
   if (RHP_UNLIKELY(!status42)) { BACKTRACE(#FN, !status42); printf("Gams msg is: %s\n", buf); \
@@ -168,7 +168,7 @@ void backtrace_(const char *expr, int status);
   BACKTRACE(#EXPR, status42); gmoErrorMessage(gmo, buf); \
   error("%s ERROR: call to " #EXPR " failed with error %d\n" \
       "Gams msg is: %s\n", __func__, status42, buf); \
-  return Error_GAMSCallFailed; } }
+  return Error_GamsCallFailed; } }
 
 #define S_CHECK(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
   BACKTRACE((EXPR), status42); return status42; } }

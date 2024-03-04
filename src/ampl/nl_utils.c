@@ -20,7 +20,7 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
    if (pmdl->backend != RHP_BACKEND_RHP && pmdl->backend != RHP_BACKEND_JULIA) {
       error("%s :: the container type must be either of JULIA or RHP, rather "
             "than %s\n", __func__, backend_name(pmdl->backend));
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    /*  TODO(Xhub) find more about that */

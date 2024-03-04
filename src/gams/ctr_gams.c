@@ -86,13 +86,13 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
 
    if (!strlen(mdldat->gamscntr)) {
       errormsg("[GAMS] ERROR: the control file is empty\n");
-      return Error_GAMSIncompleteSetupInfo;
+      return Error_GamsIncompleteSetupInfo;
    }
 
    if (gevInitEnvironmentLegacy(gms->gev, mdldat->gamscntr)) {
       error("[GAMS] ERROR: loading control file '%s' failed\n",
                mdldat->gamscntr);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    /* ---------------------------------------------------------------------
@@ -102,7 +102,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
    if (gmoRegisterEnvironment(gms->gmo, gms->gev, buffer)) {
       error("[GAMS] ERROR: registering GAMS environment failed with error '%s'\n",
             buffer);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    /* ---------------------------------------------------------------------
@@ -112,7 +112,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
    if (!cfgCreateD(&gms->cfg, mdldat->gamsdir, buffer, sizeof(buffer))) {
       error("[GAMS] ERROR: creating cfg object failed with message '%s'\n",
             buffer);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    /* ---------------------------------------------------------------------
@@ -143,7 +143,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
    if (slen > sizeof(buffer)-1) {
       error("[GAMS] ERROR: filename '%s%s%s' has size %zu, max is %zu",
             mdldat->gamsdir, DIRSEP, GMS_CONFIG_FILE, slen, sizeof(buffer)-1);
-      return Error_NameTooLong4Gams;
+      return Error_NameTooLongForGams;
    }
 
    strcpy(buffer, mdldat->gamsdir);
@@ -154,7 +154,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
 
    if (cfgReadConfig(gms->cfg, buffer)) {
       error("[GAMS] ERROR: could not read configuration file %s\n", buffer);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    gms->owning_handles = true;
@@ -195,7 +195,7 @@ int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict mdlda
    if (gmoLoadDataLegacy(gms->gmo, buffer)) {
       error("[GAMS] ERROR: Loading model data failed with message '%s'\n",
             buffer);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    gms->dct = gmoDict(gms->gmo);
@@ -333,13 +333,13 @@ int gctr_getopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
    case gmoorder_ERR:
       error("%s :: an error occurred when probing for the type of equation '%s'\n",
             __func__, ctr_printequname(ctr, ei));
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
 
    default:
       error("%s :: wrong return code %d from gmoGetEquOrderOne when probing "
             "for the type of equation '%s'\n", __func__, nlflag,
             ctr_printequname(ctr, ei));
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    return OK;

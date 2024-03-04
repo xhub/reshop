@@ -434,7 +434,7 @@ static int filter_subset_gamsopcode(void *data, rhp_idx ei, int * restrict instr
                args[i]   = _get_neg_rm_var(fs, vi);
             } else {
                // The function gams_opcode_var_to_cst already prints the error
-               return Error_Unconsistency;
+               return Error_Inconsistency;
             }
          }
       }

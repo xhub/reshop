@@ -996,7 +996,7 @@ int equ_switch_var_nl(Container *ctr, Equ *e, rhp_idx vi)
       error("%s :: the variable %s is marked as linear in equation %s, but "
             "can't be found\n", __func__, ctr_printvarname(ctr, vi),
             ctr_printequname(ctr, e->idx));
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    lequ_delete(e->lequ, pos);

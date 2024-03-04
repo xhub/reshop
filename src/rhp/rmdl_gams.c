@@ -412,7 +412,7 @@ static int _check_deleted_equ(struct ctrdata_rhp *cdat, rhp_idx i)
          "in the container. However, it could not be found in the"
          " model representation.\n",
          __func__, i);
-   return Error_Unconsistency;
+   return Error_Inconsistency;
 }
 
 /**
@@ -760,7 +760,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
             error("[GMOexport] ERROR: objective equation '%s' has type %s, it "
                   "should be %s\n", ctr_printequname(ctr_src, i),
                   gams_equtype_name(equtype), gams_equtype_name(gmoequ_E));
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
             goto _exit;
          }
       }
@@ -854,7 +854,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
       if (!vtmp) {
          error("[GMOexport] ERROR: variable '%s' is no longer in the container\n",
                ctr_printvarname(ctr_src, i));
-         status = Error_Unconsistency;
+         status = Error_Inconsistency;
          goto _exit;
       }
 
@@ -1086,7 +1086,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
            if (NLequs[ei_gmo]) {
               error("[GMOexport] ERROR: equation '%s' is declared as NL, but "
                     "has no nlcode\n", ctr_printequname(ctr_src, i));
-              status = Error_Unconsistency;
+              status = Error_Inconsistency;
               goto _exit;
           }
           continue;
@@ -1162,7 +1162,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
       default:
          error("%s :: unsupported model sense %s. Only RHP_MIN and RHP_MAX are "
                "supported\n", __func__, sense2str(sense));
-         status = Error_Unconsistency;
+         status = Error_Inconsistency;
          goto _exit;
     }
 

@@ -3561,7 +3561,7 @@ NONNULL static int create_base_mp(Interpreter *interp, const char *mp_name,
 
    if (!(sense == RhpMin || sense == RhpMax)) {
       error("%s :: no valid objective sense given\n", __func__);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    /* Lazy way. Do not look for the immediate ops functions*/

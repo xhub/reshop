@@ -95,7 +95,7 @@ static inline int mp_addvarchk(MathPrgm *mp, rhp_idx vi) {
                 ctr_printvarname(&mp->mdl->ctr, vi), vi,
                 empdag_getmpname(empdag, mp->id));
       }
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
    mp->mdl->ctr.varmeta[vi].mp_id = mp->id;
    MP_DEBUG("MP(%s) owns var '%s'\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id),
@@ -123,7 +123,7 @@ static inline int mp_addequchk(MathPrgm *mp, rhp_idx ei)
             "to MP '%s'.\n For a shared constraint, remember to declare it as "
             "such beforehand.\n", ctr_printequname(&mp->mdl->ctr, ei),
             empdag_getmpname(empdag, mp->id), empdag_getmpname(empdag, mp2_id));
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    mp->mdl->ctr.equmeta[ei].mp_id = mp->id;
@@ -730,7 +730,7 @@ int mp_finalize(MathPrgm *mp)
    if (!valid_ei(mp->opt.objequ)) {
       if (!valid_vi(objvar)) {
          mp_err_noobjdata(mp);
-         return Error_ModelIncompleteMetadata;
+         return Error_IncompleteModelMetadata;
       }
 
       S_CHECK(mp_identify_objequ(mp));
@@ -934,7 +934,7 @@ int mp_rm_var(MathPrgm *mp, rhp_idx vi) {
    if (mp2_id != mp->id) {
       error("%s :: variable %d does not belong to MP %d\n", __func__,
             vi, mp->id);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    mp->mdl->ctr.varmeta[vi].mp_id = UINT_MAX;

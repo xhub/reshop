@@ -716,7 +716,7 @@ int rmdl_fix_objequ_value(Model *mdl)
    if (valid_vi(objequ) && cdat->objequ_val_eq_objvar) {
       if (!valid_vi(objvar)) {
          error("%s :: Expecting a valid objective variable\n", __func__);
-         return Error_Unconsistency;
+         return Error_Inconsistency;
       }
 
       mdl->ctr.equs[objequ].value = mdl->ctr.vars[objvar].value;

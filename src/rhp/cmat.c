@@ -773,7 +773,7 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
                   error("[container] ERROR: the equation %s no longer contains "
                         "any variable and has a CST of %e",
                         ctr_printequname(ctr, ei), cst);
-                  return Error_Unconsistency;
+                  return Error_Inconsistency;
                }
             }
          }
@@ -840,7 +840,7 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
       if (!e) {
          error("[container] ERROR: variable '%s' does not appear in equation "
                "'%s'\n", ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei));
-         return Error_Unconsistency;
+         return Error_Inconsistency;
       }
    }
 
@@ -1209,14 +1209,14 @@ NONNULL static int cmat_chk_lequ(Container *ctr, RhpContainerData *cdat,
                   "equation %s, but is marked as active\n",
                   ctr_printvarname(ctr, vi), v,
                   ctr_printequname(ctr, ei));
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
 
          } else if (!isnan(v)) {
             error("[cmat/check] ERROR: variable %s appears with value %E in "
                   "equation %s, which is inconsistent\n",
                   ctr_printvarname(ctr, vi), v,
                   ctr_printequname(ctr, ei));
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
 
          }
       } else {
@@ -1227,7 +1227,7 @@ NONNULL static int cmat_chk_lequ(Container *ctr, RhpContainerData *cdat,
             error("[cmat/check] ERROR: variable %s already appeared in equation %s, "
                   "as %s\n", ctr_printvarname(ctr, vidx[j]),
                   ctr_printequname(ctr, ei), vtag2str(vtags[vi]));
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
          }
 
          vtags[vi] = vlin;
@@ -1262,7 +1262,7 @@ int cmat_chk_expensive(Container *ctr)
                   ctr_printequname(ctr, i), ce->vi, ce->ei, (void*)ce->next_var,
                   (void*)ce->prev_equ, (void*)ce->next_equ);
 
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
          }
          continue;
       }
@@ -1272,7 +1272,7 @@ int cmat_chk_expensive(Container *ctr)
             error("[cmat/check] ERROR: equation %s is absent from the container "
                   "matrix but not marked as such in the metadata\n",
                   ctr_printequname(ctr, i));
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
          }
          continue;
       }
@@ -1324,14 +1324,14 @@ int cmat_chk_expensive(Container *ctr)
          if (ei != i) {
             error("[cmat/check] ERROR: inconsistency between the container matrix "
                   "and the equation number: %u vs %u\n", ei, i);
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
             goto _end;
          }
 
          if (!valid_vi_(vi, total_n, "[cmat/check]")) {
             error("[cmat/check] ERROR: equation %s has invalid vi\n",
                   ctr_printequname(ctr, i));
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
             goto _end;
          }
 
@@ -1339,7 +1339,7 @@ int cmat_chk_expensive(Container *ctr)
             error("[cmat/check] ERROR: variable %s in equation %s is absent "
                   "from the container matrix\n", ctr_printvarname(ctr, vi),
                   ctr_printequname(ctr, i));
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
             goto _end;
          }
 
@@ -1353,7 +1353,7 @@ int cmat_chk_expensive(Container *ctr)
                   ctr_printvarname(ctr, vi), ctr_printvarname(ctr, ei),
                   vtag2str(vtags[vi]));
             cmat_elt_print(PO_ERROR, ce, ctr);
-            status = Error_Unconsistency;
+            status = Error_Inconsistency;
             goto _end;
          }
 
@@ -1373,7 +1373,7 @@ int cmat_chk_expensive(Container *ctr)
                error("[cmat/check] ERROR: in equation %s: variable %s is tagged "
                      "as linear, but there is no linear part\n",
                      ctr_printequname(ctr, ei), ctr_printvarname(ctr, vi));
-                status = Error_Unconsistency;
+                status = Error_Inconsistency;
                 goto _end;
             }
 
@@ -1382,7 +1382,7 @@ int cmat_chk_expensive(Container *ctr)
                      "marked as nonlinear or quadratic, but could be found "
                      "in the linear equation\n", ctr_printequname(ctr, ei),
                      ctr_printvarname(ctr, vi));
-               status = Error_Unconsistency;
+               status = Error_Inconsistency;
             }
 
             S_CHECK(lequ_find(le, vi, &val, &pos));
@@ -1392,7 +1392,7 @@ int cmat_chk_expensive(Container *ctr)
                      "has coefficient %e in the container matrix, and %e in the "
                      "equation; diff = %e\n", ctr_printequname(ctr, ei),
                      ctr_printvarname(ctr, vi), ce->value, val, ce->value - val);
-               status = Error_Unconsistency;
+               status = Error_Inconsistency;
             }
 
             break;
@@ -1416,7 +1416,7 @@ int cmat_chk_expensive(Container *ctr)
                       "in the nonlinear expression tree, but is not marked as such"
                       " in the container matrix\n", ctr_printequname(ctr, ei),
                       ctr_printvarname(ctr, vi));
-                status = Error_Unconsistency;
+                status = Error_Inconsistency;
                 goto _end;
              }
              break;
@@ -1426,13 +1426,13 @@ int cmat_chk_expensive(Container *ctr)
                    "the container matrix, but isn't found in the equation data",
                    ctr_printequname(ctr, ei), ctr_printvarname(ctr, vi));
               cmat_elt_print(PO_ERROR, ce, ctr);
-             status = Error_Unconsistency;
+             status = Error_Inconsistency;
              goto _end;
 
          default: error("[cmat/check] ERROR in equation %s: unexpected tag for "
                         "variable %s\n", ctr_printequname(ctr, ei),
                         ctr_printvarname(ctr, vi));
-               return Error_Unconsistency;
+               return Error_Inconsistency;
          }
 
 _end:
@@ -1452,7 +1452,7 @@ _end:
                   ctr_printvarname(ctr, vi));
          }
 
-         status = Error_Unconsistency;
+         status = Error_Inconsistency;
       }
 
    }

@@ -496,7 +496,7 @@ skip:
          if (rc) {
             error("[GAMS] ERROR: gevCallSolver() failed with " "message: %s\n",
                   buf);
-            return Error_SolverCallFailed;
+            return Error_GamsSolverCallFailed;
          }
 
          RESHOP_SETJMP_INTERNAL_STOP;

@@ -399,7 +399,7 @@ static int gams_copyvarname(const Container *ctr, rhp_idx vi, char *name,
    if (dctColUels(gms->dct, vi, &sindex, suels, &sdim)) {
       name[i] = '\0';
       error("%s :: call to dctColUels() failed\n", __func__);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    /* ------------------------------------------------------------------
@@ -409,7 +409,7 @@ static int gams_copyvarname(const Container *ctr, rhp_idx vi, char *name,
    if (dctSymName(gms->dct, sindex, sname, sizeof(sname))) {
       name[i] = '\0';
       error("%s :: call to dctSymName failed\n", __func__);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    while (i < (len - 1) && sname[i] != '\0') {
@@ -518,7 +518,7 @@ static int gams_copyequname(const Container *ctr, rhp_idx ei, char *name,
    if (dctRowUels(gms->dct, ei, &sindex, suels, &sdim)) {
       error("%s :: call to dctRowUels() failed with index %d\n", __func__, ei);
       name[j] = '\0';
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    /* ------------------------------------------------------------------
@@ -529,7 +529,7 @@ static int gams_copyequname(const Container *ctr, rhp_idx ei, char *name,
       error("%s :: call to dctSymName failed with index %d\n",
                          __func__, sindex);
       name[j] = '\0';
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    STRNCPY(name, sname, len);
@@ -823,13 +823,13 @@ static int gams_isequNL(const Container *ctr, rhp_idx eidx, bool *isNL)
    case gmoorder_ERR:
       error("%s :: ERROR while probing for the type of equation '%s' #%d.\n",
             __func__, ctr_printequname(ctr, eidx), eidx);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
 
    default:
       error("%s :: wrong return code %d from gmoGetEquOrderOne() when probing "
             "for the type of equation '%s' #%u \n", __func__, nlflag,
             ctr_printequname(ctr, eidx), eidx);
-      return Error_GAMSCallFailed;
+      return Error_GamsCallFailed;
    }
 
    return OK;

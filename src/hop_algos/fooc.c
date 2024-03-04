@@ -490,7 +490,7 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, const MathPrgm *mp
             "This is unsupported, the model must have exactly one of these.\n",
             mdl_fmtargs(mdl_src), ctr_printvarname(ctr_src, objvar),
             ctr_printequname(ctr_src, objequ));
-      return Error_Unconsistency;
+      return Error_Inconsistency;
     }
 
       if (valid_ei(objequ)) {
@@ -499,7 +499,7 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, const MathPrgm *mp
          error("[fooc] ERROR in %s model '%.*s' #%u: sense is %s, but neither "
                "an objective variable nor an objective equation have been given\n",
                mdl_fmtargs(mdl_src), sense2str(sense));
-         return Error_Unconsistency;
+         return Error_Inconsistency;
       } 
 
     if (sense == RhpFeasibility) {
@@ -1550,7 +1550,7 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
    if (cdat_mcp->total_m != ctr_mcp->m) {
       error("[fooc] ERROR: the MCP model has a different number of total and "
             "active equations: %zu vs %u\n", cdat_mcp->total_m, ctr_mcp->m);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
   Aequ objequs, cons_nl, cons_lin;

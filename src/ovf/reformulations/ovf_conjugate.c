@@ -443,7 +443,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          error("%s :: incompatible size: the number of row of B and the ambiant"
                " space of U should have the same there are %u rows in B and U is"
                " in R^%u\n", __func__, n_u2, n_u);
-         status = Error_Unconsistency;
+         status = Error_Inconsistency;
          goto _exit;
       }
 
@@ -451,7 +451,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          error("%s :: incompatible size: the number of arguments (%u) and the "
                "number of columns in B (%u) should be the same\n", __func__,
                n_args, n_args2);
-         status = Error_Unconsistency;
+         status = Error_Inconsistency;
          goto _exit;
       }
    }

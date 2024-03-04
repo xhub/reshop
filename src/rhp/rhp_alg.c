@@ -101,27 +101,27 @@ int rctr_compress_check_equ_x(const Container *ctr_src, Container *ctr_dst,
                   if (fabs(cst) > DBL_EPSILON) {
                      error("%s :: dummy constraint '%s' is not fulfilled: 0. != %e\n",
                            __func__, ctr_printequname(ctr_src, i), cst);
-                     return Error_Infeasible;
+                     return Error_ModelInfeasible;
                   }
                   break;
                case CONE_R_MINUS:
                   if (0. < cst) {
                      error("%s :: dummy constraint '%s' #%u is not fulfilled: 0. < %e\n",
                            __func__, ctr_printequname(ctr_src, i), i, cst);
-                     return Error_Infeasible;
+                     return Error_ModelInfeasible;
                   }
                   break;
                case CONE_R_PLUS:
                   if (0. > cst) {
                      error("%s :: dummy constraint '%s' #%u is not fulfilled: 0. > %e\n",
                            __func__, ctr_printequname(ctr_src, i), i, cst);
-                     return Error_Infeasible;
+                     return Error_ModelInfeasible;
                   }
                   break;
                case CONE_NONE:
                   error("%s :: nonsensical equation '%s' #%u: 0 ?? %e\n",
                         __func__, ctr_printequname(ctr_src, i), i, cst);
-                  return Error_Unconsistency;
+                  return Error_Inconsistency;
                default:
                   error("%s :: equation '%s' #%u is of type %d but has no "
                         "variables. This case is not implemented yet.\n",
@@ -155,14 +155,14 @@ int rctr_compress_check_equ_x(const Container *ctr_src, Container *ctr_dst,
       if (n_eq > 0) {
          error("[container/export] there are %zu inactive equations(s) that "
                "can't be explained, exiting\n", n_eq);
-         return Error_Unconsistency;
+         return Error_Inconsistency;
       }
 
    } else if (n_eq < 0) {
       error("%s :: the number of active equations in the compressed model is "
             "smaller than expected: %zu vs %u. We don't know how to deal with "
             "this case.\n", __func__, ctr_dst->m - n_eq, ctr_dst->m);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    /* -------------------------------------------------------------
@@ -188,7 +188,7 @@ int rctr_compress_check_var(size_t ctr_n, size_t total_n, size_t skip_var)
                "the model representation, there are %zu, via the "
                "model definition %zu as %zu - %zu\n",
                __func__, skip_var, total_n - ctr_n, total_n, ctr_n);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    return OK;
@@ -475,7 +475,7 @@ static NONNULL int ensure_deleted_var(Container *ctr, Fops *fops, rhp_idx vi)
    if (fops->keep_var(fops->data, vi)) {
       error("%s :: variable '%s' #%u should be inactive but is not marked as such\n",
             __func__, ctr_printvarname(ctr, vi), vi);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    return OK;

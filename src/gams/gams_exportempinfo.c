@@ -180,7 +180,7 @@ static int print_mp_opt_(struct empinfo_dat *file, MathPrgm *mp,
              "%s :: optimization programm %d has no valid "
              "objective variable\n",
              __func__, mp->id);
-    return Error_Unconsistency;
+    return Error_Inconsistency;
   }
 
   GET_PROPER_COLNAME(&mdl->ctr, objvaridx, buf, bufout);
@@ -257,7 +257,7 @@ static int _print_mp_vi(struct empinfo_dat *file, MathPrgm *mp,
             "variable '%s' (#%d) is not well defined\n",
                __func__, mp_getid(mp), mp_gettypestr(mp),
                ctr_printvarname(&mdl->ctr, vidx), vidx);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
     }
 
     rhp_idx new_eidx = mdl_getcurrentei(mdl, eidx);
@@ -398,7 +398,7 @@ static int _export_bilevel(struct empinfo_dat *file, MathPrgm *mp,
              "%s :: optimization programm %d has no valid "
              "objective variable\n",
              __func__, mp->id);
-    return Error_Unconsistency;
+    return Error_Inconsistency;
   }
 
   /* --------------------------------------------------------------------
@@ -413,7 +413,7 @@ static int _export_bilevel(struct empinfo_dat *file, MathPrgm *mp,
   RhpSense sense = mp_getsense(mp);
   if (!(sense == RhpMin || sense == RhpMax || sense == RhpFeasibility)) {
     error("%s :: no valid objective sense given\n", __func__);
-    return Error_Unconsistency;
+    return Error_Inconsistency;
   }
 
   gmoSenseSet(gms->gmo, sense == RhpMin ? gmoObj_Min : gmoObj_Max);
@@ -575,7 +575,7 @@ int gms_exportempinfo(Model *mdl_gms)
       if (mp->type != RHP_MP_OPT) {
         error("%s :: the root MP should have type OPT, got %s (#%d)\n",
                  __func__, mp_gettypestr(mp), mp_gettype(mp));
-        return Error_Unconsistency;
+        return Error_Inconsistency;
       }
 
       TO_IMPLEMENT("emptree rework");
@@ -595,7 +595,7 @@ _check_emp_probtype: ; /* TODO URG why do we need a semicolon? */
                  "model type is EMP, but no equilibrium or bilevel has "
                  "been found. Check the EMP model definition\n",
                  __func__);
-        return Error_Unconsistency;
+        return Error_Inconsistency;
       }
     }
 

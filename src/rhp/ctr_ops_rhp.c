@@ -766,7 +766,7 @@ static int rctr_setvarname_s(Container* ctr, rhp_idx vidx, const char *name)
    if (ctr->backend != RHP_BACKEND_JULIA) {
       error("%s :: the container must be of Julia type, got %s (%d)\n"
                , __func__, backend_name(ctr->backend), ctr->backend);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    struct ctrdata_rhp* model = (struct ctrdata_rhp*)ctr->data;
@@ -1087,7 +1087,7 @@ static int rctr_getallequsmult(const Container *ctr, double *mult)
 static int rctr_getequperp(const Container *ctr, rhp_idx ei, rhp_idx *vi)
 {
   if (!ctr->equmeta) {
-    return Error_ModelIncompleteMetadata;
+    return Error_IncompleteModelMetadata;
   }
 
   S_CHECK(ei_inbounds(ei,((struct ctrdata_rhp*)ctr->data)->total_m, __func__));
@@ -1234,7 +1234,7 @@ static int rctr_getvarval(const Container *ctr, rhp_idx vi, double *level)
 static int rctr_getvarperp(const Container *ctr, rhp_idx vi, rhp_idx *ei)
 {
   if (!ctr->varmeta) {
-    return Error_ModelIncompleteMetadata;
+    return Error_IncompleteModelMetadata;
   }
 
   S_CHECK(vi_inbounds(vi,((struct ctrdata_rhp*)ctr->data)->total_n, __func__));
@@ -1274,7 +1274,7 @@ static int rctr_setequname_s(Container* ctr, rhp_idx ei, const char *name)
    if (backend != RHP_BACKEND_JULIA) {
       error("%s :: the container must be of Julia type, got %s (%d)\n"
                , __func__, backend_name(backend), backend);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    RhpContainerData* model = (RhpContainerData*)ctr->data;

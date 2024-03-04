@@ -99,7 +99,7 @@ int dct_resolve(dctHandle_t dct, DctResolveData * restrict data)
       void *fh = dctFindFirstRowCol(dct, symidx, uels, &idx);
       if (idx < 0) {
          error("[empinterp] ERROR: could not find symbol #%d in the DCT.\n", symidx);
-         return Error_NotInTheRim;
+         return Error_SymbolNotInTheGamsRim;
       }
 
       /* ------------------------------------------------------------------

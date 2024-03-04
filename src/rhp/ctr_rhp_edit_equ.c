@@ -307,7 +307,7 @@ int rctr_set_equascst(Container *ctr, rhp_idx ei)
 
    error("[container] ERROR: equation '%s' is invalid: no variable and "
          "no finite constant value (%e)\n", ctr_printequname(ctr, ei), cst);
-   return Error_Unconsistency;
+   return Error_Inconsistency;
 }
 
 

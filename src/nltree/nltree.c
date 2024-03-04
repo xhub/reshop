@@ -1210,7 +1210,7 @@ int nltree_add_cst(Container *ctr, NlTree* tree, NlNode ***node,
       if (lnode->op != NLNODE_ADD) {
          error("%s :: node is of type %d, which is not OPCODE_ADD\n",
                   __func__, lnode->op);
-         return Error_Unconsistency;
+         return Error_Inconsistency;
       }
 
      /* ---------------------------------------------------------------------

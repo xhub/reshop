@@ -75,7 +75,7 @@ int rhp_ovf_param_add_scalar(OvfDef* ovf_def, const char *param_name,
       error("[OVF] ERROR in OVF %s: parameter %s cannot be defined as a scalar\n",
             ovf_def->name, p->def->name);
       /*  TODO(xhub) print usage */
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    p->type = ARG_TYPE_SCALAR;
@@ -115,7 +115,7 @@ int rhp_ovf_param_add_vector(OvfDef *ovf_def, const char *param_name,
       error("[OVF] ERROR in OVF %s: parameter %s cannot be defined as a vector\n",
             ovf_def->name, p->def->name);
       /*  TODO(xhub) print usage */
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    p->type = ARG_TYPE_VEC;

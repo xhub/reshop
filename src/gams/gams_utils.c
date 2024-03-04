@@ -163,7 +163,7 @@ int gams_chk_str(const char *str, const char *fn)
    if (len >= GMS_SSSIZE) {
       error("%s ERROR: string '%s' is too long, max length is %d\n", fn, str,
             GMS_SSSIZE);
-      return Error_NameTooLong4Gams;
+      return Error_NameTooLongForGams;
    }
 
    return OK;

@@ -620,7 +620,7 @@ int cdat_varname_start(RhpContainerData* ctrdat, const char *name)
   if (l->active) {
     error("%s :: a variable name is already active\n", __func__);
     FREE(name);
-    return Error_Unconsistency;
+    return Error_Inconsistency;
   }
 
    if (!valid_vi(vnames->start)) {
@@ -639,7 +639,7 @@ int cdat_varname_end(RhpContainerData* ctrdat)
 
    if (!l->active) {
       error("%s :: call without an active variable name\n", __func__);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    rhp_idx end_idx = ctrdat->total_n-1;
@@ -664,7 +664,7 @@ int cdat_equname_start(RhpContainerData* ctrdat, const char *name)
    if (l->active) {
       error("%s :: an equation name is already active\n", __func__);
       FREE(name);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    if (!valid_ei(vnames->start)) {
@@ -683,7 +683,7 @@ int cdat_equname_end(RhpContainerData* ctrdat)
 
    if (!l->active) {
       error("%s :: call without an active equation name\n", __func__);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
 
    rhp_idx end_idx = ctrdat->total_m-1;

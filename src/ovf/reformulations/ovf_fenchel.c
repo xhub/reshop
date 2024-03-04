@@ -251,7 +251,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    if (nb_vars == 0) {
       error("[ovf/primal] the OVF with variable '%s' has no constraints and no "
             "quadratic part. It is then unbounded\n", ovf_name);
-      status = Error_Unbounded;
+      status = Error_ModelUnbounded;
       goto _exit;
    }
 
@@ -388,7 +388,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          error("%s :: incompatible size: B_lin and A^T should have the same number of"
                " rows, but there are %d rows in B_lin and %d in A^T\n", __func__,
                n_constr2, n_u);
-         status = Error_Unconsistency;
+         status = Error_Inconsistency;
          goto _exit;
       }
 
@@ -396,7 +396,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          error("%s :: incompatible size: the number of arguments (%d) and the "
                "number of columns in B_lin (%d) should be the same\n", __func__,
                n_args, n_args2);
-         status = Error_Unconsistency;
+         status = Error_Inconsistency;
          goto _exit;
       }
    }

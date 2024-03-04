@@ -209,7 +209,7 @@ static inline int nlnode_next_child(NlTree *tree, NlNode*** node)
          && (**node)->op != NLNODE_MUL && (**node)->op != NLNODE_DIV) {
       error("%s :: unsupported node of type %d", __func__,
                (**node)->op);
-      return Error_Unconsistency;
+      return Error_Inconsistency;
    }
    S_CHECK(nlnode_child_getoffset(tree, **node, &offset));
    (*node) = &(**node)->children[offset];
