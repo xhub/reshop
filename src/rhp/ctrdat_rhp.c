@@ -570,10 +570,6 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
    FREE(cdat->equs);
    FREE(cdat->vars);
    FREE(cdat->last_equ);
-   if (cdat->fops) {
-      cdat->fops->freedata(cdat->fops->data);
-      FREE(cdat->fops);
-   }
 
    for (unsigned i = 0; i < cdat->equvar_evals_size; ++i) {
       FREE(cdat->equvar_evals[i].var2evals);

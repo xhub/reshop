@@ -154,8 +154,8 @@ int rmdl_analyze_modeltype(const Model *mdl, Fops *fops)
    Fops lfops = { .type = FopsEmpty };
 
    if (!fops) {
-      if (cdat->fops) {
-         fops = cdat->fops;
+      if (ctr->fops) {
+         fops = ctr->fops;
       } else {
          fops = &lfops;
          S_CHECK(fops_active_init(fops, (Container*)ctr));
@@ -848,36 +848,19 @@ int rmdl_incstage(Model *mdl)
 
 }
 
-int rmdl_setfops(const Model *mdl, Fops* fops)
-{
-   RhpContainerData *cdat = (RhpContainerData *)mdl->ctr.data;
-
-   /* ----------------------------------------------------------------------
-    * Set the filter ops to be the given one
-    * ---------------------------------------------------------------------- */
-   if (!cdat->fops) {
-      MALLOC_(cdat->fops, Fops, 1);
-   }
-
-   memcpy(cdat->fops, fops, sizeof(Fops));
-
-   return OK;
-}
-
 Fops* rmdl_getfops(const Model *mdl)
 {
-   RhpContainerData *cdat = (RhpContainerData *)mdl->ctr.data;
-   return cdat->fops;
+   return mdl->ctr.fops;
 }
 
 int rmdl_ensurefops_activedefault(Model *mdl)
 {
-   RhpContainerData *cdat = (RhpContainerData *)mdl->ctr.data;
-   if (cdat->fops) { return OK; }
+   Container *ctr = &mdl->ctr;
+   if (ctr->fops) { return OK; }
 
-   MALLOC_(cdat->fops, Fops, 1);
+   MALLOC_(ctr->fops, Fops, 1);
 
-   return fops_active_init(cdat->fops, &mdl->ctr);
+   return fops_active_init(ctr->fops, &mdl->ctr);
 }
 
 int rmdl_set_simpleprob(Model *mdl, const MpDescr *descr)

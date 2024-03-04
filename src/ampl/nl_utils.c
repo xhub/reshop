@@ -54,8 +54,8 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
       }
    }
 
-   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)pmdl->ctr.data;
-   Fops *fops = cdat->fops;
+   RhpContainerData *cdat = (RhpContainerData *)pmdl->ctr.data;
+   Fops *fops = pmdl->ctr.fops;
 
    for (size_t i = 0; i < cdat->total_m; ++i) {
       if (fops && !fops->keep_equ(fops->data, i)) continue;

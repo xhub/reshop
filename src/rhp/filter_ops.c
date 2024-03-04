@@ -528,19 +528,24 @@ void fops_subset_release(FilterSubset *fs)
    FREE(fs);
 }
 
-int filter_subset_init(FilterSubset *fs, Model *mdl, unsigned offset_pool)
+int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned offset_pool)
 {
    if (!mdl_is_rhp(mdl)) {
       TO_IMPLEMENT("FilterSubset with GAMS model");
    }
 
+   Container *ctr = &mdl->ctr;
    fs->ctr_src = &mdl->ctr;
    fs->offset_vars_pool = offset_pool;
 
-   Fops filt_ops;
-   fops_subset_init(&filt_ops, fs);
+   Fops fops;
+   fops_subset_init(&fops, fs);
 
-   S_CHECK(rmdl_setfops(mdl, &filt_ops));
+   if (!ctr->fops) {
+      MALLOC_(ctr->fops, Fops, 1);
+   }
+
+   memcpy(ctr->fops, &fops, sizeof(Fops));
 
    empdag_reset_type(&mdl->empinfo.empdag);
    return rmdl_set_simpleprob(mdl, &fs->descr);

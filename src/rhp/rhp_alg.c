@@ -31,19 +31,7 @@ static double _id(double val) { return val; }
 
 int rctr_compress_check_equ(const Container *ctr_src, Container *ctr_dst, size_t skip_equ)
 {
-   Fops *fops;
-
-   if (ctr_is_rhp(ctr_src)) {
-      RhpContainerData *ctrdat_src = (RhpContainerData *)ctr_src->data;
-      fops = ctrdat_src->fops;
-   } else if (ctr_src->backend == RHP_BACKEND_GAMS_GMO) {
-      fops = NULL;
-   } else {
-      error("Unsupported model type %s", backend_name(ctr_src->backend));
-      return Error_NotImplemented;
-   }
-
-   return rctr_compress_check_equ_x(ctr_src, ctr_dst, skip_equ, fops);
+   return rctr_compress_check_equ_x(ctr_src, ctr_dst, skip_equ,  ctr_src->fops);
 }
 
 int rctr_compress_check_equ_x(const Container *ctr_src, Container *ctr_dst,
@@ -440,7 +428,7 @@ static NONNULL int rmdl_prepare_export_gams(Model *mdl)
 
    /* \TODO(xhub) we need to get the resulting model_type somehow*/
    /* \TODO(xhub) this doesn't go well with fops_subset  */
-   Fops *fops = cdat->fops;
+   Fops *fops = ctr->fops;
    EmpDag *empdag = &mdl->empinfo.empdag;
    ProbType probtype = ((RhpModelData*)mdl->data)->probtype;
    if (probtype_isopt(probtype) && empdag->type == EmpDag_Empty) {
@@ -625,7 +613,7 @@ int rmdl_prepare_export(Model * restrict mdl_src, Model * restrict mdl_dst)
    S_CHECK(rmdl_incstage(mdl_src));
 
    /* TODO GITLAB #71 */
-   Fops *fops = ((RhpContainerData *)ctr->data)->fops;
+   Fops *fops = ctr->fops;
    assert(fops);
 
    /* ----------------------------------------------------------------------
@@ -691,21 +679,7 @@ int rmdl_prepare_export(Model * restrict mdl_src, Model * restrict mdl_dst)
  */
 int rctr_compress_vars(const Container *ctr_src, Container *ctr_dst)
 {
-   assert(ctr_is_rhp(ctr_dst));
-
-   Fops *fops;
-
-   if (ctr_is_rhp(ctr_src)) {
-      RhpContainerData *cdat = (RhpContainerData *)ctr_src->data;
-      fops = cdat->fops;
-   } else if (ctr_src->backend == RHP_BACKEND_GAMS_GMO) {
-      fops = NULL;
-   } else {
-      error("Unsupported model backend %s\n", backend_name(ctr_src->backend));
-      return Error_NotImplemented;
-   }
-   
-   return rctr_compress_vars_x(ctr_src, ctr_dst, fops);
+   return rctr_compress_vars_x(ctr_src, ctr_dst, ctr_src->fops);
 }
 
 NONNULL static inline
@@ -985,8 +959,8 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 
    bool cpy_fops = false;
    Fops fops_orig;
-   if (cdat->fops) {
-      memcpy(&fops_orig, cdat->fops, sizeof(Fops));
+   if (ctr->fops) {
+      memcpy(&fops_orig, ctr->fops, sizeof(Fops));
       cpy_fops = true;
    }
 
@@ -1016,7 +990,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 
       for (unsigned i = 0, j = s_subctr->len-1; i < s_subctr->len; ++i, --j) {
          struct filter_subset* fs = s_subctr->filter_subset[j];
-         S_CHECK_EXIT(filter_subset_init(fs, mdl, offset_pool));
+         S_CHECK_EXIT(filter_subset_activate(fs, mdl, offset_pool));
 
          char *name;
          IO_CALL_EXIT(asprintf(&name, "%s_s%u_i%u", mdl_name, s, i));
@@ -1101,7 +1075,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 
    memcpy(&mdl->empinfo.empdag, &empdag_orig, sizeof(EmpDag));
    if (cpy_fops) {
-      memcpy(cdat->fops, &fops_orig, sizeof(Fops));
+      memcpy(ctr->fops, &fops_orig, sizeof(Fops));
    }
 
    ((RhpModelData*)mdl->data)->probtype = probtype_type;

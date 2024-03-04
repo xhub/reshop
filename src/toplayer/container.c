@@ -8,6 +8,7 @@
 #include "consts.h"
 #include "ctrdat_rhp.h"
 #include "equvar_metadata.h"
+#include "filter_ops.h"
 #include "macros.h"
 #include "mem-debug.h"
 #include "printout.h"
@@ -58,6 +59,10 @@ static void dealloc_(Container *ctr)
    aequ_free(ctr->func2eval);
    avar_free(ctr->fixed_vars);
 
+   if (ctr->fops) {
+      ctr->fops->freedata(ctr->fops->data);
+      FREE(ctr->fops);
+   }
 }
 
 /**
@@ -122,6 +127,7 @@ int ctr_alloc(Container *ctr, BackendType backend)
    aequ_setblock(&ctr->transformations.flipped_equs, 2);
    ctr->func2eval = aequ_newblock(2);
    ctr->fixed_vars = avar_newcompact(0, IdxNA);
+   ctr->fops = NULL;
 
    return OK;
 

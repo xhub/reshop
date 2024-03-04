@@ -42,7 +42,7 @@ FopsSubsetData* fops_subset_new(unsigned vlen, Avar *vars, unsigned elen,
                               Aequ *equs, struct mp_descr* mp_d)
                               MALLOC_ATTR(fops_subset_release,1) NONNULL;
 
-int filter_subset_init(FopsSubsetData *fs, Model *mdl, unsigned offset_pool ) NONNULL;
+int filter_subset_activate(FopsSubsetData *fs, Model *mdl, unsigned offset_pool ) NONNULL;
 
 int fops_subdag_init(Fops *ops, Model *mdl, daguid_t uid) NONNULL;
 int fops_setvarpermutation(Fops *fops, rhp_idx *vperm) NONNULL;

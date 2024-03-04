@@ -68,8 +68,10 @@ typedef struct container {
                                  Container */
    rhp_idx *rosetta_equs;       /**< translation for the equations */
    rhp_idx *rosetta_vars;       /**< translation for the variables */
+   Fops *fops;                      /**< Current filter operations            */
 
-   Aequ *func2eval;             /**< Functions / equations to evaluate */
+
+   Aequ *func2eval;             /**< Functions / equations to evaluate after a solve */
    Avar *fixed_vars;            /**< Variables to be included              */
    Container *ctr_up;           /**< Source container                      */
 } Container;

@@ -34,7 +34,6 @@ int rmdl_fix_objequ_value(Model *mdl);
 int rmdl_remove_fixedvars(Model *mdl) NONNULL;
 
 int rmdl_incstage(Model *mdl) NONNULL;
-int rmdl_setfops(const Model *mdl, Fops* fops) NONNULL;
 Fops* rmdl_getfops(const Model *mdl) NONNULL;
 
 int rmdl_export_latex(Model *mdl, const char *phase_name) NONNULL;

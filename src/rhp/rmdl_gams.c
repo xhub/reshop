@@ -198,8 +198,8 @@ int rmdl_copysolveoptions_gams(Model *mdl, const Model *mdl_gms)
 int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restrict ctr_gms)
 {
    const struct ctrdata_gams *gms_src = (const struct ctrdata_gams *) ctr_gms->data;
-   struct ctrdata_rhp *ctrdat = (struct ctrdata_rhp *) ctr->data;
-   const Fops *fops = ctrdat->fops;
+   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *) ctr->data;
+   const Fops *fops = ctr->fops;
 
    gmoHandle_t gmo = gms_src->gmo;
 
@@ -237,7 +237,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
    S_CHECK(gctr_getsense(ctr_gms, &objsense));
    bool flip_marginal = objsense == RhpMax ? true : false;
 
-   for (size_t i = 0, j = 0; i < ctrdat->total_n; ++i) {
+   for (size_t i = 0, j = 0; i < cdat->total_n; ++i) {
      if (fops && !fops->keep_var(fops->data, i)) {
        ctr->vars[i].value = SNAN;
        ctr->vars[i].multiplier = SNAN;
@@ -267,7 +267,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
    rhp_idx *rosetta_equs = ctr->rosetta_equs;
    assert(rosetta_equs);
 
-   for (size_t i = 0, j = 0; i < ctrdat->total_m; ++i) {
+   for (size_t i = 0, j = 0; i < cdat->total_m; ++i) {
      if (fops && !fops->keep_equ(fops->data, i)) {
          EquInfo equinfo;
          S_CHECK(rctr_get_equation(ctr, i, &equinfo));
@@ -403,7 +403,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
 
 
-   Fops *fops = cdat->fops; assert(fops);
+   Fops *fops = ctr_src->fops; assert(fops);
 
    if (ctr_src->rosetta_vars || ctr_src->rosetta_equs) {
       error("[GMOexport] ERROR: in %s model '%.*s' #%u, rosetta arrays are "

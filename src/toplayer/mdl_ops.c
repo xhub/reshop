@@ -238,15 +238,14 @@ int mdl_checkmetadata(Model *mdl)
    unsigned num_unattached_vars = 0;
    unsigned num_unattached_equs = 0;
 
-   Fops *fops, *fops_active, fops_active_dat;
+   Fops *fops = ctr->fops, *fops_active, fops_active_dat;
 
    if (mdl_is_rhp(mdl)) {
       RhpContainerData *cdat = (RhpContainerData *)ctr->data;
       S_CHECK(fops_active_init(&fops_active_dat, ctr));
-      fops = cdat->fops;
       fops_active = &fops_active_dat;
    } else if (mdl->backend == RHP_BACKEND_GAMS_GMO) {
-      fops = fops_active = NULL;
+      fops_active = NULL;
    } else {
       TO_IMPLEMENT("metadata check for new backend model");
    }

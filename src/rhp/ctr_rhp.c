@@ -571,35 +571,34 @@ int rctr_deactivate_equ(Container *ctr, rhp_idx ei)
 
    ctr->m--;
 
-   if (!cdat->fops) {
-      MALLOC_(cdat->fops, Fops, 1);
-      fops_active_init(cdat->fops, ctr);
-   } else if (cdat->fops->type != FopsActive) {
+   if (!ctr->fops) {
+      MALLOC_(ctr->fops, Fops, 1);
+      fops_active_init(ctr->fops, ctr);
+   } else if (ctr->fops->type != FopsActive) {
       error("[container] ERROR: cannot deactivate equation with filter ops of "
-            "type %s\n", fopstype_name(cdat->fops->type));
+            "type %s\n", fopstype_name(ctr->fops->type));
    }
 
-   return fops_deactivate_equ(cdat->fops->data, ei);
+   return fops_deactivate_equ(ctr->fops->data, ei);
 }
 
 int rctr_deactivate_var(Container *ctr, rhp_idx vi)
 {
    assert(ctr_is_rhp(ctr));
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
-
    S_CHECK(vi_inbounds(vi, cdat->total_n, __func__));
 
    ctr->n--;
 
-   if (!cdat->fops) {
-      MALLOC_(cdat->fops, Fops, 1);
-      fops_active_init(cdat->fops, ctr);
-   } else if (cdat->fops->type != FopsActive) {
+   if (!ctr->fops) {
+      MALLOC_(ctr->fops, Fops, 1);
+      fops_active_init(ctr->fops, ctr);
+   } else if (ctr->fops->type != FopsActive) {
       error("[container] ERROR: cannot deactivate equation with filter ops of "
-            "type %s\n", fopstype_name(cdat->fops->type));
+            "type %s\n", fopstype_name(ctr->fops->type));
    }
 
-   return fops_deactivate_var(cdat->fops->data, vi);
+   return fops_deactivate_var(ctr->fops->data, vi);
 }
 
 static int process_flipped(Model *mdl)

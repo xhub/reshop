@@ -46,8 +46,10 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
    * Set the fops, but after the check
    * ---------------------------------------------------------------------- */
 
+   Fops *fops_backup = NULL;
    if (fops) {
-      S_CHECK(rmdl_setfops(mdl, fops));
+      fops_backup = mdl->ctr.fops;
+      mdl->ctr.fops = fops;
    }
 
    S_CHECK(rmdl_prepare_export(mdl, mdl_solver));

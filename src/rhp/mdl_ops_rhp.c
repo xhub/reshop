@@ -80,7 +80,7 @@ static int rmdl_checkmdl(Model *mdl)
    Container *ctr = &mdl->ctr;
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    size_t total_n = cdat->total_n;
-   Fops * restrict fops = cdat->fops;
+   Fops * restrict fops = ctr->fops;
 
 
    for (rhp_idx i = 0; i < total_n; ++i) {
@@ -433,7 +433,7 @@ static int rmdl_reportvalues_from_rhp(Container * restrict ctr_dst,
                                   const Container * restrict ctr_src)
 {
    RhpContainerData *cdat = (RhpContainerData *) ctr_dst->data;
-   const Fops *fops = cdat->fops;
+   const Fops *fops = ctr_dst->fops;
 
    /* ---------------------------------------------------------------------
     * We copy all active variables of ctr_src in the range [0,n) to ctr_dst

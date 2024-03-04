@@ -135,8 +135,6 @@ typedef struct ctrdata_rhp {
    unsigned char *equ_stage;        /**< Correspondence between stage and model
                                          transformation                       */
 
-   Fops *fops;                      /**< Current filter operations            */
-
    struct auxmdl *stage_auxmdl;
 
    union {
