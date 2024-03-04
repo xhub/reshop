@@ -524,6 +524,17 @@ int mdl_copystatsfromsolver(Model *mdl, const Model *mdl_solver)
 
 int mdl_exportmodel(Model *mdl, Model *mdl_dst)
 {
+   /* ----------------------------------------------------------------------
+    * - Finalize EMPDAG
+    * - Check source model
+    * - Check metadata of source model
+    * ---------------------------------------------------------------------- */
+
+   S_CHECK(empdag_finalize(mdl));
+
+   S_CHECK(mdl_check(mdl));
+   S_CHECK(mdl_checkmetadata(mdl));
+
    /* TODO: this is part of GITLAB #67 */
    mdl_dst->mdl_up = mdl_borrow(mdl);
    mdl_dst->ctr.ctr_up = &mdl->ctr;

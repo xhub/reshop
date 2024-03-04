@@ -29,19 +29,6 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
       return Error_WrongModelForFunction;
    }
 
-   /* ----------------------------------------------------------------------
-    * First of all, some checks:
-    * - on the source model
-    * - on the metadata
-    * 
-    * First the empdag is finalized 
-    * ---------------------------------------------------------------------- */
-
-   S_CHECK(empdag_finalize(mdl));
-
-   S_CHECK(mdl_check(mdl));
-   S_CHECK(mdl_checkmetadata(mdl));
-
   /* ----------------------------------------------------------------------
    * Set the fops, but after the check
    * ---------------------------------------------------------------------- */
