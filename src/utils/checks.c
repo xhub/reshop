@@ -70,12 +70,12 @@ int chk_avar(const Avar *v, const char *fn)
 
 int chk_ei(const Model *mdl, rhp_idx ei, const char *fn)
 {
-   return ei_inbounds(ei, ctr_nequs_total(&mdl->ctr), __func__);
+   return ei_inbounds(ei, ctr_nequs_total(&mdl->ctr), fn);
 }
 
 int chk_vi(const Model *mdl, rhp_idx vi, const char *fn)
 {
-   return vi_inbounds(vi, ctr_nvars_total(&mdl->ctr), __func__);
+   return vi_inbounds(vi, ctr_nvars_total(&mdl->ctr), fn);
 }
 
 int chk_var_isnotconic(const Var *v, const Container *ctr,
@@ -104,6 +104,16 @@ int chk_mpe(const Mpe *mpe, const char *fn)
    if (!mpe) {
       error("%s ERROR: the Equilibrium object is NULL!\n", fn);
       return Error_NullPointer;
+   }
+
+   return OK;
+}
+
+int chk_uint2int(unsigned v, const char *fn)
+{
+   if (v > INT_MAX) {
+      error("%s ERROR: unsigned int value %u greater than %d\n", fn, v, INT_MAX);
+      return Error_SizeTooSmall;
    }
 
    return OK;

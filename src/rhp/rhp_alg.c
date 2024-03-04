@@ -3,6 +3,7 @@
 #include <float.h>
 #include <string.h>
 
+#include "checks.h"
 #include "container.h"
 #include "cmat.h"
 #include "ctr_rhp.h"
@@ -564,29 +565,37 @@ static NONNULL int rmdl_prepare_export_rhp(Model *mdl, Fops *fops)
 static int rctr_prepare_export_gams(Container *ctr, Container *ctr_gms)
 {
    /* ----------------------------------------------------------------------
-    * The SOS variables need special care
+    * The SOS variables need special care:
+    * - copy 
     * ---------------------------------------------------------------------- */
 
-   struct ctrdata_rhp *ctrdat = (struct ctrdata_rhp *)ctr->data;
-   struct ctrdata_gams *gms = (struct ctrdata_gams *)ctr_gms->data;
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   GmsContainerData *gms = (GmsContainerData *)ctr_gms->data;
 
-   if (ctrdat->sos1.len > 0) {
+   if (cdat->sos1.len > 0) {
+
+      S_CHECK(chk_uint2int(cdat->sos1.len, __func__));
       CALLOC_(gms->sos_group, int, ctr_nvars(ctr_gms));
-      for (size_t i = 0; i < ctrdat->sos1.len; i++) {
-         Avar *v = &ctrdat->sos1.groups[i].v;
-         for (size_t j = 0; j < v->size; ++j) {
+
+      for (int i = 0, len = (int)cdat->sos1.len; i < len; i++) {
+         Avar *v = &cdat->sos1.groups[i].v;
+
+         for (unsigned j = 0; j < v->size; ++j) {
             gms->sos_group[j] = i+1;
          }
       }
    }
 
-   if (ctrdat->sos2.len > 0) {
+   if (cdat->sos2.len > 0) {
       if (!gms->sos_group) {
          CALLOC_(gms->sos_group, int, ctr_nvars(ctr_gms));
       }
-      for (size_t i = 0; i < ctrdat->sos2.len; i++) {
-         Avar *v = &ctrdat->sos2.groups[i].v;
-         for (size_t j = 0; j < v->size; ++j) {
+
+      S_CHECK(chk_uint2int(cdat->sos2.len, __func__));
+      for (int i = 0, len = (int)cdat->sos2.len; i < len; i++) {
+
+         Avar *v = &cdat->sos2.groups[i].v;
+         for (unsigned j = 0; j < v->size; ++j) {
             gms->sos_group[j] = i+1;
          }
       }
