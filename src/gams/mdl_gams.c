@@ -74,8 +74,8 @@ static int ensure_matrixfile(const char *path)
 #endif
 
    if (fh == -1) {
-      perror("Open failed on input file");
-      error("Trying to open %s\n", filename);
+      perror("open");
+      error("While trying to open '%s'\n", filename);
       goto _exit;
    } else {
       int err = close(fh);
@@ -345,10 +345,8 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
        * gevDuplicateScratchDir takes care of replacing the scrdir name
        * -------------------------------------------------------------------- */
 
+
       /* \TODO(xhub) understand why we need a logfile */
-
-      S_CHECK(ensure_matrixfile(scrdir));
-
       char logfile_new[GMS_SSSIZE];
       STRNCPY_FIXED(logfile_new, scrdir);
       strncat(logfile_new, "gamslog.dat", strlen(logfile_new)-1);
@@ -362,6 +360,10 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
       STRNCPY_FIXED(mdldat_gms->gamscntr, gamsctrl_new);
       trace_model("[model] %s model '%.*s' #%u: gamscntr from gevDuplicateScratchDir()"
                " is '%s'\n", mdl_fmtargs(mdl_gms), mdldat_gms->gamscntr);
+
+      /* TODO: is this still needed?
+       * WARNING: this must be after gevDuplicateScratchDir() */
+      S_CHECK(ensure_matrixfile(scrdir));
 
    } else {
 
