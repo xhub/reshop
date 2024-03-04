@@ -132,7 +132,6 @@ typedef struct empdag_mp_ppty {
 } DagMpPpty;
 
 typedef struct empdag_mpe_ppty {
-
    unsigned level;
 } DagMpePpty;
 

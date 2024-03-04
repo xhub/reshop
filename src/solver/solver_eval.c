@@ -152,7 +152,7 @@ int ge_prep_jacdata(Container * restrict ctr, struct jacdata * restrict jacdata)
    pptr[0] = 0;
    for (size_t vi = 0; vi < total_n; ++vi) {
       struct ctr_mat_elt *me = model->vars[vi];
-      rhp_idx ei_debug = -1;
+      rhp_idx ei_debug = -1; /* TODO: change this. Is 0 a proper value? */
       bool need_sort = false;
       bool need_diag = true;
 

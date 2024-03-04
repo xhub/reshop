@@ -274,7 +274,7 @@ int ctr_resize(Container *ctr, unsigned nvars, unsigned nequs)
       memset(&ctr->equs[old_m], 0, (nequs-old_m)*sizeof(struct equ));
       if (init_varmeta) {
          for (unsigned i = old_m; i < nequs; ++i) {
-            equmeta_init(&ctr->equmeta[i]);
+           equmeta_init(&ctr->equmeta[i]);
          }
       }
    }

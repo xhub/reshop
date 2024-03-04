@@ -360,7 +360,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
    int status = OK;
    char buffer[2048];
-   char scrdir_new[GMS_SSSIZE];
+   RESHOP_STATIC_ASSERT(sizeof(buffer) >= GMS_SSSIZE, "");
 
    Container * restrict ctr_src = &mdl->ctr;
    Container * restrict ctr_gms = &mdl_gms->ctr;
