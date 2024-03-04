@@ -1,11 +1,19 @@
+#include "ctrdat_gams.h"
 #include "fooc.h"
 #include "gams_solve.h"
+#include "instr.h"
 #include "mathprgm.h"
 #include "mdl.h"
+#include "mdl_gams.h"
 #include "mdl_rhp.h"
 #include "rhp_model.h"
 #include "rmdl_gams.h"
 #include "var.h"
+
+
+#include "gmomcc.h"
+#include "gevmcc.h"
+
 
 static int err_mdlbackend_gmo(Model *mdl)
 {

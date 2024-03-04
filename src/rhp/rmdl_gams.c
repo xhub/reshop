@@ -3,18 +3,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-/* For IO related things  */
-#ifdef _WIN32
-
-#include <io.h>
-#define open _open
-#define close _close
-
-#else
-
-#include <unistd.h>
-
-#endif
 
 #include "asnan.h"
 #include "cmat.h"
@@ -25,7 +13,6 @@
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
 #include "filter_ops.h"
-#include "fs_func.h"
 #include "gams_rosetta.h"
 #include "gams_utils.h"
 #include "instr.h"
@@ -70,26 +57,6 @@
 #else
 #define SOLREPORT_DEBUG(...)
 #endif
-
-/** @brief print function for GAMS
- *
- * @param msg   message to print
- * @param mode  type of message
- * @param data  user data (not used for us)
- */
-static void GEV_CALLCONV reshop_printfn_gams(const char *msg, int mode, UNUSED void *data)
-{
-   /* TODO(GAMS) review this:
-    * - where is the value of mode documented?
-    * - it seems that the string in msg is not NUL-terminated. Is that correct?
-    */
-   size_t i = 0;
-   while(msg[i] != '\n') { i++; }
-   ((char*)msg)[i+1] = '\0';
-
-   printstr(mode << 2 | PO_ALLDEST, msg);
-}
-
 
 
 static int _debug_check_nlcode(int opcode, int value, size_t nvars, size_t poolen)
@@ -143,44 +110,6 @@ static void _debug_lequ(const CMatElt *me, const Container *ctr)
 #endif
 }
 
-static int _ensure_matrixfile(const char *str, size_t len)
-{
-
-   char *filename;
-   const char matrixfile[] = "gamsmatr.dat";
-   MALLOC_(filename, char, (len+2)*sizeof(char) + sizeof(matrixfile));
-
-   memcpy(filename, str, len*sizeof(char));
-   filename[len] = DIRSEP[0];
-   memcpy(&filename[len+1], matrixfile, sizeof(matrixfile));
-
-#ifdef _WIN32
-   int fh = open(filename, _O_WRONLY | _O_CREAT, _S_IREAD | _S_IWRITE ); // C4996 
-#else
-   int fh = open(filename, O_CREAT|O_WRONLY, S_IRWXU);
-#endif
-
-   if (fh == -1) {
-      perror("Open failed on input file");
-      error("Trying to open %s\n", filename);
-      goto _exit;
-   } else {
-      int err = close(fh);
-
-      if (err == -1) {
-         perror("Close failed");
-         goto _exit;
-      }
-   }
-
-   FREE(filename);
-
-   return OK;
-
-_exit:
-   FREE(filename);
-   return Error_SystemError;
-}
 
 static inline bool _iscurrent_equ(Container *ctr, size_t eidx)
 {
@@ -416,173 +345,6 @@ static int _check_deleted_equ(struct ctrdata_rhp *cdat, rhp_idx i)
 }
 
 /**
- * @brief Setup GAMS object before calling gevCallSolver
- *
- * @param mdl_gms 
- * @param mdl 
- * @param scrdir_new  
- * @return 
- */
-int static setup_gams_objects(Model *mdl_gms, Model *mdl, char *scrdir_new)
-{
-   char gamsctrl_new[GMS_SSSIZE];
-   GmsModelData *mdldat_gms = mdl_gms->data;
-
-   /* ----------------------------------------------------------------------
-    * Deal with the GAMS Control File crazyness
-    *
-    * This is required before calling gcdat_init
-    * ---------------------------------------------------------------------- */
-
-   bool has_gmsdata = false;
-   Model *mdl_up = mdl;
-   while (mdl_up) {
-      if (mdl_up->backend == RHP_BACKEND_GAMS_GMO) {
-         has_gmsdata = true;
-         break;
-      }
-
-      mdl_up = mdl_up->mdl_up;
-   }
-
-   if (mdl_up) {
-      const GmsModelData *mdldat_up = mdl_up->data;
-      Container *ctr_up = &mdl_up->ctr;
-      const GmsContainerData *gms = ctr_up->data;
-
-      /* -------------------------------------------------------------------
-       * Get a new scratch dir
-       * ------------------------------------------------------------------- */
-
-      gevGetStrOpt(gms->gev, gevNameScrDir, scrdir_new);
-      if(!dir_exists(scrdir_new)) {
-         error("[gams] ERROR: cannot access scrdir '%s' of %s model '%.*s' #%u\n",
-               scrdir_new, mdl_fmtargs(mdl_up));
-         return Error_SystemError;
-      }
-
-      /* -------------------------------------------------------------------
-       * Copy the GAMS directory
-       * ------------------------------------------------------------------- */
-
-      if (strlen(mdldat_up->gamsdir)) {
-         trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' inherited"
-                     " from %s model '%.*s' #%u\n", mdl_fmtargs(mdl_gms),
-                     mdldat_up->gamsdir, mdl_fmtargs(mdl_up));
-         STRNCPY_FIXED(mdldat_gms->gamsdir, mdldat_up->gamsdir);
-      } else {
-         gevGetStrOpt(gms->gev, gevNameSysDir, mdldat_gms->gamsdir);
-         trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' set from GEV\n",
-                     mdl_fmtargs(mdl_gms), mdldat_gms->gamsdir);
-      }
-
-      if(!dir_exists(mdldat_up->gamsdir)) {
-         error("[GAMS] ERROR: cannot access gamsdir '%s'\n", mdldat_up->gamsdir);
-         return Error_SystemError;
-      }
-
-      size_t len_namescr = strlen(scrdir_new);
-      const char * dirname = mdl_gms->commondata.name ? mdl_gms->commondata.name : "reshop";
-      strncat(scrdir_new, dirname, GMS_SSSIZE - len_namescr + 1);
-
-      S_CHECK(new_unique_dirname(scrdir_new, sizeof scrdir_new));
-
-      /* --------------------------------------------------------------------
-       * WARNING: never ever call gevSetStrOpt for gevNameScrDir before
-       * gevDuplicateScratchDir, since the substitution won't happen.
-       * gevDuplicateScratchDir takes care of replacing the scrdir name
-       * -------------------------------------------------------------------- */
-
-      /* \TODO(xhub) understand why we need a logfile */
-
-      S_CHECK(_ensure_matrixfile(scrdir_new, len_namescr));
-
-      char logfile_new[GMS_SSSIZE];
-      STRNCPY_FIXED(logfile_new, scrdir_new);
-      strncat(logfile_new, "gamslog.dat", strlen(logfile_new)-1);
-
-
-      if (gevDuplicateScratchDir(gms->gev, scrdir_new, logfile_new, gamsctrl_new)) {
-         errormsg("[GAMS] ERROR: call to gevDuplicateScratchDir failed\n");
-         return Error_SystemError;
-      }
-
-      STRNCPY_FIXED(mdldat_gms->gamscntr, gamsctrl_new);
-      trace_model("[model] %s model '%.*s' #%u: gamscntr from gevDuplicateScratchDir()"
-               " is '%s'\n", mdl_fmtargs(mdl_gms), mdldat_gms->gamscntr);
-   } else {
-      /* We need to get a dummy gamscntr.dat file */
-      if (!strlen(mdldat_gms->gamscntr)) {
-         errormsg("[GAMS] ERROR: no dummy gamscntr.dat file provided\n");
-         return Error_GAMSIncompleteSetupInfo;
-      }
-
-      if (!strlen(mdldat_gms->gamsdir)) {
-         errormsg("[GAMS] ERROR: no GAMS system directory provided\n");
-         return Error_GAMSIncompleteSetupInfo;
-      }
-
-      /*  TODO(xhub) fix this hack */
-      scrdir_new[0] = '\0';
-   }
-
-   /* ----------------------------------------------------------------------
-    * Create all the GAMS objects: GMO, GEV, DCT, CFG for a new model
-    * ---------------------------------------------------------------------- */
-
-   Container *ctr_gms = &mdl_gms->ctr;
-   GmsContainerData *gms_dst = (GmsContainerData *)ctr_gms->data;
-
-   S_CHECK(gcdat_init(mdl_gms->ctr.data, mdldat_gms));
-
-   gmoHandle_t gmo = gms_dst->gmo;
-   dctHandle_t dct = gms_dst->dct;
-   assert(0 == dctNRows(dct) && 0 == dctNCols(dct));
-
-   /* ----------------------------------------------------------------------
-    * Prepare the GMO object: set the model type, index base  = 0 (for variable
-    * and equation indices), and set the name
-    * ---------------------------------------------------------------------- */
-
-   gmoIndexBaseSet(gmo, 0);
-   gmoNameModelSet(gmo, mdl->commondata.name);
-
-   /* ----------------------------------------------------------------------
-    * Set the modeltype here: it is needed and has to be done after the new GAMS
-    * env has been created
-    * ---------------------------------------------------------------------- */
-
-   S_CHECK(mdl_copyprobtype(mdl_gms, mdl));
-
-   /* TODO(xhub) make an option for that */
-   gevSetIntOpt(gms_dst->gev, gevKeep, 1);
-
-   /* ----------------------------------------------------------------------
-    * If the gev doesn't come from GAMS, set the call to reshop_printfn_gams
-    * ---------------------------------------------------------------------- */
-
-   if (!has_gmsdata) {
-      gevRegisterWriteCallback(gms_dst->gev, reshop_printfn_gams, 1, NULL);
-   }
-
-   /* -----------------------------------------------------------------------
-    * Initialize the GMO object with the problem size
-    * ---------------------------------------------------------------------- */
-
-   char buf[GMS_SSSIZE];
-   GAMS_CHECK_NZ_BUF(gmoInitData(gmo, ctr_gms->m, ctr_gms->n, 0), gmo, buf);
-
-   /* -----------------------------------------------------------------------
-    * Initialize the dictionary object with the problem size
-    * ---------------------------------------------------------------------- */
-
-   dctSetBasicCounts(dct, ctr_gms->m, ctr_gms->n, 0);
-
-
-   return OK;
-}
-
-/**
  * @brief Export an RHP model to a GAMS GMO object
  *
  * @param mdl      the RHP model
@@ -607,7 +369,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
 
    /* Setup all GAMS objects */
-   S_CHECK(setup_gams_objects(mdl_gms, mdl, scrdir_new));
+   S_CHECK(gmdl_cdat_setup(mdl_gms, mdl));
 
 
    gmoHandle_t gmo = gms_dst->gmo;
@@ -1256,16 +1018,6 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
    gms_dst->owning_handles = true;
    MALLOC_EXIT(gms_dst->rhsdelta, double, ctr_src->m+1);
    gms_dst->initialized = true;
-
-   /*  TODO(xhub) control the debug output */
-   if (scrdir_new[0] != '\0') {
-     const char* output_gms = mygetenv("RHP_OUTPUT_GAMS");
-     if (output_gms) {
-      strncat(scrdir_new, "/debug.gms", sizeof(scrdir_new) - 1 - strlen(scrdir_new));
-      S_CHECK_EXIT(gmdl_writeasgms(mdl_gms, scrdir_new));
-     }
-      myfreeenvval(output_gms);
-   }
 
 _exit:
    /*  FREE all */
