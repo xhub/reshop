@@ -383,13 +383,13 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
     * Create all the GAMS objects: GMO, GEV, DCT, CFG
     * ---------------------------------------------------------------------- */
 
-   Container *ctr_gms = &mdl_gms->ctr;
-   GmsContainerData *gms_dst = (GmsContainerData *)ctr_gms->data;
+   Container *ctrgms = &mdl_gms->ctr;
+   GmsContainerData *gmsdst = (GmsContainerData *)ctrgms->data;
 
    S_CHECK(gcdat_init(mdl_gms->ctr.data, mdldat_gms));
 
-   gmoHandle_t gmodst = gms_dst->gmo;
-   dctHandle_t dctdst = gms_dst->dct;
+   gmoHandle_t gmodst = gmsdst->gmo;
+   dctHandle_t dctdst = gmsdst->dct;
    assert(0 == dctNRows(dctdst) && 0 == dctNCols(dctdst));
 
    /* ----------------------------------------------------------------------
@@ -408,14 +408,14 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
    S_CHECK(mdl_copyprobtype(mdl_gms, mdl_src));
 
    /* TODO(xhub) make an option for that */
-   gevSetIntOpt(gms_dst->gev, gevKeep, 1);
+   gevSetIntOpt(gmsdst->gev, gevKeep, 1);
 
    /* ----------------------------------------------------------------------
     * If the gev doesn't come from GAMS, set the call to reshop_printfn_gams
     * ---------------------------------------------------------------------- */
 
    if (!has_gmsdata) {
-      gevRegisterWriteCallback(gms_dst->gev, reshop_printfn_gams, 1, NULL);
+      gevRegisterWriteCallback(gmsdst->gev, reshop_printfn_gams, 1, NULL);
    }
 
    /* -----------------------------------------------------------------------
@@ -423,17 +423,15 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
     * ---------------------------------------------------------------------- */
 
    char buf[GMS_SSSIZE];
-   GAMS_CHECK_NZ_BUF(gmoInitData(gmodst, ctr_gms->m, ctr_gms->n, 0), gmodst, buf);
+   GAMS_CHECK_NZ_BUF(gmoInitData(gmodst, ctrgms->m, ctrgms->n, 0), gmodst, buf);
 
    /* -----------------------------------------------------------------------
     * Initialize the dictionary object with the problem size
     * TODO: we need the number of UELs here
     * ---------------------------------------------------------------------- */
 
-   dctSetBasicCounts(dctdst, ctr_gms->m, ctr_gms->n, 0);
+   dctSetBasicCounts(dctdst, ctrgms->m, ctrgms->n, 0);
 
 
    return OK;
 }
-
-
