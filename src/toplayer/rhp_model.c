@@ -46,35 +46,7 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
    * If we solve it via GAMS and it is a MOPEC, then create the MCP
    *
    * TODO: GITLAB #87
-   * TODO GITLAB #88
    * ---------------------------------------------------------------------- */
-
-#if 0
-   /* We have to do this here  */
-   ProbType probtype_src;
-   mdl_getprobtype(mdl, &probtype_src);
-
-   if (probtype_src == MdlProbType_emp && mdl_solver->backend == RHP_BACKEND_GAMS_GMO &&
-      !getenv("RHP_NO_JAMS_EMULATION")) {
-
-      const EmpDag *empdag = &mdl->empinfo.empdag;
-
-      /* TODO this is a bit hackish */
-      switch (empdag->type) {
-      case EmpDag_Mopec:
-      case EmpDag_Vi:
-      case EmpDag_Simple_Vi:
-         return mdl_exportasgmo(mdl, mdl_solver); 
-      default: ;
-      }
-
-      error("[process] ERROR: don't know how to solve %s model '%.*s' #%u of "
-            "type %s with empdag type %s\n", mdl_fmtargs(mdl),
-            probtype_name(probtype_src), empdag_typename(empdag->type));
-
-      return Error_NotImplemented;
-   }
-#endif
 
    S_CHECK(mdl_exportmodel(mdl, mdl_solver));
 
