@@ -409,7 +409,7 @@ static int preprocess_ovfargs(Model *mdl, OvfDef *ovf_def, mpid_t mpid)
       rhp_idx ei;
       S_CHECK(ctr_var_iterequs(&mdl->ctr, vi, &iter, &jacval, &ei, &nlflag));
 
-      if (!iter && !nlflag && (ctr_equ_type(&mdl->ctr, ei) == EQ_CONE_INCLUSION)
+      if (!iter && !nlflag && (ctr_equ_type(&mdl->ctr, ei) == ConeInclusion)
          && (ctr_equ_cone(&mdl->ctr, ei) == CONE_0)) {
          /* The variable appeared only in an equality equation.Therefore, we
              * can remove the equation and variable and deduce the expression */
@@ -537,7 +537,7 @@ static int preprocess_ccflibargs(Model *mdl, OvfDef *ovf_def, MathPrgm *mp)
       rhp_idx ei;
       S_CHECK(ctr_var_iterequs(&mdl->ctr, vi, &iter, &jacval, &ei, &nlflag));
 
-      if (!iter && !nlflag && (ctr_equ_type(&mdl->ctr, ei) == EQ_CONE_INCLUSION)
+      if (!iter && !nlflag && (ctr_equ_type(&mdl->ctr, ei) == ConeInclusion)
          && (ctr_equ_cone(&mdl->ctr, ei) == CONE_0)) {
          /* The variable appeared only in an equality equation.Therefore, we
              * can remove the equation and variable and deduce the expression */

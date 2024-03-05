@@ -71,10 +71,10 @@ int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
    S_CHECK(vi_inbounds(objvar, ctr_nvars_total(&mdl->ctr), __func__));
 
    Equ *e = &mdl->ctr.equs[objequ];
-   if (e->object != EQ_MAPPING) {
+   if (e->object != Mapping) {
       error("[model/rhp] ERROR: the objective equation '%s' has type %s it should"
             " be %s\n", mdl_printequname(mdl, objequ), equtype_name(e->object),
-            equtype_name(EQ_MAPPING));
+            equtype_name(Mapping));
       return Error_RuntimeError;
    }
 
@@ -454,16 +454,16 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
    rmdl_getobjequ(mdl, &objequ);
    if (valid_ei(objequ)) {
       EquObjectType equtype = mdl->ctr.equs[objequ].object;
-      if (equtype == EQ_CONE_INCLUSION) {
+      if (equtype == ConeInclusion) {
          assert(mdl_up->backend == RHP_BACKEND_GAMS_GMO);
-         mdl->ctr.equs[objequ].object = EQ_MAPPING;
+         mdl->ctr.equs[objequ].object = Mapping;
          mdl->ctr.equs[objequ].cone = CONE_NONE;
       }
-      if (mdl->ctr.equs[objequ].object != EQ_MAPPING) {
+      if (mdl->ctr.equs[objequ].object != Mapping) {
          error("[model] %s model '%.*s' #%u inherited an objective equation from "
                "%s model '%.*s' #%u, but the latter has type %s, expected %s\n",
                mdl_fmtargs(mdl), mdl_fmtargs(mdl_up),
-               equtype_name(mdl->ctr.equs[objequ].object), equtype_name(EQ_MAPPING));
+               equtype_name(mdl->ctr.equs[objequ].object), equtype_name(Mapping));
          return Error_InvalidModel;
       }
    }
@@ -613,7 +613,7 @@ int rmdl_appendequs(Model *mdl, const Aequ *e)
       *edst = *esrc;
       edst->idx = ei_new;
 
-      assert(edst->object != EQ_CONE_INCLUSION || cone_1D_polyhedral(edst->cone));
+      assert(edst->object != ConeInclusion || cone_1D_polyhedral(edst->cone));
 
       S_CHECK(rctr_getnl(ctr_up, esrc));
 

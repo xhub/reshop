@@ -448,7 +448,7 @@ static NONNULL int _print_equconerev(Equ *e, FILE *f)
 
 static NONNULL int _print_equcone(Equ *e, FILE *f)
 {
-   if (e->object == EQ_CONE_INCLUSION) {
+   if (e->object == ConeInclusion) {
       S_CHECK(_print_cone_relation_rev(e->cone, f));
       S_CHECK(_print_equconesymbol(e, f));
    }

@@ -107,7 +107,7 @@ static int _add_gen_type(struct gen_data * restrict dat, rhp_idx vi, enum cone c
       Equ *e;
       rhp_idx ei_new = IdxNA;
 
-      S_CHECK(rctr_add_equ_empty(ctr, &ei_new, &e, EQ_CONE_INCLUSION, cone));
+      S_CHECK(rctr_add_equ_empty(ctr, &ei_new, &e, ConeInclusion, cone));
 
       if (mp) {
          S_CHECK(mp_addconstraint(mp, ei_new));
@@ -389,7 +389,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    /* TODO(xhub) reuse the code before to also store that*/
    Equ *e_rho;
    rhp_idx ei_rho = IdxNA;
-   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &ei_rho, &e_rho, EQ_MAPPING, CONE_NONE));
+   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &ei_rho, &e_rho, Mapping, CONE_NONE));
 
    if (valid_vi(t_idx)) {
       S_CHECK_EXIT(equ_add_newlvar(e_rho, t_idx, 1.));

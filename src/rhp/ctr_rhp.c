@@ -461,10 +461,10 @@ int rctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
    ctr->varmeta[vi].dual = ei;
 
    if (valid_ei(ei)) {
-      if (ctr->equs[ei].object != EQ_MAPPING) {
+      if (ctr->equs[ei].object != Mapping) {
          debug("%s ERROR: equ '%s' is of type %s, should be %s\n", __func__,
                ctr_printequname(ctr, ei), equtype_name(ctr->equs[ei].object),
-               equtype_name(EQ_MAPPING));
+               equtype_name(Mapping));
       }
 
       struct equ_meta *equmeta = &ctr->equmeta[ei];
@@ -527,7 +527,7 @@ int rctr_add_init_equs(Container *ctr, unsigned nb)
 
    for (unsigned i = 0; i < nb; i++) {
       rhp_idx eidx = IdxInvalid;
-      S_CHECK(rctr_add_equ_empty(ctr, &eidx, NULL, EQ_UNSET, CONE_NONE));
+      S_CHECK(rctr_add_equ_empty(ctr, &eidx, NULL, EquTypeUnset, CONE_NONE));
    }
 
    return OK;

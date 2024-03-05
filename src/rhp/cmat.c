@@ -767,7 +767,7 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
             } else {
                /*  EQU2 */
                double cst = equ_get_cst(&ctr->equs[ei]);
-               if (ctr->equs[ei].object == EQ_MAPPING && isfinite(cst)) {
+               if (ctr->equs[ei].object == Mapping && isfinite(cst)) {
                   A_CHECK(cdat->equs[ei], cmat_cst_equ(ei));
                } else {
                   error("[container] ERROR: the equation %s no longer contains "

@@ -159,7 +159,7 @@ int ge_prep_jacdata(Container * restrict ctr, struct jacdata * restrict jacdata)
       while (me) {
          if ((size_t)me->ei < total_n) {
             iptr[cnt] = me->ei;
-            equs[cnt].object = EQ_MAPPING;
+            equs[cnt].object = Mapping;
             S_CHECK_EXIT(sd_tool_deriv(adt[me->ei], vi, &equs[cnt++]));
 
             if (me->ei <= ei_debug) {
@@ -176,7 +176,7 @@ int ge_prep_jacdata(Container * restrict ctr, struct jacdata * restrict jacdata)
 
       if (need_diag) {
         need_sort = 1;
-        equs[cnt].object = EQ_MAPPING;
+        equs[cnt].object = Mapping;
         iptr[cnt++] = vi;
       }
 

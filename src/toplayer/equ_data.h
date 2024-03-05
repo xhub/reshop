@@ -12,11 +12,11 @@
 
 /** @brief Type of equation */
 __extension__ typedef enum equ_object_type ENUM_U8 {
-   EQ_UNSET = 0,          /**< Equation type unset */
-   EQ_MAPPING,            /**< Mapping (objective fn, functional part of VI, ...)*/
-   EQ_CONE_INCLUSION,     /**< Inclusion in a cone (usual constraint) */
-   EQ_BOOLEAN_RELATION,   /**< Boolean relation */
-   EQ_UNSUPPORTED,        /**< Unsupported type */ 
+   EquTypeUnset = 0,          /**< Equation type unset */
+   Mapping,            /**< Mapping (objective fn, functional part of VI, ...)*/
+   ConeInclusion,     /**< Inclusion in a cone (usual constraint) */
+   BooleanRelation,   /**< Boolean relation */
+   EquTypeUnsupported,        /**< Unsupported type */ 
 } EquObjectType;
 
 /** @brief Linear equation */

@@ -1024,7 +1024,7 @@ static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
    for (int i = 0, len = ctr->m; i < len; ++i) {
       const Equ *e = &ctr_src->equs[i];
       double value = e->value;
-      if (e->object == EQ_MAPPING) {
+      if (e->object == Mapping) {
          value -= e->p.cst;
       }
 

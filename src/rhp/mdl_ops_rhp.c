@@ -145,10 +145,10 @@ static int rmdl_checkmdl(Model *mdl)
 
    unsigned type, cone;
    S_CHECK(ctr_getequtype(&mdl->ctr, objequ, &type, &cone));
-   if (type != EQ_MAPPING) {
+   if (type != Mapping) {
       error("[model/rhp] ERROR: %s model '%.*s' #%u has an objective equation "
             "with type %s, but it must be %s. ", mdl_fmtargs(mdl), equtype_name(type),
-            equtype_name(EQ_MAPPING));
+            equtype_name(Mapping));
       errormsg("If there is an objective variable, it should be added to ");
       errormsg("the model as well!\n");
       return Error_EMPRuntimeError;
@@ -476,7 +476,15 @@ int rmdl_setobjsense(Model *mdl, RhpSense objsense)
    return empdag_simple_setsense(empdag, objsense);
 }
 
-int rmdl_setobjequ(Model *mdl, rhp_idx objequ)
+/**
+ * @brief Set the objective function of the model
+ *
+ * @param mdl The model
+ * @param ei  The objective function index
+ *
+ * @return    The error code
+ */
+int rmdl_setobjfun(Model *mdl, rhp_idx ei)
 {
    if (!valid_ei(objequ)) { S_CHECK(ei_inbounds(objequ, rctr_totalm(&mdl->ctr), __func__)); }
 
@@ -488,21 +496,21 @@ int rmdl_setobjequ(Model *mdl, rhp_idx objequ)
    Container *ctr = &mdl->ctr;
    EquObjectType equtype = ctr->equs[objequ].object;
 
-   if (equtype != EQ_MAPPING) {
+   if (equtype != Mapping) {
       error("[%s] ERROR: %s model '%.*s' #%u, the objective equation '%s' is "
             "of the wrong type: %s. Expected type is %s\n", __func__,
-            mdl_fmtargs(mdl), mdl_printequname(mdl, objequ), equtype_name(equtype),
-            equtype_name(EQ_MAPPING));
+            mdl_fmtargs(mdl), mdl_printequname(mdl, ei), equtype_name(equtype),
+            equtype_name(Mapping));
       return Error_InvalidArgument;
    }
 
    if (mdl->ctr.equmeta) {
-      EquMeta *emd = &mdl->ctr.equmeta[objequ];
+      EquMeta *emd = &mdl->ctr.equmeta[ei];
       EquRole equrole = emd->role;
       /* We also allow EquObjective since we might inject equations into a 
        * model (e.g. bilevel as MPEC). Not the cleanest way, Luft nach oben */
       if (equrole != EquUndefined && equrole != EquObjective) {
-         equmeta_rolemismatchmsg(&mdl->ctr, objequ, equrole, EquUndefined, __func__);
+         equmeta_rolemismatchmsg(&mdl->ctr, ei, equrole, EquUndefined, __func__);
          return Error_UnExpectedData;
       }
 

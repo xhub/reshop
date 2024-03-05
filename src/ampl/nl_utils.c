@@ -30,7 +30,7 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
 
    for (unsigned i = 0; i < mdl->ctr.m; ++i) {
 
-      if (mdl->ctr.equs[i].object == EQ_CONE_INCLUSION) {
+      if (mdl->ctr.equs[i].object == ConeInclusion) {
          switch (mdl->ctr.equs[i].cone) {
          case CONE_0:
             n_eq++;
@@ -44,7 +44,7 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
                      cone_name(mdl->ctr.equs[i].cone), mdl->ctr.equs[i].cone);
             return Error_InvalidValue;
          }
-      } else if (mdl->ctr.equs[i].object == EQ_BOOLEAN_RELATION) {
+      } else if (mdl->ctr.equs[i].object == BooleanRelation) {
          n_log++;
       } else {
 

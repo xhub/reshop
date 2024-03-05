@@ -101,25 +101,25 @@ static inline int equtype_from_gams(int gams_type, EquTypeFromGams *equtype)
    switch (gams_type) {
    case gmoequ_L:
       equtype->cone = CONE_R_MINUS;
-      equtype->object = EQ_CONE_INCLUSION;
+      equtype->object = ConeInclusion;
       return OK;
    case gmoequ_E:
       equtype->cone = CONE_0;
-      equtype->object = EQ_CONE_INCLUSION;
+      equtype->object = ConeInclusion;
       return OK;
    case gmoequ_G:
       equtype->cone = CONE_R_PLUS;
-      equtype->object = EQ_CONE_INCLUSION;
+      equtype->object = ConeInclusion;
       return OK;
    case gmoequ_C:
-      equtype->object = EQ_CONE_INCLUSION;
+      equtype->object = ConeInclusion;
       TO_IMPLEMENT("Second Order cone relation are not yet supported");
    case gmoequ_N:
-      equtype->object = EQ_MAPPING;
+      equtype->object = Mapping;
       equtype->cone = CONE_NONE;
       return OK;
    case gmoequ_B:
-      equtype->object = EQ_BOOLEAN_RELATION;
+      equtype->object = BooleanRelation;
       equtype->cone = CONE_NONE;
       return OK;
    case gmoequ_X:

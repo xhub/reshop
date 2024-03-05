@@ -77,7 +77,7 @@ int ovf_add_polycons(Model *mdl, union ovf_ops_data ovfd, Avar *y,
 
       rhp_idx ei_new;
       Equ *e;
-      S_CHECK(rctr_add_equ_empty(ctr, &ei_new, &e, EQ_CONE_INCLUSION, cone));
+      S_CHECK(rctr_add_equ_empty(ctr, &ei_new, &e, ConeInclusion, cone));
       S_CHECK(lequ_reserve(e->lequ, row_len));
 
       Avar subset_var;

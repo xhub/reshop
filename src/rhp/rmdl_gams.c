@@ -502,10 +502,10 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
       int equtype;
       switch (e->object) {
-      case EQ_CONE_INCLUSION:
+      case ConeInclusion:
          S_CHECK_EXIT(cone_to_gams_relation_type(e->cone, &equtype));
          break;
-      case EQ_MAPPING:
+      case Mapping:
          equtype = gmoequ_N;
          break;
       default:

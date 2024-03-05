@@ -622,7 +622,7 @@ int mp_addvipair(MathPrgm *mp, rhp_idx ei, rhp_idx vi) {
      * ------------------------------------------------------------------ */
 
       S_CHECK(mp_addequchk(mp, ei));
-      mp->mdl->ctr.equs[ei].object = EQ_MAPPING;
+      mp->mdl->ctr.equs[ei].object = Mapping;
 
    } else {
 
@@ -744,9 +744,9 @@ int mp_finalize(MathPrgm *mp)
 
    unsigned type, cone;
    S_CHECK(ctr_getequtype(&mp->mdl->ctr, objequ, &type, &cone));
-   if (type != EQ_MAPPING) {
+   if (type != Mapping) {
       error("[MP] ERROR: In MP(%.*s) (ID #%u) objequ has type %s, should be %s. ",
-            mp_fmtargs(mp), equtype_name(type), equtype_name(EQ_MAPPING));
+            mp_fmtargs(mp), equtype_name(type), equtype_name(Mapping));
       errormsg("If there is an objective variable, it should be added to ");
       errormsg("the MP *before* the objective equation\n");
       return Error_EMPRuntimeError;

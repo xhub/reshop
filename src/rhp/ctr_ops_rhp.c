@@ -1326,7 +1326,7 @@ static int rctr_setequtype(Container *ctr, rhp_idx eidx, unsigned type, unsigned
       return Error_IndexOutOfRange;
    }
 
-   if (type >= EQ_UNSUPPORTED) {
+   if (type >= EquTypeUnsupported) {
       error("%s :: invalid equation type value %u\n", __func__, type);
    }
 

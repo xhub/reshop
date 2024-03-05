@@ -138,7 +138,7 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    char *ovf_objequ_name;
    NEWNAME(ovf_objequ_name, ovf_name, ovf_namelen, "_objequ");
    S_CHECK_EXIT(cdat_equname_start(cdat, ovf_objequ_name));
-   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &objequ_new, &eobj, EQ_MAPPING, CONE_NONE));
+   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &objequ_new, &eobj, Mapping, CONE_NONE));
    S_CHECK_EXIT(cdat_equname_end(cdat));
 
    S_CHECK_EXIT(nltree_bootstrap(eobj, 3*n_args, n_u + 1)); /* TODO(xhub) tune that*/

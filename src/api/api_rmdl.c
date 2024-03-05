@@ -691,9 +691,9 @@ int rhp_equ_setcst(Model *mdl, rhp_idx ei, double val)
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(ei_inbounds(ei,((RhpContainerData*)mdl->ctr.data)->total_m, __func__)); 
 
-   if (mdl->ctr.equs[ei].object != EQ_MAPPING) {
+   if (mdl->ctr.equs[ei].object != Mapping) {
       error("%s ERROR: equation %s has the wrong type: expecting %s, got %s\n",
-            __func__, ctr_printequname(&mdl->ctr, ei), equtype_name(EQ_MAPPING),
+            __func__, ctr_printequname(&mdl->ctr, ei), equtype_name(Mapping),
             equtype_name(mdl->ctr.equs[ei].object));
       return Error_UnExpectedData;
    }
@@ -718,10 +718,10 @@ int rhp_equ_getcst(Model *mdl, rhp_idx ei, double *val)
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(ei_inbounds(ei,((RhpContainerData*)mdl->ctr.data)->total_m, __func__)); 
 
-   if (mdl->ctr.equs[ei].object != EQ_MAPPING) {
+   if (mdl->ctr.equs[ei].object != Mapping) {
       error("%s ERROR: equation %s has the wrong type: expecting a %s,"
                          " got a %s\n", __func__, ctr_printequname(&mdl->ctr, ei),
-                         equtype_name(EQ_MAPPING), equtype_name(mdl->ctr.equs[ei].object));
+                         equtype_name(Mapping), equtype_name(mdl->ctr.equs[ei].object));
       return Error_UnExpectedData;
    }
 
@@ -784,7 +784,7 @@ size_t rhp_get_nb_lequ_le(Model *mdl)
    size_t cnt = 0;
    for (size_t i = 0; i < ctr_nequs(&mdl->ctr); ++i) {
       if (!mdl->ctr.equs[i].tree &&
-          mdl->ctr.equs[i].object == EQ_CONE_INCLUSION &&
+          mdl->ctr.equs[i].object == ConeInclusion &&
           mdl->ctr.equs[i].cone == CONE_R_MINUS) cnt ++;
    }
 
@@ -800,7 +800,7 @@ size_t rhp_get_nb_lequ_ge(Model *mdl)
    size_t cnt = 0;
    for (size_t i = 0; i < ctr_nequs(&mdl->ctr); ++i) {
       if (!mdl->ctr.equs[i].tree &&
-          mdl->ctr.equs[i].object == EQ_CONE_INCLUSION &&
+          mdl->ctr.equs[i].object == ConeInclusion &&
           mdl->ctr.equs[i].cone == CONE_R_PLUS) cnt++;
    }
 
@@ -816,7 +816,7 @@ size_t rhp_get_nb_lequ_eq(Model *mdl)
    size_t cnt = 0;
    for (size_t i = 0; i < ctr_nequs(&mdl->ctr); ++i) {
       if (!mdl->ctr.equs[i].tree &&
-          mdl->ctr.equs[i].object == EQ_CONE_INCLUSION &&
+          mdl->ctr.equs[i].object == ConeInclusion &&
           mdl->ctr.equs[i].cone == CONE_0) cnt++;
    }
 
@@ -1173,7 +1173,7 @@ int rhp_add_equation(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_UNSET, CONE_NONE);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EquTypeUnset, CONE_NONE);
 }
 
 /**
@@ -1196,7 +1196,7 @@ int rhp_add_equations(Model *mdl, unsigned size, Aequ *e)
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;
-      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, EQ_UNSET, CONE_NONE));
+      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, EquTypeUnset, CONE_NONE));
       assert(ei == e->start + i);
    }
 
@@ -1221,7 +1221,7 @@ int rhp_add_con(Model *mdl, unsigned cone, rhp_idx *ei)
 
    S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
 
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_CONE_INCLUSION, cone);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, cone);
 }
 /**
  * @brief Add a constraint with a given name
@@ -1276,7 +1276,7 @@ int rhp_add_cons(Model *mdl, unsigned size, unsigned type, Aequ *eout)
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;
-      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, EQ_CONE_INCLUSION, type));
+      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, ConeInclusion, type));
       assert(ei == eout->start + i);
    }
 
@@ -1328,7 +1328,7 @@ int rhp_add_func(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_MAPPING, CONE_NONE);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, Mapping, CONE_NONE);
 }
 
 /**
@@ -1381,7 +1381,7 @@ int rhp_add_funcs(Model *mdl, unsigned size, Aequ *e)
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;
-      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, EQ_MAPPING, CONE_NONE));
+      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, Mapping, CONE_NONE));
       assert(ei == e->start + i);
    }
 
@@ -1430,7 +1430,7 @@ int rhp_add_equality_constraint(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_CONE_INCLUSION, CONE_0);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_0);
 }
 
 /**
@@ -1447,7 +1447,7 @@ int rhp_add_exp_constraint(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_CONE_INCLUSION, CONE_EXP);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_EXP);
 }
 
 /**
@@ -1464,7 +1464,7 @@ int rhp_add_greaterthan_constraint(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_CONE_INCLUSION, CONE_R_PLUS);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_R_PLUS);
 }
 
 /**
@@ -1481,7 +1481,7 @@ int rhp_add_lessthan_constraint(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_CONE_INCLUSION, CONE_R_MINUS);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_R_MINUS);
 }
 
 /**
@@ -1498,7 +1498,7 @@ int rhp_add_power_constraint(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_CONE_INCLUSION, CONE_POWER);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_POWER);
 }
 
 /**
@@ -1515,7 +1515,7 @@ int rhp_add_soc_constraint(Model *mdl, rhp_idx *ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_ei_ptr(ei, __func__));
-   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, EQ_CONE_INCLUSION, CONE_SOC);
+   return rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_SOC);
 }
 
 /**

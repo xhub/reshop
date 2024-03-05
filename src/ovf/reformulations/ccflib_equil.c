@@ -151,7 +151,7 @@ static int mp_ccflib_instantiate(EmpDag *empdag, unsigned mpid, DfsData *dfsdat,
    Equ *eobj;
    IO_CALL(asprintf(&ovf_objequ, "ccflib_objequ(%u)", mpid));
    S_CHECK(cdat_equname_start(cdat, ovf_objequ));
-   S_CHECK(rctr_add_equ_empty(&mdl->ctr, &objequ, &eobj, EQ_CONE_INCLUSION, CONE_0));
+   S_CHECK(rctr_add_equ_empty(&mdl->ctr, &objequ, &eobj, ConeInclusion, CONE_0));
    S_CHECK(cdat_equname_end(cdat));
 
    /*  Add -k(y) */

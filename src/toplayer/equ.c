@@ -541,7 +541,7 @@ void equ_dealloc(Equ **equ)
 
 void equ_basic_init(Equ *e)
 {
-   e->object = EQ_UNSET;
+   e->object = EquTypeUnset;
    e->cone = CONE_NONE;
    e->basis = BasisUnset;
    e->is_quad = false;

@@ -595,7 +595,7 @@ static int add_nonlinear_normal_cone_term(Model *restrict mdl_mcp,
 
       /* Dummy trick to avoid an error later  */
       ediff.idx = IdxNA;
-      ediff.object = EQ_MAPPING;
+      ediff.object = Mapping;
 
       /* Compute ∇ⱼ gᵢ(x) */
       S_CHECK(sd_tool_deriv(sd_equ, vi, &ediff));
@@ -842,7 +842,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
          * the position given by vi.
          * ------------------------------------------------------------- */
 
-         if (equ.object == EQ_MAPPING) {
+         if (equ.object == Mapping) {
             assert(ctr_src->equmeta && vifuncs_list);
 
             rhp_idx vi_src = ctr_src->equmeta[i].dual; assert(valid_vi(vi_src));
@@ -865,7 +865,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
          /* --------------------------------------------------------------
           *  The equation is a constraint and we copy it as such
           * -------------------------------------------------------------- */
-         } else if (equ.object == EQ_CONE_INCLUSION) {
+         } else if (equ.object == ConeInclusion) {
 
             /* rev_rosetta_cons must be updated before nl_copy_ to avoid issues
            * with tracing container changes */
@@ -916,7 +916,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
          * equation corresponding to the multipliers is  -g ⊥ (μ,λ) ∈ Y
          * ------------------------------------------------------------- */
 
-         if (edst->object == EQ_CONE_INCLUSION) {
+         if (edst->object == ConeInclusion) {
 
             /*  TODO(xhub) add prox pert? */
             S_CHECK(cmat_sync_lequ(ctr_mcp, edst));
@@ -925,11 +925,11 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
            * Now we can change the constraint to a mapping
            * ------------------------------------------------------------- */
 
-            edst->object = EQ_MAPPING;
+            edst->object = Mapping;
 
             S_CHECK(rctr_setequvarperp(ctr_mcp, ei, vi));
 
-         } else if (edst->object == EQ_MAPPING) {
+         } else if (edst->object == Mapping) {
 
             // No need to call rctr_finalize_add_equ, this is done for all the
             // non-constraints equations at once.
@@ -1009,7 +1009,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
             if (!valid_vi(vi_new)) { vi++; continue; }
 
             rhp_idx ei = vi2ei_F ? vi2ei_F[vi_new] : vi_new;
-            S_CHECK(rctr_init_equ_empty(ctr_mcp, ei, EQ_MAPPING, CONE_NONE));
+            S_CHECK(rctr_init_equ_empty(ctr_mcp, ei, Mapping, CONE_NONE));
             FOOC_DEBUG(" VI zero func added at pos %u for VI var '%s'", ei,
                        ctr_printvarname(ctr_mcp, vi_new));
             names_lookup_types[ei] = VNL_VIzerofunc;
@@ -1238,7 +1238,7 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
     equ_basic_init(&ediff);
     /* Dummy trick to avoid an error later  */
     ediff.idx = IdxNA;
-    ediff.object = EQ_MAPPING;
+    ediff.object = Mapping;
 
     /* --------------------------------------------------------------------
      * Compute ∇ₖf(x) and inject that in the equation with index k.
@@ -1811,7 +1811,7 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
 
   for (size_t i = mcpinfo.ei_F_start, end = mcpinfo.ei_cons_start; i < end; ++i) {
     ctr_mcp->equs[i].idx = i;
-    ctr_mcp->equs[i].object = EQ_MAPPING;
+    ctr_mcp->equs[i].object = Mapping;
   }
 
   /* ----------------------------------------------------------------------

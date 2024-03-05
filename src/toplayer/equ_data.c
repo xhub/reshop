@@ -9,7 +9,7 @@ const char * const _equ_type_name[] = {
 
 const char *equtype_name(unsigned type)
 {
-   if (type < EQ_UNSUPPORTED) {
+   if (type < EquTypeUnsupported) {
       return _equ_type_name[type];
    }
 

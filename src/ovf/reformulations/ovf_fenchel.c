@@ -530,7 +530,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    /* TODO(xhub) reuse the code before to also store that*/
    Equ *e_rho;
    rhp_idx ei_rho = IdxNA;
-   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &ei_rho, &e_rho, EQ_MAPPING, CONE_NONE));
+   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &ei_rho, &e_rho, Mapping, CONE_NONE));
 
    if (has_set) {
 
@@ -634,7 +634,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          continue;
       }
 
-      S_CHECK_EXIT(rctr_add_equ_empty(ctr, &new_ei, &e, EQ_CONE_INCLUSION, eqn_cone));
+      S_CHECK_EXIT(rctr_add_equ_empty(ctr, &new_ei, &e, ConeInclusion, eqn_cone));
 
       if (mp) {
          S_CHECK_EXIT(mp_addconstraint(mp, new_ei));

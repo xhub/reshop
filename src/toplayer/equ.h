@@ -225,7 +225,7 @@ static inline void equ_add_cst(Equ *e, double val)
       e->p.cst += val;
       break;
    case CONE_NONE:
-      if (e->object == EQ_MAPPING || e->object == EQ_BOOLEAN_RELATION) {
+      if (e->object == Mapping || e->object == BooleanRelation) {
          e->p.cst += val;
          break;
       }
@@ -252,7 +252,7 @@ static inline double equ_get_cst(const Equ * restrict e)
    case CONE_0:
       return e->p.cst;
    case CONE_NONE:
-      if (e->object == EQ_MAPPING || e->object == EQ_BOOLEAN_RELATION) {
+      if (e->object == Mapping || e->object == BooleanRelation) {
          return e->p.cst;
       }
    FALLTHRU
@@ -280,7 +280,7 @@ static inline void equ_set_cst(Equ *e, double val)
       e->p.cst = val;
       break;
    case CONE_NONE:
-      if (e->object == EQ_MAPPING || e->object == EQ_BOOLEAN_RELATION) {
+      if (e->object == Mapping || e->object == BooleanRelation) {
          e->p.cst = val;
          break;
       }

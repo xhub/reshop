@@ -47,11 +47,11 @@ int mp_identify_objequ(MathPrgm *mp)
 
    } while (jac);
 
-   if (objequ != IdxNA && ctr->equs[objequ].object == EQ_CONE_INCLUSION &&
+   if (objequ != IdxNA && ctr->equs[objequ].object == ConeInclusion &&
       ctr->equs[objequ].cone == CONE_0) {
 
       /* The objequ is a mapping */
-      ctr->equs[objequ].object = EQ_MAPPING;
+      ctr->equs[objequ].object = Mapping;
       ctr->equs[objequ].cone   = CONE_NONE;
 
       trace_process("[MP] MP(%s) now has %s as objective equation\n",

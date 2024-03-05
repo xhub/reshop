@@ -31,8 +31,8 @@ static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
       if (cdat->equs[ei] && !cmat_chk_varinequ(cdat->equs[ei], vi_map)) { return false; }
    }
 
-   return (valid_vimap && ctr->equs[ei].object == EQ_CONE_INCLUSION) ||
-          (!valid_vimap &&  ctr->equs[ei].object == EQ_MAPPING);
+   return (valid_vimap && ctr->equs[ei].object == ConeInclusion) ||
+          (!valid_vimap &&  ctr->equs[ei].object == Mapping);
 }
 
 
@@ -518,7 +518,7 @@ int rctr_equ_add_equ_x(Container *ctr, Equ * restrict dst, Equ * restrict src,
     * ---------------------------------------------------------------------- */
 
    /*  TODO(xhub) CONE SUPPORT */
-   assert(dst->object == EQ_MAPPING || dst->object == EQ_UNSET);
+   assert(dst->object == Mapping || dst->object == EquTypeUnset);
 
    double cst = equ_get_cst(src);
    equ_add_cst(dst, coeff*cst);
