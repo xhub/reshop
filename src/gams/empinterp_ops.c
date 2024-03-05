@@ -62,7 +62,7 @@ int parser_filter_set(Interpreter* restrict interp, unsigned i, int val)
    return OK;
 }
 
-NONNULL_ONEIDX(1) static
+NONNULL_AT(1) static
 int imm_common_nodeinit(Interpreter *interp, daguid_t uid, DagRegisterEntry *regentry)
 {
    if (regentry) {

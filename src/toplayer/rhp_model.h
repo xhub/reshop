@@ -5,6 +5,6 @@
 #include "rhp_fwd.h"
 
 int rmdl_exportmodel(Model *mdl, Model *mdl_solver,
-                    Fops *fops) NONNULL_IDX(1,2);
+                    Fops *fops) NONNULL_AT(1,2);
 
 #endif

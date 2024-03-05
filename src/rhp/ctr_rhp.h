@@ -77,7 +77,7 @@ int rctr_walkequ(const Container *ctr, rhp_idx ei, void **iterator,
 int rctr_get_var_sos1(Container *ctr, rhp_idx vi, unsigned **grps);
 int rctr_get_var_sos2(Container *ctr, rhp_idx vi, unsigned **grps);
 
-NONNULL_IDX(1, 2) ACCESS_ATTR(write_only, 2) ACCESS_ATTR(read_write, 3)
+NONNULL_AT(1, 2) ACCESS_ATTR(write_only, 2) ACCESS_ATTR(read_write, 3)
 int rctr_add_equ_empty(Container *ctr, rhp_idx *ei, Equ **e,
                        EquObjectType type, enum cone cone);
 
@@ -90,9 +90,9 @@ int rctr_reserve_eval_equvar(Container *ctr, unsigned size) NONNULL;
 int rctr_add_eval_equvar(Container *ctr, rhp_idx ei, rhp_idx vi ) NONNULL;
 int rctr_var_setasdualmultiplier(Container *ctr, Equ *e, rhp_idx vi) NONNULL;
 int rctr_add_multiplier_dual(Container *ctr, enum cone cone, void* cone_data,
-                              rhp_idx *vi) NONNULL_IDX(1, 4);
+                              rhp_idx *vi) NONNULL_AT(1, 4);
 int rctr_add_multiplier_polar(Container *ctr, enum cone cone, void* cone_data,
-                               rhp_idx *vi) NONNULL_IDX(1, 4);
+                               rhp_idx *vi) NONNULL_AT(1, 4);
 int rctr_add_box_vars_ops(Container *ctr, unsigned nb_vars, const void* env,
                           const struct var_genops* varfill) NONNULL;
 int rctr_fix_equ(Container *ctr, rhp_idx ei) NONNULL;
@@ -124,13 +124,13 @@ int rctr_equ_add_nlexpr(Container *ctr, rhp_idx ei, NlNode *node, double cst) NO
 int rctr_set_equascst(Container *ctr, rhp_idx ei) NONNULL;
 
 int rctr_equ_add_equ_rosetta(Container *ctr, Equ *dst, Equ *src, const rhp_idx* rosetta)
-NONNULL_IDX(1,2,3);
+NONNULL_AT(1,2,3);
 int rctr_equ_min_equ_rosetta(Container *ctr, Equ *dst, Equ *src, const rhp_idx* rosetta)
-NONNULL_IDX(1,2,3);
+NONNULL_AT(1,2,3);
 int rctr_equ_add_equ_coeff(Container *ctr, Equ *dst, Equ *src, double coeff) NONNULL;
 int rctr_equ_add_equ_x(Container *ctr, Equ * restrict dst, Equ * restrict src,
                        double coeff, const rhp_idx* restrict rosetta)
-NONNULL_IDX(1,2,3);
+NONNULL_AT(1,2,3);
 int rctr_equ_submulv_equ(Container *ctr, Equ *dst, Equ *src, rhp_idx vi) NONNULL;
 int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, double coeff) NONNULL;
 

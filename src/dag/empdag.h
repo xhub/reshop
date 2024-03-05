@@ -178,26 +178,23 @@ int empdag_finalize(Model *mdl) NONNULL;
 NONNULL ACCESS_ATTR(write_only, 3)
 int empdag_addmp(EmpDag *empdag, RhpSense sense, unsigned *id);
 
-ACCESS_ATTR(write_only, 4) OWNERSHIP_TAKES(3)
-NONNULL_ONEIDX(1) NONNULL_ONEIDX(4)
+ACCESS_ATTR(write_only, 4) OWNERSHIP_TAKES(3) NONNULL_AT(1,4)
 int empdag_addmpnamed(EmpDag *empdag, RhpSense sense,
                       const char *name, unsigned *id);
 
-NONNULL
-MathPrgm *empdag_newmp(EmpDag *empdag, RhpSense sense);
+NONNULL MathPrgm *empdag_newmp(EmpDag *empdag, RhpSense sense);
 
-NONNULL_ONEIDX(1) OWNERSHIP_TAKES(3)
+NONNULL_AT(1) OWNERSHIP_TAKES(3)
 MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense, const char *name);
 
 NONNULL ACCESS_ATTR(write_only, 2)
 int empdag_addmpe(EmpDag *empdag, unsigned *id);
 
-ACCESS_ATTR(write_only, 3) OWNERSHIP_TAKES(2)
-NONNULL_ONEIDX(1) NONNULL_ONEIDX(3)
+ACCESS_ATTR(write_only, 3) OWNERSHIP_TAKES(2) NONNULL_AT(1,3)
 int empdag_addmpenamed(EmpDag *empdag, const char *name, unsigned *id);
 
 Mpe *empdag_newmpe(EmpDag *empdag) NONNULL;
-NONNULL_ONEIDX(1) OWNERSHIP_TAKES(2) 
+NONNULL_AT(1) OWNERSHIP_TAKES(2) 
 Mpe *empdag_newmpenamed(EmpDag *empdag, char* name);
 
 int empdag_reserve_mp(EmpDag *empdag, unsigned reserve) NONNULL;

@@ -43,7 +43,7 @@ int vnames_list_start(struct vnames_list *l, rhp_idx idx, const char* name) NONN
 void vnames_list_stop(struct vnames_list *l, rhp_idx idx) NONNULL;
 
 void vnames_lookup_free(VecNamesFoocLookup* dat);
-NONNULL_ONEIDX(2) MALLOC_ATTR(vnames_lookup_free,1)
+NONNULL_AT(2) MALLOC_ATTR(vnames_lookup_free,1)
 VecNamesFoocLookup* vnames_lookup_new(unsigned len, const Model *mdl_fooc,
                                       const rhp_idx *ei_fooc2vi_fooc);
 VecNamesLookupTypes *vnames_lookup_gettypes(VecNamesFoocLookup *dat) NONNULL;

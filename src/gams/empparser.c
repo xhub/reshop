@@ -1923,7 +1923,7 @@ int parse_VFargs_gmsvars_list(Interpreter * restrict interp, unsigned * restrict
  * @param p 
  * @return 
  */
-NONNULL_IDX(1,2) static
+NONNULL_AT(1,2) static
 int parse_VFargs_labels(Interpreter * restrict interp, unsigned * restrict p, 
                         OvfDef *ovfdef)
 {
@@ -1953,7 +1953,7 @@ int parse_VFargs_labels(Interpreter * restrict interp, unsigned * restrict p,
    return advance(interp, p, &dummy); 
 }
 
-NONNULL_IDX(2, 3) static
+NONNULL_AT(2, 3) static
 int parse_VF_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
                  unsigned * restrict p)
 {

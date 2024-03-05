@@ -38,7 +38,7 @@ static inline int chk_param_idx(unsigned idx, unsigned size, const char *fn)
  *  Small utility functions used when creating and finalizing an empdag
  * ------------------------------------------------------------------------ */
 
-NONNULL_ONEIDX(1) static
+NONNULL_AT(1) static
 int vm_common_nodeinit(VmData *data, daguid_t uid, DagRegisterEntry *regentry)
 {
    if (regentry) {

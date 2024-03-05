@@ -46,9 +46,9 @@ int cmat_equ_add_newlvars(Container *ctr, int ei, const Avar *v, const double *v
 int cmat_equ_add_nlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double jac_val) NONNULL;
 int cmat_equ_add_lvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val, bool *isNL) ACCESS_ATTR(read_write, 5) NONNULL;
 int cmat_equ_add_vars_excpt(Container *ctr, rhp_idx ei, Avar *v,
-                               rhp_idx vi_no, double* values, bool isNL) NONNULL_IDX(1, 3);
+                               rhp_idx vi_no, double* values, bool isNL) NONNULL_AT(1, 3);
 int cmat_equ_add_vars(Container *ctr, rhp_idx ei, Avar *v,
-                              double* values, bool isNL ) NONNULL_IDX(1, 3);
+                              double* values, bool isNL ) NONNULL_AT(1, 3);
 
 NONNULL
 int cmat_equ_add_newlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val);

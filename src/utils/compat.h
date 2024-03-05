@@ -138,8 +138,7 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #define RHP_UNLIKELY(x) (__builtin_expect(!!(x),0))
 
 #define ALLOC_SIZE(IDX) __attribute__ ((alloc_size(IDX)))
-#define NONNULL_ONEIDX(IDX) __attribute__ ((nonnull(IDX)))
-#define NONNULL_IDX(E1, ...) __attribute__ ((nonnull(E1, __VA_ARGS__)))
+#define NONNULL_AT(...) __attribute__ ((nonnull(__VA_ARGS__)))
 #define NONNULL __attribute__ ((nonnull))
 #define CHECK_RESULT __attribute__ ((warn_unused_result))
 #define FORMAT_CHK(S,A) __attribute__ ((format (printf, S, A)))
@@ -190,8 +189,7 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 
 #define ALLOC_SIZE(SIZE)
 #define CTRMEM
-#define NONNULL_ONEIDX(IDX) 
-#define NONNULL_IDX(E1, ...)
+#define NONNULL_AT(...)
 #define NONNULL
 #define UNUSED
 #define __maybe_unused

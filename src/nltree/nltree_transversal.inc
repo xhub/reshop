@@ -28,7 +28,7 @@
   OP ## _POST(node, ctr, env); \
 }
 
-static int NONNULL_IDX(2,3)
+static int NONNULL_AT(2,3)
 VISIT_NODE(const NlNode * restrict node,
            const Container *ctr,
            ENV_TYPE env)

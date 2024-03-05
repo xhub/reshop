@@ -39,6 +39,6 @@ Fops* rmdl_getfops(const Model *mdl) NONNULL;
 int rmdl_export_latex(Model *mdl, const char *phase_name) NONNULL;
 int rmdl_ensurefops_activedefault(Model *mdl) NONNULL;
 
-int rmdl_reset_modeltype(Model *mdl, Fops *fops) NONNULL_ONEIDX(1);
+int rmdl_reset_modeltype(Model *mdl, Fops *fops) NONNULL_AT(1);
 
 #endif /* MODEL_RMDL_H */
