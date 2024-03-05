@@ -15,6 +15,7 @@
 #include "cones.h"
 #include "equvar_data.h"
 #include "equ_data.h"
+#include "rhpidx.h"
 #include "status.h"
 
 struct aequ_block;

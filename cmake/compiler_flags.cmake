@@ -62,7 +62,9 @@ macro(SET_C_WARNINGS _TARGETS)
     list(APPEND _just_warnings "disabled-optimization;enum-int-mismatch;literal-range;gnu;implicit-int;array-parameter")
     # TODO: reserved-identifier
       #list(APPEND _just_warnings "reserved-identifier")
-    list(APPEND _just_warnings "bool-operation")
+    list(APPEND _just_warnings "bool-operation;no-fixed-enum-extension")
+
+
 
     set (_error_warnings "trampolines;incompatible-pointer-types;restrict;shadow;alloc-zero;strict-prototypes")
     list(APPEND _error_warnings "return-type;switch;enum-conversion;implicit-function-declaration;init-self")

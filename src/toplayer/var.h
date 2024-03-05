@@ -1,6 +1,7 @@
 #ifndef VAR_H
 #define VAR_H
 
+#include "rhpidx.h"
 #ifndef _ISOC99_SOURCE
 #define _ISOC99_SOURCE      /*  See feature_test_macros(7) */
 #endif
@@ -23,7 +24,7 @@
  */
 
 /** types of variables */
-enum var_type {
+__extension__ enum var_type ENUM_U8 {
    VAR_X          = 0,        /**< continuous variable            */
    VAR_B          = 1,        /**< binary variable                */
    VAR_I          = 2,        /**< integer variable               */

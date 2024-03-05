@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "equvar_data.h"
+#include "rhpidx.h"
 #include "status.h"
 
 void invalid_ei_errmsg(rhp_idx ei, rhp_idx m, const char * fn);

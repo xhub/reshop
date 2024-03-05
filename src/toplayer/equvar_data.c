@@ -1,4 +1,5 @@
 #include "equvar_data.h"
+#include "rhpidx.h"
 
 const char* aequvar_typestr(enum a_equvar_type type)
 {

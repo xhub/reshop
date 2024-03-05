@@ -222,6 +222,29 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 
 #endif
 
+/* ----------------------------------------------------------------------
+ * For packing enums and such
+ * ---------------------------------------------------------------------- */
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202300L) || \
+    (defined(__GNUC__) && (__GNUC__ >= 13)) || \
+    (defined(__clang__) && (__clang_major__ >= 17))
+
+#   ifndef __GNUC__
+#      define __extension__ /* */
+#   endif
+
+#   define ENUM_U8  : uint8_t
+#   define ENUM_U32 : uint32_t
+
+#else
+
+#   define ENUM_U8   
+#   define ENUM_U32  
+
+#endif
+
+
 #define rhp_idx int
 
 #endif /* RESHOP_COMPAT_H  */

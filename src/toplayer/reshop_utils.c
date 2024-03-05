@@ -1,5 +1,5 @@
-#include "equvar_data.h"
 #include "reshop.h"
+#include "rhpidx.h"
 #include "toplayer_utils.h"
 
 /**

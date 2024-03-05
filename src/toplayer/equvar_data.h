@@ -7,14 +7,13 @@
  *  @brief data common to equations and variables
  */
 
-#include <limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "compat.h"
-#include "rhpidx.h"
 
 /** type of abstract variable or equation */
-typedef enum a_equvar_type {
+__extension__ typedef enum a_equvar_type ENUM_U8 {
    EquVar_Compact     = 0,  /**< Compact: continuous indices */
    EquVar_List        = 1,  /**< List: given as a list of indices */
    EquVar_SortedList  = 2,  /**< List: given as a sorted list of indices */
@@ -22,7 +21,7 @@ typedef enum a_equvar_type {
    EquVar_Unset       = 4,   /**< Unset */
 } AbstractEquVarType;
 
-typedef enum {
+__extension__ typedef enum ENUM_U8 {
    BasisUnset      = 0,
    BasisLower      = 1,
    BasisUpper      = 2,

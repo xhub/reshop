@@ -7,10 +7,11 @@
  *  @brief equation related data
  */
 
+#include <stdint.h>
 #include "compat.h"
 
 /** @brief Type of equation */
-typedef enum equ_object_type {
+__extension__ typedef enum equ_object_type ENUM_U8 {
    EQ_UNSET = 0,          /**< Equation type unset */
    EQ_MAPPING,            /**< Mapping (objective fn, functional part of VI, ...)*/
    EQ_CONE_INCLUSION,     /**< Inclusion in a cone (usual constraint) */
