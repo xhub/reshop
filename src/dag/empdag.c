@@ -1226,7 +1226,7 @@ int empdag_simple_setobjvar(EmpDag *empdag, rhp_idx objvar)
 int empdag_simple_setobjequ(EmpDag *empdag, rhp_idx objequ)
 {
    assert(empdag->type == EmpDag_Empty);
-   assert(valid_vi(objequ));
+   assert(valid_ei(objequ));
    empdag->simple_data.objequ = objequ;
 
    return OK;
