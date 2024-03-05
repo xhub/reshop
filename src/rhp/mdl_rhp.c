@@ -237,7 +237,7 @@ int rmdl_reset_modeltype(Model *mdl, Fops *fops)
          if (probtype_isopt(probtype_new)) {
             empdag->type = EmpDag_Empty;
             S_CHECK(mdl_setobjvar(mdl, objvar));
-            S_CHECK(rmdl_setobjequ(mdl, objequ));
+            S_CHECK(rmdl_setobjfun(mdl, objequ));
          } else if (probtype_isvi(probtype_new)) {
             empdag->type = EmpDag_Empty;
             assert(!valid_vi(objvar) && !valid_ei(objequ));
@@ -870,7 +870,7 @@ int rmdl_set_simpleprob(Model *mdl, const MpDescr *descr)
    assert(valid_probtype(descr->probtype));
 
    S_CHECK(rmdl_setobjsense(mdl, descr->sense));
-   S_CHECK(rmdl_setobjequ(mdl, descr->objequ));
+   S_CHECK(rmdl_setobjfun(mdl, descr->objequ));
    S_CHECK(rmdl_setobjvar(mdl, descr->objvar));
    S_CHECK(mdl_setprobtype(mdl, descr->probtype));
 

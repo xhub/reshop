@@ -121,7 +121,7 @@ int rmdl_dup_equ(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_no)
    rhp_idx objequ;
    rmdl_getobjequ_nochk(mdl, &objequ);
    if (objequ == ei_src) {
-      rmdl_setobjequ(mdl, ei_new);
+      rmdl_setobjfun(mdl, ei_new);
    }
 
    *ei = ei_new;

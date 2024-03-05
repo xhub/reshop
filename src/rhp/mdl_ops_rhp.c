@@ -486,15 +486,15 @@ int rmdl_setobjsense(Model *mdl, RhpSense objsense)
  */
 int rmdl_setobjfun(Model *mdl, rhp_idx ei)
 {
-   if (!valid_ei(objequ)) { S_CHECK(ei_inbounds(objequ, rctr_totalm(&mdl->ctr), __func__)); }
+   S_CHECK(chk_ei(mdl, ei, __func__));
 
    EmpDag *empdag = &mdl->empinfo.empdag;
    S_CHECK(chk_empdag_simple(empdag, __func__));
 
-   S_CHECK(empdag_simple_setobjequ(empdag, objequ))
+   S_CHECK(empdag_simple_setobjequ(empdag, ei))
 
    Container *ctr = &mdl->ctr;
-   EquObjectType equtype = ctr->equs[objequ].object;
+   EquObjectType equtype = ctr->equs[ei].object;
 
    if (equtype != Mapping) {
       error("[%s] ERROR: %s model '%.*s' #%u, the objective equation '%s' is "

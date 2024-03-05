@@ -406,7 +406,7 @@ static int mdl_exportasmpec_gmo(Model *mdl, Model *mdl_solver)
    if (valid_ei(objequ_upper)) {
       rhp_idx objequ_mpec = mdl_rhp_for_fooc->ctr.rosetta_equs[objequ_upper];
       assert(valid_ei(objequ_mpec));
-      S_CHECK(rmdl_setobjequ(mdl_mpec, objequ_mpec));
+      S_CHECK(rmdl_setobjfun(mdl_mpec, objequ_mpec));
    }
 
    if (valid_vi(objvar_upper)) {

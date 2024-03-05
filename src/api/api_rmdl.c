@@ -1651,7 +1651,7 @@ int rhp_mdl_setobjequ(Model *mdl, rhp_idx objequ)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
-   return rmdl_setobjequ(mdl, objequ);
+   return rmdl_setobjfun(mdl, objequ);
 }
 
 
