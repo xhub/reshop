@@ -172,7 +172,7 @@ int gmdl_setprobtype(Model *mdl, enum mdl_type probtype)
    const GmsContainerData *gms = ctr->data;
 
    if (gms->initialized) {
-      enum gmoProcType gams_probtype = probtype_to_gams(probtype);
+      enum gmoProcType gams_probtype = mdltype_to_gams(probtype);
       if (gams_probtype == gmoProc_none) {
          error("[model] ERROR: GAMS does not support modeltype %s\n", mdltype_name(probtype));
          return Error_NotImplemented;
@@ -399,6 +399,7 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
 
    gmoIndexBaseSet(gmodst, 0);
    gmoNameModelSet(gmodst, mdl_src->commondata.name);
+   gmoModelTypeSet(gmodst, mdltype_to_gams(mdl_src->commondata.mdltype));
 
    /* ----------------------------------------------------------------------
     * Set the modeltype here: it is needed and has to be done after the new GAMS
@@ -423,7 +424,7 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
     * ---------------------------------------------------------------------- */
 
    char buf[GMS_SSSIZE];
-   GAMS_CHECK_NZ_BUF(gmoInitData(gmodst, ctrgms->m, ctrgms->n, 0), gmodst, buf);
+   GMSCHK_ERRMSG(gmoInitData(gmodst, ctrgms->m, ctrgms->n, 0), gmodst, buf);
 
    /* -----------------------------------------------------------------------
     * Initialize the dictionary object with the problem size

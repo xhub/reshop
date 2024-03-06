@@ -376,7 +376,7 @@ skip:
       ModelType probtype;
       S_CHECK(mdl_gettype(mdl, &probtype))
 
-      enum gmoProcType gams_probtype = probtype_to_gams(probtype);
+      enum gmoProcType gams_probtype = mdltype_to_gams(probtype);
 
       gevGetSolver(gms->gev, gams_probtype, mdldat->solvername);
 

@@ -63,7 +63,7 @@ int cone_to_gams_relation_type(enum cone cone, int *type)
  *
  * @return      the error code
  */
-ModelType probtype_from_gams(int type)
+ModelType mdltype_from_gams(int type)
 {
   switch(type) {
    case gmoProc_none:
@@ -111,7 +111,7 @@ ModelType probtype_from_gams(int type)
  *
  * @return      the GAMS model type
  */
-int probtype_to_gams(ModelType type)
+int mdltype_to_gams(ModelType type)
 {
    switch(type) {
    case MdlType_none:
