@@ -294,7 +294,7 @@ int rhp_gms_fillmdl(Model *mdl)
       return Error_SystemError;
    }
 
-   mdl->commondata.export_dir_parent = exportdir_tmp;
+   mdl->commondata.exports_dir_parent = exportdir_tmp;
    mdl->commondata.own_export_dir_parent = true;
    mdl->commondata.mdltype = probtype_from_gams(gmoModelType(gmo));
 

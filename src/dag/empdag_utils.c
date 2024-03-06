@@ -184,7 +184,7 @@ int empdag_exportasdot(Model *mdl)
       if (mdl_ensure_exportdir(mdl) != OK) {
          error("%s ERROR: could not create an export dir", __func__);
       } else {
-         const char *export_dir = mdl->commondata.export_dir;
+         const char *export_dir = mdl->commondata.exports_dir;
          IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", export_dir, cnt));
          S_CHECK(empdag2dotfile(&mdl->empinfo.empdag, fname));
       }

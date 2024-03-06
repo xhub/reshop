@@ -40,10 +40,10 @@ typedef enum mdl_status {
 typedef struct {
    ModelType mdltype;           /**< Model type (in the sense of optimization) */
    bool own_export_dir_parent;  /**< true if has ownership of export_dir     */
-   bool delete_export_dirs;     /**< If true, deletes the export_dir_parent foler */
+   bool delete_export_dirs;     /**< If true, deletes the export_dir_parent folder */
    char *name;                  /**< Name of the model                       */
-   char *export_dir;            /**< Export dir                              */
-   char *export_dir_parent;     /**< Parent of the export dir                */
+   char *exports_dir;           /**< Directory for exports                   */
+   char *exports_dir_parent;    /**< Parent of the exports dir               */
 } MdlCommonData;
 
 
