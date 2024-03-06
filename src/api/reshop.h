@@ -285,7 +285,7 @@ int rhp_mdl_setequcst(struct rhp_mdl *mdl, rhp_idx ei, double val);
 RHP_PUBLIB
 int rhp_mdl_setequname(struct rhp_mdl *mdl, rhp_idx ei, const char *name);
 RHP_PUBLIB
-int rhp_mdl_setequmult(struct rhp_mdl *mdl, rhp_idx ei, double marginal);
+int rhp_mdl_setequmult(struct rhp_mdl *mdl, rhp_idx ei, double mult);
 RHP_PUBLIB
 int rhp_mdl_setequtype(struct rhp_mdl *mdl, rhp_idx ei, unsigned type, unsigned cone);
 RHP_PUBLIB

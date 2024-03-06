@@ -34,7 +34,7 @@ typedef struct container_ops {
    int (*getequsmult)(const Container *ctr, Aequ *e, double *mult);
    int (*getequsval)(const Container *ctr, Aequ *e, double *vals);
    int (*getequbyname)(const Container *ctr, const char* name, rhp_idx *ei);
-   int (*getequmult)(const Container *ctr, rhp_idx ei, double *marginal);
+   int (*getequmult)(const Container *ctr, rhp_idx ei, double *mult);
    int (*getequperp)(const Container *ctr, rhp_idx ei, rhp_idx *vi);
    int (*getequname)(const Container *ctr, rhp_idx ei, const char ** name);
    int (*getequbasis)(const Container *ctr, rhp_idx ei, int *bstat);
@@ -48,7 +48,7 @@ typedef struct container_ops {
    int (*getvarbounds)(const Container *ctr, rhp_idx vi, double *lb, double *ub);
    int (*getvarbyname)(const Container *ctr, const char* name, rhp_idx *vi);
    int (*getvarbasis)(const Container *ctr, rhp_idx vi, int *bstat);
-   int (*getvarmult)(const Container *ctr, rhp_idx vi, double *marginal);
+   int (*getvarmult)(const Container *ctr, rhp_idx vi, double *mult);
    int (*getvarperp)(const Container *ctr, rhp_idx vi, rhp_idx *ei);
    int (*getvarname)(const Container *ctr, rhp_idx vi, const char ** name);
    int (*getvarlb)(const Container *ctr, rhp_idx vi, double *lower_bound);

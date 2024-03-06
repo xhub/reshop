@@ -39,7 +39,7 @@ static int gams_getrowjacinfo(const Container *ctr, int rowidx,
                               int *nlflag);
 static int gams_getnnz(const Container *ctr, int *nnz);
 static int gams_getvarval(const Container *ctr, rhp_idx vi, double *level);
-static int gams_getvarmult(const Container *ctr, rhp_idx vi, double *marginal);
+static int gams_getvarmult(const Container *ctr, rhp_idx vi, double *mult);
 static int gams_getvarperp(const Container *ctr, rhp_idx vi, int *match);
 static int gams_getvarbasis(const Container *ctr, rhp_idx vi, int *basis);
 static int gams_setequbasis(Container *ctr, rhp_idx ei, int basis);
