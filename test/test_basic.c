@@ -961,9 +961,9 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
 
-  RESHOP_CHECK(rhp_add_posvars(mdl, 3, x));
-  RESHOP_CHECK(rhp_add_posvars(mdl, 3, p));
-  RESHOP_CHECK(rhp_add_posvars(mdl, 1, y));
+  RESHOP_CHECK(rhp_add_posvarsnamed(mdl, 3, x, "x"));
+  RESHOP_CHECK(rhp_add_posvarsnamed(mdl, 3, p, "p"));
+  RESHOP_CHECK(rhp_add_posvarsnamed(mdl, 1, y, "y"));
 
 
   struct rhp_mathprgm *mp_ag = rhp_empdag_newmp(mdl, RHP_MAX);
@@ -1023,7 +1023,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
    * Dirty trick: add the objequ last ...
    * ------------------------------------------------------------------------ */
   rhp_idx objequ;
-  RESHOP_CHECK(rhp_add_func(mdl, &objequ));
+  RESHOP_CHECK(rhp_add_funcnamed(mdl, &objequ, "objequ"));
 
   /* Objective is sum(i=1:3, s[i] * log(x[i]))  */
 
