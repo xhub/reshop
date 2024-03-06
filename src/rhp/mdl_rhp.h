@@ -22,7 +22,6 @@ int rmdl_appendequs(Model *mdl, const Aequ *e) NONNULL;
 int rmdl_getobjequ(const Model *mdl, rhp_idx *objequ) NONNULL;
 int rmdl_getobjvar(const Model *mdl, rhp_idx *objvar) NONNULL;
 int rmdl_getsense(const Model *mdl, RhpSense *objsense) NONNULL;
-int rmdl_getprobtype(const Model *mdl, ProbType *probtype) NONNULL;
 int rmdl_setobjfun(Model *mdl, rhp_idx ei) NONNULL;
 int rmdl_setobjvar(Model *mdl, rhp_idx objvar) NONNULL;
 int rmdl_setobjsense(Model *mdl, RhpSense objsense) NONNULL;

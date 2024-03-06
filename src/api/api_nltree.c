@@ -280,7 +280,7 @@ int rhp_nltree_call(Model *mdl, NlTree *tree,
     * ---------------------------------------------------------------------- */
 
    if (opcode >= fnboolnot && opcode <= fnifthen) {
-      S_CHECK(mdl_setprobtype(mdl, MdlProbType_dnlp));
+      S_CHECK(mdl_settype(mdl, MdlType_dnlp));
    }
 
    return OK;

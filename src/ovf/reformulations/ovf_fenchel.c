@@ -774,7 +774,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       size_t elen = sizeof(eqn_c)/sizeof(Aequ);
 
       /* TODO: OVF_SUP check MpMin */
-      struct mp_descr descr = { .probtype = MdlProbType_qcp, .sense = RhpMin,
+      struct mp_descr descr = { .mdltype = MdlType_qcp, .sense = RhpMin,
                                 .objvar = vi_ovf, .objequ = ei_rho };
 
       A_CHECK_EXIT(fs, fops_subset_new(vlen, var_c, elen, eqn_c, &descr));

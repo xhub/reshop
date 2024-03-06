@@ -50,7 +50,6 @@ static int rmdl_allocdata(Model *mdl)
    RhpModelData *mdldata = NULL;
    MALLOC_EXIT(mdldata, RhpModelData, 1);
    mdldata->solver = RMDL_SOLVER_UNSET;
-   mdldata->probtype = MdlProbType_none;
 
    A_CHECK_EXIT(mdldata->options, rmdl_set_options());
 
@@ -114,14 +113,14 @@ static int rmdl_checkmdl(Model *mdl)
    EmpDag *empdag = &mdl->empinfo.empdag;
    S_CHECK(empdag_fini(empdag));
 
-   ProbType probtype;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
+   ModelType probtype;
+   S_CHECK(mdl_gettype(mdl, &probtype));
 
 
    /* TODO: GITLAB #69 */
    //if (empdag->type == EmpDag_Empty) { return status; }
 
-   if (!probtype_isopt(probtype)) { return status; }
+   if (!mdltype_isopt(probtype)) { return status; }
 
    /* ----------------------------------------------------------------------
     * For a simple OPT model, check that the objective equation and variable have
@@ -544,15 +543,6 @@ int rmdl_setobjvar(Model *mdl, rhp_idx objvar)
    return OK;
 }
 
-static int rmdl_setprobtype(Model *mdl, ProbType probtype)
-{
-   assert(mdl_is_rhp(mdl));
-   RhpModelData *mdldata = (RhpModelData *) mdl->data;
-   mdldata->probtype = probtype;
-
-   return OK;
-}
-
 static int rmdl_postprocess(Model *mdl)
 {
    return OK;
@@ -634,26 +624,28 @@ static int rmdl_solve(Model *mdl)
    }
    myfreeenvval(subsolver_log);
 
-  switch (cdat->probtype) {
-  case MdlProbType_lp:         /**< LP    Linear Programm   */
-  case MdlProbType_nlp:        /**< NLP   NonLinear Programm     */
-  case MdlProbType_qcp:        /**< QCP   Quadratically Constraint Programm */
-  case MdlProbType_emp:        /**< EMP   Extended Mathematical Programm */
-  case MdlProbType_mcp:
-  case MdlProbType_vi:
+   ModelType type = mdl->commondata.mdltype;
+
+  switch (type) {
+  case MdlType_lp:         /**< LP    Linear Programm   */
+  case MdlType_nlp:        /**< NLP   NonLinear Programm     */
+  case MdlType_qcp:        /**< QCP   Quadratically Constraint Programm */
+  case MdlType_emp:        /**< EMP   Extended Mathematical Programm */
+  case MdlType_mcp:
+  case MdlType_vi:
     return rmdl_solve_asmcp(mdl);
-  case MdlProbType_dnlp:       /**< DNLP  Nondifferentiable NLP  */
+  case MdlType_dnlp:       /**< DNLP  Nondifferentiable NLP  */
     error("%s :: nonsmooth NLP are not yet supported\n", __func__);
     return Error_NotImplemented;
-  case MdlProbType_mip:        /**< MIP   Mixed-Integer Programm */
-  case MdlProbType_minlp:      /**< MINLP Mixed-Integer NLP*/
-  case MdlProbType_miqcp:      /**< MIQCP Mixed-Integer QCP*/
+  case MdlType_mip:        /**< MIP   Mixed-Integer Programm */
+  case MdlType_minlp:      /**< MINLP Mixed-Integer NLP*/
+  case MdlType_miqcp:      /**< MIQCP Mixed-Integer QCP*/
     error("%s :: integer model are not yet supported\n", __func__);
     return Error_NotImplemented;
-  case MdlProbType_cns:        /**< CNS   Constrained Nonlinear System */
+  case MdlType_cns:        /**< CNS   Constrained Nonlinear System */
   default:
-    error("%s :: no internal solver for a model of type %s\n",
-                       __func__, probtype_name(cdat->probtype));
+    error("%s :: no internal solver for a model of type %s\n", __func__,
+          mdltype_name(type));
     return Error_NotImplemented;
   }
 
@@ -673,14 +665,12 @@ const ModelOps mdl_ops_rhp = {
    .getsense    = rmdl_getsense,
    .getobjvar      = rmdl_getobjvar,
    .getoption      = rmdl_getoption,
-   .getprobtype    = rmdl_getprobtype,
    .getsolvername  = rmdl_getsolvername,
    .getsolvestat   = rmdl_getsolvestat,
    .postprocess    = rmdl_postprocess,
    .reportvalues   = rmdl_reportvalues,
    .setmodelstat   = rmdl_setmodelstat,
-   .setsense    = rmdl_setobjsense,
-   .setprobtype   = rmdl_setprobtype,
+   .setsense       = rmdl_setobjsense,
    .setobjvar      = rmdl_setobjvar,
    .setsolvername   = rmdl_setsolvername,
    .setsolvestat   = rmdl_setsolvestat,

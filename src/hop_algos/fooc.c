@@ -25,10 +25,10 @@
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl.h"
+#include "mdl_data.h"
 #include "mdl_rhp.h"
 #include "ctrdat_rhp.h"
 #include "rhp_alg.h"
-#include "rmdl_data.h"
 #include "rmdl_debug.h"
 #include "printout.h"
 #include "reshop_data.h"
@@ -503,9 +503,9 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, const MathPrgm *mp
       } 
 
     if (sense == RhpFeasibility) {
-         ProbType probtype;
-         S_CHECK(mdl_getprobtype(mdl_src, &probtype));
-          if (probtype == MdlProbType_vi) {
+         ModelType probtype;
+         S_CHECK(mdl_gettype(mdl_src, &probtype));
+          if (probtype == MdlType_vi) {
             VarMeta *vmd = mdl_src->ctr.varmeta;
 
             for (unsigned i = 0, len = ctr_nvars(&mdl_src->ctr); i < len; ++i) {
@@ -1690,7 +1690,7 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
 
   cdat_mcp->total_m = mcp_size;
 
-  S_CHECK_EXIT(mdl_setprobtype(mdl_mcp, MdlProbType_mcp));
+  S_CHECK_EXIT(mdl_settype(mdl_mcp, MdlType_mcp));
 
    /* TODO: delete? This should already be done when creating the ctr_mcp? */
   S_CHECK_EXIT(rctr_inherit_pool(ctr_mcp, ctr_src));
@@ -1991,14 +1991,14 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
 
     } else {
 
-      ProbType probtype;
-      S_CHECK_EXIT(mdl_getprobtype(mdl_src, &probtype));
+      ModelType probtype;
+      S_CHECK_EXIT(mdl_gettype(mdl_src, &probtype));
 
-      if (probtype == MdlProbType_mcp) {
+      if (probtype == MdlType_mcp) {
         S_CHECK_EXIT(fooc_mcp_primal_mcp(mdl_mcp, NULL, mdl_src));
 
-      } else if (probtype == MdlProbType_vi ||
-            (probtype == MdlProbType_emp && mdl_src->empinfo.empdag.type == EmpDag_Single_Vi)) {
+      } else if (probtype == MdlType_vi ||
+            (probtype == MdlType_emp && mdl_src->empinfo.empdag.type == EmpDag_Single_Vi)) {
         S_CHECK_EXIT(
             fooc_mcp_primal_vi(mdl_mcp, NULL, &cons_nl, &cons_lin, mdl_src, &mcpinfo));
 
@@ -2206,46 +2206,45 @@ int fooc_create_mcp(Model *mdl, McpStats *restrict mcpdata)
 
    assert(mdl->mdl_up && mdl_is_rhp(mdl->mdl_up));
 
-  RhpModelData *mdldata_up = (RhpModelData *)mdl->mdl_up->data;
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl->mdl_up, &mdltype));
 
-  enum mdl_probtype probtype = mdldata_up->probtype;
-
-  if (probtype == MdlProbType_mcp) {
+  if (mdltype == MdlType_mcp) {
     error("[fooc] ERROR in %s model '%.*s' #%u: the problem type is MCP, which "
           "already represents optimality conditions\n", mdl_fmtargs(mdl));
     return Error_UnExpectedData;
   }
 
-  switch (probtype) {
-  case MdlProbType_lp:
-  case MdlProbType_qcp:
-  case MdlProbType_nlp: {
+  switch (mdltype) {
+  case MdlType_lp:
+  case MdlType_qcp:
+  case MdlType_nlp: {
     McpDef mcpdef = {.uid = EMPDAG_UID_NONE}; //, .fops_vars = NULL};
     S_CHECK(fooc_mcp(mdl, &mcpdef, mcpdata));
     break;
     }
 
-  case MdlProbType_dnlp:
+  case MdlType_dnlp:
     error("%s :: ERROR: nonsmooth NLP are not supported\n", __func__);
     return Error_NotImplemented;
 
-  case MdlProbType_cns:
+  case MdlType_cns:
     error("%s :: ERROR: constraints systems are not supported\n", __func__);
     return Error_NotImplemented;
 
-  case MdlProbType_mip:
-  case MdlProbType_minlp:
-  case MdlProbType_miqcp:
+  case MdlType_mip:
+  case MdlType_minlp:
+  case MdlType_miqcp:
     error("%s :: ERROR: Model with integer variables are not yet supported\n", __func__);
     return Error_NotImplemented;
 
-  case MdlProbType_emp:
+  case MdlType_emp:
     S_CHECK(fooc_mcp_emp(mdl, mcpdata));
     break;
 
   default:
     error("%s :: ERROR: unknown/unsupported container type %s\n", __func__,
-          probtype_name(probtype));
+          mdltype_name(mdltype));
     return Error_InvalidValue;
   }
 

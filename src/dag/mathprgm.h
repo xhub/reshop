@@ -72,7 +72,7 @@ typedef struct rhp_mathprgm {
   RhpSense sense;              /**< mathprgm sense                       */
   MpType type;                 /**< mathprgm type                        */
 //  enum EmpDAGType type_subdag; /**< type of the subdag of this node      */
-  ProbType probtype;           /**< problem type                         */
+  ModelType probtype;           /**< problem type                         */
    MpStatus status;
 
   Model *mdl;                  /**< model for this MP                    */
@@ -105,7 +105,7 @@ int mp_addvipairs(MathPrgm *mp, Aequ *e, Avar *v);
 int mp_finalize(MathPrgm *mp) NONNULL;
 rhp_idx mp_getobjequ(const MathPrgm *mp);
 rhp_idx mp_getobjvar(const MathPrgm *mp);
-ProbType mp_getprobtype(const MathPrgm *mp) NONNULL;
+ModelType mp_getprobtype(const MathPrgm *mp) NONNULL;
 RhpSense mp_getsense(const MathPrgm *mp) NONNULL;
 void mp_print(MathPrgm *mp, const Model *mdl);
 int mp_settype(MathPrgm *mp, unsigned type);

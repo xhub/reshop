@@ -440,13 +440,13 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
     * ---------------------------------------------------------------------- */
    size_t skip_equ = 0;
 
-   ProbType probtype;
-   S_CHECK_EXIT(mdl_getprobtype(mdl, &probtype));
-   if (probtype_isopt(probtype)) {
+   ModelType mdltype;
+   S_CHECK_EXIT(mdl_gettype(mdl, &mdltype));
+   if (mdltype_isopt(mdltype)) {
       rhp_idx objequ;
       rmdl_getobjequ(mdl, &objequ);
       S_CHECK_EXIT(rhp_idx_add(&objequs, objequ));
-   } else if (probtype == MdlProbType_emp) {
+   } else if (mdltype == MdlType_emp) {
       const EmpDag *empdag = &mdl->empinfo.empdag;
       MathPrgm **mplist = empdag->mps.arr;
 
@@ -462,7 +462,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
    }
 
-   bool has_metadata = probtype_hasmetadata(probtype);
+   bool has_metadata = mdltype_hasmetadata(probtype);
 
    for (size_t i = 0; i < cdat->total_m; ++i) {
 
@@ -907,7 +907,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
     * Set the objective variable value
     * ---------------------------------------------------------------------- */
 
-  if (probtype_isopt(probtype)) {
+  if (mdltype_isopt(probtype)) {
     S_CHECK_EXIT(vi_inbounds(objvar, cdat->total_n, __func__));
     assert(valid_vi(ctr_getcurrent_vi(ctr_src, objvar)));
 
@@ -941,7 +941,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
    /* Some checks  */
    assert(gmoM(gmo) == ctr_gms->m && gmoN(gmo) == ctr_gms->n);
-   assert(!probtype_isopt(probtype) || gmoGetObjName(gmo, buffer));
+   assert(!mdltype_isopt(probtype) || gmoGetObjName(gmo, buffer));
 
    bool do_expensive_check = optvalb(mdl, Options_Expensive_Checks);
 

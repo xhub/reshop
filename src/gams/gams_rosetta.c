@@ -63,44 +63,44 @@ int cone_to_gams_relation_type(enum cone cone, int *type)
  *
  * @return      the error code
  */
-ProbType probtype_from_gams(int type)
+ModelType probtype_from_gams(int type)
 {
   switch(type) {
    case gmoProc_none:
-      return MdlProbType_none;
+      return MdlType_none;
    case gmoProc_lp:
-      return MdlProbType_lp;
+      return MdlType_lp;
    case gmoProc_mip:
-      return MdlProbType_mip;
+      return MdlType_mip;
    case gmoProc_rmip:
-      return MdlProbType_none;
+      return MdlType_none;
    case gmoProc_nlp:
-      return MdlProbType_nlp;
+      return MdlType_nlp;
    case gmoProc_mcp:
-      return MdlProbType_mcp;
+      return MdlType_mcp;
    case gmoProc_mpec:
-      return MdlProbType_mpec;
+      return MdlType_mpec;
    case gmoProc_rmpec:
-      return MdlProbType_none;
+      return MdlType_none;
    case gmoProc_cns:
-      return MdlProbType_cns;
+      return MdlType_cns;
    case gmoProc_dnlp:
-      return MdlProbType_dnlp;
+      return MdlType_dnlp;
    case gmoProc_rminlp:
-      return MdlProbType_none;
+      return MdlType_none;
    case gmoProc_minlp:
-      return MdlProbType_minlp;
+      return MdlType_minlp;
    case gmoProc_qcp:
-      return MdlProbType_qcp;
+      return MdlType_qcp;
    case gmoProc_miqcp:
-      return MdlProbType_miqcp;
+      return MdlType_miqcp;
    case gmoProc_rmiqcp:
-      return MdlProbType_none;
+      return MdlType_none;
    case gmoProc_emp:
-      return MdlProbType_emp;
+      return MdlType_emp;
    case gmoProc_nrofmodeltypes:
    default:
-      return MdlProbType_none;
+      return MdlType_none;
    }
 }
 
@@ -111,32 +111,32 @@ ProbType probtype_from_gams(int type)
  *
  * @return      the GAMS model type
  */
-int probtype_to_gams(ProbType type)
+int probtype_to_gams(ModelType type)
 {
    switch(type) {
-   case MdlProbType_none:
+   case MdlType_none:
      return gmoProc_none;
-   case MdlProbType_lp:
+   case MdlType_lp:
      return gmoProc_lp;
-   case MdlProbType_nlp:
+   case MdlType_nlp:
      return gmoProc_nlp;
-   case MdlProbType_dnlp:
+   case MdlType_dnlp:
      return gmoProc_dnlp;
-   case MdlProbType_mip:
+   case MdlType_mip:
      return gmoProc_mip;
-   case MdlProbType_minlp:
+   case MdlType_minlp:
      return gmoProc_minlp;
-   case MdlProbType_miqcp:
+   case MdlType_miqcp:
      return gmoProc_miqcp;
-   case MdlProbType_qcp:
+   case MdlType_qcp:
      return gmoProc_qcp;
-   case MdlProbType_mcp:
+   case MdlType_mcp:
      return gmoProc_mcp;
-   case MdlProbType_mpec:
+   case MdlType_mpec:
      return gmoProc_mpec;
-   case MdlProbType_emp:
+   case MdlType_emp:
      return gmoProc_emp;
-   case MdlProbType_cns:
+   case MdlType_cns:
      return gmoProc_cns;
    default:
      return gmoProc_none;

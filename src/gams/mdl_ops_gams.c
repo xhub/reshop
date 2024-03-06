@@ -129,7 +129,6 @@ static int gams_getintopt(const Model *mdl, unsigned opt, int *ival);
 static int gams_getobjjacval(const Model *mdl, double *objjacval);
 static int gams_getobjvar(const Model *mdl, int *objvar);
 static int gams_getmodelstat(const Model *mdl, int *modelstat);
-static int gams_getprobtype(const Model *mdl, ProbType *probtype);
 static int gams_getsolvestat(const Model *mdl, int *solvestat);
 
 static int gams_allocdata(Model *mdl)
@@ -224,20 +223,6 @@ static int gams_getmodelstat(const Model *mdl, int *modelstat)
    (*modelstat) = stat;
 
    return OK;
-}
-
-static int gams_getprobtype(const Model *mdl, ProbType *probtype)
-{
-   const GmsContainerData *gms = mdl->ctr.data;
-
-   if (gms->initialized) {
-      int gams_modeltype = gmoModelType(gms->gmo);
-      (*probtype) = probtype_from_gams(gams_modeltype);
-      return OK;
-   }
-
-   error("%s ERROR: uninitialized GMO\n", __func__);
-   return Error_NotInitialized;
 }
 
 /**
@@ -388,8 +373,8 @@ skip:
        * We currently support LP, MI(NL)P, (D)NLP, QCP, and MCP.
        * ------------------------------------------------------------------ */
 
-      ProbType probtype;
-      S_CHECK(gams_getprobtype(mdl, &probtype))
+      ModelType probtype;
+      S_CHECK(mdl_gettype(mdl, &probtype))
 
       enum gmoProcType gams_probtype = probtype_to_gams(probtype);
 
@@ -1131,7 +1116,6 @@ const ModelOps mdl_ops_gams = {
    .copystatsfromsolver = gams_copystatsfromsolver,
    .getsolvername  = gams_getsolvername,
    .getmodelstat   = gams_getmodelstat, /* DEL -> solveinfos */
-   .getprobtype    = gams_getprobtype, /* RENAME -> getproblemtype */
    .getobjequ      = gams_getobjequ,
    .getobjjacval   = gams_getobjjacval,
    .getsense       = gams_getsense,
@@ -1141,8 +1125,7 @@ const ModelOps mdl_ops_gams = {
    .postprocess    = gams_postprocess,
    .reportvalues   = gams_reportvalues,
    .setmodelstat   = gams_setmodelstat, /* DEL -> solveinfos */
-   .setprobtype    = gmdl_setprobtype,
-   .setsense    = gams_setobjsense,
+   .setsense       = gams_setobjsense,
    .setobjvar      = gams_setobjvar,
    .setsolvestat   = gams_setsolvestat, /* DEL -> solveinfos */
    .setsolvername  = gams_setsolvername,

@@ -51,10 +51,10 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
    S_CHECK(mdl_exportmodel(mdl, mdl_solver));
 
    /* We have to do this here  */
-   ProbType probtype;
-   mdl_getprobtype(mdl_solver, &probtype);
+   ModelType probtype;
+   mdl_gettype(mdl_solver, &probtype);
 
-   if (probtype == MdlProbType_none) {
+   if (probtype == MdlType_none) {
       S_CHECK(mdl_copyprobtype(mdl_solver, mdl));
    }
 

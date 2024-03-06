@@ -30,7 +30,15 @@ typedef enum mdl_status {
    MdlFinalized   = 0x4,
 } MdlStatus;
 
+/* ----------------------------------------------------------------------
+ * Problem type is stored in the common part as during the export it might
+ * be set before the GMO obejct is created. Also, the GMO object is really
+ * for the container. Having it stored more data makes the conceptual model
+ * harder
+ * ---------------------------------------------------------------------- */
+
 typedef struct {
+   ModelType mdltype;           /**< Model type (in the sense of optimization) */
    bool own_export_dir_parent;  /**< true if has ownership of export_dir     */
    bool delete_export_dirs;     /**< If true, deletes the export_dir_parent foler */
    char *name;                  /**< Name of the model                       */
@@ -76,13 +84,13 @@ int mdl_copysolveoptions(Model *mdl, const Model *mdl_src) NONNULL;
 int mdl_copystatsfromsolver(Model *mdl, const Model *mdl_solver) NONNULL;
 int mdl_copyprobtype(Model *mdl, const Model *mdl_src) NONNULL;
 
-int mdl_exportmodel(Model *mdl, Model *mdl_dst) NONNULL;
+int mdl_export(Model *mdl, Model *mdl_dst) NONNULL;
 int mdl_reportvalues(Model *mdl, Model *mdl_src) NONNULL;
 
-int mdl_getprobtype(const Model *mdl, ProbType *probtype);
+int mdl_gettype(const Model *mdl, ModelType *probtype);
 int mdl_getobjjacval(const Model *mdl, double *objjacval);
 int mdl_getoption(const Model *mdl, const char *option, void *val);
-const char *mdl_getprobtypetxt(ProbType probtype);
+const char *mdl_getprobtypetxt(ModelType probtype);
 
 int mdl_getmodelstat(const Model *mdl, int *modelstat);
 const char *mdl_getmodelstatastxt(const Model *mdl) NONNULL;
@@ -110,7 +118,7 @@ int mdl_getnamelen2(const Model *mdl);
 rhp_idx mdl_getcurrentei(const Model *mdl, rhp_idx ei) NONNULL;
 rhp_idx mdl_getcurrentvi(const Model *mdl, rhp_idx vi) NONNULL;
 
-int mdl_setprobtype(Model *mdl, ProbType probtype);
+int mdl_settype(Model *mdl, ModelType probtype);
 int mdl_setobjvar(Model *mdl, rhp_idx vi);
 
 int mdl_ensure_exportdir(Model *mdl) NONNULL;

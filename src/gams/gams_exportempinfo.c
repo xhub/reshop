@@ -586,10 +586,10 @@ int gms_exportempinfo(Model *mdl_gms)
     }
   } else {
 _check_emp_probtype: ; /* TODO URG why do we need a semicolon? */
-      ProbType probtype;
-      S_CHECK(mdl_getprobtype(mdl_gms, &probtype));
-      assert(probtype != MdlProbType_none);
-      if (probtype == MdlProbType_emp) {
+      ModelType probtype;
+      S_CHECK(mdl_gettype(mdl_gms, &probtype));
+      assert(probtype != MdlType_none);
+      if (probtype == MdlType_emp) {
         error(
                  "%s :: destination container is GAMS and the "
                  "model type is EMP, but no equilibrium or bilevel has "

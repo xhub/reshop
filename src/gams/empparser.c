@@ -370,36 +370,36 @@ NONNULL static void _tok_print(Token *tok, unsigned mode)
             toktype2str(tok->type), tok->linenr);
 }
 
-static enum mdl_probtype tok2probtype(TokenType toktype)
+static enum mdl_type tok2probtype(TokenType toktype)
 {
-   enum mdl_probtype type;
+   enum mdl_type type;
    switch (toktype) {
    case TOK_DNLP:
-      type = MdlProbType_dnlp;
+      type = MdlType_dnlp;
       break;
    case TOK_LP:
-      type = MdlProbType_lp;
+      type = MdlType_lp;
       break;
    case TOK_MCP:
-      type = MdlProbType_mcp;
+      type = MdlType_mcp;
       break;
    case TOK_MINLP:
-      type = MdlProbType_minlp;
+      type = MdlType_minlp;
       break;
    case TOK_MIP:
-      type = MdlProbType_mip;
+      type = MdlType_mip;
       break;
    case TOK_MIQCP:
-      type = MdlProbType_miqcp;
+      type = MdlType_miqcp;
       break;
    case TOK_NLP:
-      type = MdlProbType_nlp;
+      type = MdlType_nlp;
       break;
    case TOK_QCP:
-      type = MdlProbType_qcp;
+      type = MdlType_qcp;
       break;
    default:
-      type = MdlProbType_none;
+      type = MdlType_none;
    }
    return type;
 }
@@ -2557,7 +2557,7 @@ int parse_equilibrium(Interpreter *interp)
 
    parsed_equilibrium(interp);
 
-   mdl_setprobtype(interp->mdl, MdlProbType_emp);
+   mdl_settype(interp->mdl, MdlType_emp);
 
    /* ---------------------------------------------------------------------
     * We add an equilibrium as root

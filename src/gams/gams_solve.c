@@ -400,7 +400,7 @@ static int mdl_exportasmpec_gmo(Model *mdl, Model *mdl_solver)
       return Error_EMPRuntimeError;
    }
 
-   S_CHECK(mdl_setprobtype(mdl_mpec, MdlProbType_mpec));
+   S_CHECK(mdl_settype(mdl_mpec, MdlType_mpec));
    S_CHECK(mdl_setsense(mdl_mpec, sense));
 
    if (valid_ei(objequ_upper)) {
@@ -467,32 +467,32 @@ static int mdl_emp_transform_exportasgmo(Model *mdl, Model *mdl_solver)
 
 int mdl_exportasgmo(Model *mdl, Model *mdl_solver)
 {
-   ProbType probtype;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
+   ModelType probtype;
+   S_CHECK(mdl_gettype(mdl, &probtype));
 
    switch (probtype) {
-   case MdlProbType_lp:         /**< LP    Linear Programm   */
-   case MdlProbType_nlp:        /**< NLP   NonLinear Programm     */
-   case MdlProbType_qcp:        /**< QCP   Quadratically Constraint Programm */
-   case MdlProbType_mip:        /**< MIP   Mixed-Integer Programm */
-   case MdlProbType_minlp:      /**< MINLP Mixed-Integer NLP*/
-   case MdlProbType_miqcp:      /**< MIQCP Mixed-Integer QCP*/
-   case MdlProbType_mcp:
-   case MdlProbType_mpec:
+   case MdlType_lp:         /**< LP    Linear Programm   */
+   case MdlType_nlp:        /**< NLP   NonLinear Programm     */
+   case MdlType_qcp:        /**< QCP   Quadratically Constraint Programm */
+   case MdlType_mip:        /**< MIP   Mixed-Integer Programm */
+   case MdlType_minlp:      /**< MINLP Mixed-Integer NLP*/
+   case MdlType_miqcp:      /**< MIQCP Mixed-Integer QCP*/
+   case MdlType_mcp:
+   case MdlType_mpec:
      return mdl_directexportasgmo(mdl, mdl_solver);
-   case MdlProbType_vi:
+   case MdlType_vi:
       return mdl_exportasmcp_gmo(mdl, mdl_solver);
-   case MdlProbType_emp:        /**< EMP   Extended Mathematical Programm */
+   case MdlType_emp:        /**< EMP   Extended Mathematical Programm */
       return mdl_emp_transform_exportasgmo(mdl, mdl_solver);
-   case MdlProbType_cns:        /**< CNS   Constrained Nonlinear System */
+   case MdlType_cns:        /**< CNS   Constrained Nonlinear System */
       error("%s :: CNS is not yet supported\n", __func__);
       return Error_NotImplemented;
-   case MdlProbType_dnlp:       /**< DNLP  Nondifferentiable NLP  */
+   case MdlType_dnlp:       /**< DNLP  Nondifferentiable NLP  */
       error("%s :: nonsmooth NLP are not yet supported\n", __func__);
       return Error_NotImplemented;
    default:
       error("%s :: no solve procedure for a model of type %s\n", __func__,
-            probtype_name(probtype));
+            mdltype_name(probtype));
       return Error_NotImplemented;
    }
 }

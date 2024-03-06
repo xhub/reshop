@@ -32,7 +32,7 @@ int gams_chk_mdlfull(const Model* mdl, const char *fn) NONNULL;
 
 int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src) NONNULL;
 
-int gmdl_setprobtype(Model *mdl, enum mdl_probtype probtype) NONNULL;
+int gmdl_setprobtype(Model *mdl, enum mdl_type probtype) NONNULL;
 int gmdl_set_gamsdata_from_env(Model *mdl) NONNULL;
 int gmdl_writeasgms(const Model *mdl, const char *filename) NONNULL;
 int gmdl_writesol2gdx(Model *mdl, const char *gdxname) NONNULL;

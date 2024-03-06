@@ -16,15 +16,15 @@
  */
 static int ensure_EMP_mdl_type(Model *mdl)
 {
-   ProbType probtype;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
 
-   if (probtype == MdlProbType_none) {
-      S_CHECK(mdl_setprobtype(mdl, MdlProbType_emp));
-   } else if (probtype !=  MdlProbType_emp) {
+   if (mdltype == MdlType_none) {
+      S_CHECK(mdl_settype(mdl, MdlType_emp));
+   } else if (mdltype !=  MdlType_emp) {
 
       error("%s :: ERROR Model type is %s, should be %s\n", __func__,
-            probtype_name(probtype), probtype_name(MdlProbType_emp));
+            mdltype_name(mdltype), mdltype_name(MdlType_emp));
       return Error_EMPIncorrectInput;
   }
 
@@ -90,10 +90,10 @@ int rhp_empdag_rootsetmpe(Model *mdl, Mpe *mpe)
       return Error_NullPointer;
    }
 
-   ProbType probtype;
-   rmdl_getprobtype(mdl, &probtype);
-   if (probtype == MdlProbType_none) {
-      mdl_setprobtype(mdl, MdlProbType_emp);
+   ModelType mdltype;
+   mdl_gettype(mdl, &mdltype);
+   if (mdltype == MdlType_none) {
+      mdl_settype(mdl, MdlType_emp);
    }
 
    return empdag_setroot(&mdl->empinfo.empdag, mpeid2uid(mpe->id));

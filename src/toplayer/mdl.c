@@ -316,26 +316,26 @@ MathPrgm* mdl_getmpforequ(const Model *mdl, rhp_idx ei)
    return empdag_getmpfast(empdag, mp_id);
 }
 
-const char *mdl_getprobtypetxt(enum mdl_probtype probtype)
+const char *mdl_getprobtypetxt(enum mdl_type probtype)
 {
    switch (probtype) {
-   case MdlProbType_none:
+   case MdlType_none:
       return "none";
-   case MdlProbType_lp:
+   case MdlType_lp:
       return "lp";
-   case MdlProbType_nlp:
+   case MdlType_nlp:
       return "nlp";
-   case MdlProbType_dnlp:
+   case MdlType_dnlp:
       return "dnlp";
-   case MdlProbType_mip:
+   case MdlType_mip:
       return "mip";
-   case MdlProbType_minlp:
+   case MdlType_minlp:
       return "minlp";
-   case MdlProbType_qcp:
+   case MdlType_qcp:
       return "qcp";
-   case MdlProbType_mcp:
+   case MdlType_mcp:
       return "mcp";
-   case MdlProbType_emp:
+   case MdlType_emp:
       return "emp";
    default:
       error("%s :: unknown problem type %d\n", __func__, probtype);

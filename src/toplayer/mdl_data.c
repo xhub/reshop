@@ -39,30 +39,30 @@ typedef struct {
    };
    char dummystr[1];
    };
-} ProbTypesNames;
+} MdlTypesNames;
 #undef DEFSTR
 
 #define DEFSTR(id, str) .id = str,
 
-static const ProbTypesNames probtypesnames = {
+static const MdlTypesNames mdltypesnames = {
 DEFINE_STR()
 };
 #undef DEFSTR
 
-#define DEFSTR(id, str) offsetof(ProbTypesNames, id),
-static const unsigned probtypesnames_offsets[] = {
+#define DEFSTR(id, str) offsetof(MdlTypesNames, id),
+static const unsigned mdltypesnames_offsets[] = {
 DEFINE_STR()
 };
 
-const unsigned probtypeslen = sizeof(probtypesnames_offsets)/sizeof(unsigned);
+const unsigned mdltypeslen = sizeof(mdltypesnames_offsets)/sizeof(unsigned);
 
-RESHOP_STATIC_ASSERT(sizeof(probtypesnames_offsets)/sizeof(unsigned) == (MdlProbType_last+1),
+RESHOP_STATIC_ASSERT(sizeof(mdltypesnames_offsets)/sizeof(unsigned) == (MdlType_last+1),
       "Inconsistency in problem types")
-const char* probtype_name(ProbType type)
+const char* mdltype_name(ModelType type)
 {
-   if (type >= probtypeslen) { return "unknown problem type"; }   
+   if (type >= mdltypeslen) { return "unknown problem type"; }   
 
-   return probtypesnames.dummystr + probtypesnames_offsets[type];
+   return mdltypesnames.dummystr + mdltypesnames_offsets[type];
 }
 
 unsigned backend_idx(const char *backendname)
@@ -76,13 +76,13 @@ unsigned backend_idx(const char *backendname)
    return UINT_MAX;
 }
 
-bool probtype_hasmetadata(const ProbType type)
+bool mdltype_hasmetadata(ModelType type)
 {
    switch(type) {
-   case MdlProbType_emp:
-   case MdlProbType_mcp:
-   case MdlProbType_mpec:
-   case MdlProbType_vi:
+   case MdlType_emp:
+   case MdlType_mcp:
+   case MdlType_mpec:
+   case MdlType_vi:
      return true;
    default:
      return false;
@@ -99,32 +99,32 @@ const char* backend_name(unsigned backendtype)
   
 }
 
-bool probtype_isopt(ProbType type)
+bool mdltype_isopt(ModelType type)
 {
-  assert(type != MdlProbType_none);
+  assert(type != MdlType_none);
 
   switch (type) {
-  case MdlProbType_lp:
-  case MdlProbType_nlp:
-  case MdlProbType_dnlp:
-  case MdlProbType_mip:
-  case MdlProbType_minlp:
-  case MdlProbType_miqcp:
-  case MdlProbType_mpec:
-  case MdlProbType_qcp:
+  case MdlType_lp:
+  case MdlType_nlp:
+  case MdlType_dnlp:
+  case MdlType_mip:
+  case MdlType_minlp:
+  case MdlType_miqcp:
+  case MdlType_mpec:
+  case MdlType_qcp:
     return true;
   default:
     return false;
   }
 }
 
-bool probtype_isvi(ProbType type)
+bool mdltype_isvi(ModelType type)
 {
-  assert(type != MdlProbType_none);
+  assert(type != MdlType_none);
 
   switch (type) {
-  case MdlProbType_mcp:
-  case MdlProbType_vi:
+  case MdlType_mcp:
+  case MdlType_vi:
     return true;
   default:
     return false;

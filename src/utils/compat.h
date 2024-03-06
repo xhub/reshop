@@ -234,6 +234,8 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #      define __extension__ /* */
 #   endif
 
+#include <stdint.h>
+
 #   define ENUM_U8  : uint8_t
 #   define ENUM_U32 : uint32_t
 

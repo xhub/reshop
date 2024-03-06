@@ -40,9 +40,10 @@ int rhp_mdl_getprobtype(const Model *mdl, unsigned *probtype)
    S_CHECK(chk_mdl(mdl, __func__));
    S_CHECK(chk_arg_nonnull(probtype, 2, __func__));
 
-   ProbType probtype_;
-   S_CHECK(mdl->ops->getprobtype(mdl, &probtype_));
+   ModelType probtype_;
+   S_CHECK(mdl_gettype(mdl, &probtype_));
    *probtype = probtype_;
+
    return OK;
 }
 
@@ -60,12 +61,12 @@ int rhp_mdl_getsense(const Model *mdl, unsigned *objsense)
 int rhp_mdl_setprobtype(Model *mdl, unsigned probtype)
 {
    S_CHECK(chk_mdl(mdl, __func__));
-   if (!valid_probtype(probtype)) {
+   if (!valid_mdltype(probtype)) {
       error("%s ERROR: invalid probtype value %u\n", __func__, probtype);
       return Error_InvalidValue;
    }
 
-   return mdl_setprobtype(mdl, probtype);
+   return mdl_settype(mdl, probtype);
 }
 
 int rhp_mdl_setobjsense(Model *mdl, unsigned objsense)
@@ -151,7 +152,7 @@ int rhp_mdl_exportmodel(struct rhp_mdl *mdl, struct rhp_mdl *mdl_dst)
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_rmdl(mdl_dst, __func__));
 
-   return mdl_exportmodel(mdl, mdl_dst);
+   return mdl_export(mdl, mdl_dst);
 }
 
 

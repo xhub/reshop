@@ -12,22 +12,22 @@
  */
 
 /** @brief type of (classical) optimization problem */
-typedef enum mdl_probtype {
-   MdlProbType_none  = 0,  /**< Not set */
-   MdlProbType_lp,         /**< LP    Linear Programm   */
-   MdlProbType_nlp,        /**< NLP   NonLinear Programm     */
-   MdlProbType_dnlp,       /**< DNLP  Nondifferentiable NLP  */
-   MdlProbType_mip,        /**< MIP   Mixed-Integer Programm */
-   MdlProbType_minlp,      /**< MINLP Mixed-Integer NLP*/
-   MdlProbType_miqcp,      /**< MIQCP Mixed-Integer QCP*/
-   MdlProbType_qcp,        /**< QCP   Quadratically Constraint Programm */
-   MdlProbType_mcp,        /**< MCP   Mixed Complementarity Programm*/
-   MdlProbType_mpec,       /**< MPEC  Math. Prog. with Equilibrium Constraints*/
-   MdlProbType_vi,         /**< VI    Variational Inequality */
-   MdlProbType_emp,        /**< EMP   Extended Mathematical Programm */
-   MdlProbType_cns,        /**< CNS   Constrained Nonlinear System */
-   MdlProbType_last = MdlProbType_cns,
-} ProbType;
+__extension__ typedef enum mdl_type ENUM_U8 {
+   MdlType_none  = 0,      /**< Not set */
+   MdlType_lp,             /**< LP    Linear Programm   */
+   MdlType_nlp,            /**< NLP   NonLinear Programm     */
+   MdlType_dnlp,           /**< DNLP  Nondifferentiable NLP  */
+   MdlType_mip,            /**< MIP   Mixed-Integer Programm */
+   MdlType_minlp,          /**< MINLP Mixed-Integer NLP*/
+   MdlType_miqcp,          /**< MIQCP Mixed-Integer QCP*/
+   MdlType_qcp,            /**< QCP   Quadratically Constraint Programm */
+   MdlType_mcp,            /**< MCP   Mixed Complementarity Programm*/
+   MdlType_mpec,           /**< MPEC  Math. Prog. with Equilibrium Constraints*/
+   MdlType_vi,             /**< VI    Variational Inequality */
+   MdlType_emp,            /**< EMP   Extended Mathematical Programm */
+   MdlType_cns,            /**< CNS   Constrained Nonlinear System */
+   MdlType_last = MdlType_cns,
+} ModelType;
 
 
 typedef enum {
@@ -47,23 +47,24 @@ typedef enum {
 
 /** @brief mathematical programm description */
 struct mp_descr {
-   ProbType probtype;           /**< type of the MP */
+   ModelType mdltype;           /**< type of the MP */
    RhpSense sense;              /**< sense of the MP */
    rhp_idx objvar;              /**< Objective variable (when applicable) */
    rhp_idx objequ;              /**< Objective equation (when applicable) */
 };
 
-extern const unsigned probtypeslen;
+extern const unsigned mdltypeslen;
 
 const char* backend_name(unsigned backendtype);
 unsigned backend_idx(const char *backendname);
-const char* probtype_name(ProbType type);
-bool probtype_hasmetadata(ProbType type);
-bool probtype_isopt(ProbType type);
-bool probtype_isvi(ProbType type);
 
-static inline bool valid_probtype(ProbType type) {
-   return type > MdlProbType_none && type <= MdlProbType_cns;
+const char* mdltype_name(ModelType type);
+bool mdltype_hasmetadata(ModelType type);
+bool mdltype_isopt(ModelType type);
+bool mdltype_isvi(ModelType type);
+
+static inline bool valid_mdltype(ModelType type) {
+   return type > MdlType_none && type <= MdlType_last;
 }
 
 static inline bool valid_sense(unsigned sense)
@@ -85,7 +86,7 @@ static inline bool valid_optsense(RhpSense sense)
 
 static inline void mp_descr_invalid(struct mp_descr *d)
 {
-   d->probtype = MdlProbType_none;
+   d->mdltype = MdlType_none;
    d->sense = RhpNoSense;
    d->objvar = IdxInvalid;
    d->objequ = IdxInvalid;

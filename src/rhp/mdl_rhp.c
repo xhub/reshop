@@ -105,7 +105,7 @@ int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
  *
  * @return      the error code
  */
-int rmdl_analyze_modeltype(const Model *mdl, Fops *fops)
+int rmdl_analyze_modeltype(Model *mdl, Fops *fops)
 {
    bool var_types[VAR_TYPE_LEN] = {false};
    bool var_cones[CONE_LEN] = {false};
@@ -123,12 +123,13 @@ int rmdl_analyze_modeltype(const Model *mdl, Fops *fops)
       return Error_WrongModelForFunction;
    }
 
-   RhpModelData *mdldata = (RhpModelData *)mdl->data;
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
 
-   if (mdldata->probtype != MdlProbType_none) {
-      if (empinfo_hasempdag(&mdl->empinfo) && empinfo_is_hop(&mdl->empinfo) && mdldata->probtype != MdlProbType_emp) {
+   if (mdltype != MdlType_none) {
+      if (empinfo_hasempdag(&mdl->empinfo) && empinfo_is_hop(&mdl->empinfo) && mdltype != MdlType_emp) {
         error("[model] ERROR: High-Order Problem data, but the model type is %s rather than %s.\n",
-              probtype_name(mdldata->probtype), probtype_name(MdlProbType_emp));
+              mdltype_name(mdltype), mdltype_name(MdlType_emp));
         return Error_EMPIncorrectInput;
       }
       return OK;
@@ -137,12 +138,12 @@ int rmdl_analyze_modeltype(const Model *mdl, Fops *fops)
    const EmpInfo *empinfo = &mdl->empinfo;
    if (empinfo_hasempdag(empinfo)) {
       if (empinfo_is_hop(empinfo)) {
-         mdldata->probtype = MdlProbType_emp;
+         S_CHECK(mdl_settype(mdl, MdlType_emp));
          return OK;
       }
 
       if (empinfo_is_vi(empinfo)) {
-         mdldata->probtype = MdlProbType_vi;
+         S_CHECK(mdl_settype(mdl, MdlType_vi));
          return OK;
       }
 
@@ -186,17 +187,16 @@ int rmdl_analyze_modeltype(const Model *mdl, Fops *fops)
    }
 
    bool is_integral = var_types[VAR_I] || var_types[VAR_B] || var_types[VAR_SI];
-   enum mdl_probtype probtype;
 
    if (has_nl) {
-      probtype = is_integral ? MdlProbType_minlp : MdlProbType_nlp;
+      mdltype = is_integral ? MdlType_minlp : MdlType_nlp;
    } else if (has_quad) {
-      probtype = is_integral ? MdlProbType_miqcp : MdlProbType_qcp;
+      mdltype = is_integral ? MdlType_miqcp : MdlType_qcp;
    } else {
-      probtype = is_integral ? MdlProbType_mip : MdlProbType_lp;
+      mdltype = is_integral ? MdlType_mip : MdlType_lp;
    }
 
-   mdldata->probtype = probtype;
+   S_CHECK(mdl_settype(mdl, mdltype));
 
 
    /* HACK to free the memory */
@@ -210,16 +210,16 @@ int rmdl_analyze_modeltype(const Model *mdl, Fops *fops)
 
 int rmdl_reset_modeltype(Model *mdl, Fops *fops)
 {
-   ProbType probtype;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
-   S_CHECK(mdl_setprobtype(mdl, MdlProbType_none));
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
+   S_CHECK(mdl_settype(mdl, MdlType_none));
 
    S_CHECK(rmdl_analyze_modeltype(mdl, fops));
 
-   ProbType probtype_new;
-   S_CHECK(mdl_getprobtype(mdl, &probtype_new));
+   ModelType mdltype_new;
+   S_CHECK(mdl_gettype(mdl, &mdltype_new));
 
-   if (probtype == MdlProbType_emp && probtype_new != MdlProbType_emp) {
+   if (mdltype == MdlType_emp && mdltype_new != MdlType_emp) {
 
       EmpDag *empdag = &mdl->empinfo.empdag;
 
@@ -234,11 +234,11 @@ int rmdl_reset_modeltype(Model *mdl, Fops *fops)
 
          S_CHECK(mdl_setsense(mdl, sense));
 
-         if (probtype_isopt(probtype_new)) {
+         if (mdltype_isopt(mdltype_new)) {
             empdag->type = EmpDag_Empty;
             S_CHECK(mdl_setobjvar(mdl, objvar));
             S_CHECK(rmdl_setobjfun(mdl, objequ));
-         } else if (probtype_isvi(probtype_new)) {
+         } else if (mdltype_isvi(mdltype_new)) {
             empdag->type = EmpDag_Empty;
             assert(!valid_vi(objvar) && !valid_ei(objequ));
          } else {
@@ -248,7 +248,7 @@ int rmdl_reset_modeltype(Model *mdl, Fops *fops)
 
          trace_process("[model] %s model '%.*s' #%u has now type %s with "
                        "sense %s, objvar = %s, objequ = %s\n", mdl_fmtargs(mdl),
-                       probtype_name(probtype_new), sense2str(sense),
+                       mdltype_name(mdltype_new), sense2str(sense),
                        mdl_printvarname(mdl, objvar), mdl_printequname(mdl, objequ));
 
          return OK;
@@ -262,7 +262,7 @@ int rmdl_reset_modeltype(Model *mdl, Fops *fops)
       return error_runtime();
    }
 
-   if (probtype == probtype_new ||  (probtype_isopt(probtype) && probtype_isopt(probtype_new))) {
+   if (mdltype == mdltype_new ||  (mdltype_isopt(mdltype) && mdltype_isopt(mdltype_new))) {
       return OK;
    }
 
@@ -690,14 +690,6 @@ int rmdl_appendequs(Model *mdl, const Aequ *e)
 }
 
 
-int rmdl_getprobtype(const Model *mdl, ProbType *probtype)
-{
-   const RhpModelData *mdldata = (RhpModelData *) mdl->data;
-   *probtype = mdldata->probtype;
-   return OK;
-}
-
-
 /**
  * @brief If needed, fix the objective function value to the objective variable
  *
@@ -867,12 +859,12 @@ int rmdl_set_simpleprob(Model *mdl, const MpDescr *descr)
 {
    EmpDag *empdag = &mdl->empinfo.empdag;
    S_CHECK(empdag_simple_init(empdag));
-   assert(valid_probtype(descr->probtype));
+   assert(valid_mdltype(descr->mdltype));
 
    S_CHECK(rmdl_setobjsense(mdl, descr->sense));
    S_CHECK(rmdl_setobjfun(mdl, descr->objequ));
    S_CHECK(rmdl_setobjvar(mdl, descr->objvar));
-   S_CHECK(mdl_setprobtype(mdl, descr->probtype));
+   S_CHECK(mdl_settype(mdl, descr->mdltype));
 
    return OK;
 }

@@ -158,7 +158,7 @@ static int mp_ccflib_instantiate(EmpDag *empdag, unsigned mpid, DfsData *dfsdat,
    ops->add_k(ovfd, mdl, eobj, &y, n_children);
 
    /*  TODO(xhub) URG remove this HACK */
-   mp_ovf->probtype = eobj->tree ? MdlProbType_nlp : MdlProbType_lp;
+   mp_ovf->probtype = eobj->tree ? MdlType_nlp : MdlType_lp;
 
    S_CHECK(mp_settype(mp_ovf, RHP_MP_OPT));
 

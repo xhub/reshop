@@ -413,13 +413,14 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
 
    MpType mptype;
 
-   ProbType mdl_probtype = ((RhpModelData*)mdl->data)->probtype;
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
 
-   if (probtype_isvi(mdl_probtype)) {
+   if (mdltype_isvi(mdltype)) {
       mptype = MpTypeVi;
-   } else if (mdl_probtype == MdlProbType_cns) {
+   } else if (mdltype == MdlType_cns) {
       error("%s ::  model \"%s\" (#%u): cannot init an empdag from modeltype %s",
-            __func__,  mdl_getname(mdl), mdl->id, probtype_name(mdl_probtype));
+            __func__,  mdl_getname(mdl), mdl->id, mdltype_name(mdltype));
       return Error_NotImplemented;
    } else {
       //TODO: if we end up here with mdl_probtype == MdlProbType_emp, it's okay
@@ -460,7 +461,7 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
    }
 
    /*  TODO(xhub) this is a hack */
-   mp->probtype = mdl_probtype;
+   mp->probtype = mdltype;
 
    VarMeta * restrict vmd = mdl->ctr.varmeta;
 
@@ -562,7 +563,7 @@ int empdag_initfromDAG(EmpDag * restrict empdag,
    assert(empdag_up->mps.len > 0);
 
    /* TODO(xhub) should this be done elsewhere? */
-   S_CHECK(mdl_setprobtype(mdl, MdlProbType_emp));
+   S_CHECK(mdl_settype(mdl, MdlType_emp));
 
    S_CHECK(_mp_namedarray_copy(&empdag->mps, &empdag_up->mps, empdag->mdl));
    S_CHECK(_mpe_namedlist_copy(&empdag->mpes, &empdag_up->mpes, empdag->mdl));
@@ -1240,7 +1241,7 @@ int empdag_single_MP_to_Nash(EmpDag* empdag)
       return Error_EMPRuntimeError;
    }
 
-   mdl_setprobtype(empdag->mdl, MdlProbType_emp);
+   mdl_settype(empdag->mdl, MdlType_emp);
    
    MathPrgm *mp = empdag->mps.arr[0];
    char *name;

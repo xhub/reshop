@@ -30,7 +30,7 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    Container *ctr = &mdl->ctr;
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
-   S_CHECK(mdl_setprobtype(mdl, MdlProbType_emp));
+   S_CHECK(mdl_settype(mdl, MdlType_emp));
 
    const struct ovf_ops *op;
    switch (type) {
@@ -210,7 +210,7 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
     * ---------------------------------------------------------------------- */
 
    /*  TODO(xhub) URG remove this HACK */
-   mp_ovf->probtype = eobj->tree ? MdlProbType_nlp : MdlProbType_lp;
+   mp_ovf->probtype = eobj->tree ? MdlType_nlp : MdlType_lp;
 
    S_CHECK_EXIT(mp_settype(mp_ovf, RHP_MP_OPT));
 

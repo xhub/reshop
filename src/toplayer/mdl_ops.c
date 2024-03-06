@@ -24,20 +24,21 @@ int mdl_copysolveoptions(Model *mdl, const Model *mdl_src)
  */
 int mdl_copyprobtype(Model *mdl, const Model *mdl_src)
 {
-   ProbType probtype;
-   S_CHECK(mdl_src->ops->getprobtype(mdl_src, &probtype));
+   ModelType probtype = mdl_src->commondata.mdltype;
 
-   assert(probtype != MdlProbType_none);
-   if (probtype >= probtypeslen) {
-      error("%s :: unknown model type %d\n", __func__, probtype);
+   assert(probtype != MdlType_none);
+   if (probtype >= mdltypeslen) {
+      error("%s ERROR: unknown model type %d\n", __func__, probtype);
       return Error_InvalidValue;
    }
    
-   trace_stack("[model] %s model '%.*s' #%u: setting model type to %s "
+   trace_model("[model] %s model '%.*s' #%u: setting model type to %s "
                "from %s model '%.*s' #%u\n", mdl_fmtargs(mdl),
-               probtype_name(probtype), mdl_fmtargs(mdl_src));
+               mdltype_name(probtype), mdl_fmtargs(mdl_src));
 
-   return mdl_setprobtype(mdl, probtype);
+   mdl->commondata.mdltype = probtype;
+
+   return OK;
 }
 
 /**
@@ -66,53 +67,53 @@ int mdl_check(Model *mdl)
    S_CHECK(mdl_getsense(mdl, &sense))
    bool has_optobj =  valid_vi(objvar) || valid_ei(objequ);
 
-   ProbType probtype;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
+   ModelType probtype;
+   S_CHECK(mdl_gettype(mdl, &probtype));
 
    switch (probtype) {
-   case MdlProbType_none:
+   case MdlType_none:
       error("[model check] ERROR: %s model '%.*s' #%u has no type set", mdl_fmtargs(mdl));
       return Error_InvalidModel;
-   case MdlProbType_lp:
-   case MdlProbType_nlp:
-   case MdlProbType_dnlp:
-   case MdlProbType_mip:
-   case MdlProbType_minlp:
-   case MdlProbType_miqcp:
-   case MdlProbType_qcp:
-   case MdlProbType_mpec:
+   case MdlType_lp:
+   case MdlType_nlp:
+   case MdlType_dnlp:
+   case MdlType_mip:
+   case MdlType_minlp:
+   case MdlType_miqcp:
+   case MdlType_qcp:
+   case MdlType_mpec:
       if (!has_optobj) {
          error("[model check] ERROR: %s model '%.*s' #%u of type %s has neither"
                " an objective variable or an objective function.\n", mdl_fmtargs(mdl),
-               probtype_name(probtype));
+               mdltype_name(probtype));
          return Error_InvalidModel;
       }
       break;
-   case MdlProbType_emp:
+   case MdlType_emp:
       if (mdl->empinfo.empdag.mps.len == 0 && valid_optsense(sense)) {
          if (!has_optobj) {
          error("[model check] ERROR: %s model '%.*s' #%u of type %s has neither"
                " an objective variable or an objective function.\n", mdl_fmtargs(mdl),
-               probtype_name(probtype));
+               mdltype_name(probtype));
          return Error_InvalidModel;
          }
       }
       /* TODO where to check the compatibility between empdag and objective stuff */
       break;
 
-   case MdlProbType_mcp:
-   case MdlProbType_vi:
-   case MdlProbType_cns:
+   case MdlType_mcp:
+   case MdlType_vi:
+   case MdlType_cns:
       if (has_optobj) {
          error("[model check] ERROR: %s model '%.*s' #%u of type %s has either an"
                " objective variable or an objective function.\n", mdl_fmtargs(mdl),
-               probtype_name(probtype));
+               mdltype_name(probtype));
          return Error_InvalidModel;
       }
       break;
    default:
       error("[model check] ERROR: unknown model type %s (#%d)",
-            probtype_name(probtype), probtype);
+            mdltype_name(probtype), probtype);
       return Error_RuntimeError;
    }
 
@@ -135,10 +136,10 @@ int mdl_check(Model *mdl)
  */
 int mdl_solvable(Model *mdl)
 {
-   ProbType probtype;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
+   ModelType probtype;
+   S_CHECK(mdl_gettype(mdl, &probtype));
 
-   if (probtype != MdlProbType_emp) {
+   if (probtype != MdlType_emp) {
       return OK;
    }
 
@@ -213,11 +214,11 @@ int mdl_checkmetadata(Model *mdl)
       S_CHECK(mdl_finalize(mdl));
    }
 
-   ProbType probtype;
+   ModelType probtype;
    EmpInfo *empinfo = &mdl->empinfo;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
+   S_CHECK(mdl_gettype(mdl, &probtype));
 
-   if (!probtype_hasmetadata(probtype) || ((probtype == MdlProbType_emp) &&
+   if (!mdltype_hasmetadata(probtype) || ((probtype == MdlType_emp) &&
       (empdag_isopt(&empinfo->empdag) || empdag_isempty(&empinfo->empdag)))) {
      return OK;
    }
@@ -229,9 +230,9 @@ int mdl_checkmetadata(Model *mdl)
    }
 
    /* TODO: GITLAB#70 */
-   if (probtype == MdlProbType_mpec) { return OK; }
+   if (probtype == MdlType_mpec) { return OK; }
 
-   if (probtype == MdlProbType_mcp) {
+   if (probtype == MdlType_mcp) {
       return mdl_chk_mcpmetadata(mdl);
    }
 
@@ -486,10 +487,10 @@ int mdl_finalize(Model *mdl)
 {
    S_CHECK(empdag_fini(&mdl->empinfo.empdag))
 
-   ProbType probtype;
-   S_CHECK(mdl_getprobtype(mdl, &probtype));
+   ModelType probtype;
+   S_CHECK(mdl_gettype(mdl, &probtype));
 
-   if (probtype == MdlProbType_none) {
+   if (probtype == MdlType_none) {
       if (mdl_is_rhp(mdl)) {
          S_CHECK(rmdl_analyze_modeltype(mdl, NULL));
       } else {
@@ -554,9 +555,11 @@ int mdl_getmodelstat(const Model *mdl, int *modelstat)
    return mdl->ops->getmodelstat(mdl, modelstat);
 }
 
-int mdl_getprobtype(const Model *mdl, ProbType *probtype)
+int mdl_gettype(const Model *mdl, ModelType *type)
 {
-   return mdl->ops->getprobtype(mdl, probtype);
+   /* TODO: this could just return the type */
+   *type = mdl->commondata.mdltype;
+   return OK;
 }
 
 /**
@@ -631,22 +634,25 @@ int mdl_setmodelstat(Model *mdl, int modelstat)
  *
  * @ingroup publicAPI
  *
- * @param mdl        the container
- * @param probtype   the model type
+ * @param mdl    the container
+ * @param type   the model type
  *
- * @return           the error code
+ * @return       the error code
  */
-int mdl_setprobtype(Model *mdl, ProbType probtype)
+int mdl_settype(Model *mdl, ModelType type)
 {
-   if (probtype >= probtypeslen) {
-      error("%s :: unknown model type %d\n", __func__, probtype);
+   if (type >= mdltypeslen) {
+      error("%s ERROR: unknown model type %d\n", __func__, type);
       return Error_InvalidValue;
    }
+
+   mdl->commondata.mdltype = type;
    
-   S_CHECK(mdl->ops->setprobtype(mdl, probtype));
+   trace_model("[model] %s model '%.*s' #%u: setting model type to %s\n",
+               mdl_fmtargs(mdl), mdltype_name(type));
 
    Container *ctr = &mdl->ctr;
-   if (probtype_hasmetadata(probtype)) {
+   if (mdltype_hasmetadata(type)) {
       rhp_idx max_n = ctr_nvars_max(ctr);
       if (!ctr->varmeta) {
          MALLOC_(ctr->varmeta, struct var_meta, max_n);

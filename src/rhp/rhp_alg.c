@@ -955,7 +955,8 @@ int rmdl_presolve(Model *mdl, unsigned backend)
    EmpDag empdag_orig;
    memcpy(&empdag_orig, &mdl->empinfo.empdag, sizeof(EmpDag));
 
-   ProbType probtype_type = ((RhpModelData*)mdl->data)->probtype;
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
 
    bool cpy_fops = false;
    Fops fops_orig;
@@ -1078,7 +1079,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
       memcpy(ctr->fops, &fops_orig, sizeof(Fops));
    }
 
-   ((RhpModelData*)mdl->data)->probtype = probtype_type;
+   S_CHECK(mdl_settype(mdl, mdltype));
 
 _exit:
    mdl_release(mdl_solver);

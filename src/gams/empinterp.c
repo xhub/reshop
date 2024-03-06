@@ -184,7 +184,7 @@ int empinterp_process(Model *mdl, const char *fname)
 
    S_CHECK_EXIT(advance(&interp, &p, &toktype));
 
-   mdl_setprobtype(interp.mdl, MdlProbType_emp);
+   mdl_settype(interp.mdl, MdlType_emp);
 
    /* TODO(xhub) do we want to continue or error if we have an error */
 

@@ -631,7 +631,7 @@ RHP_PUBLIB
 unsigned rhp_mdl_nequs_total(const struct rhp_mdl *mdl);
 
 RHP_PUBLIB
-int rmdl_analyze_modeltype(const struct rhp_mdl *mdl, struct rhp_ctr_filter_ops *fops);
+int rmdl_analyze_modeltype(struct rhp_mdl *mdl, struct rhp_ctr_filter_ops *fops);
 
 RHP_PUBLIB
 int rhp_mdl_latex(struct rhp_mdl *mdl, const char *filename);

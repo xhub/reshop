@@ -14,6 +14,7 @@
 #include "printout.h"
 #include "pool.h"
 #include "reshop_data.h"
+#include "rhp_alg.h"
 #include "status.h"
 #include "tlsdef.h"
 

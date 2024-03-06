@@ -21,7 +21,6 @@ typedef enum rmdl_solver {
 typedef struct rmdl_data {
    enum gams_modelstatus modelstat;
    enum gams_solvestatus solvestat;
-   ProbType probtype;              /**< Problem type                         */
    RhpSolver solver;               /**< Solver for this model                */
    struct rmdl_option *options;    /**< Options                              */
 } RhpModelData;

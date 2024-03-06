@@ -25,8 +25,8 @@ extern const struct rmdl_gams_opt rmdl_opt_to_gams[];
 extern const size_t rmdl_opt_to_gams_len;
 
 int cone_to_gams_relation_type(Cone cone, int *type);
-enum mdl_probtype probtype_from_gams(int type);
-int probtype_to_gams(enum mdl_probtype type);
+enum mdl_type probtype_from_gams(int type);
+int probtype_to_gams(enum mdl_type type);
 
 typedef struct {
    EquObjectType object;     /**< type of equation                            */

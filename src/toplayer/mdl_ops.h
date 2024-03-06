@@ -25,14 +25,12 @@ typedef struct model_ops {
    int (*getsense)(const Model *mdl, RhpSense *objsense);
    int (*getobjvar)(const Model *mdl, rhp_idx *objvar);
    int (*getoption)(const Model *mdl, const char *option, void *val);
-   int (*getprobtype)(const Model *mdl, ProbType *probtype);
    int (*getsolvestat)(const Model *mdl, int *solvestat);
    int (*getsolvername)(const Model *mdl, char const ** solvername);
    int (*postprocess)(Model *mdl);
    int (*reportvalues)(Model *mdl, const Model *mdl_src);
    int (*setmodelstat)(Model *mdl, int modelstat);
    int (*setobjvar)(Model *mdl, rhp_idx vi);
-   int (*setprobtype)(Model *mdl, ProbType probtype);
    int (*setsense)(Model *mdl, RhpSense objsense);
    int (*setsolvername)(Model *mdl, const char *solvername);
    int (*setsolvestat)(Model *mdl, int solvestat);

@@ -244,7 +244,7 @@ static MathPrgm *mp_alloc(Model *mdl) {
 
    mp->type = MpTypeUndef;
 //   mp->type_subdag = EmpDag_Empty;
-   mp->probtype = MdlProbType_none;
+   mp->probtype = MdlType_none;
 
    /* Do not borrow to avoid circular reference */
    mp->mdl = mdl;
@@ -363,9 +363,9 @@ int mp_settype(MathPrgm *mp, unsigned type) {
 
 int mp_setprobtype(MathPrgm *mp, unsigned probtype)
 {
-   if (probtype >= probtypeslen) {
+   if (probtype >= mdltypeslen) {
       error( "%s :: MP type %u is above the limit %u\n", __func__,
-            probtype, probtypeslen - 1);
+            probtype, mdltypeslen - 1);
       return Error_InvalidValue;
    }
 
@@ -810,7 +810,7 @@ void mp_err_noobjdata(const MathPrgm *mp)
 }
 
 
-inline ProbType mp_getprobtype(const MathPrgm *mp) {
+inline ModelType mp_getprobtype(const MathPrgm *mp) {
    return mp->probtype;
 }
 
