@@ -240,7 +240,7 @@ int fitting_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const char *re
 
   RESHOP_CHECK(rhp_mdl_setobjequ(mdl, ei));
   RESHOP_CHECK(rhp_mdl_setobjsense(mdl, RHP_MIN));
-  RESHOP_CHECK(rhp_mdl_setprobtype(mdl, 1));
+  RESHOP_CHECK(rhp_mdl_settype(mdl, 1));
 
    for (unsigned i = 0; i < nb_equ; ++i) {
       rhp_idx vi;

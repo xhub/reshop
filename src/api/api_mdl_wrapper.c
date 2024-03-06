@@ -35,14 +35,14 @@ int rhp_mdl_getsolvername(const Model *mdl, char const ** solvername)
    return mdl->ops->getsolvername(mdl, solvername);
 }
 
-int rhp_mdl_getprobtype(const Model *mdl, unsigned *probtype)
+int rhp_mdl_gettype(const Model *mdl, unsigned *type)
 {
    S_CHECK(chk_mdl(mdl, __func__));
-   S_CHECK(chk_arg_nonnull(probtype, 2, __func__));
+   S_CHECK(chk_arg_nonnull(type, 2, __func__));
 
-   ModelType probtype_;
-   S_CHECK(mdl_gettype(mdl, &probtype_));
-   *probtype = probtype_;
+   ModelType type_;
+   S_CHECK(mdl_gettype(mdl, &type_));
+   *type = type_;
 
    return OK;
 }
@@ -58,15 +58,15 @@ int rhp_mdl_getsense(const Model *mdl, unsigned *objsense)
    return OK;
 }
 
-int rhp_mdl_setprobtype(Model *mdl, unsigned probtype)
+int rhp_mdl_settype(Model *mdl, unsigned type)
 {
    S_CHECK(chk_mdl(mdl, __func__));
-   if (!valid_mdltype(probtype)) {
-      error("%s ERROR: invalid probtype value %u\n", __func__, probtype);
+   if (!valid_mdltype(type)) {
+      error("%s ERROR: invalid model type value %u\n", __func__, type);
       return Error_InvalidValue;
    }
 
-   return mdl_settype(mdl, probtype);
+   return mdl_settype(mdl, type);
 }
 
 int rhp_mdl_setobjsense(Model *mdl, unsigned objsense)

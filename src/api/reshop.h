@@ -241,7 +241,7 @@ int rhp_mdl_getsense(const struct rhp_mdl *mdl, unsigned *objsense);
 RHP_PUBLIB
 int rhp_mdl_getobjvar(const struct rhp_mdl *mdl, rhp_idx *objvar);
 RHP_PUBLIB
-int rhp_mdl_getprobtype(const struct rhp_mdl *mdl, unsigned *probtype);
+int rhp_mdl_gettype(const struct rhp_mdl *mdl, unsigned *type);
 RHP_PUBLIB
 int rhp_mdl_getsolvername(const struct rhp_mdl *mdl, char const ** solvername);
 RHP_PUBLIB
@@ -293,7 +293,7 @@ int rhp_mdl_setequvarperp(struct rhp_mdl *mdl, rhp_idx ei, rhp_idx vi);
 RHP_PUBLIB
 int rhp_mdl_setequval(struct rhp_mdl *mdl, rhp_idx ei, double level);
 RHP_PUBLIB
-int rhp_mdl_setprobtype(struct rhp_mdl *mdl, unsigned probtype);
+int rhp_mdl_settype(struct rhp_mdl *mdl, unsigned type);
 RHP_PUBLIB
 int rhp_mdl_setobjsense(struct rhp_mdl *mdl, unsigned objsense);
 RHP_PUBLIB
