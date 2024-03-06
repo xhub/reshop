@@ -323,24 +323,19 @@ int empdag_fini(EmpDag *empdag)
       else { return error_runtime(); }
    }
    
-   struct lineppty l = {.colw = 70, .mode = PO_INFO, .ident = 2 };
+   struct lineppty l = {.colw = 40, .mode = PO_INFO, .ident = 2 };
 
    unsigned n_mps = empdag->mps.len;
-   printuint(&l, "Total number of MPs", n_mps);
+   printuint(&l, "MPs", n_mps);
    l.ident += 2;
-   printuint(&l, "Number of OPT MPs", n_opt);
-   printuint(&l, "Number of VI MPs", n_vi);
-   printuint(&l, "Number of CCFLIB MPs", n_ccflib);
+   printuint(&l, "OPT MPs", n_opt);
+   printuint(&l, "VI MPs", n_vi);
+   printuint(&l, "CCFLIB MPs", n_ccflib);
    l.ident -= 2;
-   printuint(&l, "Number of Nash nodes", empdag->mpes.len);
-   printuint(&l, "Number of VF edges", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
-   printuint(&l, "Number of CTRL edges", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
-   printuint(&l, "Number of children of Nash nodes", empdag->mpes.arcs ? empdag->mpes.arcs->len : 0);
-
-   if (n_mps > 1 && valid_uid(empdag->uid_root)) {
-      printout(PO_INFO, "%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(empdag->uid_root),
-               empdag_getname(empdag, empdag->uid_root));
-   }
+   printuint(&l, "Nash nodes", empdag->mpes.len);
+   printuint(&l, "VF edges", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
+   printuint(&l, "CTRL edges", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
+   printuint(&l, "Children of Nash nodes", empdag->mpes.arcs ? empdag->mpes.arcs->len : 0);
 
    unsigned n_roots = empdag->roots.len;
 
