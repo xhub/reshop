@@ -22,7 +22,7 @@ __extension__ typedef enum equ_object_type ENUM_U8 {
 /** @brief Linear equation */
 typedef struct lequ {
    unsigned max;    /**< Size of the allocated arrays */
-   unsigned len;    /**< Currentnumber of linear terms */
+   unsigned len;    /**< Current number of linear terms */
 
    rhp_idx *vis;    /**< Variable indices */
    double *coeffs;  /**< Coefficients     */

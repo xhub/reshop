@@ -179,7 +179,7 @@ void aequ_empty(Aequ *e)
 /**
  * @brief Reset the abstract variable: the memory is not freed
  *
- * @param v  the variable to empty
+ * @param e  the equation to reset
  */
 void aequ_reset(Aequ *e)
 {

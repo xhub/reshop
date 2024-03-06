@@ -392,7 +392,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
    bool *nlflags = (bool*)&var_in_equ[nvars_up];
 
    /* TODO improvement: use cmat_append_equs if we start from RHP? */
-   for (rhp_idx ei = 0; ei < ctr->m; ++ei) {
+   for (rhp_idx ei = 0, len = ctr->m; ei < len; ++ei) {
       void *iterator = NULL;
       double jacval;
       int nlflag;
@@ -693,7 +693,7 @@ int rmdl_appendequs(Model *mdl, const Aequ *e)
 /**
  * @brief If needed, fix the objective function value to the objective variable
  *
- * @param ctr  the container
+ * @param mdl  the model
  *
  * @return     the error code
  */

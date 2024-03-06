@@ -19,7 +19,7 @@ void logging_syncenv(void);
 
 static inline int error_runtime(void)
 {
-   errormsg("unexpected runtime error");
+   errormsg("Unexpected runtime error\n");
    return Error_RuntimeError;
 }
 

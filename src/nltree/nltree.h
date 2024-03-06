@@ -176,7 +176,7 @@ int nltree_get_add_node(Model* mdl, rhp_idx ei, unsigned n_children,
  *  @param ctr   the container object
  *  @param tree  the tree to modify
  *  @param node  the node
- *  @param vidx  the variable index
+ *  @param vi    the variable index
  *
  *  @return      the error code
  */
