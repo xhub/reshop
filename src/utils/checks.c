@@ -35,7 +35,7 @@ int chk_aequ(const Aequ *e, const char *fn)
       return Error_NullPointer;
    }
 
-   if (e->type == EquVar_Unset) {
+   if (e->size > 0 && e->type == EquVar_Unset) {
       error("%s ERROR: the equation object doesn't have a type set!\n", fn);
       return Error_InvalidValue;
    }
