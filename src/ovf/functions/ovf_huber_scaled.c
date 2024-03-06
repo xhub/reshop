@@ -67,8 +67,8 @@ static const struct var_genops huber_scaled_varfill  = {
    .set_type = NULL,
    .get_lb = huber_scaled_var_lb,
    .get_ub = huber_scaled_var_ub,
-   .set_level = NULL,
-   .set_marginal = NULL,
+   .get_value = NULL,
+   .get_multiplier = NULL,
 };
 
 static int huber_scaled_gen_var(Container* ctr, 

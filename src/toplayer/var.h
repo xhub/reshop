@@ -111,15 +111,15 @@ struct var_genops {
    enum var_type (*set_type)(const void* env, unsigned indx);
    double (*get_lb)(const void* env, unsigned indx);
    double (*get_ub)(const void* env, unsigned indx);
-   double (*set_level)(const void* env, unsigned indx);
-   double (*set_marginal)(const void* env, unsigned indx);
+   double (*get_value)(const void* env, unsigned indx);
+   double (*get_multiplier)(const void* env, unsigned indx);
 };
 
 
 void avar_free(Avar* v);
 Avar* avar_new(void) MALLOC_ATTR(avar_free,1);
 Avar* avar_newcompact(unsigned size, unsigned start) MALLOC_ATTR(avar_free,1);
-Avar* avar_newlist(unsigned size, rhp_idx *list) NONNULL MALLOC_ATTR(avar_free,1);
+Avar* avar_newlistborrow(unsigned size, rhp_idx *list) NONNULL MALLOC_ATTR(avar_free,1);
 Avar* avar_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(avar_free,1);
 Avar* avar_newblock(unsigned block_size) MALLOC_ATTR(avar_free,1);
 

@@ -162,8 +162,8 @@ static const struct var_genops hubnik_varfill  = {
    .set_type = NULL,
    .get_lb = hubnik_var_lb,
    .get_ub = hubnik_var_ub,
-   .set_level = NULL,
-   .set_marginal = NULL,
+   .get_value = NULL,
+   .get_multiplier = NULL,
 };
 
 static int hubnik_gen_var(Container* ctr,  unsigned n, const void* p)

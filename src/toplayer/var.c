@@ -88,7 +88,7 @@ Avar* avar_newcompact(unsigned size, unsigned start)
  *  @return      the error code
  *
  */
-Avar* avar_newlist(unsigned size, rhp_idx *list)
+Avar* avar_newlistborrow(unsigned size, rhp_idx *list)
 {
    Avar *avar;
    MALLOC_NULL(avar, Avar, 1);

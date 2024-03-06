@@ -16,8 +16,8 @@ static const struct var_genops ecvarup_varfill  = {
    .set_type = NULL,
    .get_lb = ecvarup_var_lb,
    .get_ub = ecvarup_var_ub,
-   .set_level = NULL,
-   .set_marginal = NULL,
+   .get_value = NULL,
+   .get_multiplier = NULL,
 };
 
 static int ecvarup_gen_var(Container* ctr, unsigned n, const void* p)

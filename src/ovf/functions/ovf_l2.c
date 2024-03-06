@@ -23,8 +23,8 @@ static const struct var_genops l2_varfill  = {
    .set_type = NULL,
    .get_lb = NULL,
    .get_ub = NULL,
-   .set_level = NULL,
-   .set_marginal = NULL,
+   .get_value = NULL,
+   .get_multiplier = NULL,
 };
 
 static int l2_gen_var(Container* ctr,  unsigned n, const void* p)

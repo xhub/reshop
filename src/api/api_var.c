@@ -17,7 +17,7 @@ Avar* rhp_avar_newlist(unsigned size, rhp_idx *indx)
 {
    SN_CHECK(chk_arg_nonnull(indx, 2, __func__));
 
-   return avar_newlist(size, indx);
+   return avar_newlistborrow(size, indx);
 }
 
 Avar* rhp_avar_newlistcopy(unsigned size, rhp_idx *vis)

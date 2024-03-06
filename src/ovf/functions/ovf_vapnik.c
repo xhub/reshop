@@ -127,8 +127,8 @@ static const struct var_genops vapnik_varfill  = {
    .set_type = NULL,
    .get_lb = vapnik_var_lb,
    .get_ub = vapnik_var_ub,
-   .set_level = NULL,
-   .set_marginal = NULL,
+   .get_value = NULL,
+   .get_multiplier = NULL,
 };
 
 static int vapnik_gen_var(Container* ctr,  unsigned n, const void* p)

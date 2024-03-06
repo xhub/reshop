@@ -327,12 +327,12 @@ int rctr_add_box_vars_ops(Container* ctr, unsigned nb_vars, const void* env,
          ctr->vars[i].bnd.ub = INFINITY;
       }
 
-      if (varfill->set_level) {
-         ctr->vars[i].value = varfill->set_level(env, indx);
+      if (varfill->get_value) {
+         ctr->vars[i].value = varfill->get_value(env, indx);
       }
 
-      if (varfill->set_marginal) {
-         ctr->vars[i].multiplier = varfill->set_marginal(env, indx);
+      if (varfill->get_multiplier) {
+         ctr->vars[i].multiplier = varfill->get_multiplier(env, indx);
       }
 
    }

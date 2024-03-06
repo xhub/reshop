@@ -21,7 +21,7 @@ Aequ* rhp_aequ_newlist(unsigned size, rhp_idx *eis)
 {
    SN_CHECK(chk_arg_nonnull(eis, 2, __func__));
 
-   return aequ_newlist(size, eis);
+   return aequ_newlistborrow(size, eis);
 }
 
 Aequ* rhp_aequ_newlistcopy(unsigned size, rhp_idx *eis)

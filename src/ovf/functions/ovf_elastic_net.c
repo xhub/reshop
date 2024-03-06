@@ -190,8 +190,8 @@ static const struct var_genops elastic_net_varfill  = {
    .set_type = NULL,
    .get_lb = elastic_net_var_lb,
    .get_ub = elastic_net_var_ub,
-   .set_level = NULL,
-   .set_marginal = NULL,
+   .get_value = NULL,
+   .get_multiplier = NULL,
 };
 
 static int elastic_net_gen_var(Container* ctr,  unsigned n, const void* p)
