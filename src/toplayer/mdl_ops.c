@@ -24,21 +24,19 @@ int mdl_copysolveoptions(Model *mdl, const Model *mdl_src)
  */
 int mdl_copyprobtype(Model *mdl, const Model *mdl_src)
 {
-   ModelType probtype = mdl_src->commondata.mdltype;
+   ModelType mdltype = mdl_src->commondata.mdltype;
 
-   assert(probtype != MdlType_none);
-   if (probtype >= mdltypeslen) {
-      error("%s ERROR: unknown model type %d\n", __func__, probtype);
+   assert(mdltype != MdlType_none);
+   if (mdltype >= mdltypeslen) {
+      error("%s ERROR: unknown model type %d\n", __func__, mdltype);
       return Error_InvalidValue;
    }
    
    trace_model("[model] %s model '%.*s' #%u: setting model type to %s "
                "from %s model '%.*s' #%u\n", mdl_fmtargs(mdl),
-               mdltype_name(probtype), mdl_fmtargs(mdl_src));
+               mdltype_name(mdltype), mdl_fmtargs(mdl_src));
 
-   mdl->commondata.mdltype = probtype;
-
-   return OK;
+   return mdl_settype(mdl, mdltype);
 }
 
 /**
