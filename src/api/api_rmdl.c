@@ -1540,14 +1540,15 @@ int rhp_delete_equ(Model *mdl, rhp_idx ei)
  * @ingroup publicAPI
  *
  * @param mdl   the model
- * @param vidx  the variable to delete
+ * @param vi  the variable to delete
  *
  * @return      the error code
  */
-int rhp_delete_var(Model *mdl, int vidx)
+int rhp_delete_var(Model *mdl, rhp_idx vi)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
-   return rctr_delete_var(&mdl->ctr, vidx);
+   S_CHECK(chk_vi(mdl, vi, __func__));
+   return rctr_delete_var(&mdl->ctr, vi);
 }
 
 /**
