@@ -72,7 +72,7 @@ int rmdl_equ_rm(Model *mdl, rhp_idx ei)
 
 /** @brief Create an equation based on an existing one for editing
  *
- *  @param         ctr       the container
+ *  @param         mdl       the container
  *  @param[in,out] ei         on input, the equation to copy. On output, the index
  *                           off the new equation
  *  @param         lin_space additional space in the linear vector
@@ -133,7 +133,7 @@ int rmdl_dup_equ(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_no)
 /**
  * @brief Flip an equation: copy and remove the original one
  *
- * @param       ctr      the container
+ * @param       mdl      the container
  * @param       ei       the equation to flip
  * @param[out]  ei_new   the flipped equation
  *
