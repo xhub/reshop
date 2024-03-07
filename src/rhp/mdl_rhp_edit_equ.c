@@ -55,11 +55,12 @@ int rmdl_equ_rm(Model *mdl, rhp_idx ei)
       if (mpid_regularmp(mpid)) {
          MathPrgm *mp = empdag_getmpfast(&mdl->empinfo.empdag, mpid);
          IdxArray *mpequs = &mp->equs;
-         int rc = rhp_idx_rm(mpequs, ei);
+         int rc = rhp_idx_rmsorted(mpequs, ei);
          if (rc) {
             error("Failed to remove equation %s from MP(%s)",
                   ctr_printequname(ctr, ei),
                   empdag_getmpname(&mdl->empinfo.empdag, mpid));
+            return Error_RuntimeError;
          }
 
       }
