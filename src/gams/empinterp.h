@@ -223,7 +223,7 @@ typedef struct edge_weight {
    double cst;
    rhp_idx ei;         /**< mapping where the term appears */
    unsigned nvars;
-   rhp_idx vi[];
+   rhp_idx vi[] __counted_by(nvars);
 } EdgeWeight;
 
 typedef struct dag_labels_list {
@@ -268,7 +268,7 @@ typedef struct dag_label {
    uint16_t basename_len;
    daguid_t daguid; 
    const char *basename;
-   int uels[];  /* Layout: uels[dim] */
+   int uels[]  __counted_by(dim);
 } DagLabel;
 
 

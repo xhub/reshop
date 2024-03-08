@@ -178,7 +178,7 @@
 typedef struct vm_gms_sym_iterator {
    bool compact;
    IdentData symbol;
-   int uels[];
+   int uels[]; // Clang-18 fails to understand __counted_by(symbol.dim)
 } VmGmsSymIterator;
 
 const char* vmval_typename(VmValue vmval);

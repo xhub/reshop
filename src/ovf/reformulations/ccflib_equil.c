@@ -22,7 +22,7 @@
 
 typedef struct {
    unsigned size;
-   NlNode *nodes[];
+   NlNode *nodes[] __counted_by(size);
 } DualObjEquNlNodes;
 
 typedef struct {

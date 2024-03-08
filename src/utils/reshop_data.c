@@ -179,7 +179,7 @@ int rhp_int_set(IntArray *dat, unsigned idx, int v)
 struct rhp_stack_gen {
    unsigned pos;
    unsigned max;
-   void* list[];
+   void* list[] __counted_by(max);
 };
 
 void rhp_obj_init(ObjArray *dat)

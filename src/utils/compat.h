@@ -176,6 +176,14 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #define WRITE_ONLY(...) ACCESS_ATTR(write_only, __VA_ARGS__)
 #define READ_ONLY(...) ACCESS_ATTR(read_only, __VA_ARGS__)
 
+
+#if __has_attribute(__counted_by__)
+# define __counted_by(member)		__attribute__((__counted_by__(member)))
+#else
+# define __counted_by(member)
+#endif
+
+
 #else /* NOT __GNUC__ */
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)

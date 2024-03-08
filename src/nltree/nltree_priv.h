@@ -116,7 +116,7 @@ typedef struct vartree_list {
 typedef struct vartree {
    unsigned len;
    bool done;
-   VarTreeList vars[];
+   VarTreeList vars[] __counted_by(len);
 } VarTree;
 
 extern const char * const opcode_names[];

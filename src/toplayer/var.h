@@ -99,9 +99,9 @@ typedef struct rhp_avar {
  * @brief Block of abstract variable
  */
 typedef struct avar_block {
-   unsigned len;     /**< number of avar */
-   unsigned max;     /**< maximum number of avar */
-   Avar v[];  /**< list of avar */
+   unsigned len;                /**< number of avar */
+   unsigned max;                /**< maximum number of avar */
+   Avar v[] __counted_by(max);  /**< list of avar */
 } AvarBlock;
 
 /*

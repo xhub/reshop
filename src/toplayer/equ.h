@@ -37,7 +37,7 @@ typedef struct rhp_aequ {
 typedef struct aequ_block {
    unsigned len;                  /**< number of blocks            */
    unsigned max;                  /**< maximum number of blocks    */
-   struct rhp_aequ e[];               /**< Number of abstract equation */
+   Aequ e[] __counted_by(max);    /**< Number of abstract equation */
 } AequBlock;
 
 /** @brief Representation of an equation */
