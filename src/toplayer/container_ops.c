@@ -264,6 +264,11 @@ int ctr_getequtype(const Container *ctr, rhp_idx ei, unsigned *type, unsigned *c
    return ctr->ops->getequtype(ctr, ei, type, cone);
 }
 
+int ctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *type)
+{
+   return ctr->ops->getequexprtype(ctr, ei, type);
+}
+
 int ctr_var_iterequs(const Container *ctr, rhp_idx vi, void **jacptr,
                       double *jacval, rhp_idx *ei, int *nlflag)
 {
@@ -331,11 +336,6 @@ int ctr_getallvarsval(const Container *ctr, double *vals)
 int ctr_getvartype(const Container *ctr, rhp_idx vi, unsigned *type)
 {
    return ctr->ops->getvartype(ctr, vi, type);
-}
-
-int ctr_isequNL(const Container *ctr, rhp_idx ei, bool *isNL)
-{
-   return ctr->ops->isequNL(ctr, ei, isNL);
 }
 
 int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis)

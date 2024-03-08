@@ -96,7 +96,6 @@ int ctr_var_iterequs(const Container *ctr, rhp_idx vi, void **jacptr,
                       double *jacval, rhp_idx *ei, int *nlflag);
 int ctr_equ_itervars(const Container *ctr, rhp_idx ei, void **jacptr,
                       double *jacval, rhp_idx *vi, int *nlflag);
-int ctr_isequNL(const Container *ctr, rhp_idx ei, bool *isNL);
 
 double ctr_poolval(Container *ctr, unsigned idx);
 
@@ -133,6 +132,7 @@ int ctr_getequval(const Container *ctr, rhp_idx ei, double *value);
 int ctr_getequperp(const Container *ctr, rhp_idx ei, rhp_idx *vi);
 int ctr_getequmult(const Container *ctr, rhp_idx ei, double *multiplier);
 int ctr_getequtype(const Container *ctr, rhp_idx ei, unsigned *type, unsigned *cone);
+int ctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *type);
 int ctr_getcst(const Container *ctr, rhp_idx ei, double *val);
 int ctr_getspecialfloats(const Container *ctr, double *minf, double *pinf, double* nan);
 int ctr_getvarperp(const Container *ctr, rhp_idx vi, rhp_idx *ei);

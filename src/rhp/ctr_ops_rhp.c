@@ -1365,26 +1365,26 @@ static int rctr_setequcst(Container *ctr, rhp_idx ei, double val)
    return OK;
 }
 
-
-static int rctr_isequNL(const Container *ctr, int ei, bool *isNL)
+static int rctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *type)
 {
-   const struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
-   assert(ctr);
+   const RhpContainerData *cdat = (RhpContainerData *) ctr->data;
+   S_CHECK(ei_inbounds(ei, cdat->total_m, __func__));
 
-   rhp_idx ei_up;
-   if ((ei_up = cdat_equ_inherited(model, ei)) && valid_ei(ei_up)) {
-      return ctr_isequNL(ctr->ctr_up, ei_up, isNL);
+   rhp_idx ei_up = cdat_equ_inherited(cdat, ei);
+   if (valid_ei(ei_up)) {
+      return ctr_getequexprtype(ctr->ctr_up, ei_up, type);
    }
 
-   if (ctr->equs[ei].tree) {
-     *isNL = true;
+   Equ *e = &ctr->equs[ei];
+   if (e->tree && e->tree->root) {
+     *type = e->is_quad ? EquExprQuadratic : EquExprNonLinear;
    } else {
-     *isNL = false;
+     *type = EquExprLinear;
    }
 
    return OK;
-}
 
+}
 const struct container_ops ctr_ops_rhp = {
    .allocdata      = rctr_allocdata,
    .deallocdata    = rctr_deallocdata,
@@ -1409,6 +1409,7 @@ const struct container_ops ctr_ops_rhp = {
    .getequbasis  = rctr_getequbasis,
    .getequname     = rctr_getequname_s,
    .getequtype     = rctr_getequtype,
+   .getequexprtype     = rctr_getequexprtype,
    .getcoljacinfo  = rctr_getcoljacinfo,
    .getrowjacinfo  = rctr_walkequ,
    .getequcst         = rctr_getcst,
@@ -1424,7 +1425,6 @@ const struct container_ops ctr_ops_rhp = {
    .getvarbasis  = rctr_getvarbasis,
    .getallvarsval     = rctr_getallvarsval,
    .getvartype     = rctr_getvartype,
-   .isequNL        = rctr_isequNL,
    .resize         = rctr_resize,
    .setequval     = rctr_setequval,
    .setequmult     = rctr_setequmult,
@@ -1481,6 +1481,7 @@ const struct container_ops ctr_ops_julia = {
    .getequbasis    = rctr_getequbasis,
    .getallequsval  = rctr_getallequsval,
    .getequtype     = rctr_getequtype,
+   .getequexprtype     = rctr_getequexprtype,
    .getcoljacinfo  = rctr_getcoljacinfo,
    .getrowjacinfo  = rctr_walkequ,
    .getequcst         = rctr_getcst,
@@ -1496,7 +1497,6 @@ const struct container_ops ctr_ops_julia = {
    .getvarbasis    = rctr_getvarbasis,
    .getallvarsval  = rctr_getallvarsval,
    .getvartype     = rctr_getvartype,
-   .isequNL        = rctr_isequNL,
    .resize         = rctr_resize,
    .setequval      = rctr_setequval,
    .setequmult     = rctr_setequmult,

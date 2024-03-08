@@ -60,9 +60,9 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
    for (size_t i = 0; i < cdat->total_m; ++i) {
       if (fops && !fops->keep_equ(fops->data, i)) continue;
 
-      bool isNL;
-      S_CHECK(ctr_isequNL(&pmdl->ctr, i, &isNL));
-      if (isNL) nl_constr++;
+      EquExprType etype;
+      S_CHECK(ctr_getequexprtype(&pmdl->ctr, i, &etype));
+      if (etype == EquExprQuadratic || etype == EquExprNonLinear) nl_constr++;
    }
 
    rhp_idx old_objequ;
@@ -70,9 +70,11 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
    if (nobj) {
       bool isobjNL;
 
-      S_CHECK(ctr_isequNL(&pmdl->ctr, old_objequ, &isobjNL));
+      EquExprType etype;
 
-      if (isobjNL) {
+      S_CHECK(ctr_getequexprtype(&pmdl->ctr, old_objequ, &etype));
+
+      if (etype == EquExprQuadratic || etype == EquExprNonLinear) {
           nl_constr--;
           nl_obj = 1;
       }

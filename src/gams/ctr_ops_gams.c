@@ -889,6 +889,41 @@ static int gams_getequtype(const Container *ctr, rhp_idx eidx, unsigned *type, u
    return Error_NotImplemented;
 }
 
+static int gams_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *type)
+{
+   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
+   assert(gmo);
+
+   int gmsequexprtype = gmoGetEquOrderOne(gmo, ei);
+
+
+   switch (gmsequexprtype) {
+   /*  TODO(xhub) support quadratic expression */
+   case gmoorder_Q:
+      *type = EquExprQuadratic;
+      break;
+   case gmoorder_NL:
+      *type = EquExprNonLinear;
+      break;
+   case gmoorder_L:
+      *type = EquExprLinear;
+      break;
+   case gmoorder_ERR:
+      error("%s ERROR: while probing for the type of expression in equation '%s'\n",
+            __func__, ctr_printequname(ctr, ei));
+      return Error_GamsCallFailed;
+
+   default:
+      error("%s ERROR: unsupported value %d from gmoGetEquOrderOne() when probing "
+            "for the type of expression in equation '%s'\n", __func__, gmsequexprtype,
+            ctr_printequname(ctr, ei));
+      return Error_GamsCallFailed;
+   }
+
+   return OK;
+}
+
 static int gams_setintopt(Container *ctr, unsigned opt, int ival)
 {
    struct ctrdata_gams *gms;

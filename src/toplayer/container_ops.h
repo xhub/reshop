@@ -10,6 +10,7 @@
 
 #include <stdbool.h>
 
+#include "equ_data.h"
 #include "mdl_data.h"
 #include "rhp_fwd.h"
 
@@ -40,6 +41,7 @@ typedef struct container_ops {
    int (*getequbasis)(const Container *ctr, rhp_idx ei, int *bstat);
    int (*getequval)(const Container *ctr, rhp_idx ei, double *level);
    int (*getequtype)(const Container *ctr, rhp_idx ei, unsigned *type, unsigned *cone);
+   int (*getequexprtype)(const Container *ctr, rhp_idx ei, EquExprType *type);
    int (*getcoljacinfo)(const Container *ctr, rhp_idx vi, void **jacptr,
                         double *jacval, rhp_idx *ei, int *nlflag);
    int (*getrowjacinfo)(const Container *ctr, rhp_idx ei, void **jacptr,
