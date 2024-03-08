@@ -90,7 +90,7 @@ int rhp_postprocess(Model *mdl_solver)
 
 
       mdl = mdl_up;
-      mdl_up = mdl->mdl_up ? mdl->mdl_up : NULL;
+      mdl_up = mdl->mdl_up;
    }
 
    /* ----------------------------------------------------------------------
