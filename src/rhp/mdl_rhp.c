@@ -1,4 +1,5 @@
 #include "internal_model_common.h"
+#include "mdl_priv.h"
 #include "reshop_config.h"
 #include "asnan.h"
 
@@ -320,10 +321,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
                  mdl_fmtargs(mdl), mdl_fmtargs(mdl_up));
 
 
-   mdl->mdl_up = mdl_borrow(mdl_up);
-   ctr->ctr_up = ctr_up;
-   mdl_timings_rel(mdl->timings);
-   mdl->timings = mdl_timings_borrow(mdl_up->timings);
+   mdl_linkmodels(mdl_up, mdl);
   
    /* Not always necessary  */
    S_CHECK(rctr_inherit_pool(ctr, ctr_up));

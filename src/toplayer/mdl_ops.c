@@ -4,6 +4,7 @@
 #include "mdl.h"
 #include "mdl_data.h"
 #include "mdl_ops.h"
+#include "mdl_priv.h"
 #include "ovfinfo.h"
 #include "printout.h"
 
