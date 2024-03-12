@@ -36,15 +36,15 @@ const char *fopstype_name(FopsType type);
 int fops_active_init(Fops *ops, Container *ctr) NONNULL;
 int fops_deactivate_equ(void *data, rhp_idx ei) NONNULL;
 int fops_deactivate_var(void *data, rhp_idx vi) NONNULL;
-void fops_subset_init(Fops *ops, struct filter_subset *fs ) NONNULL;
-void fops_subset_release(struct filter_subset *fs );
-FopsSubsetData* fops_subset_new(unsigned vlen, Avar *vars, unsigned elen,
-                              Aequ *equs, struct mp_descr* mp_d)
-                              MALLOC_ATTR(fops_subset_release,1) NONNULL;
+void fops_subset_init(Fops *fops, struct filter_subset *fs ) NONNULL;
+void fops_subset_release(FopsSubsetData *fs);
+FopsSubsetData* filter_subset_new(unsigned vlen, Avar vars[vlen], unsigned elen,
+                                  Aequ equs[elen], struct mp_descr* mp_d)
+                                  MALLOC_ATTR(fops_subset_release,1) NONNULL_AT(5);
 
 int filter_subset_activate(FopsSubsetData *fs, Model *mdl, unsigned offset_pool ) NONNULL;
 
-int fops_subdag_init(Fops *ops, Model *mdl, daguid_t uid) NONNULL;
+int fops_subdag_init(Fops *fops, Model *mdl, daguid_t uid) NONNULL;
 int fops_setvarpermutation(Fops *fops, rhp_idx *vperm) NONNULL;
 
 #endif /* FILTER_OPS_H */

@@ -551,25 +551,25 @@ int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned offset_pool)
    return rmdl_set_simpleprob(mdl, &fs->descr);
 }
 
-int fops_active_init(Fops *ops, Container *ctr)
+int fops_active_init(Fops *fops, Container *ctr)
 {
-   ops->type = FopsActive;
+   fops->type = FopsActive;
    FilterActive *dat;
    MALLOC_(dat, FilterActive, 1);
    dat->ctr = ctr;
    dat->vars_permutation = NULL;
    filter_deactivated_init(&dat->deactivated);
 
-   ops->data = dat;
-   ops->freedata = &filter_active_freedata;
-   ops->deactivatedequslen = &filter_active_deactivatedequslen;
-   ops->get_sizes = &filter_active_size;
-   ops->keep_var = &filter_active_var;
-   ops->keep_equ = &filter_active_equ;
-   ops->vars_permutation = NULL;
-   ops->transform_lequ = &filter_active_lequ;
-   ops->transform_gamsopcode = &filter_active_gamsopcode;
-   ops->transform_nltree = &filter_active_nltree;
+   fops->data = dat;
+   fops->freedata = &filter_active_freedata;
+   fops->deactivatedequslen = &filter_active_deactivatedequslen;
+   fops->get_sizes = &filter_active_size;
+   fops->keep_var = &filter_active_var;
+   fops->keep_equ = &filter_active_equ;
+   fops->vars_permutation = NULL;
+   fops->transform_lequ = &filter_active_lequ;
+   fops->transform_gamsopcode = &filter_active_gamsopcode;
+   fops->transform_nltree = &filter_active_nltree;
 
    return OK;
 }
@@ -577,19 +577,19 @@ int fops_active_init(Fops *ops, Container *ctr)
 static void filter_subset_freedata(void* data) {  }
 static unsigned filter_subset_deactivatedequslen(void *data) { return 0; }
 
-void fops_subset_init(Fops *ops, FilterSubset *fs)
+void fops_subset_init(Fops *fops, FilterSubset *fs)
 {
-   ops->type = FopsSubset;
-   ops->data = fs;
-   ops->deactivatedequslen = &filter_subset_deactivatedequslen;
-   ops->freedata = &filter_subset_freedata;
-   ops->get_sizes = &filter_subset_size;
-   ops->keep_var = &filter_subset_var;
-   ops->keep_equ = &filter_subset_equ;
-   ops->vars_permutation = NULL;
-   ops->transform_lequ = &filter_subset_lequ;
-   ops->transform_gamsopcode = &filter_subset_gamsopcode;
-   ops->transform_nltree = &filter_subset_nltree;
+   fops->type = FopsSubset;
+   fops->data = fs;
+   fops->deactivatedequslen = &filter_subset_deactivatedequslen;
+   fops->freedata = &filter_subset_freedata;
+   fops->get_sizes = &filter_subset_size;
+   fops->keep_var = &filter_subset_var;
+   fops->keep_equ = &filter_subset_equ;
+   fops->vars_permutation = NULL;
+   fops->transform_lequ = &filter_subset_lequ;
+   fops->transform_gamsopcode = &filter_subset_gamsopcode;
+   fops->transform_nltree = &filter_subset_nltree;
 }
 
 struct avar_list {
