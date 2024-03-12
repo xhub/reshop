@@ -409,10 +409,8 @@ unsigned avar_findidx(const Avar* v, rhp_idx vi)
  *
  * @return      the error code
  */
-int avar_set_list(Avar *v, unsigned size, rhp_idx *list)
+int avar_set_list(Avar *v, unsigned size, rhp_idx list[static size])
 {
-   S_CHECK(chk_arg_nonnull(v, 1, __func__));
-   S_CHECK(chk_arg_nonnull(list, 2, __func__));
 
    v->type = EquVar_List;
    v->own = false;
@@ -460,7 +458,7 @@ int avar_subset(Avar* v, rhp_idx *idx, unsigned len, Avar *v_subset)
    v_subset->type = EquVar_List;
    v_subset->own = true;
    v_subset->size = len;
-   MALLOC_(v_subset->list, int, len);
+   MALLOC_(v_subset->list, rhp_idx, len);
 
    switch (v->type) {
    case EquVar_Compact:
