@@ -143,7 +143,7 @@ _no_add: ;
  *  @return               the error code
  */
 int nlnode_copy_rosetta(NlNode** new_node, const NlNode* node,
-                        NlTree* tree, const int* rosetta)
+                        NlTree* tree, const int* restrict rosetta)
 {
    /*  new_node must be empty */
    assert(!*new_node);
@@ -155,11 +155,11 @@ int nlnode_copy_rosetta(NlNode** new_node, const NlNode* node,
 
    /* ----------------------------------------------------------------------
     * Keep a list of all the variables in the tree
-    * TODO(xhub) factorize
+    * TODO(xhub) make v_list a sorted avar
     * ---------------------------------------------------------------------- */
 
    if (tree->v_list && (node->op == NLNODE_VAR || node->oparg == NLNODE_OPARG_VAR)) {
-      rhp_idx vi = rosetta[VIDX_R(node->value)];
+      rhp_idx vi = rosetta[VIDX_R(node->value)]; assert(valid_vi(vi));
       S_CHECK(vlist_add(tree->v_list, vi));
    }
 
