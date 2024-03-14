@@ -26,14 +26,14 @@ typedef enum equ_ppty {
    EquPptyIsDeleted      = 64, /**< equation has been deleted             */
 } EquPpty;
 
-/** @brief Variable type */
-enum VarType {
+/** @brief Variable role in an optimization problem */
+__extension__ typedef enum ENUM_U8 {
    VarUndefined          ,  /**< undefined                             */
    VarObjective          ,  /**< an objective variable                 */
    VarPrimal             ,  /**< a primal variable                     */
    VarDual               ,  /**< a dual variable                       */
-   VarDefiningMap,          /**< variable definiting a mapping         */
-};
+   VarDefiningMap,          /**< variable defining a mapping         */
+} VarRole;
 
 /* Bit representation
  *  []
@@ -53,7 +53,7 @@ enum VarType {
  */
 
 /** @brief Variable properties */
-enum VarPptyType {
+__extension__ typedef enum ENUM_U8 {
    VarPptyNone              = 0,  /**< undefined                             */
    VarIsObjMin              = 1,  /**< minimize objective variable           */
    VarIsObjMax              = 2,  /**< maximize objective variable           */
@@ -65,7 +65,7 @@ enum VarPptyType {
    VarIsSolutionVar         = 16, /**< Is part of a control relation         */
    VarIsShared              = 32, /**< variable is assigned to multiple nodes*/
    VarIsDeleted             = 128, /**< Deleted variable                     */
-};
+} VarPptyType;
 
 typedef enum {
    VarPptyBasicMask         = 0xf, /**< Mask for basic type                  */ 
@@ -85,14 +85,14 @@ typedef struct equ_meta {
 
 /** @brief Metadata for variable */
 typedef struct var_meta {
-   enum VarType type;             /**< metadata type                         */
-   enum VarPptyType ppty;         /**< metadata subtype                      */
+   VarRole type;                  /**< metadata type                         */
+   VarPptyType ppty;              /**< metadata subtype                      */
    rhp_idx dual;                  /**< dual equ or var index                 */
-   mpid_t mp_id;               /**< mathematical program owning this var  */
+   mpid_t mp_id;                  /**< mathematical program owning this var  */
 } VarMeta;
 
 const char* equrole_name(EquRole role);
-const char* varmetatype_name(enum VarType type);
+const char* varrole_name(VarRole type);
 void equmeta_rolemismatchmsg(const Container *ctr, rhp_idx ei, EquRole actual,
                              EquRole expected, const char *fn) NONNULL;
 
@@ -107,7 +107,7 @@ void varmeta_init(struct var_meta *vmd) NONNULL;
 void varmeta_print(const VarMeta * restrict vmeta, rhp_idx vi, const Model *mdl,
                    unsigned mode, unsigned offset) NONNULL;
 
-static inline unsigned vmd_basictype(enum VarPptyType ppty) {
+static inline unsigned vmd_basictype(VarPptyType ppty) {
    return ppty & VarPptyBasicMask;
 }
 

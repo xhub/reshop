@@ -279,11 +279,11 @@ int mdl_checkmetadata(Model *mdl)
       case VarObjective:
       {
          rhp_idx ei_dual = var_md.dual;
-         enum VarPptyType ppty = var_md.ppty;
+         VarPptyType ppty = var_md.ppty;
 
          if (valid_ei(ei_dual) && ei_dual <= total_m) {
            error("[metadata check] ERROR: %s '%s' has a valid dual equation '%s'"
-                 ", this is inconsistent.\n",  varmetatype_name(var_md.type),
+                 ", this is inconsistent.\n",  varrole_name(var_md.type),
                  ctr_printvarname(ctr, i), ctr_printequname(ctr, ei_dual));
            status = status == OK ? Error_IncompleteModelMetadata : status;
          }
@@ -291,7 +291,7 @@ int mdl_checkmetadata(Model *mdl)
          if (ppty & VarIsDeleted) {
            error("[metadata check] ERROR: %s '%s' has a deleted subtype, "
                  "but is still seen as active by the model.\n",
-                 varmetatype_name(var_md.type), ctr_printvarname(ctr, i));
+                 varrole_name(var_md.type), ctr_printvarname(ctr, i));
            status = status == OK ? Error_IncompleteModelMetadata : status;
          }
 
@@ -299,14 +299,14 @@ int mdl_checkmetadata(Model *mdl)
          if ((ppty & VarIsExplicitlyDefined) && (ppty &
              ~(VarIsObjMin | VarIsObjMax | VarIsExplicitlyDefined))) {
            error("[metadata check] ERROR: %s '%s' has an inconsistent subtype.\n",
-                 varmetatype_name(var_md.type), ctr_printvarname(ctr, i));
+                 varrole_name(var_md.type), ctr_printvarname(ctr, i));
            status = status == OK ? Error_IncompleteModelMetadata : status;
          }
 
          /* Check for inconsistent subtypes  */
          if ((ppty & VarIsObjMin) && (ppty & VarIsObjMax)) {
            error("[metadata check] ERROR: %s '%s' has both minimize and maximize subtypes.\n",
-                 varmetatype_name(var_md.type), ctr_printvarname(ctr, i));
+                 varrole_name(var_md.type), ctr_printvarname(ctr, i));
            status = status == OK ? Error_IncompleteModelMetadata : status;
          }
          break;
@@ -316,7 +316,7 @@ int mdl_checkmetadata(Model *mdl)
          if (var_md.ppty & VarIsDeleted) {
            error("[metadata check] ERROR: %s '%s' has a deleted subtype, but "
                  "is still seen as active by the model.\n",
-                 varmetatype_name(var_md.type), ctr_printvarname(ctr, i));
+                 varrole_name(var_md.type), ctr_printvarname(ctr, i));
            status = status == OK ? Error_IncompleteModelMetadata : status;
          }
 
@@ -330,14 +330,14 @@ int mdl_checkmetadata(Model *mdl)
               /* If we have a SubZeroFunction, no dual equ must be present */
               error("[metadata check] ERROR: %s '%s' is perpendicular to the zero "
                  "function, but has a valid dual equation '%s'.\n",
-                 varmetatype_name(var_md.type), ctr_printvarname(ctr, i),
+                 varrole_name(var_md.type), ctr_printvarname(ctr, i),
                  ctr_printequname(ctr, ei_dual));
 
               status = status == OK ? Error_IncompleteModelMetadata : status;
            } else {
              error("[metadata check] ERROR: %s '%s' has a valid dual equation %s "
                    "but doesn't have the subtype ViFunction. This is inconsistent.\n", 
-                   varmetatype_name(var_md.type), ctr_printvarname(ctr, i),
+                   varrole_name(var_md.type), ctr_printvarname(ctr, i),
                    ctr_printequname(ctr, ei_dual));
              status = status == OK ? Error_IncompleteModelMetadata : status;
            }
@@ -349,7 +349,7 @@ int mdl_checkmetadata(Model *mdl)
          if (var_md.ppty & VarIsDeleted) {
            error("[metadata check] ERROR: %s '%s' has a deleted subtype, but "
                  "is still seen as active by the model.\n",
-                 varmetatype_name(var_md.type), ctr_printvarname(ctr, i));
+                 varrole_name(var_md.type), ctr_printvarname(ctr, i));
            status = status == OK ? Error_IncompleteModelMetadata : status;
          }
 
@@ -358,7 +358,7 @@ int mdl_checkmetadata(Model *mdl)
          if (!valid_ei(ei_dual) || ei_dual >= total_m) {
              error("[metadata check] ERROR: %s '%s' has no dual equation, "
                    "this is inconsistent.\n", 
-                   varmetatype_name(var_md.type), ctr_printvarname(ctr, i));
+                   varrole_name(var_md.type), ctr_printvarname(ctr, i));
              status = status == OK ? Error_IncompleteModelMetadata : status;
          }
          break;
@@ -409,8 +409,8 @@ int mdl_checkmetadata(Model *mdl)
              error("[metadata check] ERROR: %s '%s' has dual variable '%s' of "
                    "type %s, it should be %s.\n",  equrole_name(equ_md->role),
                    ctr_printequname(ctr, i), ctr_printvarname(ctr, vi_dual),
-                   varmetatype_name(ctr->varmeta[vi_dual].type),
-                   varmetatype_name(VarDual));
+                   varrole_name(ctr->varmeta[vi_dual].type),
+                   varrole_name(VarDual));
              error("Hints: it could also be that the equation should be of type %s.\n",
                    equrole_name(EquViFunction));
            status = status == OK ? Error_IncompleteModelMetadata : status;
@@ -435,8 +435,8 @@ int mdl_checkmetadata(Model *mdl)
            error("[metadata check] ERROR: %s '%s' has dual variable '%s' of "
                  "type %s, it should be %s.\n", equrole_name(equ_md->role),
                  ctr_printequname(ctr, i), ctr_printvarname(ctr, vi_dual),
-                 varmetatype_name(ctr->varmeta[vi_dual].type),
-                 varmetatype_name(VarPrimal));
+                 varrole_name(ctr->varmeta[vi_dual].type),
+                 varrole_name(VarPrimal));
            status = status == OK ? Error_IncompleteModelMetadata : status;
          }
 

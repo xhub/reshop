@@ -485,7 +485,7 @@ int mp_setobjvar_internal(MathPrgm *mp, rhp_idx vi)
          return OK;
       }
 
-      _setvartype(mp, vi, VarObjective);
+      _setvarrole(mp, vi, VarObjective);
       switch (mp->sense) {
       case RHP_MIN:
          _addvarbasictype(mp, vi, VarIsObjMin);
@@ -582,7 +582,7 @@ int mp_addconstraints(MathPrgm *mp, Aequ *e) {
 
 int mp_addvar(MathPrgm *mp, rhp_idx vidx) {
    S_CHECK(mp_addvarchk(mp, vidx));
-   _setvartype(mp, vidx, VarPrimal);
+   _setvarrole(mp, vidx, VarPrimal);
 
    return OK;
 }
@@ -591,7 +591,7 @@ int mp_addvars(MathPrgm *mp, Avar *v) {
    for (size_t i = 0; i < v->size; ++i) {
       rhp_idx vi = avar_fget(v, i);
       S_CHECK(mp_addvarchk(mp, vi));
-      _setvartype(mp, vi, VarPrimal);
+      _setvarrole(mp, vi, VarPrimal);
    }
 
    return OK;

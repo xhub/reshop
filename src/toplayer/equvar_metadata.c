@@ -1,5 +1,4 @@
 #include "container.h"
-#include "equvar_data.h"
 #include "equvar_metadata.h"
 #include "macros.h"
 #include "mdl.h"
@@ -74,7 +73,7 @@ const char* equrole_name(EquRole role)
    }
 }
 
-const char* varmetatype_name(enum VarType type)
+const char* varrole_name(VarRole type)
 {
    switch (type) {
    case VarUndefined:
@@ -90,7 +89,7 @@ const char* varmetatype_name(enum VarType type)
    }
 }
 
-static const char* varbasicppty_name(enum VarPptyType type)
+static const char* varbasicppty_name(VarPptyType type)
 {
    switch (type) {
    case VarPptyNone:                return "undefined";
@@ -105,7 +104,7 @@ static const char* varbasicppty_name(enum VarPptyType type)
    }
 }
 
-static const char* varextendedppty_name(enum VarPptyType type)
+static const char* varextendedppty_name(VarPptyType type)
 {
    switch (type) {
    case VarIsSolutionVar:           return "Solution variable";
@@ -119,13 +118,13 @@ void varmeta_print(const VarMeta * restrict vmeta, rhp_idx vi, const Model *mdl,
                    unsigned mode, unsigned offset)
 {
    printout(mode, "%*sVariable '%s' has type %s\n", offset, "",
-            mdl_printvarname(mdl, vi), varmetatype_name(vmeta->type));
+            mdl_printvarname(mdl, vi), varrole_name(vmeta->type));
 
-   enum VarPptyType ppty = vmeta->ppty;
+   VarPptyType ppty = vmeta->ppty;
    printout(mode, "%*sVariable '%s' has properties: %s", offset, "",
             mdl_printvarname(mdl, vi), varbasicppty_name(ppty));
 
-   enum VarPptyType ext_types[] = {VarIsSolutionVar, VarIsDeleted};
+   VarPptyType ext_types[] = {VarIsSolutionVar, VarIsDeleted};
    for (unsigned i = 0, len = ARRAY_SIZE(ext_types); i < len; ++i) {
       if (ppty & ext_types[i]) {
          printstr(mode, ", "); printstr(mode, varextendedppty_name(ext_types[i]));

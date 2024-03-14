@@ -18,15 +18,15 @@
 int mp_setobjequ_internal(MathPrgm *mp, rhp_idx objequ) NONNULL;
 int mp_setobjvar_internal(MathPrgm *mp, rhp_idx vidx) NONNULL;
 
-static inline void _setvartype(MathPrgm *mp, rhp_idx vi, enum VarType type)
+static inline void _setvarrole(MathPrgm *mp, rhp_idx vi, VarRole type)
 {
    assert(mp->mdl->ctr.varmeta);
    MP_DEBUG("Var '%s' has now type '%s'\n", ctr_printvarname(&mp->mdl->ctr, vi),
-            varmetatype_name(type));
+            varrole_name(type));
    (mp->mdl->ctr.varmeta)[vi].type = type;
 }
 
-static inline void _addvarbasictype(MathPrgm *mp, rhp_idx vi, enum VarPptyType ppty)
+static inline void _addvarbasictype(MathPrgm *mp, rhp_idx vi, VarPptyType ppty)
 {
    assert(mp->mdl->ctr.varmeta);
    MP_DEBUG("Var '%s' has now property %u\n", ctr_printvarname(&mp->mdl->ctr, vi),
@@ -68,13 +68,13 @@ static inline int _getvardual(MathPrgm *mp, rhp_idx vi)
    return (mp->mdl->ctr.varmeta)[vi].dual;
 }
 
-static inline enum VarType _getvartype(MathPrgm *mp, rhp_idx vi)
+static inline VarRole _getvarrole(MathPrgm *mp, rhp_idx vi)
 {
    assert(mp->mdl->ctr.varmeta);
    return (mp->mdl->ctr.varmeta)[vi].type;
 }
 
-static inline enum VarPptyType _getvarsubtype(MathPrgm *mp, rhp_idx vi)
+static inline VarPptyType _getvarsubtype(MathPrgm *mp, rhp_idx vi)
 {
    assert(mp->mdl->ctr.varmeta);
    return (mp->mdl->ctr.varmeta)[vi].ppty;
