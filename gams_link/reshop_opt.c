@@ -31,8 +31,8 @@ static int concat(gevHandle_t eh, const char* sysdir, const char *fname, char ou
 
    if (buf_len >= GMS_SSSIZE || sysdir_len >= GMS_SSSIZE-buf_len) {
       gevLogStat(eh, "*** ReSHOP: ERROR! concatenation of strings is too long:");
-      gevLogStat(eh, sysdir);
-      gevLogStatPChar(eh, fname);
+      gevLogStatPChar(eh, sysdir);
+      gevLogStat(eh, fname);
       return 1;
    }
 
@@ -51,51 +51,52 @@ static void err_fname_missing(gevHandle_t eh, char fname[GMS_SSSIZE])
 
 static void err_fname_permission(gevHandle_t eh, char fname[GMS_SSSIZE])
 {
-   gevLogStatPChar(eh, "*** ReSHOP: ERROR! Cannot read option definition file '");
+   gevLogStatPChar(eh, "*** ReSHOP: ERROR! Cannot read (permission issue) option definition file '");
    gevLogStatPChar(eh, fname);
    gevLogStatPChar(eh, "'\n");
 
 }
 static int get_deffile(gevHandle_t eh, const char* sysdir, char fname[GMS_SSSIZE])
 {
-   char fname2[GMS_SSSIZE];
+   char fname_sysdir[GMS_SSSIZE];
    int rc = 0;
-   if (access(fname, R_OK)) {
-      if (access(fname, F_OK)) {
+  /* ----------------------------------------------------------------------
+   * We do a nice check of whether we can read the file (R_OK).
+   * If not, then we check if the file exists (F_OK). If yes, error.
+   * If not, we repeat the process after prepending the sysdir.
+   * ---------------------------------------------------------------------- */
 
-         /* fname might just be the filename, without any path */
-         rc = concat(eh, sysdir, fname, fname2);
-         if (rc) return rc;
+   if (!access(fname, R_OK)) { return 0; }
 
-         if (access(fname2, R_OK)) {
-            if (access(fname2, F_OK)) {
-               err_fname_missing(eh, fname);
-               err_fname_missing(eh, fname2);
-            } else {
-               err_fname_permission(eh, fname2);
-            }
-
-            return 1;
-
-         }
-
-         /* Update the fname */
-         strcpy(fname, fname2);
-         return 0;
-               
-      }
-
-      err_fname_permission(eh, fname2);
+   if (!access(fname, F_OK)) {
+      err_fname_permission(eh, fname_sysdir);
       return 1;
    }
 
-   return 0;
+   /* fname might just be the filename, without any path */
+   rc = concat(eh, sysdir, fname, fname_sysdir);
+   if (rc) { return rc; }
+
+   if (!access(fname_sysdir, R_OK)) {
+      /* Update the fname for the parent */
+      strcpy(fname, fname_sysdir);
+      return 0;
+   }
+ 
+   if (access(fname_sysdir, F_OK)) {
+       err_fname_missing(eh, fname);
+       err_fname_missing(eh, fname_sysdir);
+    } else {
+       err_fname_permission(eh, fname_sysdir);
+    }
+
+   return 1;
 }
 
 int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir)
 {
    int ival, rc;
-   char buf[GMS_SSSIZE];
+   char buf[GMS_SSSIZE], solvername[GMS_SSSIZE];
    gevHandle_t eh = jh->eh;
    gmoHandle_t gh = jh->gh;
    optHandle_t oh = jh->oh;
@@ -103,18 +104,17 @@ int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir)
 
    if (need_init) {
 
-      if (!cfgDefFileName(ch, "RESHOP", buf)) {
+      int solver_id = gevGetIntOpt(eh, gevCurSolver);
+      gevId2Solver(eh, solver_id, solvername);
 
+      if (!cfgDefFileName(ch, solvername, buf)) {
+         /* Get the default def file: gamsSysdir/optpath.def */
          rc = concat(eh, sysdir, "optreshop.def", buf);
          if (rc > 0) return rc;
-
       } else {
-
          rc = get_deffile(eh, sysdir, buf);
          if (rc > 0) return rc;
-
       }
-
 
       if (optReadDefinition(oh, buf)) {
          gevLogStat(eh, buf);
@@ -175,10 +175,17 @@ int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir)
    return 0;
 }
 
-#define CHK(fn, s, ...) { int status42 = fn(s, __VA_ARGS__); if (status42) { \
-char msg[1024]; \
-snprintf(msg, sizeof(msg), "ERROR: Call to " #fn " for option '%s' failed with error %s (%d)\n", \
-s, rhp_status_descr(status42), status42); gevLogStatPChar(jh->eh, msg); status = status42; goto _exit; } }
+#define CHK(fn, s, ...) { \
+   int status42 = fn(s, __VA_ARGS__); \
+   if (status42) { \
+      char msg[1024]; \
+      snprintf(msg, sizeof(msg), "ERROR: Call to " #fn " for option '%s' failed with error %s (%d)\n", \
+         s, rhp_status_descr(status42), status42); \
+      gevLogStatPChar(jh->eh, msg); \
+      status = status42; \
+      goto _exit; \
+   } \
+}
 
 // Commented on 2024.02.15
 #if 0

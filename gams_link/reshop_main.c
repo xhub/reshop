@@ -128,7 +128,12 @@ int rhpReadyAPI(rhpRec_t *jh, gmoHandle_t gh, optHandle_t oh)
    strcat(sysdir, GMS_CONFIG_FILE);
 
    if (cfgReadConfig(jh->ch, sysdir)) {
+      gevLogStatPChar(jh->eh, "*** ReSHOP ERROR: Could not parse config file ");
       gevLogStat(jh->eh, sysdir);
+      while (cfgNumMsg(jh->ch) > 0) {
+         cfgGetMsg(jh->ch, msg);
+         gevLogStat(jh->eh, msg);
+      }
       rc = 1; goto _exit;
    }
 
