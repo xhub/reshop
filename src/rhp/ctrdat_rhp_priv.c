@@ -228,7 +228,7 @@ typedef struct vnames_fooclookup {
    unsigned len;
    const rhp_idx *ei_fooc2vi_fooc;
    const Model *mdl_fooc;
-   VecNamesLookupTypes types[];
+   VecNamesLookupTypes types[] __counted_by(len);
 } VecNamesFoocLookup;
 
 VecNamesFoocLookup* vnames_lookup_new(unsigned len, const Model *mdl_fooc,

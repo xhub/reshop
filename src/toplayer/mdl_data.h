@@ -41,9 +41,26 @@ typedef enum {
 /** Type of filter ops */
 typedef enum {
    FopsEmpty,
-   FopsActive,
-   FopsSubset,
+   FopsActive,                 /**< Selects the active variables and equations */
+   FopsSubset,                 /**< Selects a subset of equations and variables */
+   FopsEmpDagNash,             /**< Selects a specified Nash equilibrium */
+   FopsEmpDagSingleMp,         /**< Selects a single EMPDAG MP */
+   FopsEmpDagSingleMpAllVars,  /**< All vars in the equations of a single EMPDAG MP */
+   FopsEmpDagSubDag,           /**< Selects an EMPDAG subdag */
 } FopsType;
+
+/** MCP statistics */
+typedef struct mcp_info {
+   size_t mcp_size;            /**< size of the MCP: primal vars + constraints */
+   size_t n_primalvars;        /**< number of primal variables: fooc +  aux */
+   size_t n_foocvars;          /**< number of variables for the FOOC */
+   size_t n_auxvars;           /**< number of auxiliary variables (present in equations) */
+   size_t n_constraints;       /**< Number of constraints/multipliers */
+   size_t n_lincons;           /**< Number of affine constraints */
+   size_t n_nlcons;            /**< Number of NL constraints */
+   size_t n_vifuncs;           /**< Number of VI functions   */
+   size_t n_vizerofuncs;       /**< Number of VI zero functions */
+} McpInfo;
 
 /** @brief mathematical programm description */
 struct mp_descr {
@@ -57,6 +74,8 @@ extern const unsigned mdltypeslen;
 
 const char* backend_name(unsigned backendtype);
 unsigned backend_idx(const char *backendname);
+
+int backend_throw_notimplemented_error(unsigned backend, const char *fn);
 
 const char* mdltype_name(ModelType type);
 bool mdltype_hasmetadata(ModelType type);

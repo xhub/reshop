@@ -179,6 +179,7 @@ int empinterp_process(Model *mdl, const char *fname)
    bool eof = skip_spaces_commented_lines(&interp, &p);
    if (eof) {
       printout(PO_LOGFIFLE, "[empinterp] Empinfo file %s has no statement\n", fname);
+
       goto _exit;
    }
 
@@ -208,11 +209,18 @@ _exit:
       EmpDag *empdag = &mdl->empinfo.empdag;
 
       if (status == OK) {
-         if (empdag->mps.len > 0) {
+         unsigned mp_len = empdag->mps.len;
+
+         if (mp_len > 0) {
             status = mdl_checkmetadata(mdl); 
          } else {
             status = gmdl_ensuresimpleprob(mdl);
          }
+
+         /* TODO: if mp_len is 1, we might have a trivial/simple model */
+         //if (mp_len == 1) {
+         //   status = mdl_reset_modeltype(mdl, NULL);
+         //}
       }
 
       if (status == OK) {

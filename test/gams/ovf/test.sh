@@ -75,6 +75,7 @@ exec_gams() {
       e_error "$1 with args has failed: status = ${status}"
       env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=4 keep=1 optfile=1 "$@"
       env RHP_LOG=all gams "${gms_name}" lo=4 keep=1 optfile=1 "$@"
+      e_error "gams $gms_name $* FAILED!"
       [ -z ${NO_EXIT_EARLY+x} ] && exit 1;
    fi
 }

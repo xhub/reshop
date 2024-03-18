@@ -281,6 +281,10 @@ int ctr_equ_itervars(const Container *ctr, rhp_idx ei, void **jacptr,
    return ctr->ops->getrowjacinfo(ctr, ei, jacptr, jacval, vi, nlflag);
 }
 
+int ctr_equvarcounts(Container *ctr)
+{
+  return ctr->ops->equvarcounts(ctr);
+}
 
 
 int ctr_getcst(const Container *ctr, rhp_idx ei, double *val)

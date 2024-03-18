@@ -3,7 +3,6 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <stdint.h>
 
 #include "compat.h"
 
@@ -14,7 +13,9 @@
  */
 
 /** @brief Type of cones  */
-__extension__ typedef enum cone ENUM_U8 {
+//__extension__ typedef enum cone ENUM_U8 {
+// TODO: recompile vrepr with cones as uint8_t
+typedef enum cone {
    CONE_NONE = 0,    /**< Unset/non-existent */
    CONE_R_PLUS,      /**< Non-negative real \f$\mathbb{R}_+\f$ */
    CONE_R_MINUS,     /**< Non-positive real \f$\mathbb{R}_-\f$  */

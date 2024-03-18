@@ -283,7 +283,7 @@ int empdag_delete(EmpDag *empdag, daguid_t uid) NONNULL;
  * -------------------------------------------------------------------------- */
 
 int empdag_mpe_getchildren(const EmpDag *empdag, mpeid_t mpeid,
-                           UIntArray *mps) WRITE_ONLY(3) NONNULL;
+                           DagUidArray *mps) WRITE_ONLY(3) NONNULL;
 
 bool empdag_mphasname(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getmpname(const EmpDag *empdag, mpid_t mpid);

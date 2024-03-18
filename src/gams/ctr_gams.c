@@ -1,3 +1,4 @@
+#include "gams_macros.h"
 #include "reshop_config.h"
 
 #include <stdlib.h>

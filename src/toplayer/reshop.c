@@ -11,7 +11,6 @@
 #include "rhp_alg.h"
 #include "printout.h"
 #include "reshop.h"
-#include "rhp_model.h"
 #include "rhp_process.h"
 #include "status.h"
 #include "timings.h"
@@ -65,29 +64,7 @@ int rhp_postprocess(Model *mdl_solver)
    assert(mdl_up);
 
    while (mdl_up) {
-       trace_solreport("[solreport] %s model '%.*s' #%u: reporting values from %s "
-                       "model '%.*s' #%u\n", mdl_fmtargs(mdl_up), mdl_fmtargs(mdl));
-
-      S_CHECK(mdl_reportvalues(mdl_up, mdl));
-      S_CHECK(ctr_evalequvar(&mdl_up->ctr));
-
-      /* ------------------------------------------------------------------
-       * Get the solve and model status
-       * ------------------------------------------------------------------ */
-
-      S_CHECK(mdl_getmodelstat(mdl, &mstat));
-      S_CHECK(mdl_setmodelstat(mdl_up, mstat));
-      S_CHECK(mdl_getsolvestat(mdl, &sstat));
-      S_CHECK(mdl_setsolvestat(mdl_up, sstat));
-
-      if (mdl_is_rhp(mdl_up)) {
-         /* deleted equations and equations in func2eval */
-         S_CHECK(rctr_evalfuncs(&mdl_up->ctr));
-         /* if required, set the objective function value to the objvar one */
-         S_CHECK(rmdl_fix_objequ_value(mdl_up));
-      }
-
-
+      S_CHECK(mdl_solreport(mdl_up, mdl));
 
       mdl = mdl_up;
       mdl_up = mdl->mdl_up;
@@ -145,6 +122,8 @@ int rhp_solve(Model *mdl)
  */
 int rhp_process(Model *mdl, Model *mdl_solver)
 {
+   int status = OK;
+
    S_CHECK(chk_mdl(mdl, __func__));
 
    if (!mdl_solver) {
@@ -166,8 +145,6 @@ int rhp_process(Model *mdl, Model *mdl_solver)
 
    ctr_setneednames(&mdl->ctr);
 
-   int status = OK;
-
    Model *mdl_local = NULL;
 
    S_CHECK_EXIT(mdl_check(mdl));
@@ -186,12 +163,10 @@ int rhp_process(Model *mdl, Model *mdl_solver)
     * - mdl_local contains the local model
     *
     * The following will be done
-    * - Compute the modeltype
     * - Compute initial values for new variables
     * - Compress and export the changed model to the solver model
     * ---------------------------------------------------------------------- */
 
-   /* TODO: GITLAB #87  refactor the following mess */
    if (mdl_local) {
 
       /* -------------------------------------------------------------------
@@ -202,54 +177,14 @@ int rhp_process(Model *mdl, Model *mdl_solver)
 
       S_CHECK_EXIT(rmdl_presolve(mdl_local, mdl_solver->backend));
 
-      S_CHECK_EXIT(rmdl_ensurefops_activedefault(mdl_local));
-
       S_CHECK(rmdl_export_latex(mdl_local, "transformed"));
 
-      S_CHECK_EXIT(rmdl_exportmodel(mdl_local, mdl_solver, NULL));
-
-   } else if (mdl_is_rhp(mdl)) {
-   /* ----------------------------------------------------------------------
-    * If the model is RHP-like and didn't change, we just filter the active
-    * variables and analyze the model to set the model type
-    * ---------------------------------------------------------------------- */
-
-      /* TODO This looks like a big hack  */
-      S_CHECK_EXIT(rmdl_ensurefops_activedefault(mdl));
-      S_CHECK_EXIT(rmdl_analyze_modeltype(mdl, NULL));
-      S_CHECK_EXIT(rmdl_exportmodel(mdl, mdl_solver, NULL));
-
-   } else if (mdl->backend == RHP_BACKEND_GAMS_GMO) {
-   /* ----------------------------------------------------------------------
-    * Model from GAMS are always with only active variable and equations
-    *
-    * If we reached here, we didn't do any processing. If the problem type is
-    * classical (aka not EMP), then we just solve the problem directly. Otherwise:
-    * - If we have a continuous Nash Equilibrium problem, we form the VI/MCP
-    * - If we have a bilevel problem, we build the MPEC/MPCC
-    * ---------------------------------------------------------------------- */
-
-      if (mdl_solver->backend == RHP_BACKEND_GAMS_GMO) {
-
-         S_CHECK_EXIT(mdl_exportasgmo(mdl, mdl_solver));
-
-
-      } else if (mdl_solver->backend != RHP_BACKEND_RHP) {
-         errormsg("[process] ERROR: a GAMS model can be solved either by ReSHOP");
-         return Error_RuntimeError;
-      }
-
-       /* ----------------------------------------------------------------------
-       * Copy the options
-       *
-       * TODO(xhub) this is terrible
-       * ---------------------------------------------------------------------- */
-
-      S_CHECK(mdl_copysolveoptions(mdl_solver, mdl));
-   } else {
-      errormsg("[process] ERROR unsupported case!");
-      return Error_RuntimeError;
    }
+
+   /* TODO: GITLAB #87  refactor the following mess */
+   Model *mdl4export = mdl_local ? mdl_local : mdl;
+
+   S_CHECK_EXIT(mdl_copyassolvable(mdl_solver, mdl4export));
 
 _exit:
    if (mdl_local) {

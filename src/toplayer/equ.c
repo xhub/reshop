@@ -72,7 +72,7 @@ Aequ* aequ_newcompact(unsigned size, rhp_idx start)
  *  @return      the error code
  *
  */
-Aequ* aequ_newlist(unsigned size, rhp_idx *list)
+Aequ* aequ_newlistborrow(unsigned size, rhp_idx *list)
 {
    Aequ *aequ;
    MALLOC_NULL(aequ, Aequ, 1);
@@ -117,17 +117,16 @@ _exit:
 /**
  * @brief Create an abstract equation based on blocks
  *
- * @param size        the number of equations (set to 0 if unknown)
- * @param block_size  the number of blocks
+ * @param num_blocks  the number of blocks
  *
  * @return            the error code
  */
-Aequ *aequ_newblock(unsigned block_size)
+Aequ *aequ_newblock(unsigned num_blocks)
 {
    Aequ *e;
    MALLOC_NULL(e, Aequ, 1);
 
-   SN_CHECK_EXIT(aequ_setblock(e, block_size));
+   SN_CHECK_EXIT(aequ_setblock(e, num_blocks));
 
    return e;
 
@@ -491,6 +490,7 @@ void aequ_printnames(const Aequ *e, unsigned mode, const Model *mdl)
    }
    
 }
+
 
 /* -------------------------------------------------------------------------
  * Equation functions follow

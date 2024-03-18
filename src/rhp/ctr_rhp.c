@@ -172,6 +172,28 @@ int rctr_evalfuncs(Container *ctr)
 }
 
 /**
+ * @brief Add a function to be evaluated during the postprocessing
+ *
+ * @param ctr  the container
+ * @param ei   the equation index
+ *
+ * @return     the error code
+ */
+int rctr_func2eval_add(Container *ctr, rhp_idx ei)
+{
+  if (!ctr->func2eval) { 
+      A_CHECK(ctr->func2eval, aequ_newblock(2));
+   }
+
+   S_CHECK(ei_inbounds(ei, ctr_nequs_max(ctr), __func__));
+
+   Aequ o = {.type = EquVar_Compact, .start = ei, .size = 1};
+   S_CHECK(aequ_extendandown(ctr->func2eval, &o));
+
+   return OK;
+}
+
+/**
  * @brief Delete a variable from a model
  *
  * @warning this function is quite destructive, and offers no guarantee
@@ -218,34 +240,6 @@ int rctr_delete_var(Container *ctr, rhp_idx vi)
    return OK;
 }
 
-int rctr_inherit_pool(Container *ctr, Container *ctr_src)
-{
-   if (ctr->pool) {
-      pool_release(ctr->pool);
-      ctr->pool = NULL;
-   }
-
-   NlPool *p = pool_get(ctr_src->pool);
-
-   if (!p) {
-      A_CHECK(ctr->pool, pool_new_gams());
-      return OK;
-   }
-
-   ctr->pool = p;
-
-   return OK;
-}
-
-int rctr_ensure_pool(Container *ctr)
-{
-
-   if (!ctr->pool) {
-      A_CHECK(ctr->pool, pool_new_gams());
-   }
-
-   return OK;
-}
 
 /**
  * @brief Evaluate a function at a given point
@@ -506,7 +500,7 @@ unsigned rctr_poolidx(Container *ctr, double val)
     * Make sure that a pool exists ...
     * ---------------------------------------------------------------------- */
 
-   if (rctr_ensure_pool(ctr) != OK) return UINT_MAX;
+   if (ctr_ensure_pool(ctr) != OK) return UINT_MAX;
 
    return pool_getidx(ctr->pool, val);
 }

@@ -573,20 +573,20 @@ NlTree* nltree_dup_rosetta(const NlTree* restrict tree, const rhp_idx* restrict 
 {
    if (!tree) return NULL;
 
-   NlTree* copy;
-   AA_CHECK(copy, nltree_alloc2(nltree_numnodes(tree), nltree_numchildren(tree)));
+   NlTree* tree_copy;
+   AA_CHECK(tree_copy, nltree_alloc2(nltree_numnodes(tree), nltree_numchildren(tree)));
 
-   if (!tree->root) return copy;
+   if (!tree->root) return tree_copy;
 
   /* TODO(xhub) TREE this should better handled. free the memory? borrow the memory? */
-   SN_CHECK_EXIT(nltree_reset_var_list(copy));
+   SN_CHECK_EXIT(nltree_reset_var_list(tree_copy));
 
-   SN_CHECK_EXIT(nlnode_copy_rosetta(&copy->root, tree->root, copy, rosetta))
+   SN_CHECK_EXIT(nlnode_copy_rosetta(&tree_copy->root, tree->root, tree_copy, rosetta))
 
-   return copy;
+   return tree_copy;
 
 _exit:
-   nltree_dealloc(copy);
+   nltree_dealloc(tree_copy);
    return NULL;
 }
 

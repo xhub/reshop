@@ -39,7 +39,6 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
       mdl->ctr.fops = fops;
    }
 
-   S_CHECK(rmdl_prepare_export(mdl, mdl_solver));
 
 
   /* ----------------------------------------------------------------------
@@ -48,15 +47,8 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
    * TODO: GITLAB #87
    * ---------------------------------------------------------------------- */
 
-   S_CHECK(mdl_exportmodel(mdl, mdl_solver));
+   S_CHECK(mdl_export(mdl, mdl_solver));
 
-   /* We have to do this here  */
-   ModelType probtype;
-   mdl_gettype(mdl_solver, &probtype);
-
-   if (probtype == MdlType_none) {
-      S_CHECK(mdl_copyprobtype(mdl_solver, mdl));
-   }
 
    return OK;
 }

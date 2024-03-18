@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 void setup_gams(void);
-bool gams_skip_solver(const char *slv);
+bool gams_skip_solver(const char *slv, const char *testname);
 
 #endif

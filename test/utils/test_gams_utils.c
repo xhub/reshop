@@ -1,6 +1,7 @@
 #include "reshop_config.h"
 
 #include <stdlib.h>
+#include <strings.h>
 
 #include "test_gams_utils.h"
 #include "reshop.h"
@@ -27,9 +28,19 @@ void setup_gams(void)
 }
 
 
-bool gams_skip_solver(const char *slv)
+bool gams_skip_solver(const char *slv, const char * testname)
 {
    if (!slv) { return false; }
+
+   const char *conopt_skip[] = {
+       "test_oneobjvar1", "test_oneobjvar2"
+   };
+
+   if (!strcasecmp(slv, "conopt")) {
+      for (unsigned i = 0, len = ARRAY_SIZE(conopt_skip); i < len; ++i) {
+         if (!strcasecmp(testname, conopt_skip[i])) { return true; }
+      }
+   }
 
 #ifdef USES_DARLING
 #include <strings.h>

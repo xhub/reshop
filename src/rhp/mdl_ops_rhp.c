@@ -1,19 +1,27 @@
+#include "checks.h"
 #include "cmat.h"
 #include "container.h"
 #include "ctr_rhp.h"
+#include "ctr_rhp_add_vars.h"
+#include "ctrdat_gams.h"
 #include "empinfo.h"
 #include "gams_solve.h"
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
 #include "filter_ops.h"
+#include "lequ.h"
 #include "macros.h"
+#include "mathprgm.h"
 #include "mdl.h"
 #include "mdl_ops.h"
 #include "ctrdat_rhp.h"
 #include "ctrdat_rhp_priv.h"
 #include "mdl_rhp.h"
+#include "nltree.h"
+#include "pool.h"
 #include "printout.h"
 #include "reshop_solvers.h"
+#include "rhp_alg.h"
 #include "rhp_fwd.h"
 #include "rmdl_gams.h"
 #include "rmdl_data.h"
@@ -43,6 +51,8 @@ static int chk_empdag_simple(EmpDag *empdag, const char *fn)
    }
    return OK;
 }
+
+static int rmdl_export(Model *mdl, Model *mdl_dst);
 
 static int rmdl_allocdata(Model *mdl)
 {
@@ -154,6 +164,11 @@ static int rmdl_checkmdl(Model *mdl)
    }
 
    return OK;
+}
+
+static int rmdl_copyassolvable(Model *mdl, Model *mdl_src)
+{
+   return rmdl_export(mdl_src, mdl);
 }
 
 static int rmdl_copysolveoptions(Model *mdl, const Model *mdl_src)
@@ -428,6 +443,116 @@ forgotten_equ:
    return OK;
 }
 
+/* Copy variables attributes with filtering */
+static inline void  copy_vars_rosetta(Container * ctr_dst,
+                                      const Container * ctr_src)
+{
+   Var * restrict vars_dst = ctr_dst->vars;
+   const Var * restrict vars_src = ctr_src->vars;
+   const rhp_idx * restrict rosetta_vars = ctr_dst->rosetta_vars; assert(rosetta_vars);
+
+   for (size_t i = 0, len = ctr_nvars_total(ctr_dst); i < len; ++i) {
+      Var * restrict v = &vars_dst[i];
+      rhp_idx vi_src = rosetta_vars[i];
+
+      if (!valid_vi(vi_src)) {
+         v->value = SNAN;
+         v->multiplier = SNAN;
+         v->basis = BasisUnset;
+      } else {
+         assert(!v->is_deleted);
+         const Var * restrict v_src = &vars_src[vi_src];
+         v->value = v_src->value;
+         v->multiplier = v_src->multiplier;
+         v->basis = v_src->basis;
+         SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " from downstream var %s",
+                         ctr_printvarname(ctr_dst, i), solreport_gms_v(v), 
+                         ctr_printvarname2(ctr_src, vi_src));
+      }
+   }
+}
+
+static inline int  copy_equs_rosetta(Container * restrict ctr_dst,
+                                     const Container * restrict ctr_src)
+{
+   Equ * restrict equs_dst = ctr_dst->equs;
+   const Equ * restrict equs_src = ctr_src->equs;
+   const  rhp_idx * restrict rosetta_equs = ctr_dst->rosetta_equs; assert(rosetta_equs);
+
+   for (unsigned i = 0, len = ctr_nequs_total(ctr_dst); i < len; ++i) {
+      Equ * restrict e = &equs_dst[i];
+      rhp_idx ei_src = rosetta_equs[i];
+
+      if (valid_ei(ei_src)) {
+         assert(valid_ei_(ei_src, ctr_nequs_total(ctr_src), __func__));
+
+         const Equ * restrict e_src = &equs_src[ei_src];
+
+         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s",
+                            ctr_printequname(ctr_dst, i), solreport_gms(e_src), 
+                            ctr_printequname2(ctr_src, ei_src));
+
+         e->value = e_src->value;
+         e->multiplier = e_src->multiplier;
+         e->basis = e_src->basis;
+
+         continue;
+      }
+
+  /* ----------------------------------------------------------------------
+   * Equations was deleted. Check if it was transformed
+   * ---------------------------------------------------------------------- */
+
+      EquInfo equinfo;
+      S_CHECK(rctr_get_equation(ctr_dst, i, &equinfo));
+
+      assert(valid_ei_(equinfo.ei, len, __func__));
+      ei_src = rosetta_equs[equinfo.ei];
+
+         // TODO  if (!ppty[EQU_PPTY_EXPANDED] && valid_ei(ei_new)) {
+      if (valid_ei(ei_src)) {
+         const Equ * restrict e_src = &equs_src[ei_src];
+
+         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using transformed %s",
+                         ctr_printequname(ctr_dst, i), solreport_gms(e_src), 
+                         ctr_printequname2(ctr_src, ei_src));
+
+         if (RHP_LIKELY(!equinfo.flipped)) {
+            e->value = e_src->value;
+            e->multiplier = e_src->multiplier;
+            e->basis = e_src->basis;
+         } else {
+            e->value = -e_src->value;
+            e->multiplier = -e_src->multiplier;
+            BasisStatus basis = e_src->basis;
+
+            if (basis == BasisLower) {
+               basis = BasisUpper;
+            } else if (basis == BasisUpper) {
+               basis = BasisLower;
+            }
+            e->basis = basis;
+         }
+
+      } else { /* This case is encountered for any objequ while using an MCP/VI solver */
+
+         /* TODO(xhub) determine whether forgotten eqn is right */
+
+         /* If the equation is in func2eval, everything is fine */
+         if ((O_Output & PO_TRACE_SOLREPORT) && (!ctr_dst->func2eval ||
+            !valid_idx(aequ_findidx(ctr_dst->func2eval, i)))) {
+            trace_solreport("[solreport] equ '%s' was forgotten\n",
+                     ctr_printequname(ctr_dst, i));
+         }
+         e->value = SNAN;
+         e->multiplier = SNAN;
+         e->basis = BasisUnset;
+      }
+   }
+
+   return OK;
+}
+
 static int rmdl_reportvalues_from_rhp(Container * restrict ctr_dst,
                                   const Container * restrict ctr_src)
 {
@@ -441,10 +566,19 @@ static int rmdl_reportvalues_from_rhp(Container * restrict ctr_dst,
    if (fops) {
       _copy_vars_fops(ctr_dst, ctr_src, cdat->total_n, fops);
       _copy_equs_fops(ctr_dst, ctr_src, cdat->total_m, fops);
-   } else {
-      assert(!ctr_dst->rosetta_vars && !ctr_dst->rosetta_equs);
-      _copy_vars(ctr_dst, ctr_src, cdat->total_n);
+      return OK;
+   }
+
+   if (ctr_dst->rosetta_equs){
+      copy_equs_rosetta(ctr_dst, ctr_src);
+   }  else {
       _copy_equs(ctr_dst->equs, ctr_src->equs, cdat->total_m);
+   }
+
+   if (ctr_dst->rosetta_vars){
+      copy_vars_rosetta(ctr_dst, ctr_src);
+   }  else {
+      _copy_vars(ctr_dst, ctr_src, cdat->total_n);
    }
 
    return OK;
@@ -581,25 +715,550 @@ static int rmdl_setsolvestat(Model *mdl, int solvestat)
    return OK;
 }
 
-/* TODO: this is part of GITLAB #67 */
-static int rmdl_exportmodel(Model *mdl, Model *mdl_dst)
+/**
+ * @brief Make sure that the model has an new objective function
+ *
+ * If the objective equation already existed, the objective variable
+ * should be eliminated from the new objective function
+ *
+ * If the objective equation did not already existed, then create it and
+ * add the objective variable to it
+ *
+ * @param          mdl     the model
+ * @param          fops    the filter ops
+ * @param          objvar  the objective variable
+ * @param[in,out]  objequ  on input, the current objequ, on output the new objequ
+ * @param[out]     e_obj   on output, a pointer to the equation
+ *
+ * @return                 the error code
+ */
+static NONNULL_AT(1,4,5)
+int ensure_newobjfun(Model *mdl, Fops *fops, rhp_idx objvar, rhp_idx *objequ,
+                     Equ **e_obj)
 {
-   if (!mdl_dst->data || !mdl_dst->ctr.data) {
-      error("%s :: The destination model is empty\n", __func__);
-      return Error_UnExpectedData;
+   rhp_idx lobjequ = *objequ;
+   S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
+
+  /* ------------------------------------------------------------------------
+   * If objequ points to a valid equation, then we check that the objvar
+   * is present. Otherwise, we add a new equation
+   * ------------------------------------------------------------------------ */
+
+   if (!valid_ei(lobjequ) || (fops && !fops->keep_equ(fops->data, lobjequ))) {
+      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &lobjequ, e_obj, Mapping, CONE_NONE));
+      assert(valid_ei(lobjequ));
+      *objequ = lobjequ;
+      S_CHECK(rmdl_setobjfun(mdl, lobjequ));
+      return rctr_equ_addnewvar(&mdl->ctr, *e_obj, objvar, 1.);
+
    }
 
-   trace_process("[process] Exporting %s model '%.*s' #%u to %s model '%.*s' #%u\n",
-                 mdl_fmtargs(mdl), mdl_fmtargs(mdl_dst));
+   Lequ *le = mdl->ctr.equs[lobjequ].lequ;
+   double objvar_coeff;
+   unsigned dummyint;
+   S_CHECK(lequ_find(le, objvar, &objvar_coeff, &dummyint));
+
+   if (!isfinite(objvar_coeff)) {
+      error("%s :: objvar '%s' could not be found in equation '%s'\n",
+            __func__, ctr_printvarname(&mdl->ctr, objvar), 
+            ctr_printequname(&mdl->ctr, lobjequ));
+      return Error_IndexOutOfRange;
+   }
+
+   S_CHECK(rmdl_dup_equ(mdl, objequ, 0, objvar));
+   lobjequ = *objequ;
+   Equ *e = &mdl->ctr.equs[lobjequ];
+   *e_obj = e;
+
+   double coeff_inv = -1./objvar_coeff;
+   S_CHECK(lequ_scal(e->lequ, coeff_inv));
+   if (e->tree && e->tree->root) {
+      S_CHECK(nltree_scal(&mdl->ctr, e->tree, coeff_inv));
+   }
+   S_CHECK(cmat_scal(&mdl->ctr, e->idx, coeff_inv));
+
+   double cst = equ_get_cst(e);
+   equ_set_cst(e, cst*coeff_inv);
+
+   return OK;
+}
+
+/**
+ * @brief Create the objective variable and add it to the objective equation
+ *
+ * @param          ctr     the model
+ * @param          fops    the filter ops
+ * @param[out]     objvar  on output the objective variable
+ * @param[in,out]  objequ  on input, the current objequ, on output a valid objequ
+ *
+ * @return                 the error code
+ */
+
+static NONNULL_AT(1,3,4)
+int create_objvar_in_objequ(Container *ctr, Fops *fops, rhp_idx *objvar, rhp_idx *objequ)
+{
+   /* ----------------------------------------------------------------------
+    * Ensure that an objective variable exists and add an objective equation
+    * if it is missing.
+    *
+    * There are instance where there is not even an objective function, like
+    * when are given a feasibility problem. In that case, we also have to
+    * add a dummy objective equation.
+    *
+    * If the objequ index was valid, we force the evaluation of the objequ
+    * based on this objvar
+    * ---------------------------------------------------------------------- */
+
+   Equ *e_obj;
+   rhp_idx lobjequ = *objequ;
+   if (!valid_ei(lobjequ) || (fops && !fops->keep_equ(fops->data, lobjequ))) {
+      S_CHECK(rctr_reserve_equs(ctr, 1));
+      S_CHECK(rctr_add_equ_empty(ctr, objequ, &e_obj, ConeInclusion, CONE_0));
+   } else {
+      e_obj = &ctr->equs[lobjequ];
+      if (e_obj->object == Mapping) {
+         e_obj->object = ConeInclusion;
+         e_obj->cone = CONE_0;
+      } else if (e_obj->object != ConeInclusion) {
+         error("[model] ERROR: the objective equation has type %s, which is "
+               "unsupported. Please file a bug report\n",
+               equtype_name(e_obj->object));
+         return Error_RuntimeError;
+      }
+   }
+
+   S_CHECK(rctr_reserve_vars(ctr, 1));
+   Avar v;
+   S_CHECK(rctr_add_free_vars(ctr, 1, &v));
+
+   rhp_idx lobjvar = v.start;
+   S_CHECK(rctr_equ_addnewvar(ctr, e_obj, lobjvar, -1.));
+   ctr->vars[lobjvar].value = 0.; /* TODO: delete or initialize via evaluation */
+   *objvar = lobjvar;
+
+   return OK;
+}
+
+/* ----------------------------------------------------------------------
+ * TODO(xhub) DOC internal fn
+ * ---------------------------------------------------------------------- */
+static NONNULL_AT(1,2,3)
+int objvar_gamschk(Model *mdl, rhp_idx * restrict objvar,
+                   rhp_idx * restrict objequ, Fops *fops)
+{
+   RhpContainerData *cdat = mdl->ctr.data;
+
+   /* ----------------------------------------------------------------------
+    * If the objective variable is not valid, we add an objective variable
+    * and then 
+    * ---------------------------------------------------------------------- */
+   if (!valid_vi(*objvar) || (fops && !fops->keep_var(fops->data, *objvar))) {
+
+      S_CHECK(create_objvar_in_objequ(&mdl->ctr, fops, objvar, objequ));
+
+      cdat->pp.remove_objvars++;
+
+   } else { /* valid objvar index, but if it is a free variable, we need to replace it */
+      Container *ctr = &mdl->ctr;
+      Var *v = &ctr->vars[*objvar];
+      if (v->type != VAR_X || v->is_conic || v->bnd.lb != -INFINITY ||
+         v->bnd.ub != INFINITY) {
+
+         Equ *e_obj;
+         if (!valid_ei(*objequ) || (fops && !fops->keep_equ(fops->data, *objequ))) {
+            S_CHECK(rctr_reserve_equs(ctr, 1));
+            S_CHECK(rctr_add_equ_empty(ctr, objequ, &e_obj, Mapping, CONE_NONE));
+            S_CHECK(rctr_equ_addnewvar(ctr, e_obj, *objvar, 1.));
+         } else {
+            e_obj = &mdl->ctr.equs[*objequ];
+            assert(e_obj->cone == CONE_NONE && e_obj->object == Mapping);
+            assert(!ctr->equmeta || ctr->equmeta[e_obj->idx].role == EquObjective);
+         }
+
+         S_CHECK(rctr_reserve_vars(ctr, 1));
+         Avar vv;
+         S_CHECK(rctr_add_free_vars(ctr, 1, &vv));
+
+         *objvar = vv.start;
+         S_CHECK(rctr_equ_addnewvar(ctr, e_obj, *objvar, -1.));
+         mdl->ctr.vars[*objvar].value = 0.;
+
+         cdat->pp.remove_objvars++;
+      }
+   }
+
+   return rmdl_checkobjequvar(mdl, *objvar, *objequ);
+}
+
+static NONNULL_AT(1) int ensure_objvar_exists(Model *mdl, Fops *fops)
+{
+   rhp_idx objvar, objequ;
+   EmpDag *empdag = &mdl->empinfo.empdag;
+   RhpContainerData *cdat = mdl->ctr.data;
+
+   assert(empdag->type == EmpDag_Empty);
+   objvar = empdag->simple_data.objvar;
+   objequ = empdag->simple_data.objequ;
+
+   rhp_idx objvar_bck = objvar, objequ_bck = objequ;
+   bool update_objequ = !valid_ei(objequ);
+
+   S_CHECK(objvar_gamschk(mdl, &objvar, &objequ, fops));
+
+   if (update_objequ) {
+      trace_process("[process] %s model %.*s #%u: objequ is now %s\n",
+                    mdl_fmtargs(mdl), mdl_printequname(mdl, objequ));
+      S_CHECK(rmdl_setobjfun(mdl, objequ));
+   } else {
+      assert(objequ_bck == objequ);
+   }
+
+   if (objvar_bck != objvar) {
+      assert(mdl->empinfo.empdag.type == EmpDag_Empty);
+
+      trace_process("[process] %s model %.*s #%u: adding objvar %s to objequ %s\n",
+                    mdl_fmtargs(mdl), mdl_printvarname(mdl, objvar),
+                    mdl_printequname(mdl, objequ));
+
+      empdag->simple_data.objvar = objvar;
+      cdat->objequ_val_eq_objvar = true;
+   }
+
+   return OK;
+}
+
+#if 0
+static int objvarmp_gamschk(Model *mdl, MathPrgm *mp, Fops *fops)
+{
+   rhp_idx objvar, objequ;
+   EmpDag *empdag = &mdl->empinfo.empdag;
+   RhpContainerData *ctrdat = mdl->ctr.data;
+
+   if (!mp) {
+      assert(empdag->type == EmpDag_Empty);
+      objvar = empdag->simple_data.objvar;
+      objequ = empdag->simple_data.objequ;
+   } else {
+      objvar = mp_getobjvar(mp);
+      objequ = mp_getobjequ(mp);
+   }
+
+   rhp_idx objvar_bck = objvar, objequ_bck = objequ;
+   bool update_objequ = !valid_ei(objequ);
+
+   S_CHECK(objvar_gamschk(mdl, &objvar, &objequ, fops));
+
+   if (update_objequ) {
+      if (mp) {
+         S_CHECK(mp_setobjequ(mp, objequ));
+      } else {
+         trace_process("[process] %s model %.*s #%u: objequ is now %s\n",
+                       mdl_fmtargs(mdl), mdl_printequname(mdl, objequ));
+         S_CHECK(rmdl_setobjequ(mdl, objequ));
+      }
+   } else {
+      assert(objequ_bck == objequ);
+   }
+
+   if (objvar_bck != objvar) {
+      if (mp) {
+         S_CHECK(mp_setobjvar(mp, objvar));
+         S_CHECK(mp_objvarval2objequval(mp));
+      } else {
+         assert(mdl->empinfo.empdag.type == EmpDag_Empty);
+
+         trace_process("[process] %s model %.*s #%u: adding objvar %s to objequ %s\n",
+                       mdl_fmtargs(mdl), mdl_printvarname(mdl, objvar),
+                       mdl_printequname(mdl, objequ));
+
+         empdag->simple_data.objvar = objvar;
+         ctrdat->objequ_val_eq_objvar = true;
+      }
+   }
+
+   return OK;
+}
+#endif
+
+static int rctr_convert_metadata_togams(Container *ctr, Container *ctr_gms)
+{
+   /* ----------------------------------------------------------------------
+    * The SOS variables need special care: copy the group ID  
+    * ---------------------------------------------------------------------- */
+
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   GmsContainerData *gms = (GmsContainerData *)ctr_gms->data;
+
+   assert(ctr_gms->status & CtrEquVarInherited && !(ctr_gms->status & CtrMetaDataAvailable));
+
+   /* TODO fops switch */
+   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
+   if (cdat->sos1.len > 0) {
+
+      S_CHECK(chk_uint2int(cdat->sos1.len, __func__));
+      CALLOC_(gms->sos_group, int, ctr_nvars(ctr_gms));
+
+      for (int i = 0, len = (int)cdat->sos1.len; i < len; i++) {
+         Avar *v = &cdat->sos1.groups[i].v;
+
+         for (unsigned j = 0, size = v->size; j < size; ++j) {
+            rhp_idx vi = avar_fget(v, j);
+            vi = rosetta_vars ? rosetta_vars[vi] : vi;
+            gms->sos_group[vi] = i+1;
+         }
+      }
+   }
+
+   if (cdat->sos2.len > 0) {
+      if (!gms->sos_group) {
+         CALLOC_(gms->sos_group, int, ctr_nvars(ctr_gms));
+      }
+
+      S_CHECK(chk_uint2int(cdat->sos2.len, __func__));
+      for (int i = 0, len = (int)cdat->sos2.len; i < len; i++) {
+
+         Avar *v = &cdat->sos2.groups[i].v;
+         for (unsigned j = 0, size = v->size; j < size; ++j) {
+            rhp_idx vi = avar_fget(v, j);
+            vi = rosetta_vars ? rosetta_vars[vi] : vi;
+            gms->sos_group[vi] = i+1;
+         }
+      }
+   }
+
+   ctr->status |= CtrMetaDataAvailable;
+   return OK;
+}
+
+static NONNULL int rmdl_prepare_ctrexport_gams(Model *mdl_src, Model *mdl_dst)
+{
+   Container *ctr_src = &mdl_src->ctr;
+   Container *ctr_dst = &mdl_dst->ctr;
+   RhpContainerData *cdat = (RhpContainerData *)ctr_src->data;
+
+   S_CHECK(ctr_prepare_export(ctr_src, ctr_dst));
+
+   S_CHECK(rctr_convert_metadata_togams(ctr_src, ctr_dst));
+
+   mdl_dst->status |= MdlContainerInstantiable;
+
+   return OK;
+}
+
+static NONNULL_AT(1)
+int check_var_is_really_deleted(Container *ctr, Fops *fops, rhp_idx vi)
+{
+   if (fops && fops->keep_var(fops->data, vi)) {
+      error("%s :: variable '%s' #%u should be inactive but is not marked as such\n",
+            __func__, ctr_printvarname(ctr, vi), vi);
+      return Error_Inconsistency;
+   }
+
+   return OK;
+}
+
+static NONNULL
+int rmdl_prepare_ctrexport_rhp(Model *mdl, Model *mdl_dst)
+{
+   Container *ctr_src = &mdl->ctr;
+   EmpInfo *empinfo = &mdl->empinfo;
+
+   /* ----------------------------------------------------------------------
+    * We need to remove objective variables and also fixed variables
+    * 
+    * TODO(xhub) URG : we allow ourself to modify an equation in place,
+    * without copying it, which quite bad
+    * ---------------------------------------------------------------------- */
+
+   /* TODO GITLAB #71 */
+   Fops *fops = ctr_src->fops;
+
+   EmpDag *empdag = &empinfo->empdag;
+   if (empdag->type == EmpDag_Empty) {
+
+      rhp_idx objvar;
+      rmdl_getobjvar(mdl, &objvar);
+
+      if (valid_vi(objvar)) {
+
+         Equ *e_obj;
+         rhp_idx objequ_old;
+         rmdl_getobjequ(mdl, &objequ_old);
+
+         rhp_idx objfun = objequ_old;
+         S_CHECK(ensure_newobjfun(mdl, fops, objvar, &objfun, &e_obj));
+         trace_process("[process] %s model %.*s #%u: objvar '%s' removed; "
+                       "objective function is now '%s'\n", mdl_fmtargs(mdl),
+                       mdl_printvarname(mdl, objvar), mdl_printequname(mdl, objfun));
+
+         if (valid_ei(objequ_old)) {
+
+            S_CHECK(check_var_is_really_deleted(ctr_src, fops, objvar));
+            S_CHECK(rctr_add_eval_equvar(ctr_src, objequ_old, objvar));
+         } /* TODO ensure that objvar values are set  */
+
+         rmdl_setobjvar(mdl, IdxNA);
+      }
+   } else {
+      unsigned mp_len = empdag_getmplen(empdag);
+      assert(mp_len > 0);
+      for (unsigned i = 0; i < mp_len; ++i) {
+         MathPrgm *mp = empdag_getmpfast(empdag, i);
+         if (!mp) continue;
+
+         rhp_idx objvar = mp_getobjvar(mp);
+         rhp_idx objequ = mp_getobjequ(mp);
+
+         if (valid_vi(objvar) && valid_ei(objequ)) {
+            Equ *e_obj;
+            rhp_idx objequ_old = objequ;
+
+            S_CHECK(ensure_newobjfun(mdl, fops, objvar, &objequ, &e_obj));
+
+            assert(objequ_old != objequ);
+            S_CHECK(rctr_add_eval_equvar(ctr_src, objequ_old, objvar));
+            S_CHECK(check_var_is_really_deleted(ctr_src, fops, objvar));
+            /* TODO ensure that objvar values are set  */
+
+            S_CHECK(mp_setobjvar(mp, IdxNA));
+            S_CHECK(mp_setobjequ(mp, objequ));
+            trace_process("[process] MP(%s): objvar '%s' removed; objequ is now '%s'\n",
+                          empdag_getmpname(empdag, i), mdl_printvarname(mdl, objvar),
+                          mdl_printequname(mdl, objequ));
+         }
+      }
+   }
+
+   /* TODO GITLAB #90 */
+  /* -----------------------------------------------------------------------
+   * We go over all the variables identify fixed variables
+   * ----------------------------------------------------------------------- */
+//  S_CHECK(ctr_fixedvars(ctr));
+
+//  S_CHECK(rmdl_remove_fixedvars(mdl));
+
+   S_CHECK(ctr_prepare_export(ctr_src, &mdl_dst->ctr));
+
+   ctr_src->status |= CtrMetaDataAvailable;
+
+   return OK;
+}
+
+/** 
+ *  @brief Prepare a ReSHOP model for the export into another model
+ *
+ *
+ *  @param mdl_src   the original model
+ *  @param mdl_dst   the destination model
+ *
+ *  @return          the error code
+ */
+int rmdl_prepare_export(Model * restrict mdl_src, Model * restrict mdl_dst)
+{
+   Container *ctr_src = &mdl_src->ctr;
+   Container *ctr_dst = &mdl_dst->ctr;
+
+   assert(!(mdl_dst->status & MdlInstantiable));
+
+   trace_process("[process] %s model %.*s #%u: exporting to %s model %.*s #%u\n",
+                 mdl_fmtargs(mdl_src), mdl_fmtargs(mdl_dst));
+
+   /* Just make sure we increase the stage to make sure objvar are evaluated properly */
+   S_CHECK(rmdl_incstage(mdl_src));
+
+  /* ----------------------------------------------------------------------
+   * If there are any deleted/inactive equations or variables, set the fops
+   * ATTENTION: this needs to be set before preparing the container export
+   * ---------------------------------------------------------------------- */
+
+   RhpContainerData *cdat = (RhpContainerData *)ctr_src->data;
+   if (cdat->total_m != ctr_src->m || cdat->total_n != ctr_src->n) {
+      S_CHECK(rmdl_ensurefops_activedefault(mdl_src));
+   }
+
+   /* ----------------------------------------------------------------------
+    * If the destination container is
+    * - a GAMS GMO object, we may need to add objective variable(s)
+    * - a RHP, we need to remove any objective variables(s) and change
+    *   the equations.
+    * ---------------------------------------------------------------------- */
+
+   switch (ctr_dst->backend) {
+   case RHP_BACKEND_GAMS_GMO:
+      S_CHECK(rmdl_prepare_ctrexport_gams(mdl_src, mdl_dst));
+      break;
+   case RHP_BACKEND_RHP:
+      S_CHECK(rmdl_prepare_ctrexport_rhp(mdl_src, mdl_dst));
+      break;
+   default:
+      error("%s ERROR: unsupported destination model type %d\n", __func__,
+            ctr_dst->backend);
+      return Error_NotImplemented;
+   }
+
+   /* HACK: we need this again as we might have delete equations/variables */
+   if (cdat->total_m != ctr_src->m || cdat->total_n != ctr_src->n) {
+      S_CHECK(rmdl_ensurefops_activedefault(mdl_src));
+   }
+
+   /* ----------------------------------------------------------------------
+    * There may be no pool in the original container.
+    * We have to be careful in the following to ensure that later on it exists
+    * when we want to use it.
+    * ---------------------------------------------------------------------- */
+
+   trace_model("[export] %s model '%.*s' #%u with %u vars and %u equs, is ready "
+               "to receive export from %s model '%.*s' #%u\n", mdl_fmtargs(mdl_dst),
+               ctr_dst->n, ctr_dst->m, mdl_fmtargs(mdl_src));
+
+   if (ctr_dst->status & CtrInstantiable) {
+      mdl_dst->status |= MdlContainerInstantiable;
+   } else {
+      error("[model] ERROR: while preparing the export in %s model '%.*s' #%u: "
+            "container is not ready after %s\n", mdl_fmtargs(mdl_dst), __func__);
+      return Error_RuntimeError;
+   }
+
+   return OK;
+}
+
+static NONNULL int rmdl_export_setmodeltype(Model *mdl, Model *mdl_dst)
+{
+   Fops *fops = mdl->ctr.fops;
+   if (!fops) {
+      S_CHECK(mdl_copyprobtype(mdl_dst, mdl));
+   }
+
+   return OK;
+}
+
+/* TODO: this is part of GITLAB #67 */
+static int rmdl_export(Model *mdl, Model *mdl_dst)
+{
+   assert(mdl_dst->ctr.n == 0 && mdl_dst->ctr.m == 0);
+
+   S_CHECK(rmdl_prepare_export(mdl, mdl_dst));
+
+  /* ----------------------------------------------------------------------
+   * Get the modeltype
+   * ---------------------------------------------------------------------- */
+   S_CHECK(rmdl_export_setmodeltype(mdl, mdl_dst));
 
    switch(mdl_dst->backend) {
    case RHP_BACKEND_GAMS_GMO:
-      S_CHECK(mdl_exportasgmo(mdl, mdl_dst));
+      S_CHECK(rmdl_exportasgmo(mdl, mdl_dst));
       break;
-   case RHP_BACKEND_RHP:
+   case RHP_BACKEND_RHP: {
       /*  Do nothing here */
    /* TODO: this is part of GITLAB #67 */
 //      S_CHECK(rmdl_exportmodel_rmdl(ctr, ctr_dst));
+   ModelType probtype;
+   mdl_gettype(mdl_dst, &probtype);
+
+   if (probtype == MdlType_none) {
+      S_CHECK(mdl_copyprobtype(mdl_dst, mdl));
+   }
+      }
       break;
    default:
       error("[model] ERROR: Only GAMS and RHP are supported as a destination "
@@ -652,27 +1311,28 @@ static int rmdl_solve(Model *mdl)
 }
 
 const ModelOps mdl_ops_rhp = {
-   .allocdata      = rmdl_allocdata,
-   .deallocdata    = rmdl_deallocdata,
-   .checkmdl       = rmdl_checkmdl,
-   .checkobjequvar = rmdl_checkobjequvar,
-   .copysolveoptions = rmdl_copysolveoptions,
+   .allocdata           = rmdl_allocdata,
+   .deallocdata         = rmdl_deallocdata,
+   .checkmdl            = rmdl_checkmdl,
+   .checkobjequvar      = rmdl_checkobjequvar,
+   .copyassolvable      = rmdl_copyassolvable,
+   .copysolveoptions    = rmdl_copysolveoptions,
    .copystatsfromsolver = rmdl_copystatsfromsolver,
-   .exportmodel    = rmdl_exportmodel,
-   .getmodelstat   = rmdl_getmodelstat,
-   .getobjequ      = rmdl_getobjequ,
-   .getobjjacval   = rmdl_getobjjacval,
-   .getsense    = rmdl_getsense,
-   .getobjvar      = rmdl_getobjvar,
-   .getoption      = rmdl_getoption,
-   .getsolvername  = rmdl_getsolvername,
-   .getsolvestat   = rmdl_getsolvestat,
-   .postprocess    = rmdl_postprocess,
-   .reportvalues   = rmdl_reportvalues,
-   .setmodelstat   = rmdl_setmodelstat,
-   .setsense       = rmdl_setobjsense,
-   .setobjvar      = rmdl_setobjvar,
-   .setsolvername   = rmdl_setsolvername,
-   .setsolvestat   = rmdl_setsolvestat,
-   .solve          = rmdl_solve,
+   .export              = rmdl_export,
+   .getmodelstat        = rmdl_getmodelstat,
+   .getobjequ           = rmdl_getobjequ,
+   .getobjjacval        = rmdl_getobjjacval,
+   .getsense            = rmdl_getsense,
+   .getobjvar           = rmdl_getobjvar,
+   .getoption           = rmdl_getoption,
+   .getsolvername       = rmdl_getsolvername,
+   .getsolvestat        = rmdl_getsolvestat,
+   .postprocess         = rmdl_postprocess,
+   .reportvalues        = rmdl_reportvalues,
+   .setmodelstat        = rmdl_setmodelstat,
+   .setsense            = rmdl_setobjsense,
+   .setobjvar           = rmdl_setobjvar,
+   .setsolvername       = rmdl_setsolvername,
+   .setsolvestat        = rmdl_setsolvestat,
+   .solve               = rmdl_solve,
 };

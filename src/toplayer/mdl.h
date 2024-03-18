@@ -24,15 +24,17 @@
 typedef struct model_ops ModelOps;
 
 typedef enum mdl_status {
-   MdlStatusUnset = 0x0,
-   MdlMetaChecked = 0x1,
-   MdlChecked     = 0x2,
-   MdlFinalized   = 0x4,
+   MdlStatusUnset           = 0x0,
+   MdlMetaChecked           = 0x1,
+   MdlChecked               = 0x2,
+   MdlFinalized             = 0x4,
+   MdlContainerInstantiable = 0x8,
+   MdlInstantiable          = MdlContainerInstantiable,
 } MdlStatus;
 
 /* ----------------------------------------------------------------------
  * Problem type is stored in the common part as during the export it might
- * be set before the GMO obejct is created. Also, the GMO object is really
+ * be set before the GMO object is created. Also, the GMO object is really
  * for the container. Having it stored more data makes the conceptual model
  * harder
  * ---------------------------------------------------------------------- */
@@ -46,7 +48,9 @@ typedef struct {
    char *exports_dir_parent;    /**< Parent of the exports dir               */
 } MdlCommonData;
 
-
+typedef union {
+   McpInfo mcp;
+} MdlDetailedInfo;
 
 /** @brief ReSHOP Model structure */
 typedef struct rhp_mdl {
@@ -59,6 +63,8 @@ typedef struct rhp_mdl {
 
    EmpInfo empinfo;             /**< the EMP information                     */
    MdlCommonData commondata;    /**< Name of the model                       */
+   MdlDetailedInfo info;
+
    Timings *timings;            /**< Timings                                 */
    const ModelOps *ops;         /**< Backend-specific operations             */
    void *data;                  /**< Backend-specific data                   */
@@ -85,12 +91,16 @@ int mdl_copystatsfromsolver(Model *mdl, const Model *mdl_solver) NONNULL;
 int mdl_copyprobtype(Model *mdl, const Model *mdl_src) NONNULL;
 
 int mdl_export(Model *mdl, Model *mdl_dst) NONNULL;
+int mdl_copyassolvable(Model *mdl, Model *mdl_dst) NONNULL;
 int mdl_reportvalues(Model *mdl, Model *mdl_src) NONNULL;
 
 int mdl_gettype(const Model *mdl, ModelType *probtype);
 int mdl_getobjjacval(const Model *mdl, double *objjacval);
 int mdl_getoption(const Model *mdl, const char *option, void *val);
 const char *mdl_getprobtypetxt(ModelType probtype);
+
+int mdl_analyze_modeltype(Model *mdl, Fops *fops) NONNULL_AT(1);
+int mdl_reset_modeltype(Model *mdl, Fops *fops) NONNULL_AT(1);
 
 int mdl_getmodelstat(const Model *mdl, int *modelstat);
 const char *mdl_getmodelstatastxt(const Model *mdl) NONNULL;
@@ -127,6 +137,8 @@ int mdl_export_gms(Model *mdl, const char *phase_name) NONNULL;
 MathPrgm* mdl_getmpforequ(const Model *mdl, rhp_idx ei) NONNULL;
 MathPrgm* mdl_getmpforvar(const Model *mdl, rhp_idx vi) NONNULL;
 
+McpInfo* mdl_getmcpinfo(Model *mdl) NONNULL;
+int mdl_solreport(Model *mdl_dst, Model *mdl_src) NONNULL;
 
 int mdl_setdualvars(Model *mdl, Avar *v, Aequ *e) NONNULL;
 

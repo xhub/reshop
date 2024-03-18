@@ -10,12 +10,10 @@
 #include "compat.h"
 #include "equ.h"
 #include "equvar_metadata.h"
-#include "mdl_data.h"
 #include "container_ops.h"
-#include "reshop.h"
 #include "rhp_fwd.h"
-
-typedef enum rhp_backendtype BackendType;
+#include "rhp_typedefs.h"
+#include "var.h"
 
 /**
  * Data structure provided for the consumer of workspace memory.
@@ -30,16 +28,30 @@ struct ctrmem {
 
 /** Status of the Container */
 typedef enum ctr_status {
-  CtrChecked           = 1,
-  CtrMetaChecked       = 2,
-  CtrNeedEquVarNames   = 4,
-  CtrHasBeenSolvedOnce = 8,
+   CtrChecked            = 0x1,
+   CtrMetaChecked        = 0x2,
+   CtrNeedEquVarNames    = 0x4,
+   CtrHasBeenSolvedOnce  = 0x8,
+   CtrEquVarInherited    = 0x10,
+   CtrMetaDataAvailable  = 0x20,
+   CtrHasNlPool          = 0x40,
+   CtrInstantiable       = CtrEquVarInherited | CtrMetaDataAvailable | CtrHasNlPool,
 } CtrStatus;
 
 typedef struct {
    Aequ flipped_equs;
 } CtrTransformations;
 
+
+typedef struct {
+   unsigned vartypes[VAR_TYPE_LEN];
+
+   struct {
+      unsigned cones [CONE_LEN];
+      unsigned types[EquTypeUnsupported+1];
+      unsigned exprtypes[EquExprNonLinear+1];
+   } equs;
+} EquVarTypeCounts;
 
 /* @brief the container for the model */
 typedef struct container {
@@ -66,6 +78,7 @@ typedef struct container {
 
    CtrTransformations transformations;  /**< Transformations to execute on the 
                                  Container */
+   EquVarTypeCounts equvarstats; /**< Statistics about the equations and variables */
    rhp_idx *rosetta_equs;       /**< translation for the equations */
    rhp_idx *rosetta_vars;       /**< translation for the variables */
    Fops *fops;                      /**< Current filter operations            */
@@ -97,6 +110,8 @@ int ctr_var_iterequs(const Container *ctr, rhp_idx vi, void **jacptr,
 int ctr_equ_itervars(const Container *ctr, rhp_idx ei, void **jacptr,
                       double *jacval, rhp_idx *vi, int *nlflag);
 
+int ctr_ensure_pool(Container *ctr);
+int ctr_borrow_nlpool(Container *ctr, Container *ctr_src);
 double ctr_poolval(Container *ctr, unsigned idx);
 
 unsigned ctr_nequs(const Container *ctr);
@@ -118,6 +133,7 @@ const char* ctr_printvarname2(const Container *ctr, rhp_idx vi) NONNULL;
 int ctr_copyequname(const Container *ctr, rhp_idx ei, char *name, unsigned len) NONNULL;
 int ctr_copyvarname(const Container *ctr, rhp_idx vi, char *name, unsigned len) NONNULL;
 int ctr_fixvar(Container *ctr, rhp_idx vi, double val);
+int ctr_equvarcounts(Container *ctr) NONNULL;
 int ctr_getvarsmult(const Container *ctr, Avar *v, double *mult);
 int ctr_getvarsbasis(const Container *ctr, Avar *v, int *basis);
 int ctr_getvarsval(const Container *ctr, Avar *v, double *vals);
@@ -159,6 +175,13 @@ int ctr_setvarmult(Container *ctr, rhp_idx vi, double varm);
 int ctr_setvarname(Container *ctr, rhp_idx vi, const char *name);
 int ctr_setvartype(Container *ctr, rhp_idx vi, unsigned type);
 int ctr_setvarub(Container *ctr, rhp_idx vi, double ub);
+
+
+/* ----------------------------------------------------------------------
+ * Container Export
+ * ---------------------------------------------------------------------- */
+
+int ctr_prepare_export(Container *ctr_src, Container *ctr_dst) NONNULL;
 
 /* ----------------------------------------------------------------------
  * Container metadata/transformation section

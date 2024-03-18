@@ -59,8 +59,6 @@ typedef struct equ_info EquInfo;
 int rhp_chk_ctr(const Container *ctr, const char *fn);
 
 int rctr_delete_var(Container *ctr, rhp_idx vi);
-int rctr_ensure_pool(Container *ctr);
-int rctr_inherit_pool(Container *ctr, Container *ctr_src);
 NONNULL ACCESS_ATTR(write_only, 3)
 int rctr_evalfunc(Container *ctr, rhp_idx ei, double * restrict F);
 NONNULL ACCESS_ATTR(read_only, 3) ACCESS_ATTR(write_only, 4)
@@ -88,6 +86,8 @@ int rctr_init_equ_empty(Container *ctr, rhp_idx ei, EquObjectType type,
 
 int rctr_reserve_eval_equvar(Container *ctr, unsigned size) NONNULL;
 int rctr_add_eval_equvar(Container *ctr, rhp_idx ei, rhp_idx vi ) NONNULL;
+int rctr_func2eval_add(Container *ctr, rhp_idx ei) NONNULL;
+
 int rctr_var_setasdualmultiplier(Container *ctr, Equ *e, rhp_idx vi) NONNULL;
 int rctr_add_multiplier_dual(Container *ctr, enum cone cone, void* cone_data,
                               rhp_idx *vi) NONNULL_AT(1, 4);

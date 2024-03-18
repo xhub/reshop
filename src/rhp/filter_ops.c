@@ -6,25 +6,17 @@
 #include "equ.h"
 #include "equvar_helpers.h"
 #include "mdl.h"
-#include "nltree.h"
 #include "nltree_priv.h"
 #include "filter_ops.h"
 #include "gams_utils.h"
 #include "instr.h"
-#include "lequ.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl_rhp.h"
 #include "ctrdat_rhp.h"
+#include "pool.h"
 #include "printout.h"
 #include "var.h"
-
-struct idx_list {
-   unsigned size;           /**< current number of pointer stored        */
-   unsigned max;            /**< maximum size of the arrays              */
-   rhp_idx *pool_idx;       /**< array of pointers to the pool index     */
-   rhp_idx *vars;           /**< variable indices                        */
-};
 
 typedef struct filter_deactivated {
    IdxArray vars;    
@@ -33,14 +25,23 @@ typedef struct filter_deactivated {
    Aequ e;
 } FilterDeactivated;
 
+typedef struct {
+   unsigned offset_vars_pool;      /**< Start in the pool for the var values  */
+   unsigned size;           /**< current number of pointer stored        */
+   unsigned max;            /**< maximum size of the arrays              */
+   unsigned *pool_idx;       /**< array of pointers to the pool index     */
+   rhp_idx *vis;           /**< variable indices                        */
+   NlPool *pool;
+} NlPoolVars;
+
+
 /** filter based on a subset of variables and equations */
 typedef struct filter_subset {
-   unsigned offset_vars_pool;      /**< Start in the pool for the var values  */
-   Container *ctr_src;             /**< Source container                      */
-   struct idx_list neg_var_vals;   /**< List of negative of variables         */
    struct mp_descr descr;          /**< Description of the math programm      */
    Avar vars;                      /**< Variables to be included              */
    Aequ equs;                      /**< Equations to be included              */
+   NlPoolVars nlpoolvars;          /**< Non-linear pool variables             */
+   Container *ctr_src;             /**< Source container                      */
    rhp_idx *vars_permutation;      /**< Optional variable permutation         */
 } FilterSubset;
 
@@ -50,13 +51,35 @@ typedef struct filter_active {
    rhp_idx *vars_permutation;      /**< Optional variable permutation         */
 } FilterActive;
 
+typedef struct {
+   daguid_t subdag_root;
+   Fops *parent;
+   FilterSubset *fs;
+} FilterEmpDagSubDag;
+
+typedef struct {
+   mpid_t mpid;
+   IdxArray *mp_equs;
+   IdxArray *mp_vars;
+   Container *ctr;
+   Fops *parent;
+} FilterEmpDagSingleMp;
+
+typedef struct {
+   MpIdArray mpids;
+   Fops *parent;
+} FilterEmpDagNash;
+
 
 const char *fopstype_name(FopsType type)
 {
    switch (type) {
-   case FopsActive: return "active";
-   case FopsSubset: return "subset";
-   default: return "error unknown filter ops type";
+   case FopsActive:         return "active";
+   case FopsSubset:         return "subset";
+   case FopsEmpDagNash:     return "EmpDag Nash";
+   case FopsEmpDagSingleMp: return "Single MP";
+   case FopsEmpDagSubDag:   return "EmpDag Subdag";
+   default:                 return "error unknown filter ops type";
    }
 }
 
@@ -113,10 +136,10 @@ static unsigned filter_active_deactivatedequslen(void *data)
    return deactivated->equs.len + aequ_size(&deactivated->e);
 }
 
-static inline bool rhpctrdat_active_var(const Container *ctr, rhp_idx vi)
+static inline bool rctr_active_var(const Container *ctr, rhp_idx vi)
 {
-   RhpContainerData *ctrdat = ctr->data;
-   return ctrdat->vars[vi];
+   RhpContainerData *cdat = ctr->data;
+   return cdat->vars[vi];
 }
 
 /*  TODO(xhub) PERF measure impact of indirection */
@@ -148,54 +171,53 @@ static void filter_active_size(void *data, size_t* n, size_t* m)
  * ConLequ on edst from the active variables
  * ------------------------------------------------------------------------- */
 
-static int filter_active_lequ(void *data, Equ *e, Equ *edst)
-{
-   FilterActive *dat = (FilterActive *)data;
-   Container *ctr = dat->ctr;
-   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
-   Lequ *le = e->lequ;
-   size_t len;
-   if (le && le->len > 0) {
-      len = le->len;
-   } else {
-      return OK;
-   }
-
-   rhp_idx * restrict idx = le->vis;
-   double * restrict vals = le->coeffs;
-
-   if (!edst->lequ) { A_CHECK(edst->lequ, lequ_alloc(len)); }
-   Lequ * lequ = edst->lequ;
-
-   for (unsigned i = 0; i < len; ++i) {
-      rhp_idx vi_new = rosetta_vars[idx[i]];
-      double val = vals[i];
-
-      if (valid_vi(vi_new) && isfinite(val)) {
-         lequ_add(lequ, vi_new, val); /* no check as we do not resize */
-      } else {
-         if (!isnan(val)) {
-            error("%s :: In an equation, the deleted variable %d has a value %e\n",
-                  __func__, idx[i], val);
-         }
-      }
-   }
-
-   return OK;
-}
+// TODO: delete? Commented on 2024.03.12
+//static int filter_active_lequ(void *data, Equ *e, Equ *edst)
+//{
+//   FilterActive *dat = (FilterActive *)data;
+//   Container *ctr = dat->ctr;
+//   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
+//   Lequ *le = e->lequ;
+//   size_t len;
+//   if (le && le->len > 0) {
+//      len = le->len;
+//   } else {
+//      return OK;
+//   }
+//
+//   rhp_idx * restrict idx = le->vis;
+//   double * restrict vals = le->coeffs;
+//
+//   if (!edst->lequ) { A_CHECK(edst->lequ, lequ_alloc(len)); }
+//   Lequ * lequ = edst->lequ;
+//
+//   for (unsigned i = 0; i < len; ++i) {
+//      rhp_idx vi_new = rosetta_vars[idx[i]];
+//      double val = vals[i];
+//
+//      if (valid_vi(vi_new) && isfinite(val)) {
+//         lequ_add(lequ, vi_new, val); /* no check as we do not resize */
+//      } else {
+//         if (!isnan(val)) {
+//            error("%s :: In an equation, the deleted variable %d has a value %e\n",
+//                  __func__, idx[i], val);
+//         }
+//      }
+//   }
+//
+//   return OK;
+//}
 
 /* -------------------------------------------------------------------------
  * Change the variable indices in the GAMS code
  * ------------------------------------------------------------------------- */
 
-static int filter_active_gamsopcode(void *data, rhp_idx ei, int * restrict instrs,
-                                    int * restrict args, unsigned len)
+static void perm_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
+                                      rhp_idx ei, unsigned len,
+                                      const int instrs[static restrict len],
+                                      int args[static restrict len])
 {
-   FilterActive *dat = (FilterActive *)data;
-   Container *ctr = dat->ctr;
-   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
-
-   for (unsigned i = 0; i < (unsigned)len; ++i) {
+   for (unsigned i = 0; i < len; ++i) {
       if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
          assert(valid_vi(rosetta_vars[args[i]-1]));
          args[i] = 1 + rosetta_vars[args[i]-1];
@@ -205,20 +227,50 @@ static int filter_active_gamsopcode(void *data, rhp_idx ei, int * restrict instr
    /* Update the nlStore field to match the new equation index */
    assert(instrs[len-1] == nlStore);
    args[len-1] = 1 + ei;
-
-   return OK;
 }
 
-static int filter_active_nltree(void *data, Equ *e, Equ *edst)
+static void filter_gamsopcode_rosetta_perm(const rhp_idx * restrict rosetta_vars,
+                                           const rhp_idx * restrict vperm,
+                                           rhp_idx ei, unsigned len,
+                                           const int instrs[static restrict len],
+                                           int args[static restrict len])
+{
+   for (unsigned i = 0; i < len; ++i) {
+      if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
+         assert(valid_vi(rosetta_vars[args[i]-1]));
+         args[i] = 1 + vperm[rosetta_vars[args[i]-1]];
+      }
+   }
+
+   /* Update the nlStore field to match the new equation index */
+   assert(instrs[len-1] == nlStore);
+   args[len-1] = 1 + ei;
+}
+
+static int perm_active_gamsopcode(void *data, rhp_idx ei, unsigned len,
+                                    int instrs[static restrict len],
+                                    int args[static restrict len])
 {
    FilterActive *dat = (FilterActive *)data;
    Container *ctr = dat->ctr;
-   rhp_idx *rosetta_vars = ctr->rosetta_vars;
+   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
 
-   A_CHECK(edst->tree, nltree_dup_rosetta(e->tree, rosetta_vars));
+   perm_gamsopcode_rosetta(rosetta_vars, ei, len, instrs, args);
 
    return OK;
 }
+
+// TODO delete? Commented on 2024.03.12
+//static int filter_active_nltree(void *data, Equ *e, Equ *edst)
+//{
+//   FilterActive *dat = (FilterActive *)data;
+//   Container *ctr = dat->ctr;
+//   rhp_idx *rosetta_vars = ctr->rosetta_vars;
+//
+//   A_CHECK(edst->tree, nltree_dup_rosetta(e->tree, rosetta_vars));
+//
+//   return OK;
+//}
 
 static rhp_idx filter_active_vperm(void *data, rhp_idx vi)
 {
@@ -246,32 +298,24 @@ static int filter_active_setvarpermutation(Fops *fops, rhp_idx *vperm)
  * subset functions definition
  * ------------------------------------------------------------------------- */
 
-static int _get_neg_rm_var(FilterSubset *fs, rhp_idx vi)
+static unsigned get_poolidx_negvar(NlPoolVars *dat, rhp_idx vi)
 {
-   struct idx_list *list = &fs->neg_var_vals;
-   Container *ctr = fs->ctr_src;
-
-   for (unsigned i = 0; i < list->size; ++i) {
-      if (list->vars[i] == vi) {
-         return list->pool_idx[i];
+   for (unsigned i = 0, len = dat->size; i < len; ++i) {
+      if (dat->vis[i] == vi) {
+         return dat->pool_idx[i];
       }
    }
 
-   if (list->size >= list->max) {
-      list->max = MAX(list->size+1, list->max);
-      REALLOC_(list->pool_idx, rhp_idx, list->max);
-      REALLOC_(list->vars, rhp_idx, list->max);
+   if (dat->size >= dat->max) {
+      dat->max = MAX(dat->size+1, dat->max);
+      REALLOC_(dat->pool_idx, unsigned, dat->max);
+      REALLOC_(dat->vis, rhp_idx, dat->max);
    }
 
-   rhp_idx idx;
-   if (rhpctrdat_active_var(ctr, vi)) {
-      idx = rctr_poolidx(ctr, -ctr->vars[vi].value);
-   } else {
-      idx = rctr_poolidx(ctr, 0.);
-   }
+   unsigned idx = pool_getidx(dat->pool, SNAN);
 
-   list->vars[list->size] = vi;
-   list->pool_idx[list->size++] = idx;
+   dat->vis[dat->size] = vi;
+   dat->pool_idx[dat->size++] = idx;
 
    return idx;
 }
@@ -282,8 +326,8 @@ static bool filter_subset_var(void *data, rhp_idx vi)
 
    FilterSubset* fs = (FilterSubset *)data;
    const Container * restrict ctr_src = fs->ctr_src;
-   RhpContainerData * restrict ctrdat = fs->ctr_src->data;
-   bool is_active = ctr_is_rhp(ctr_src) ? ctrdat->vars[vi] != NULL : true;
+   RhpContainerData * restrict cdat = fs->ctr_src->data;
+   bool is_active = ctr_is_rhp(ctr_src) ? cdat->vars[vi] != NULL : true;
 
    return avar_contains(&fs->vars, vi) &&
          !avar_contains(ctr_src->fixed_vars, vi) &&
@@ -296,14 +340,14 @@ static bool filter_subset_equ(void *data, rhp_idx ei)
 
    FilterSubset* fs = (FilterSubset *)data;
    const Container * restrict ctr_src = fs->ctr_src;
-   RhpContainerData * restrict ctrdat = fs->ctr_src->data;
-   bool is_active = ctr_is_rhp(ctr_src) ? ctrdat->equs[ei] != NULL : true;
+   RhpContainerData * restrict cdat = fs->ctr_src->data;
+   bool is_active = ctr_is_rhp(ctr_src) ? cdat->equs[ei] != NULL : true;
 
    /* TODO: GITLAB #107 */
    return is_active && aequ_contains(&fs->equs, ei);
 }
 
-static size_t subset_nvars_rhp(Avar *v, Avar *fixed_vars, CMatElt ** vars)
+static NONNULL size_t subset_nvars_rhp(Avar *v, Avar *fixed_vars, CMatElt **vars)
 {
    size_t nvars = 0;
 
@@ -315,7 +359,7 @@ static size_t subset_nvars_rhp(Avar *v, Avar *fixed_vars, CMatElt ** vars)
    return nvars;
 }
 
-static size_t subset_nequs_rhp(Aequ *e, CMatElt ** equs)
+static NONNULL size_t subset_nequs_rhp(Aequ *e, CMatElt ** equs)
 {
    size_t nequs = 0;
 
@@ -335,13 +379,13 @@ static void filter_subset_size(void *data, size_t* ctr_n, size_t* ctr_m)
    Avar *v = &fs->vars;
    Aequ *e = &fs->equs;
    const Container * restrict ctr_src = fs->ctr_src;
-   RhpContainerData * restrict ctrdat = fs->ctr_src->data;
+   RhpContainerData * restrict cdat = ctr_src->data;
    
    size_t nvars, nequs;
 
    if (ctr_is_rhp(ctr_src)) {
-      nvars = subset_nvars_rhp(v, ctr_src->fixed_vars, ctrdat->vars);
-      nequs = subset_nequs_rhp(e, ctrdat->equs);
+      nvars = subset_nvars_rhp(v, ctr_src->fixed_vars, cdat->vars);
+      nequs = subset_nequs_rhp(e, cdat->equs);
    } else {
       nvars = avar_size(v) - avar_size(fs->ctr_src->fixed_vars);
       nequs = aequ_size(&fs->equs);
@@ -351,57 +395,57 @@ static void filter_subset_size(void *data, size_t* ctr_n, size_t* ctr_m)
    *ctr_m = nequs;
 }
 
-static int filter_subset_lequ(void *data, Equ *e, Equ *edst)
+// TODO delete? Commented on 2024.03.12
+//static int filter_subset_lequ(void *data, Equ *e, Equ *edst)
+//{
+//   FilterSubset *fs = (FilterSubset *)data;
+//   Container *ctr = fs->ctr_src;
+//
+//   Lequ *lequ;
+//   Lequ *le = e->lequ;
+//   size_t len;
+//
+//   if (le && le->len > 0) {
+//      len = le->len;
+//   } else {
+//      return OK;
+//   }
+//
+//   rhp_idx * restrict idx = le->vis;
+//   double * restrict vals = le->coeffs;
+//
+//   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
+//   Var * restrict ctr_vars = ctr->vars;
+//
+//   if (!edst->lequ) {
+//      A_CHECK(edst->lequ, lequ_alloc(len));
+//      lequ = edst->lequ;
+//   } else {
+//      lequ = edst->lequ;
+//   }
+//
+//   for (unsigned i = 0; i < len; ++i) {
+//      rhp_idx vi = idx[i];
+//      rhp_idx vi_new = rosetta_vars[vi];
+//      double val = vals[i];
+//
+//      if (valid_vi(vi_new)) {
+//         lequ_add(lequ, vi_new, val); /* no check as we do not resize */
+//      } else {
+//         if (isfinite(val) && fabs(val) > DBL_EPSILON) {
+//            equ_add_cst(edst, val*ctr_vars[vi].value);
+//         }
+//      }
+//   }
+//
+//   return OK;
+//}
+
+static int filter_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
+                                     rhp_idx ei, unsigned len, NlPoolVars *datpool,
+                                    int instrs[restrict len],
+                                    int args[restrict len])
 {
-   FilterSubset *fs = (FilterSubset *)data;
-   Container *ctr = fs->ctr_src;
-
-   Lequ *lequ;
-   Lequ *le = e->lequ;
-   size_t len;
-
-   if (le && le->len > 0) {
-      len = le->len;
-   } else {
-      return OK;
-   }
-
-   rhp_idx * restrict idx = le->vis;
-   double * restrict vals = le->coeffs;
-
-   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
-   Var * restrict ctr_vars = ctr->vars;
-
-   if (!edst->lequ) {
-      A_CHECK(edst->lequ, lequ_alloc(len));
-      lequ = edst->lequ;
-   } else {
-      lequ = edst->lequ;
-   }
-
-   for (unsigned i = 0; i < len; ++i) {
-      rhp_idx vi = idx[i];
-      rhp_idx vi_new = rosetta_vars[vi];
-      double val = vals[i];
-
-      if (valid_vi(vi_new)) {
-         lequ_add(lequ, vi_new, val); /* no check as we do not resize */
-      } else {
-         if (isfinite(val) && fabs(val) > DBL_EPSILON) {
-            equ_add_cst(edst, val*ctr_vars[vi].value);
-         }
-      }
-   }
-
-   return OK;
-}
-
-static int filter_subset_gamsopcode(void *data, rhp_idx ei, int * restrict instrs,
-                                    int * restrict args, unsigned len)
-{
-   FilterSubset *fs = (FilterSubset *)data;
-   rhp_idx * restrict rosetta_vars = fs->ctr_src->rosetta_vars;
-
    /* ----------------------------------------------------------------------
     * For each variable 
     * - If the variable is still active, update the variable index
@@ -409,13 +453,15 @@ static int filter_subset_gamsopcode(void *data, rhp_idx ei, int * restrict instr
     *   that takes a variable as argument to one that takes a constant
     * ---------------------------------------------------------------------- */
 
+   int offset_pool = (int)datpool->offset_vars_pool;
    for (unsigned i = 0; i < len; ++i) {
 
       if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
          rhp_idx vi = args[i]-1;
+         rhp_idx vi_new = rosetta_vars[vi];
 
-         if (filter_subset_var(data, vi)) {
-            args[i] = 1 + rosetta_vars[vi];
+         if (valid_vi(vi_new)) {
+            args[i] = 1 + vi_new;
          } else {
             int opcode = gams_opcode_var_to_cst(instrs[i]);
 
@@ -428,10 +474,10 @@ static int filter_subset_gamsopcode(void *data, rhp_idx ei, int * restrict instr
 
             if (opcode >= 0 && opcode < nlOpcode_size) {
                instrs[i] = opcode;
-               args[i]   = fs->offset_vars_pool + vi;
+               args[i]   = offset_pool + vi;
             } else if (opcode == -1) {
                instrs[i] = nlPushI;
-               args[i]   = _get_neg_rm_var(fs, vi);
+               args[i]   = (int)get_poolidx_negvar(datpool, vi);
             } else {
                // The function gams_opcode_var_to_cst already prints the error
                return Error_Inconsistency;
@@ -447,13 +493,24 @@ static int filter_subset_gamsopcode(void *data, rhp_idx ei, int * restrict instr
    return OK;
 }
 
-static int filter_subset_nltree(void *data, Equ *e, Equ *edst)
+static int filter_subset_gamsopcode(void *data, rhp_idx ei, unsigned len,
+                                    int * restrict instrs,
+                                    int * restrict args)
 {
-  TO_IMPLEMENT("");
+   FilterSubset *fs = (FilterSubset *)data;
+   rhp_idx * restrict rosetta_vars = fs->ctr_src->rosetta_vars;
+
+   return filter_gamsopcode_rosetta(rosetta_vars, ei, len, &fs->nlpoolvars, instrs, args);
 }
 
-FilterSubset* fops_subset_new(unsigned vlen, Avar *vars, unsigned elen,
-                              Aequ *equs, struct mp_descr* mp_d)
+// TODO delete? Commented on 2024.03.12
+//static int filter_subset_nltree(void *data, Equ *e, Equ *edst)
+//{
+//  TO_IMPLEMENT("");
+//}
+
+FilterSubset* filter_subset_new(unsigned vlen, Avar vars[vlen], unsigned elen,
+                                Aequ equs[elen], struct mp_descr* mp_d)
 {
    FilterSubset *fs;
 
@@ -470,12 +527,12 @@ FilterSubset* fops_subset_new(unsigned vlen, Avar *vars, unsigned elen,
       SN_CHECK_EXIT(aequ_extendandown(&fs->equs, &equs[i]));
    }
 
-   fs->offset_vars_pool = UINT_MAX;
+   fs->nlpoolvars.offset_vars_pool = UINT_MAX;
 
-   fs->neg_var_vals.size = 0;
-   fs->neg_var_vals.max = 0;
-   fs->neg_var_vals.pool_idx = NULL;
-   fs->neg_var_vals.vars = NULL;
+   fs->nlpoolvars.size = 0;
+   fs->nlpoolvars.max = 0;
+   fs->nlpoolvars.pool_idx = NULL;
+   fs->nlpoolvars.vis = NULL;
 
    memcpy(&fs->descr, mp_d, sizeof(struct mp_descr));
 
@@ -523,8 +580,8 @@ void fops_subset_release(FilterSubset *fs)
 
    aequ_empty(&fs->equs);
    avar_empty(&fs->vars);
-   FREE(fs->neg_var_vals.pool_idx);
-   FREE(fs->neg_var_vals.vars);
+   FREE(fs->nlpoolvars.pool_idx);
+   FREE(fs->nlpoolvars.vis);
    FREE(fs);
 }
 
@@ -536,7 +593,7 @@ int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned offset_pool)
 
    Container *ctr = &mdl->ctr;
    fs->ctr_src = &mdl->ctr;
-   fs->offset_vars_pool = offset_pool;
+   fs->nlpoolvars.offset_vars_pool = offset_pool;
 
    Fops fops;
    fops_subset_init(&fops, fs);
@@ -562,34 +619,39 @@ int fops_active_init(Fops *fops, Container *ctr)
 
    fops->data = dat;
    fops->freedata = &filter_active_freedata;
-   fops->deactivatedequslen = &filter_active_deactivatedequslen;
+//   fops->deactivatedequslen = &filter_active_deactivatedequslen;
    fops->get_sizes = &filter_active_size;
    fops->keep_var = &filter_active_var;
    fops->keep_equ = &filter_active_equ;
    fops->vars_permutation = NULL;
-   fops->transform_lequ = &filter_active_lequ;
-   fops->transform_gamsopcode = &filter_active_gamsopcode;
-   fops->transform_nltree = &filter_active_nltree;
+   fops->transform_gamsopcode = &perm_active_gamsopcode;
+   //fops->transform_lequ = &filter_active_lequ;
+   //fops->transform_nltree = &filter_active_nltree;
 
    return OK;
 }
 
-static void filter_subset_freedata(void* data) {  }
+static void filter_subset_freedata(void* data)
+{
+   FilterSubset *fs = data;
+   fops_subset_release(fs);
+}
+
 static unsigned filter_subset_deactivatedequslen(void *data) { return 0; }
 
 void fops_subset_init(Fops *fops, FilterSubset *fs)
 {
    fops->type = FopsSubset;
    fops->data = fs;
-   fops->deactivatedequslen = &filter_subset_deactivatedequslen;
+//   fops->deactivatedequslen = &filter_subset_deactivatedequslen;
    fops->freedata = &filter_subset_freedata;
    fops->get_sizes = &filter_subset_size;
    fops->keep_var = &filter_subset_var;
    fops->keep_equ = &filter_subset_equ;
    fops->vars_permutation = NULL;
-   fops->transform_lequ = &filter_subset_lequ;
    fops->transform_gamsopcode = &filter_subset_gamsopcode;
-   fops->transform_nltree = &filter_subset_nltree;
+   //fops->transform_lequ = &filter_subset_lequ;
+   //fops->transform_nltree = &filter_subset_nltree;
 }
 
 struct avar_list {
@@ -672,9 +734,106 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
    return OK;
 }
 
-int fops_subdag_init(Fops *fops, Model *mdl, daguid_t uid)
+static int dfs_equ(EmpDag *empdag, daguid_t uid, struct aequ_list *equs)
+{
+   daguid_t * restrict children;
+   struct VFedges * restrict Varcs;
+   unsigned num_children;
+
+   if (uidisMP(uid)) {
+      mpid_t id = uid2id(uid);
+      UIntArray *Carcs = &empdag->mps.Carcs[id];
+      children = Carcs->arr;
+      num_children = Carcs->len;
+
+      Varcs = &empdag->mps.Varcs[id];
+
+      MathPrgm *mp = empdag->mps.arr[id];
+
+      IdxArray mpequs = mp->equs;
+      Aequ e;
+      aequ_setlist(&e, mpequs.len, mpequs.arr);
+      S_CHECK(aequ_list_add(equs, e));
+
+   } else {
+
+      mpeid_t id = uid2id(uid);
+      UIntArray *mpe_children = &empdag->mpes.arcs[id];
+      children = mpe_children->arr;
+      num_children = mpe_children->len;
+
+      assert(num_children > 0);
+
+      Varcs = NULL;
+   }
+
+
+   for (unsigned i = 0; i < num_children; ++i) {
+      S_CHECK(dfs_equ(empdag, children[i], equs));
+   }
+
+   if (!Varcs) { return OK; }
+
+   struct rhp_empdag_arcVF *Vlist = Varcs->arr;
+   for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
+      S_CHECK(dfs_equ(empdag, mpid2uid(Vlist[i].child_id), equs));
+   }
+
+   return OK;
+}
+
+
+static void subdag_freedata(void *data)
+{
+   FilterEmpDagSubDag *dat = data;
+   filter_subset_freedata(dat->fs);
+}
+
+static void subdag_get_sizes(void *data, size_t* n, size_t* m)
+{
+   FilterEmpDagSubDag *dat = data;
+   filter_subset_size(dat->fs, n, m);
+}
+
+static bool subdag_keep_var(void *data, rhp_idx vi)
+{
+   FilterEmpDagSubDag *dat = data;
+   return filter_subset_var(dat->fs, vi);
+}
+
+static bool subdag_keep_equ(void *data, rhp_idx ei)
+{
+   FilterEmpDagSubDag *dat = data;
+   return filter_subset_equ(dat->fs, ei);
+}
+
+static bool subdag_keep_var_parentfops(void *data, rhp_idx vi)
+{
+   FilterEmpDagSubDag *dat = data;
+   Fops *fops_up = dat->parent;
+   return filter_subset_var(dat->fs, vi) && fops_up->keep_var(fops_up->data, vi);
+}
+
+static bool subdag_keep_equ_parentfops(void *data, rhp_idx ei)
+{
+   FilterEmpDagSubDag *dat = data;
+   Fops *fops_up = dat->parent;
+   return filter_subset_equ(dat->fs, ei) && fops_up->keep_equ(fops_up->data, ei);
+}
+
+static int subdag_transform_gamsopcode(void *data, rhp_idx ei, unsigned len,
+                                       int * restrict instrs,
+                                       int * restrict args)
+{
+   FilterEmpDagSubDag *dat = data;
+   return filter_subset_gamsopcode(&dat->fs, ei, len, instrs, args);
+}
+Fops* fops_subdag_new(Model *mdl, daguid_t uid)
 {
    int status = OK;
+   Fops *fops;
+   MALLOC_NULL(fops, Fops, 1);
+   fops->type = FopsEmpDagSubDag;
 
    EmpDag *empdag = &mdl->empinfo.empdag;
 
@@ -690,20 +849,117 @@ int fops_subdag_init(Fops *fops, Model *mdl, daguid_t uid)
    mp_descr_invalid(&mp_d);
 
    FilterSubset* fs;
-   A_CHECK_EXIT(fs, fops_subset_new(vars.len, vars.list, vars.len, equs.list, &mp_d));
+   A_CHECK_EXIT(fs, filter_subset_new(vars.len, vars.list, equs.len, equs.list, &mp_d));
 
    fs->ctr_src = &mdl->ctr;
-   fs->offset_vars_pool = UINT_MAX;
+   fs->nlpoolvars.offset_vars_pool = UINT_MAX;
 
-   fops_subset_init(fops, fs);
+   FilterEmpDagSubDag *dat;
+   MALLOC_EXIT(dat, FilterEmpDagSubDag, 1);
+   fops->data = dat;
 
+   dat->fs = fs;
+   dat->parent = mdl->ctr.fops;
+   dat->subdag_root = uid;
 
+   fops->freedata = subdag_freedata;
+   fops->get_sizes = &subdag_get_sizes;
+   if (dat->parent) {
+      fops->keep_var = &subdag_keep_var_parentfops;
+      fops->keep_equ = &subdag_keep_equ_parentfops;
+   } else {
+      fops->keep_var = &subdag_keep_var;
+      fops->keep_equ = &subdag_keep_equ;
+   }
+   fops->vars_permutation = NULL;
+   fops->transform_gamsopcode = &subdag_transform_gamsopcode;
+ 
 _exit:
    avar_list_free(&vars);
    aequ_list_free(&equs);
    
-   return OK;
+   if (status != OK) {
+      free(fops);
+      return NULL;
+   }
+
+   return fops;
 }
+static void subdag_active_get_sizes(void *data, size_t* n, size_t* m)
+{
+   FilterEmpDagSubDag *dat = data;
+   Container *ctr = dat->fs->ctr_src;
+   *n = (size_t)ctr->n;
+
+   *m = dat->fs->equs.size;
+}
+
+static bool subdag_active_keep_var(void *data, rhp_idx vi)
+{
+   FilterEmpDagSubDag *dat = data;
+   return rctr_active_var(dat->fs->ctr_src, vi);
+}
+
+
+Fops* fops_subdag_activevars_new(Model *mdl, daguid_t uid)
+{
+   int status = OK;
+   Fops *fops;
+   MALLOC_NULL(fops, Fops, 1);
+   fops->type = FopsEmpDagSubDag;
+
+   EmpDag *empdag = &mdl->empinfo.empdag;
+
+   struct aequ_list equs;
+   aequ_list_init(&equs);
+
+   S_CHECK_EXIT(dfs_equ(empdag, uid, &equs));
+   assert(equs.list);
+
+   struct mp_descr mp_d;
+   mp_descr_invalid(&mp_d);
+
+   FilterSubset* fs;
+   A_CHECK_EXIT(fs, filter_subset_new(0, NULL, equs.len, equs.list, &mp_d));
+
+   fs->ctr_src = &mdl->ctr;
+   fs->nlpoolvars.offset_vars_pool = UINT_MAX;
+
+   FilterEmpDagSubDag *dat;
+   MALLOC_EXIT(dat, FilterEmpDagSubDag, 1);
+   fops->data = dat;
+
+   dat->fs = fs;
+   dat->parent = mdl->ctr.fops;
+   dat->subdag_root = uid;
+
+   fops->data = dat;
+   fops->freedata = &subdag_freedata;
+   fops->get_sizes = &subdag_active_get_sizes;
+   fops->keep_var = &subdag_active_keep_var;
+
+   if (dat->parent) {
+      fops->keep_equ = &subdag_keep_equ_parentfops;
+   } else {
+      fops->keep_equ = &subdag_keep_equ;
+   }
+   fops->vars_permutation = NULL;
+   fops->transform_gamsopcode = &subdag_transform_gamsopcode;
+//   fops->deactivatedequslen = &filter_subset_deactivatedequslen;
+   //fops->transform_lequ = &filter_subset_lequ;
+   //fops->transform_nltree = &filter_subset_nltree;
+
+_exit:
+   aequ_list_free(&equs);
+   
+   if (status != OK) {
+      free(fops);
+      return NULL;
+   }
+
+   return fops;
+}
+
 
 int fops_setvarpermutation(Fops *fops, rhp_idx *vperm)
 {
@@ -718,4 +974,113 @@ int fops_setvarpermutation(Fops *fops, rhp_idx *vperm)
    }
 
 
+}
+
+mpid_t fops_singleMP_getmpid(Fops *fops)
+{
+   if (fops->type != FopsEmpDagSingleMp) {
+      error("[fops] ERROR in %s: expecting %s, got %s\n", __func__,
+            fopstype_name(FopsEmpDagSingleMp), fopstype_name(fops->type));
+      return MpId_NA;
+   }
+
+   FilterEmpDagSingleMp *dat = (FilterEmpDagSingleMp *)fops->data;
+   return dat->mpid;
+}
+
+const MpIdArray* fops_Nash_getmpids(Fops *fops)
+{
+   if (fops->type != FopsEmpDagNash) {
+      error("[fops] ERROR in %s: expecting %s, got %s\n", __func__,
+            fopstype_name(FopsEmpDagNash), fopstype_name(fops->type));
+      return NULL;
+   }
+
+   FilterEmpDagNash *dat = (FilterEmpDagNash *)fops->data;
+   return &dat->mpids;
+}
+
+daguid_t fops_subdag_getrootuid(Fops *fops)
+{
+   if (fops->type != FopsEmpDagSubDag) {
+      error("[fops] ERROR in %s: expecting %s, got %s\n", __func__,
+            fopstype_name(FopsEmpDagNash), fopstype_name(fops->type));
+      return EMPDAG_UID_NONE;
+   }
+
+   FilterEmpDagSubDag *dat = (FilterEmpDagSubDag *)fops->data;
+   return dat->subdag_root;
+}
+
+Fops* fops_getparent(Fops *fops)
+{
+   switch (fops->type) {
+   case FopsEmpDagSubDag: return ((FilterEmpDagSubDag*)fops->data)->parent;
+   case FopsEmpDagSingleMp: return ((FilterEmpDagSingleMp*)fops->data)->parent;
+   case FopsEmpDagNash: return ((FilterEmpDagNash*)fops->data)->parent;
+   default: return NULL;
+   }
+}
+
+static bool filter_empdag_singleMP_equ(void *data, rhp_idx ei)
+{
+   FilterEmpDagSingleMp *dat = data;
+
+   return rhp_idx_findsorted(dat->mp_equs, ei) != UINT_MAX;
+
+}
+
+static void singleMP_get_sizes(void *data, size_t* n, size_t* m)
+{
+   FilterEmpDagSingleMp *dat = data;
+   Container *ctr = dat->ctr;
+   *n = (size_t)ctr->n;
+
+   *m = dat->mp_equs->len;
+}
+
+Fops *fops_singleMP_activevars_new(Model *mdl, mpid_t mpid)
+{
+   Fops *fops = NULL;
+
+   Fops *fops_mdl = mdl->ctr.fops;
+
+   if (!fops_mdl && mdl_is_rhp(mdl)) {
+      size_t total_n = ctr_nvars_total(&mdl->ctr);
+
+      if (total_n != mdl->ctr.n) {
+         SN_CHECK(rmdl_ensurefops_activedefault(mdl));
+      }
+   }
+
+   CALLOC_NULL(fops, Fops, 1);
+
+   fops->type = FopsEmpDagSingleMpAllVars;
+
+   MALLOC_EXIT_NULL(fops->data, FilterEmpDagSingleMp, 1);
+   FilterEmpDagSingleMp *dat = fops->data;
+
+   dat->mpid = mpid;
+
+   fops->freedata = &filter_active_freedata;
+   //fops->deactivatedequslen = &filter_active_deactivatedequslen;
+   fops->get_sizes = &singleMP_get_sizes;
+   fops->keep_var = &filter_active_var;
+   fops->keep_equ = &filter_empdag_singleMP_equ;
+   fops->vars_permutation = NULL;
+   fops->transform_gamsopcode = &perm_active_gamsopcode;
+   //fops->transform_lequ = &filter_active_lequ;
+   //fops->transform_nltree = &filter_active_nltree;
+
+   return fops;
+
+_exit:
+   if (fops) {
+      if (fops->data) {
+         fops->freedata(fops->data);
+      }
+      free(fops);
+   }
+
+   return NULL;
 }

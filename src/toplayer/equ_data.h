@@ -7,7 +7,6 @@
  *  @brief equation related data
  */
 
-#include <stdint.h>
 #include "compat.h"
 
 /** @brief Type of equation */
@@ -18,6 +17,13 @@ __extension__ typedef enum equ_object_type ENUM_U8 {
    BooleanRelation,   /**< Boolean relation */
    EquTypeUnsupported,        /**< Unsupported type */ 
 } EquObjectType;
+
+/** Type of expression in equation */
+typedef enum {
+   EquExprLinear,     /**< Linear expression             */
+   EquExprQuadratic,  /**< Quadratic expression          */
+   EquExprNonLinear,  /**< Nonlinear expression          */
+} EquExprType;
 
 /** @brief Linear equation */
 typedef struct lequ {

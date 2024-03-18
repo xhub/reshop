@@ -32,7 +32,7 @@ int main(void)
 
 
 #define SOLVE_TEST_INIT(TEST_FN, SOLVER_STR) \
-    if (gams_skip_solver(SOLVER_STR)) { continue; } \
+    if (gams_skip_solver(SOLVER_STR, #TEST_FN)) { continue; } \
     struct rhp_mdl *mdl = test_init(); \
     struct rhp_mdl *mdl_gams = rhp_mdl_new(RHP_BACKEND_GAMS_GMO); \
     if (!mdl_gams) { status = 1; goto _exit; } \

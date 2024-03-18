@@ -16,9 +16,11 @@ typedef struct model_ops {
    void (*deallocdata)(Model *mdl);
    int (*checkmdl)(Model *mdl);
    int (*checkobjequvar)(const Model *mdl, rhp_idx objvar, rhp_idx objequ);
+   int (*copyassolvable)(Model *mdl, Model *mdl_src);
    int (*copysolveoptions)(Model *mdl, const Model *mdl_src);
    int (*copystatsfromsolver)(Model *mdl, const Model *mdl_solver);
-   int (*exportmodel)(Model *mdl, Model *mdl_dst);
+   int (*export)(Model *mdl, Model *mdl_dst);
+   int (*exportsolvable)(Model *mdl, Model *mdl_dst);
    int (*getmodelstat)(const Model *mdl, int *modelstat);
    int (*getobjequ)(const Model *mdl, rhp_idx *objequ);
    int (*getobjjacval)(const Model *mdl, double *objjacval);

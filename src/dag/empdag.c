@@ -1087,12 +1087,12 @@ int empdag_setmpname(EmpDag *empdag, mpid_t mpid, const char *const name)
    return OK;
 }
 
-int empdag_mpe_getchildren(const EmpDag *empdag, mpeid_t mpe_id,
-                           UIntArray *mps)
+int empdag_mpe_getchildren(const EmpDag *empdag, mpeid_t mpeid,
+                           DagUidArray *mps)
 {
-   S_CHECK(chk_mpeid(empdag, mpe_id));
+   S_CHECK(chk_mpeid(empdag, mpeid));
 
-   memcpy(mps, &empdag->mpes.arcs[mpe_id], sizeof(UIntArray));
+   memcpy(mps, &empdag->mpes.arcs[mpeid], sizeof(DagUidArray));
 
    return OK;
 }

@@ -539,6 +539,19 @@ int rhp_add_power_constraint(struct rhp_mdl *mdl, rhp_idx *ei);
 RHP_PUBLIB
 int rhp_add_soc_constraint(struct rhp_mdl *mdl, rhp_idx *ei);
 
+RHP_PUBLIB
+int rhp_add_equality_constraint_named(struct rhp_mdl *mdl, rhp_idx *ei, const char *name);
+RHP_PUBLIB
+int rhp_add_exp_constraint_named(struct rhp_mdl *mdl, rhp_idx *ei, const char *name);
+RHP_PUBLIB
+int rhp_add_greaterthan_constraint_named(struct rhp_mdl *mdl, rhp_idx *ei, const char *name);
+RHP_PUBLIB
+int rhp_add_lessthan_constraint_named(struct rhp_mdl *mdl, rhp_idx *ei, const char *name);
+RHP_PUBLIB
+int rhp_add_power_constraint_named(struct rhp_mdl *mdl, rhp_idx *ei, const char *name);
+RHP_PUBLIB
+int rhp_add_soc_constraint_named(struct rhp_mdl *mdl, rhp_idx *ei, const char *name);
+
 /* -------------------------------------------------------------------------
  * RIM: equation modification
  * ------------------------------------------------------------------------- */
@@ -629,9 +642,6 @@ RHP_PUBLIB
 unsigned rhp_mdl_nvars_total(const struct rhp_mdl *mdl);
 RHP_PUBLIB
 unsigned rhp_mdl_nequs_total(const struct rhp_mdl *mdl);
-
-RHP_PUBLIB
-int rmdl_analyze_modeltype(struct rhp_mdl *mdl, struct rhp_ctr_filter_ops *fops);
 
 RHP_PUBLIB
 int rhp_mdl_latex(struct rhp_mdl *mdl, const char *filename);

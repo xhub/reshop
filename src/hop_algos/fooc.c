@@ -20,13 +20,13 @@
 #include "equvar_metadata.h"
 #include "filter_ops.h"
 #include "fooc.h"
+#include "fooc_data.h"
 #include "fooc_priv.h"
 #include "lequ.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl.h"
 #include "mdl_data.h"
-#include "mdl_rhp.h"
 #include "ctrdat_rhp.h"
 #include "rhp_alg.h"
 #include "rmdl_debug.h"
@@ -50,22 +50,6 @@
 struct equ_inh_names {
    IdxArray cons_src;
 };
-
-typedef struct {
-   rhp_idx *vi_primal2ei_F;
-   rhp_idx *ei_F2vi_primal;
-   rhp_idx ei_F_start;
-   rhp_idx ei_cons_start;
-   rhp_idx ei_lincons_start;
-   rhp_idx vi_mult_start;
-   unsigned n_equs_orig;
-   struct {
-      unsigned total_m;
-      unsigned total_n;
-   } src;
-   unsigned skipped_equ;
-   McpStats *stats;
-} McpInfo;
 
 
 /* TODO: LOW rethink this */
@@ -101,11 +85,11 @@ static void err_objvar_(const Model *mdl, const MathPrgm *mp, rhp_idx objvar,
                         rhp_idx objequ)
 {
    const EmpDag *empdag = &mdl->empinfo.empdag;
-   error("[FOOC] ERROR: the variable '%s' is the objective variable in MP(%s),"
-         " and its objective function is '%s'. This is unsupported, the MP must"
-         " have exactly one of these\n",
-         mdl_printvarname(mdl, objvar), mdl_printequname(mdl, objequ),
-         empdag_getmpname(empdag, mp->id));
+   error("[FOOC] ERROR in %s model '%.*s' #%u: the MP(%s) has both an objective "
+         "variable '%s' and an objective function '%s'. This is unsupported, "
+         "there must be only one of these.\n", mdl_fmtargs(mdl),
+         empdag_getmpname(empdag, mp->id), mdl_printvarname(mdl, objvar),
+         mdl_printequname(mdl, objequ));
 }
 
 static NONNULL
@@ -185,16 +169,16 @@ end:
 }
 
 static inline
-int setup_equvarnames(struct equ_inh_names * equnames, McpInfo *mcpinfo,
+int setup_equvarnames(struct equ_inh_names * equnames, FoocData *fooc_dat,
                       RhpContainerData *cdat_mcp, const Model* mdl_fooc)
 {
    rhp_idx_init(&equnames->cons_src);
 
-   size_t n_cons = mcpinfo->stats->n_constraints;
+   size_t n_cons = fooc_dat->info->n_constraints;
    S_CHECK(rhp_idx_reserve(&equnames->cons_src, n_cons));
 
    Aequ e, e_src;
-   aequ_setcompact(&e, n_cons, mcpinfo->ei_cons_start);
+   aequ_setcompact(&e, n_cons, fooc_dat->ei_cons_start);
    S_CHECK(aequ_extendandown(&cdat_mcp->equname_inherited.e, &e));
    aequ_setandownlist(&e_src, n_cons, equnames->cons_src.arr);
    S_CHECK(aequ_extendandown(&cdat_mcp->equname_inherited.e_src, &e_src));
@@ -202,19 +186,19 @@ int setup_equvarnames(struct equ_inh_names * equnames, McpInfo *mcpinfo,
 
    struct vnames *vnames_var = &cdat_mcp->var_names.v;
    vnames_var->type = VNAMES_MULTIPLIERS;
-   vnames_var->start = mcpinfo->vi_mult_start;
-   vnames_var->end = mcpinfo->vi_mult_start + n_cons - 1;
+   vnames_var->start = fooc_dat->vi_mult_start;
+   vnames_var->end = fooc_dat->vi_mult_start + n_cons - 1;
 
    struct vnames *vnames_equ = &cdat_mcp->equ_names.v;
    assert(vnames_equ->type == VNAMES_UNSET);
 
    vnames_equ->type = VNAMES_FOOC_LOOKUP;
-   vnames_equ->start = mcpinfo->ei_F_start;
-   vnames_equ->end = mcpinfo->ei_cons_start-1;
+   vnames_equ->start = fooc_dat->ei_F_start;
+   vnames_equ->end = fooc_dat->ei_cons_start-1;
 
-   A_CHECK(vnames_equ->fooc_lookup, vnames_lookup_new(mcpinfo->stats->n_primalvars,
+   A_CHECK(vnames_equ->fooc_lookup, vnames_lookup_new(fooc_dat->info->n_primalvars,
                                                       mdl_fooc,
-                                                      mcpinfo->ei_F2vi_primal));
+                                                      fooc_dat->ei_F2vi_primal));
 
    return OK;
 }
@@ -327,157 +311,32 @@ static inline int copy_functional_from_mp_(Model *restrict mdl_mcp,
  * This just gets all the objective equations and the number of perp mappings
  * ------------------------------------------------------------------------ */
 
-static int fill_objequs_and_get_vifuncs(const Model *mdl_src, const MathPrgm *mp,
-                                        const Mpe *mpe, McpInfo *mcpinfo,
-                                        Aequ *objequs, rhp_idx **mp2objequ)
+static void print_objequs_vifuncs_stats(const Model *mdl_src, FoocData *fooc_dat)
 {
-  size_t lvi_funcs = 0, lvi_zerofuncs = 0;
-  rhp_idx *mps2objequs;
-  rhp_idx *objequs2mps;
-  const Container *ctr_src = &mdl_src->ctr;
-   size_t total_m = mcpinfo->src.total_m;
+   unsigned n_objequ = aequ_size(&fooc_dat->objequs);
+   trace_fooc("[fooc] Found %u objective equations\n", n_objequ);
+   for (unsigned i = 0; i < n_objequ; ++i) {
+      trace_fooc("%*c %s\n", 6, ' ', mdl_printequname(mdl_src, aequ_fget(&fooc_dat->objequs, i)));
+   }
+   trace_fooc("[fooc] Found %zu VI functions\n", fooc_dat->info->n_vifuncs);
+   trace_fooc("[fooc] Found %zu zero VI functions\n", fooc_dat->info->n_vizerofuncs);
 
-  if (mp) {
-    switch (mp->type) {
-    case MpTypeOpt: {
-      rhp_idx objvar = mp_getobjvar(mp);
-      rhp_idx objequ = mp_getobjequ(mp);
-      bool valid_objvar = valid_vi(objvar), valid_objequ = valid_ei(objequ);
+}
 
-      if (valid_objvar && valid_objequ) {
-        err_objvar_(mdl_src, mp, objvar, objequ);
-        return Error_EMPIncorrectInput;
-      }
+static int fill_objequs_and_get_vifuncs(const Model *mdl_src, FoocData *fooc_dat)
+{
+   size_t lvi_funcs = 0, lvi_zerofuncs = 0;
+   rhp_idx *mps2objequs;
+   rhp_idx *objequs2mps;
+   const Container *ctr_src = &mdl_src->ctr;
+   const EmpDag *empdag = &mdl_src->empinfo.empdag;
+   size_t total_m = fooc_dat->src.total_m;
 
-      if (!(valid_objvar || valid_objequ)) {
-         mp_err_noobjdata(mp);
-         return Error_EMPIncorrectInput;
-      }
+   unsigned mps_len = fooc_dat->mps.len;
 
-      if (valid_objequ) {
-         S_CHECK(ei_inbounds(objequ, total_m, __func__));
-         aequ_setcompact(objequs, 1, objequ);
-      }
-      break;
-    }
-    case MpTypeVi:
-/* See GITLAB #83 */
-//    case MpTypeMcp:
-       lvi_zerofuncs = mp_getnumzerofunc(mp);
-       lvi_funcs = mp_getnumvars(mp) - lvi_zerofuncs;
-       break;
-    default:
-       error("%s :: not implemented for MP type %s", __func__, mp_gettypestr(mp));
-       return Error_NotImplemented;
-    }
+  /* No HOP structure  */
 
-  } else if (mpe) {
-
-    bool do_exit = false;
-    rhp_idx *objequs_list;
-    const EmpInfo *empinfo_src = &mdl_src->empinfo;
-    const EmpDag *empdag = &empinfo_src->empdag;
-
-    UIntArray mps;
-    S_CHECK(empdag_mpe_getchildren(empdag, mpe->id, &mps));
-    unsigned mpe_len = mps.len;
-    if (!valid_idx(mpe_len)) {
-      error("%s :: invalid MPE %s, error is ``%s''", __func__,
-               empdag_getmpename(empdag, mpe->id), empdagc_err(mpe_len));
-      return Error_EMPIncorrectInput;
-    }
-    MALLOC_(objequs_list, rhp_idx, mpe_len);
-    aequ_setandownlist(objequs, UINT_MAX, objequs_list);
-    unsigned nb_objequs = 0;
-    MALLOC_(mps2objequs, rhp_idx, 2 * mpe_len);
-    memset(mps2objequs, IdxNA,  (2 * mpe_len)*sizeof(rhp_idx));
-    *mp2objequ = mps2objequs;
-    objequs2mps = &mps2objequs[mpe_len];
-
-    for (unsigned i = 0; i < mpe_len; i++) {
-      MathPrgm *_mp;
-      S_CHECK(empdag_getmpbyuid(empdag, rhp_uint_at(&mps, i), &_mp));
-
-      switch (_mp->type) {
-      case MpTypeOpt: {
-
-        rhp_idx objvar = mp_getobjvar(_mp);
-        rhp_idx objequ = mp_getobjequ(_mp);
-        bool valid_objvar = valid_vi(objvar), valid_objequ = valid_ei(objequ);
-
-        /* with a valid objvar, we do nothing  */
-        if (valid_objvar) {
-          if (valid_objequ) {
-            err_objvar_(mdl_src, _mp, objvar, objequ);
-            do_exit = true;
-          } 
-        } else if (!valid_objequ) { /* error if no objequ */
-            mp_err_noobjdata(_mp);
-            do_exit = true;
-        } else {
-          S_CHECK(ei_inbounds(objequ, total_m, __func__));
-          /* ----------------------------------------------------------
-           * Perform a sorted insertion.
-           * This is needed since we want to iterate over the equations in
-           * an interval fashion: we go from one objective equation to the
-           * other, removing the objective equations from the processing.
-           *
-           * One could implement a secant-type search and use memmove
-           * TODO: GITLAB #111
-           * ---------------------------------------------------------- */
-
-          size_t j = nb_objequs;
-          while (j > 0) {
-            rhp_idx cur = objequs_list[j - 1];
-            if (cur > objequ) {
-              objequs_list[j] = cur;
-              rhp_idx mp_idx = objequs2mps[j - 1];
-              mps2objequs[mp_idx] = j;
-              objequs2mps[j] = mp_idx;
-            } else {
-              break;
-            }
-            j--;
-          }
-          objequs_list[j] = objequ;
-          mps2objequs[i] = j;
-          objequs2mps[j] = i;
-          nb_objequs++;
-        }
-
-        break;
-      }
-
-        /* ----------------------------------------------------------------
-         * The number of constraints in the total system should not account
-         * for the GE functionals
-         * ---------------------------------------------------------------- */
-
-/* See GITLAB #83 */
-//      case MpTypeMcp:
-      case MpTypeVi: {
-         unsigned mp_zerofuncs = mp_getnumzerofunc(_mp);
-         lvi_zerofuncs += mp_zerofuncs;
-         lvi_funcs += mp_getnumvars(_mp) - mp_zerofuncs;
-         mps2objequs[i] = IdxNA;
-      }
-      break;
-
-      default:
-        error("%s :: unsupported MP of type %s\n", __func__, mp_gettypestr(_mp));
-        return Error_NotImplemented;
-      }
-
-      /* If one of more fatal error were encountered  */
-      if (do_exit) {
-        return Error_EMPIncorrectInput;
-      }
-    }
-
-    aequ_setsize(objequs, nb_objequs);
-
-  } else { /* No HOP structure  */
-
+   if (mps_len == 0) {
     rhp_idx objvar, objequ;
     RhpSense sense;
     S_CHECK(mdl_getobjvar(mdl_src, &objvar));
@@ -494,7 +353,7 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, const MathPrgm *mp
     }
 
       if (valid_ei(objequ)) {
-         aequ_setcompact(objequs, 1, objequ);
+         aequ_setcompact(&fooc_dat->objequs, 1, objequ);
       } else if (!valid_vi(objvar) && sense != RhpFeasibility) {
          error("[fooc] ERROR in %s model '%.*s' #%u: sense is %s, but neither "
                "an objective variable nor an objective equation have been given\n",
@@ -515,20 +374,112 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, const MathPrgm *mp
             }
          }
       }
+      fooc_dat->info->n_vifuncs = lvi_funcs;
+      fooc_dat->info->n_vizerofuncs = lvi_zerofuncs;
+
+      if (O_Output & PO_TRACE_FOOC) {
+         print_objequs_vifuncs_stats(mdl_src, fooc_dat);
+      }
+      return OK;
    }
 
-  mcpinfo->stats->n_vifuncs = lvi_funcs;
-  mcpinfo->stats->n_vizerofuncs = lvi_zerofuncs;
+   rhp_idx *objequs_list;
+   MALLOC_(objequs_list, rhp_idx, mps_len);
+   aequ_setandownlist(&fooc_dat->objequs, UINT_MAX, objequs_list);
+
+   unsigned nb_objequs = 0;
+   MALLOC_(mps2objequs, rhp_idx, 2 * mps_len);
+   memset(mps2objequs, IdxNA,  (2 * mps_len)*sizeof(rhp_idx));
+   fooc_dat->mp2objequ = mps2objequs;
+   objequs2mps = &mps2objequs[mps_len];
+
+   MpIdArray *mps = &fooc_dat->mps;
+
+   for (unsigned i = 0; i < mps_len; i++) {
+      MathPrgm *mp;
+      S_CHECK(empdag_getmpbyid(empdag, mpidarray_at(mps, i), &mp));
+
+      switch (mp->type) {
+      case MpTypeOpt: {
+
+         rhp_idx objvar = mp_getobjvar(mp);
+         rhp_idx objequ = mp_getobjequ(mp);
+         bool valid_objvar = valid_vi(objvar), valid_objequ = valid_ei(objequ);
+
+         if (valid_objvar && valid_objequ) {
+           err_objvar_(mdl_src, mp, objvar, objequ);
+           return Error_EMPIncorrectInput;
+         }
+
+         if (!(valid_objvar || valid_objequ)) {
+            mp_err_noobjdata(mp);
+            return Error_EMPIncorrectInput;
+         }
+
+         if (valid_objequ) {
+            S_CHECK(ei_inbounds(objequ, total_m, __func__));
+            /* ----------------------------------------------------------
+             * Perform a sorted insertion.
+             * This is needed since we want to iterate over the equations in
+             * an interval fashion: we go from one objective equation to the
+             * other, removing the objective equations from the processing.
+             *
+             * One could implement a secant-type search and use memmove
+             * TODO: GITLAB #111
+             * ---------------------------------------------------------- */
+
+            size_t j = nb_objequs;
+            while (j > 0) {
+               rhp_idx cur = objequs_list[j - 1];
+               if (cur > objequ) {
+                  objequs_list[j] = cur;
+                  rhp_idx mp_idx = objequs2mps[j - 1];
+                  mps2objequs[mp_idx] = j;
+                  objequs2mps[j] = mp_idx;
+               } else {
+                  break;
+               }
+               j--;
+            }
+            objequs_list[j] = objequ;
+            mps2objequs[i] = j;
+            objequs2mps[j] = i;
+            nb_objequs++;
+         }
+
+         break;
+      }
+
+      /* ----------------------------------------------------------------
+      * The number of constraints in the total system should not account
+      * for the GE functionals
+      * ---------------------------------------------------------------- */
+
+      /* See GITLAB #83 */
+      //      case MpTypeMcp:
+      case MpTypeVi: {
+         unsigned mp_zerofuncs = mp_getnumzerofunc(mp);
+         lvi_zerofuncs += mp_zerofuncs;
+         lvi_funcs += mp_getnumvars(mp) - mp_zerofuncs;
+         mps2objequs[i] = IdxNA;
+         break;
+      }
+
+      default:
+         error("%s ERROR: unsupported MP of type %s\n", __func__, mp_gettypestr(mp));
+         return Error_NotImplemented;
+      }
+
+   }
+
+
+   aequ_setsize(&fooc_dat->objequs, nb_objequs);
+  fooc_dat->info->n_vifuncs = lvi_funcs;
+  fooc_dat->info->n_vizerofuncs = lvi_zerofuncs;
 
 
    if (O_Output & PO_TRACE_FOOC) {
-      unsigned n_objequ = aequ_size(objequs);
-      trace_fooc("[fooc] Found %u objective equations\n", n_objequ);
-      for (unsigned i = 0; i < n_objequ; ++i) {
-         trace_fooc("%*c %s\n", 6, ' ', mdl_printequname(mdl_src, aequ_fget(objequs, i)));
-      }
-      trace_fooc("[fooc] Found %zu VI functions\n", lvi_funcs);
-      trace_fooc("[fooc] Found %zu zero VI functions\n", lvi_zerofuncs);
+      print_objequs_vifuncs_stats(mdl_src, fooc_dat);
    }
 
    return OK;
@@ -755,8 +706,8 @@ static inline void copy_values_equ2mult(Var *var, Equ *equ)
    }
 }
 
-static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpinfo,
-                                  Aequ *objequs, const Fops * const fops_equ,
+static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc_dat,
+                                  const Fops * const fops_equ,
                                   struct equ_inh_names *equ_inh_names,
                                   const Rosettas * restrict rosettas_vars)
 {
@@ -764,16 +715,14 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
    Container * restrict ctr_src = &mdl_src->ctr;
    RhpContainerData *cdat_mcp = (RhpContainerData *)ctr_mcp->data;
 
-   //size_t ei_lin    = mcpstats->mcp_size - mcpstats->n_lincons;
-   //size_t ei_start  = mcpstats->n_primal_vars;
-   size_t ei_lin    = mcpinfo->ei_lincons_start;
-   size_t ei_start  = mcpinfo->ei_cons_start;
+   size_t ei_lin    = fooc_dat->ei_lincons_start;
+   size_t ei_start  = fooc_dat->ei_cons_start;
    size_t ei_nl     = ei_start;
-   size_t vi_mult   = mcpinfo->vi_mult_start;
-   rhp_idx *vi2ei_F = mcpinfo->vi_primal2ei_F;
+   size_t vi_mult   = fooc_dat->vi_mult_start;
+   rhp_idx *vi2ei_F = fooc_dat->vi_primal2ei_F;
 
    /* We need to evaluate the VI functions when reporting the solution */
-   unsigned n_vifuncs = mcpinfo->stats->n_vifuncs;
+   unsigned n_vifuncs = fooc_dat->info->n_vifuncs;
    rhp_idx *vifuncs_list = NULL;
    if (n_vifuncs > 0) {
       MALLOC_(vifuncs_list, rhp_idx, n_vifuncs);
@@ -791,19 +740,12 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
     * what happens there.
     * --------------------------------------------------------------------- */
 
-  /* TODO(xhub) URG this seems unused, why? */
-  /*
-  int *var_in_equ = (int*)working_mem.ptr;
-  double *jac_vals = (double*)&var_in_equ[var_size];
-  bool *nlflags = (bool*)&jac_vals[var_size];
-  */
-
   /* ----------------------------------------------------------------------
    * Start copying the constraints equations
    * ---------------------------------------------------------------------- */
 
-  rhp_idx *rosetta_equs = ctr_src->rosetta_equs;
-  rhp_idx *rosetta_vars = ctr_src->rosetta_vars;
+   rhp_idx *rosetta_equs = ctr_src->rosetta_equs;
+   rhp_idx *rosetta_vars = ctr_src->rosetta_vars;
 
    struct vnames *vnames_equ = &cdat_mcp->equ_names.v;
    assert(vnames_equ->type == VNAMES_FOOC_LOOKUP);
@@ -814,8 +756,10 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
    unsigned n_mappings = 0;
    size_t ei_src_start = 0;
    size_t i_objequs = 0;
-   size_t total_m_src = mcpinfo->src.total_m;
-   unsigned skipped_equ = mcpinfo->skipped_equ;
+   size_t total_m_src = fooc_dat->src.total_m;
+   unsigned skipped_equ = fooc_dat->skipped_equ;
+
+   Aequ *objequs = &fooc_dat->objequs;
 
    do {
       size_t ei_src_end =
@@ -995,7 +939,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
    * Add the VI zerofunc
    * ---------------------------------------------------------------------- */
 
-   size_t n_vizerofunc = mcpinfo->stats->n_vizerofuncs;
+   size_t n_vizerofunc = fooc_dat->info->n_vizerofuncs;
 
    if (n_vizerofunc > 0) {
       rhp_idx vi = 0;
@@ -1038,12 +982,12 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, McpInfo *mcpin
    * - we just added cons_size multipliers
    * ---------------------------------------------------------------------- */
 
-   mcpinfo->skipped_equ = skipped_equ;
-   ctr_mcp->m = mcpinfo->n_equs_orig + mcpinfo->stats->mcp_size;
+   fooc_dat->skipped_equ = skipped_equ;
+   ctr_mcp->m = fooc_dat->n_equs_orig + fooc_dat->info->mcp_size;
 
    /* Just 2 consistency checks  */
-   assert(ei_lin == (mcpinfo->stats->mcp_size + mcpinfo->n_equs_orig));
-   assert(ei_nl == (ei_lin - mcpinfo->stats->n_lincons));
+   assert(ei_lin == (fooc_dat->info->mcp_size + fooc_dat->n_equs_orig));
+   assert(ei_nl == (ei_lin - fooc_dat->info->n_lincons));
 
    return OK;
 }
@@ -1070,7 +1014,7 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
                                Aequ *restrict cons_nl,
                                Aequ *restrict cons_lin,
                                Model *restrict mdl_src,
-                               McpInfo *restrict mcpinfo,
+                               FoocData *restrict fooc_dat,
                                rhp_idx objequ) {
   /* ----------------------------------------------------------------------
    * A few assumptions:
@@ -1150,7 +1094,7 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
       A_CHECK_EXIT(sd_cequ[i], sd_tool_alloc_fromequ(SDT_ANY, ctr_mcp, e));
    }
 
-   rhp_idx *vi_primal2ei_F = mcpinfo->vi_primal2ei_F;
+   rhp_idx *vi_primal2ei_F = fooc_dat->vi_primal2ei_F;
 
   /* ----------------------------------------------------------------------
    * Compute the derivative of the objective w.r.t primal variables ∇ₖf(x)
@@ -1254,7 +1198,7 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
 
       rhp_idx ei = vi_primal2ei_F ? vi_primal2ei_F[vi] : vi;
 
-      assert(ei >= mcpinfo->ei_F_start && ei < mcpinfo->ei_cons_start);
+      assert(ei >= fooc_dat->ei_F_start && ei < fooc_dat->ei_cons_start);
 
       S_CHECK(rctr_setequvarperp(ctr_mcp, ei, vi));
     Equ *e = &ctr_mcp->equs[ei];
@@ -1343,19 +1287,20 @@ static int fooc_mcp_primal_mcp(Model *ctr_mcp, MathPrgm *mp,
  *
  * Add the equations \f$ 0\in F(x) + N_C(x) \f$ into the MCP
  *
- * @param ctr_mcp      the destination container
+ * @param mdl_mcp      the destination container
  * @param mp           the mathematical programm (optional)
  * @param cequ_nl      the nonlinear constraints (only those belonging to the
  * MP, if any)
  * @param cequ_lin     the linear constraints (only those belonging to the MP,
  * if any)
- * @param ctr_src      the source container
+ * @param mdl_src      the source container
  *
  * @return             the error code
  */
 static int fooc_mcp_primal_vi(Model *mdl_mcp, MathPrgm *mp,
                               Aequ *cequ_nl, Aequ *cequ_lin,
-                              Model *mdl_src, McpInfo *mcpinfo) {
+                              Model *mdl_src, FoocData *fooc_dat)
+{
   /* ----------------------------------------------------------------------
    * A few assumptions:
    * - the multiplier are all in the model and their indices matches the once
@@ -1426,7 +1371,7 @@ static int fooc_mcp_primal_vi(Model *mdl_mcp, MathPrgm *mp,
     A_CHECK_EXIT(sd_cequ[i], sd_tool_alloc(SDT_ANY, ctr_mcp, ei));
   }
 
-   rhp_idx *vi_primal2ei_F = mcpinfo->vi_primal2ei_F;
+   rhp_idx *vi_primal2ei_F = fooc_dat->vi_primal2ei_F;
 
   /* ----------------------------------------------------------------------
    * Phase 2:  Compute and add   - < μ, (∇ₓg^NL)^T >
@@ -1451,63 +1396,6 @@ _exit:
   return status;
 }
 
-/**
- * @brief Create a permutation list from variable indices in the source model
- * to a subset based on a subdag.
- *
- * @param mdl_src 
- * @param subdag_root 
- * @param vi_primal2ei_F 
- * @return 
- */
-static int subdag_create_permutations(Model *mdl_src, daguid_t subdag_root,
-                                      rhp_idx **vi_primal2ei_F,
-                                      rhp_idx **ei_F2vi_primal)
-{
-   const EmpDag *empdag = &mdl_src->empinfo.empdag;
-
-   UIntArray mplist;
-   rhp_uint_init(&mplist);
-
-   S_CHECK(empdag_subdag_getmplist(empdag, subdag_root, &mplist));
-
-   assert(mplist.len > 0);
-
-   VarMeta * restrict vmeta = mdl_src->ctr.varmeta;
-   assert(vmeta);
-
-   Fops *fops_ctr = rmdl_getfops(mdl_src);
-
-   rhp_idx nvars_src = ctr_nvars_total(&mdl_src->ctr);
-   size_t nvars_primal, dummy;
-   if (fops_ctr) { fops_ctr->get_sizes(fops_ctr->data, &nvars_primal, &dummy); }
-   else { nvars_primal = nvars_src; }
-
-   rhp_idx *vi2ei_F, *ei_F2vi;
-   MALLOC_(vi2ei_F, rhp_idx, nvars_src);
-   MALLOC_(ei_F2vi, rhp_idx, nvars_primal);
-   *vi_primal2ei_F = vi2ei_F;
-   *ei_F2vi_primal = ei_F2vi;
-
-      /*TODO GITLAB #109*/
-   rhp_idx ei_F = 0;
-   for (rhp_idx i = 0, vi = 0; i < nvars_src; ++i) {
-      if (fops_ctr && !fops_ctr->keep_var(fops_ctr->data, i)) {
-         continue;
-      }
-
-      if (rhp_uint_findsorted(&mplist, vmeta[i].mp_id) != UINT_MAX) {
-         ei_F2vi[ei_F] = vi;
-         vi2ei_F[vi] = ei_F++;
-      } else {
-         vi2ei_F[vi] = IdxInvalid;
-      }
-
-      vi++;
-   }
-
-   return OK;
-}
 
 /**
  * @brief Build the first order condition of an optimization problem or an
@@ -1515,12 +1403,10 @@ static int subdag_create_permutations(Model *mdl_src, daguid_t subdag_root,
  *
  * @param  mdl_mcp    the MCP model to be created, with the problem to be
  *                    transformed into an MCP as source problem
- * @param  mcpdef     Data needed to define the MCP
- * @param  mcpstats   Statistics about the MCP
  * 
  * @return            the error code
  */
-int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
+int fooc_mcp(Model *mdl_mcp)
 {
 
   /* ----------------------------------------------------------------------
@@ -1528,8 +1414,6 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
    * A few assumptions on the input data:
    * - the container must be RHP (could be fixed by making the Var and
    *   Equ really modeling language independent
-   * - the given model is already compressed: no inactive variables or
-   *   equations
    *
    * On output:
    *                     | x |   primal variable
@@ -1545,111 +1429,95 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
   Container *ctr_mcp = &mdl_mcp->ctr;
   RhpContainerData *cdat_mcp = (RhpContainerData *)ctr_mcp->data;
 
-   McpInfo mcpinfo = {.stats = mcpstats};
+   McpInfo * restrict mcpstats;
+   S_CHECK(mdl_settype(mdl_mcp, MdlType_mcp));
+   A_CHECK(mcpstats, mdl_getmcpinfo(mdl_mcp));
 
-   if (cdat_mcp->total_m != ctr_mcp->m) {
+   FoocData fooc_dat;
+   fooc_data_init(&fooc_dat, mcpstats);
+
+   /* This is a HACK */
+   if (cdat_mcp->total_m == 0) {
+      ctr_mcp->m = 0;
+   } else if (cdat_mcp->total_m != ctr_mcp->m) {
       error("[fooc] ERROR: the MCP model has a different number of total and "
             "active equations: %zu vs %u\n", cdat_mcp->total_m, ctr_mcp->m);
       return Error_Inconsistency;
    }
 
-  Aequ objequs, cons_nl, cons_lin;
-  aequ_init(&objequs);
-  aequ_init(&cons_nl);
-  aequ_init(&cons_lin);
+   if (cdat_mcp->total_n == 0) {
+      ctr_mcp->n = 0;
+   }
 
   Rosettas rosettas_vars;
   rosettas_init(&rosettas_vars);
-  rhp_idx *cons_idxs = NULL, *mp2objequ = NULL;
+  rhp_idx *cons_idxs = NULL;
 
    Model *mdl_src = mdl_mcp->mdl_up;
    if (!mdl_src) {
-      error("%s :: the source container is missing!\n", __func__);
+      error("%s ERROR: the source container is missing!\n", __func__);
       return Error_NullPointer;
    }
 
    Container *ctr_src = &mdl_src->ctr;
-   EmpDag *empdag = NULL;
-
-   if (ctr_src->rosetta_equs) {
-      error("%s :: a rosetta array is already present, this is not allowed", __func__);
-      status = Error_UnExpectedData;
-      goto _exit;
-   }
-
-   size_t var_size, equ_size;
-
-   MathPrgm *mp = NULL;
-   Mpe *mpe = NULL;
-   Fops *fops_subdag = NULL, *fops_ctr = NULL; //mcpdef->fops_vars;
-   bool is_subdag, delete_fops_subdag = false;
-
-   daguid_t empdag_uid = mcpdef->uid;
-   if (empdag_uid != EMPDAG_UID_NONE) {
-
-      unsigned id = uid2id(empdag_uid);
-
-      A_CHECK(empdag, &mdl_src->empinfo.empdag);
-      if (uidisMP(empdag_uid)) {
-         S_CHECK_EXIT(empdag_getmpbyid(empdag, id, &mp));
-      } else {
-         S_CHECK_EXIT(empdag_getmpebyid(empdag, id, &mpe));
-      }
-
-      if (!empdag_isroot(empdag, empdag_uid)) {
-         is_subdag = delete_fops_subdag = true;
-         MALLOC_(fops_subdag, Fops, 1);
-         S_CHECK(fops_subdag_init(fops_subdag, mdl_src, empdag_uid));
-         S_CHECK(subdag_create_permutations(mdl_src, empdag_uid,
-                                            &mcpinfo.vi_primal2ei_F,
-                                            &mcpinfo.ei_F2vi_primal));
-
-      } else {
-         mcpinfo.vi_primal2ei_F = NULL;
-         mcpinfo.ei_F2vi_primal = NULL;
-         is_subdag = false;
-//         if (mcpdef->fops_vars) {
-//            errormsg("[fooc] ERROR: MCP definition contained fops for variables,"
-//                  " but the first-order optimality condition for the whole DAG "
-//                  "are going to be created. This doesn't make sense,\n");
-//            return Error_Unconsistency;
-//         }
-      }
-   } else {
-      mcpinfo.vi_primal2ei_F = NULL;
-      mcpinfo.ei_F2vi_primal = NULL;
-   }
+   EmpDag *empdag = &mdl_src->empinfo.empdag;
 
   /* ----------------------------------------------------------------------
-   * TODO(xhub) this is a bit smelly
+   * Fill fooc_dat.mps if needed
    * ---------------------------------------------------------------------- */
 
-   if (!fops_ctr && mdl_is_rhp(mdl_src)) {
-      fops_ctr = rmdl_getfops(mdl_src);
+   Fops *fops = mdl_src->ctr.fops;
+   if (fops) {
+      switch (fops->type) {
+      case FopsEmpDagSubDag: {
+         daguid_t uid_root = fops_subdag_getrootuid(fops);
+         S_CHECK_EXIT(fooc_data_empdag(&fooc_dat, empdag, uid_root, fops));
+         break;
+      }
+      case FopsEmpDagSingleMp: {
+         mpid_t mpid = fops_singleMP_getmpid(fops);
+         mpidarray_add(&fooc_dat.mps, mpid);
+         break;
+      }
+      case FopsEmpDagNash: {
+         const MpIdArray *mpids = fops_Nash_getmpids(fops);
+         S_CHECK_EXIT(mpidarray_copy(&fooc_dat.mps, mpids));
+         break;
+      }
+      default: ;
+      }
    }
 
-   mcpinfo.src.total_m = ctr_nequs_total(ctr_src);
-   mcpinfo.n_equs_orig = ctr_nequs(ctr_mcp);
-   mcpinfo.src.total_n = ctr_nvars_total(ctr_src);
-   mcpinfo.vi_mult_start = ctr_nvars(ctr_src);
+   if (fooc_dat.mps.len == 0 && empdag->mps.len > 0) {
+
+      unsigned n_roots = empdag->roots.len;
+
+      if (n_roots != 1) {
+         error("[fooc] ERROR in %s model '%.*s' #%u: %u root(s) detected, need "
+               "be to given a unique root!\n", mdl_fmtargs(mdl_src), n_roots);
+         return Error_EMPRuntimeError;
+      }
+
+      S_CHECK_EXIT(fooc_data_empdag(&fooc_dat, empdag, empdag->roots.arr[0], fops));
+   }
+
+   /* Check that we can compute the FOOC */
+   S_CHECK(fooc_check_childless_mps(mdl_mcp, &fooc_dat));
 
    size_t n_primalvars, n_equs4mcp;
 
-   if (fops_ctr) {
-      fops_ctr->get_sizes(fops_ctr->data, &var_size, &equ_size);
+   if (fops) {
+      fops->get_sizes(fops->data, &n_primalvars, &n_equs4mcp);
    } else {
-      var_size = ctr_src->n;
-      equ_size = ctr_src->m;
+      n_primalvars = ctr_src->n; 
+      n_equs4mcp = ctr_src->m; 
    }
 
-   if (fops_subdag) {
-      fops_subdag->get_sizes(fops_subdag->data, &n_primalvars, &n_equs4mcp);
-   } else {
-      n_primalvars = var_size; 
-      n_equs4mcp = equ_size; 
-   }
-
-   Fops *fops_equ = fops_subdag ? fops_subdag : fops_ctr;
+  
+   fooc_dat.n_equs_orig = ctr_nequs(ctr_mcp);
+   fooc_dat.src.total_m = ctr_nequs_total(ctr_src);
+   fooc_dat.src.total_n = ctr_nvars_total(ctr_src);
+   fooc_dat.vi_mult_start = n_primalvars;
 
    /* ----------------------------------------------------------------------
    * Init the MCP as a square system.
@@ -1659,8 +1527,7 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
    * - Get the number of VI functions and VI zero functions
    * ---------------------------------------------------------------------- */
 
-   S_CHECK_EXIT(fill_objequs_and_get_vifuncs(mdl_src, mp, mpe, &mcpinfo,
-                                             &objequs, &mp2objequ));
+   S_CHECK_EXIT(fill_objequs_and_get_vifuncs(mdl_src, &fooc_dat));
 
   /* ----------------------------------------------------------------------
    * The total number of constraints is obtain from the number of incoming
@@ -1669,54 +1536,80 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
    * - the number of VI relations
    * ---------------------------------------------------------------------- */
 
+   Aequ * restrict objequs = &fooc_dat.objequs;
+
   size_t n_vifuncs = mcpstats->n_vifuncs;
-  assert(n_equs4mcp >= objequs.size + n_vifuncs);
-  const size_t cons_size = n_equs4mcp - (objequs.size + n_vifuncs);
-  size_t mcp_size = cons_size + n_primalvars;
+  assert(n_equs4mcp >= objequs->size + n_vifuncs);
+  const size_t cons_size = n_equs4mcp - (objequs->size + n_vifuncs);
+
+
+   if (mcpstats->n_foocvars != SSIZE_MAX) {
+      if (mcpstats->n_foocvars + mcpstats->n_auxvars != n_primalvars) {
+         error("[fooc] ERROR in %s model '%.*s' #%u: inconsistency in the "
+               "number of variable: total is %zu, but %zu are tagged for the "
+               "derivative (first-order optimality conditions) and %zu are tagged "
+               "as auxiliaries (that is present in equations, but not in the "
+               "first set). The second total is %zu\n", mdl_fmtargs(mdl_src),
+               n_primalvars, mcpstats->n_foocvars, mcpstats->n_auxvars,
+               mcpstats->n_foocvars + mcpstats->n_auxvars);
+         return Error_Inconsistency;
+      }
+   } else if (mcpstats->n_auxvars != SSIZE_MAX) {
+      error("[fooc] ERROR in %s model '%.*s' #%u: no FOOC vars, but %zu aux vars\n",
+            mdl_fmtargs(mdl_src), mcpstats->n_auxvars);
+         return Error_Inconsistency;
+   } else { /* if n_foocvars was not set, it is assumed to be all vars */
+      mcpstats->n_foocvars = n_primalvars;
+      mcpstats->n_auxvars = 0;
+   }
+
+   size_t n_foocvars = mcpstats->n_foocvars;
+
+   /* We do not count the auzliary variables in mcp_size*/
+   size_t mcp_size = cons_size + mcpstats->n_foocvars;
 
    mcpstats->mcp_size = mcp_size;
    mcpstats->n_primalvars = n_primalvars;
    mcpstats->n_constraints = cons_size;
 
   /* ----------------------------------------------------------------------
-   * Reserve all the variables and equations
-   * ATTENTION: set total_m already here to allow for some debugging info
+   * Reserve all the variables and equations.
+   * ATTENTION: we reserve more space for the variables (ctr_src->n + ncons),
+   * as we could have "extra" variables. This is the case when computing an
+   * MPMCP, as the variables of the upper level problem can be present
    * ---------------------------------------------------------------------- */
 
    /* TODO GITLAB #108*/
-   S_CHECK_EXIT(ctr_resize(ctr_mcp, ctr_src->n+cons_size, mcp_size));
-//  S_CHECK_EXIT(rctr_reserve_equs(ctr_mcp, mcp_size));
-//  S_CHECK_EXIT(rctr_reserve_vars(ctr_mcp, ctr_src->n+cons_size));
+   S_CHECK_EXIT(ctr_resize(ctr_mcp, n_primalvars+cons_size, mcp_size));
+   ctr_mcp->n = ctr_mcp->m = 0;
 
-  cdat_mcp->total_m = mcp_size;
-
-  S_CHECK_EXIT(mdl_settype(mdl_mcp, MdlType_mcp));
+   /* ATTENTION: set total_m already here to allow for some debugging info */
+   cdat_mcp->total_m = mcp_size;
 
    /* TODO: delete? This should already be done when creating the ctr_mcp? */
-  S_CHECK_EXIT(rctr_inherit_pool(ctr_mcp, ctr_src));
+   S_CHECK_EXIT(ctr_borrow_nlpool(ctr_mcp, ctr_src));
 
    if (!ctr_src->rosetta_vars) {
-      MALLOC_EXIT(ctr_src->rosetta_vars, rhp_idx, ctr_nvars_total(ctr_src));
+      MALLOC_EXIT(ctr_src->rosetta_vars, rhp_idx, fooc_dat.src.total_n);
    }
 
-  /*  We allocate + 1 since it simplifies the logic */
-  MALLOC_EXIT(ctr_src->rosetta_equs, rhp_idx, mcpinfo.src.total_m + 1);
-  rhp_idx *rosetta_equ = ctr_src->rosetta_equs;
+   /*  We allocate + 1 since it simplifies the logic */
+   MALLOC_EXIT(ctr_src->rosetta_equs, rhp_idx, fooc_dat.src.total_m + 1);
+   rhp_idx *rosetta_equ = ctr_src->rosetta_equs;
 
-  if (fops_subdag || fops_ctr) { /* With filtering, all equation data is copied */
-    rctr_inherited_equs_are_not_borrowed(ctr_mcp);
-  }
+   if (fops) { /* With filtering, all equation data is copied */
+      rctr_inherited_equs_are_not_borrowed(ctr_mcp);
+   }
 
-  /* ----------------------------------------------------------------------
+   /* ----------------------------------------------------------------------
    * 1. Take care of variables in the MCP model:
    *   - Compress primal variables and introduce them in the MCP model.
    *   - Set multiplier names
    * ---------------------------------------------------------------------- */
 
-  //S_CHECK_EXIT(rctr_compress_vars_x(ctr_src, ctr_mcp, fops_ctr));
-  S_CHECK_EXIT(rctr_compress_vars(ctr_src, ctr_mcp));
+   S_CHECK_EXIT(rctr_compress_vars(ctr_src, ctr_mcp));
 
-  S_CHECK_EXIT(compute_all_rosettas(mdl_mcp, &rosettas_vars));
+   S_CHECK_EXIT(compute_all_rosettas(mdl_mcp, &rosettas_vars));
 
   /* ----------------------------------------------------------------------
    * 2. Inject constraints into the MCP model
@@ -1736,59 +1629,61 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
    * IMPORTANT: the objective equation(s) shall not be copied
    * ---------------------------------------------------------------------- */
 
-  size_t ei_src_start = 0;
-  size_t i_objequs = 0;
-  size_t n_lincons = 0;
-  const EquMeta * restrict equmeta = ctr_src->equmeta;
-  do {
-    size_t ei_src_end =
-        i_objequs < objequs.size ? aequ_fget(&objequs, i_objequs) : mcpinfo.src.total_m;
+   size_t ei_src_start = 0;
+   size_t n_lincons = 0;
+   unsigned n_objequs = objequs->size, idx = 0;
+   const EquMeta * restrict equmeta = ctr_src->equmeta;
+   do {
+      size_t ei_src_end =
+         idx < n_objequs ? aequ_fget(objequs, idx) : fooc_dat.src.total_m;
 
-    assert(ei_src_end <= mcpinfo.src.total_m);
+      assert(ei_src_end <= fooc_dat.src.total_m);
 
-    for (size_t i = ei_src_start; i < ei_src_end; ++i) {
-      if (fops_equ && !fops_equ->keep_equ(fops_equ->data, i)) { continue; }
+      for (size_t i = ei_src_start; i < ei_src_end; ++i) {
+         if (fops && !fops->keep_equ(fops->data, i)) { continue; }
 
-      Equ *e = &ctr_src->equs[i];
-      S_CHECK_EXIT(rctr_getnl(ctr_src, e));
-
-         /* TODO: this is fragile */
-      if (!(e->tree && e->tree->root) &&
-          (!equmeta || equmeta[i].role == EquConstraint)) {
-       n_lincons++;
+         EquExprType etype;
+         S_CHECK_EXIT(ctr_getequexprtype(ctr_src, i, &etype));
+         if (etype == EquExprLinear && (!equmeta || equmeta[i].role == EquConstraint)) {
+            n_lincons++;
+         }
       }
-    }
 
-    ei_src_start = ei_src_end + 1;
-    i_objequs++;
-  } while (i_objequs <= objequs.size);
+      ei_src_start = ei_src_end + 1;
+      idx++;
+   } while (idx <= n_objequs);
 
    assert(n_lincons <= cons_size);
    mcpstats->n_lincons = n_lincons;
 
-  /* skip_equ is now the number of equations from the source model not expected
+   /* skip_equ is now the number of equations from the source model not expected
    * to be in the MCP */
-  mcpinfo.skipped_equ = objequs.size;
+   fooc_dat.skipped_equ = objequs->size;
 
-  /* NL equs start at var_size, LIN equs start at mcp_size - nb_lin */
-   if (mcp_size < n_lincons + n_primalvars) {
-      error("[fooc] ERROR in %s model '%.*s' #%u: Number of linear constraint (%zu)"
+  /* NL equs start at n_foocvars, LIN equs start at mcp_size - nb_lin */
+   if (mcp_size < n_lincons + n_foocvars) {
+      error("[fooc] ERROR in %s model '%.*s' #%u: Number of linear constraint (%zu) "
             "is greater than the number of multipliers (%zu)!\n", mdl_fmtargs(mdl_src),
-            n_lincons, mcp_size-n_primalvars);
+            n_lincons, mcp_size-n_foocvars);
       status = Error_RuntimeError;
       goto _exit;
    }
 
    mcpstats->n_nlcons = cons_size - n_lincons;
 
-   mcpinfo.ei_F_start = mcpinfo.n_equs_orig;
-   mcpinfo.ei_cons_start = mcpinfo.n_equs_orig + mcpinfo.stats->n_primalvars;
-   mcpinfo.ei_lincons_start = mcpinfo.ei_cons_start + mcpinfo.stats->n_nlcons;
+   fooc_dat.ei_F_start = fooc_dat.n_equs_orig;
+   fooc_dat.ei_cons_start = fooc_dat.n_equs_orig + fooc_dat.info->n_foocvars;
+   fooc_dat.ei_lincons_start = fooc_dat.ei_cons_start + fooc_dat.info->n_nlcons;
 
-   trace_fooc("[fooc] MCP of size %zu has %zu primal variables; %zu VI function(s); %zu zero"
-              " VI function(s); %zu constraint(s) (%zu linear, %zu non-linear)\n",
-              var_size + cons_size, var_size, n_vifuncs, mcpstats->n_vizerofuncs,
-              cons_size, n_lincons, mcpstats->n_nlcons);
+   int offset;
+   trace_fooc("[fooc] %n%s model '%.*s' #%u has an MCP of size %zu.\n", &offset,
+              mdl_fmtargs(mdl_src), mcp_size);
+   trace_fooc("%*s%zu primal variables: %zu for FOOC; %zu auxiliary\n", offset, "",
+              n_primalvars, mcpstats->n_foocvars,
+              mcpstats->n_auxvars != SSIZE_MAX ? mcpstats->n_auxvars : 0);
+   trace_fooc("%*s%zu VI function(s); %zu zero VI function(s); %zu constraint(s)"
+              " (%zu linear, %zu non-linear)\n", offset, "", n_vifuncs,
+              mcpstats->n_vizerofuncs, cons_size, n_lincons, mcpstats->n_nlcons);
 
   /* ----------------------------------------------------------------------
    * We need to perform the filtering here since the rosetta_equ array
@@ -1797,19 +1692,19 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
    * ---------------------------------------------------------------------- */
 
    struct equ_inh_names equ_inh_names;
-   S_CHECK_EXIT(setup_equvarnames(&equ_inh_names, &mcpinfo, cdat_mcp, mdl_mcp));
+   S_CHECK_EXIT(setup_equvarnames(&equ_inh_names, &fooc_dat, cdat_mcp, mdl_mcp));
 
    cdat_mcp->total_n += cons_size;
 
-   S_CHECK_EXIT(inject_vifunc_and_cons(mdl_src, mdl_mcp, &mcpinfo, &objequs,
-                                       fops_equ, &equ_inh_names, &rosettas_vars));
+   S_CHECK_EXIT(inject_vifunc_and_cons(mdl_src, mdl_mcp, &fooc_dat, fops,
+                                       &equ_inh_names, &rosettas_vars));
 
   /* ----------------------------------------------------------------------
    * This is needed to set the proper index values. It is a bit inefficient
    * as with many VI functions, it is going to write the same value.
    * ---------------------------------------------------------------------- */
 
-  for (size_t i = mcpinfo.ei_F_start, end = mcpinfo.ei_cons_start; i < end; ++i) {
+  for (size_t i = fooc_dat.ei_F_start, end = fooc_dat.ei_cons_start; i < end; ++i) {
     ctr_mcp->equs[i].idx = i;
     ctr_mcp->equs[i].object = Mapping;
   }
@@ -1817,25 +1712,30 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
   /* ----------------------------------------------------------------------
    * 3. Add the functions corresponding to the primal part of the MCP
    *   - First, collect all the NL and linear constraints in the equation
-   *     containers cons_nl and cons_lin with indices in the MCP space
+   *     containers cons_nl and fooc_dat.cons_lin with indices in the MCP space
    *   - Then, perform the construction of all dLdx functions
    *
    *  If there is no constraint, we just move on and set the aequ sizes to 0
    * ---------------------------------------------------------------------- */
 
-   if (mpe) {
-      UIntArray mps;
-      S_CHECK_EXIT(empdag_mpe_getchildren(empdag, mpe->id, &mps));
-      unsigned nb_mp = mps.len;
+   MpIdArray *mps = &fooc_dat.mps;
+   unsigned mps_len = mps->len;
+
+   if (mps_len > 0 ) {
+    if (!fooc_dat.mp2objequ) {
+      error("%s ERROR: Need allocated mp2objequ\n", __func__);
+      status = Error_RuntimeError;
+      goto _exit;
+    }
       // expected size cons_size - nb_lin
       // expected size nb_lin
-      S_CHECK_EXIT(aequ_setblock(&cons_nl, nb_mp));
-      S_CHECK_EXIT(aequ_setblock(&cons_lin, nb_mp));
-      aequ_setsize(&cons_nl, cons_size - n_lincons);
-      aequ_setsize(&cons_lin, n_lincons);
+      S_CHECK_EXIT(aequ_setblock(&fooc_dat.cons_nl, mps_len));
+      S_CHECK_EXIT(aequ_setblock(&fooc_dat.cons_lin, mps_len));
+      aequ_setsize(&fooc_dat.cons_nl, cons_size - n_lincons);
+      aequ_setsize(&fooc_dat.cons_lin, n_lincons);
 
-      AequBlock *restrict cons_nl_blk = aequ_getblocks(&cons_nl);
-      AequBlock *restrict cons_lin_blk = aequ_getblocks(&cons_lin);
+      AequBlock *restrict cons_nl_blk = aequ_getblocks(&fooc_dat.cons_nl);
+      AequBlock *restrict cons_lin_blk = aequ_getblocks(&fooc_dat.cons_lin);
       assert(cons_nl_blk && cons_lin_blk);
 
       rhp_idx * restrict nl_list_mp = NULL;
@@ -1847,10 +1747,10 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
       }
 
       /* Now the real linear equation start in the FOOC index space */
-      rhp_idx ei_lincons_start = mcpinfo.ei_lincons_start;
-      rhp_idx ei_cons_start = mcpinfo.ei_cons_start;
+      rhp_idx ei_lincons_start = fooc_dat.ei_lincons_start;
+      rhp_idx ei_cons_start = fooc_dat.ei_cons_start;
 
-      for (size_t i = 0; i < nb_mp; ++i) {
+      for (size_t i = 0; i < mps_len; ++i) {
          if (cons_size == 0) {
             assert(n_lincons == 0);
             aequ_setcompact(&cons_nl_blk->e[i], 0, IdxInvalid);
@@ -1858,11 +1758,11 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
             continue;
          }
 
-         MathPrgm *mp_;
-         S_CHECK_EXIT(empdag_getmpbyuid(empdag, rhp_uint_at(&mps, i), &mp_));
-         assert(mp_);
+         MathPrgm *mp;
+         S_CHECK_EXIT(empdag_getmpbyid(empdag, mpidarray_at(mps, i), &mp));
+         assert(mp);
 
-         IdxArray *restrict equs_mp = &mp_->equs; assert(equs_mp);
+         IdxArray *restrict equs_mp = &mp->equs; assert(equs_mp);
          unsigned n_nl_mp = 0, n_lin_mp = 0;
 
          for (size_t j = 0, len = equs_mp->len; j < len; ++j) {
@@ -1874,11 +1774,11 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
                /* Skip this equation: deleted or is a VI function  */
 
             } else if (ei_mcp >= ei_lincons_start) {    /* linear constraint */
-               assert(n_lin_mp < mcpinfo.stats->n_lincons);
+               assert(n_lin_mp < fooc_dat.info->n_lincons);
                lin_list_mp[n_lin_mp++] = ei_mcp;
 
             } else {                                        /* NL constraint */
-               assert(n_nl_mp < mcpinfo.stats->n_nlcons);
+               assert(n_nl_mp < fooc_dat.info->n_nlcons);
                nl_list_mp[n_nl_mp++] = ei_mcp;
             }
          }
@@ -1888,139 +1788,100 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
          nl_list_mp = &nl_list_mp[n_nl_mp];
          lin_list_mp = &lin_list_mp[n_lin_mp];
       }
-      assert(nl_list_mp - cons_idxs == (ei_lincons_start - mcpinfo.stats->n_primalvars));
+      assert(nl_list_mp - cons_idxs == (ei_lincons_start - fooc_dat.info->n_foocvars));
       assert(lin_list_mp - cons_idxs == cons_size);
 
-   } else {
-      aequ_setcompact(&cons_nl, cons_size - n_lincons, mcpinfo.ei_cons_start);
-      aequ_setcompact(&cons_lin, mcpinfo.stats->n_lincons, mcpinfo.ei_lincons_start);
-   }
+      rhp_idx * restrict mp2objequ = fooc_dat.mp2objequ;
 
-  /* ------------------------------------------------------------------------
-   * Now compute all the dLdx expressions and add the normal cones contributions
-   * ------------------------------------------------------------------------ */
+      /* -------------------------------------------------------------------
+       * Compute all the dLdx expressions and add the normal cones contributions
+       * ------------------------------------------------------------------- */
 
-  if (mp) {
+      for (size_t i = 0; i < mps_len; i++) {
+         MathPrgm *mp;
+         S_CHECK_EXIT(empdag_getmpbyid(empdag, mpidarray_at(mps, i), &mp));
+         assert(mp);
 
-    switch (mp->type) {
-    case MpTypeOpt: {
-      rhp_idx objequ = objequs.size > 0 ? aequ_fget(&objequs, 0) : IdxNA;
-      S_CHECK_EXIT(fooc_mcp_primal_opt(mdl_mcp, mp, &cons_nl, &cons_lin,
-                                       mdl_src, &mcpinfo, objequ));
-      break;
-      }
-/* See GITLAB #83 */
-//    case RHP_MP_MCP:
-//      S_CHECK_EXIT(fooc_mcp_primal_mcp(mdl_mcp, mp, mdl_src));
-//      break;
+         Aequ *cons_nl_mp = &cons_nl_blk->e[i];
+         Aequ *cons_lin_mp = &cons_lin_blk->e[i];
 
-    case MpTypeVi:
-      S_CHECK_EXIT(
-          fooc_mcp_primal_vi(mdl_mcp, mp, &cons_nl, &cons_lin, mdl_src, &mcpinfo));
-      break;
+         switch (mp->type) {
+         case MpTypeOpt: {
+            rhp_idx objequ;
+            unsigned objequ_idx = mp2objequ[i];
 
-    default:
-      error("[fooc] ERROR: unsupported MP of type %s\n", mp_gettypestr(mp));
-      status = Error_NotImplemented;
-      goto _exit;
-    }
+            if (valid_idx(objequ_idx)) {
+               assert(objequ_idx < objequs->size);
+               objequ = objequs->list[objequ_idx];
+            } else {
+               objequ = IdxNA;
+            }
 
-  } else if (mpe) {
-    if (!mp2objequ) {
-      error("%s :: Need allocated mp2objequ\n", __func__);
-      status = Error_RuntimeError;
-      goto _exit;
-    }
-
-    AequBlock *restrict cons_nl_blk = aequ_getblocks(&cons_nl);
-    AequBlock *restrict cons_lin_blk = aequ_getblocks(&cons_lin);
-    assert(cons_nl_blk && cons_lin_blk);
-
-    UIntArray mps;
-    S_CHECK_EXIT(empdag_mpe_getchildren(empdag, mpe->id, &mps));
-
-    for (size_t i = 0, n_mp = mps.len; i < n_mp; i++) {
-      MathPrgm *mp_;
-      S_CHECK_EXIT(empdag_getmpbyuid(empdag, rhp_uint_at(&mps, i), &mp_));
-      assert(mp_);
-
-      Aequ *cons_nl_mp = &cons_nl_blk->e[i];
-      Aequ *cons_lin_mp = &cons_lin_blk->e[i];
-
-      switch (mp_->type) {
-      case MpTypeOpt: {
-         rhp_idx objequ;
-         unsigned idx = mp2objequ[i];
-
-         if (valid_idx(idx)) {
-            assert(idx < objequs.size);
-            objequ = objequs.list[idx];
-         } else {
-            objequ = IdxNA;
+            S_CHECK_EXIT(fooc_mcp_primal_opt(mdl_mcp, mp, cons_nl_mp, cons_lin_mp,
+                                             mdl_src, &fooc_dat, objequ));
+            break;
          }
 
-        S_CHECK_EXIT(fooc_mcp_primal_opt(mdl_mcp, mp_, cons_nl_mp, cons_lin_mp,
-                                         mdl_src, &mcpinfo, objequ));
-        break;
+         /* See GITLAB #83 */
+         //      case RHP_MP_MCP:
+         //        S_CHECK_EXIT(fooc_mcp_primal_mcp(mdl_mcp, mp_, mdl_src));
+         //        break;
+
+         case MpTypeVi:
+            S_CHECK_EXIT(
+               fooc_mcp_primal_vi(mdl_mcp, mp, cons_nl_mp, cons_lin_mp, mdl_src, &fooc_dat));
+            break;
+
+         default:
+            error("%s ERROR: unsupported MP of type %s\n", __func__, mp_gettypestr(mp));
+            status = Error_NotImplemented;
+            goto _exit;
+         }
       }
+   } else { /* No HOP structure  */
+      aequ_setcompact(&fooc_dat.cons_nl, cons_size - n_lincons, fooc_dat.ei_cons_start);
+      aequ_setcompact(&fooc_dat.cons_lin, fooc_dat.info->n_lincons, fooc_dat.ei_lincons_start);
 
-/* See GITLAB #83 */
-//      case RHP_MP_MCP:
-//        S_CHECK_EXIT(fooc_mcp_primal_mcp(mdl_mcp, mp_, mdl_src));
-//        break;
+      if (objequs->size > 0) {
 
-      case MpTypeVi:
-        S_CHECK_EXIT(
-            fooc_mcp_primal_vi(mdl_mcp, mp_, cons_nl_mp, cons_lin_mp, mdl_src, &mcpinfo));
-        break;
+         assert(objequs->size == 1 && objequs->type == EquVar_Compact);
+         rhp_idx objequ = aequ_fget(objequs, 0);
+         S_CHECK_EXIT(fooc_mcp_primal_opt(mdl_mcp, NULL, &fooc_dat.cons_nl,
+                                          &fooc_dat.cons_lin, mdl_src, &fooc_dat, objequ));
 
-      default:
-        error("%s :: unsupported MP of type %s\n", __func__, mp_gettypestr(mp_));
-        status = Error_NotImplemented;
-        goto _exit;
+      } else {
+
+         ModelType mdltype;
+         S_CHECK_EXIT(mdl_gettype(mdl_src, &mdltype));
+
+         if (mdltype == MdlType_mcp) {
+            S_CHECK_EXIT(fooc_mcp_primal_mcp(mdl_mcp, NULL, mdl_src));
+
+         } else if (mdltype == MdlType_vi ||
+            (mdltype == MdlType_emp && mdl_src->empinfo.empdag.type == EmpDag_Single_Vi)) {
+            S_CHECK_EXIT(
+               fooc_mcp_primal_vi(mdl_mcp, NULL, &fooc_dat.cons_nl, &fooc_dat.cons_lin, mdl_src, &fooc_dat));
+
+         } else { /* TODO: we could have a feasibility problem here */
+            error("%s ERROR: unsupported model of type %s\n", __func__,
+                  mdl_getprobtypetxt(mdltype));
+            status = Error_WrongModelForFunction;
+            goto _exit;
+         }
       }
-    }
-
-  } else { /* No HOP structure  */
-    if (objequs.size > 0) {
-
-      assert(objequs.size == 1 && objequs.type == EquVar_Compact);
-      rhp_idx objequ = aequ_fget(&objequs, 0);
-      S_CHECK_EXIT(fooc_mcp_primal_opt(mdl_mcp, NULL, &cons_nl, &cons_lin,
-                                       mdl_src, &mcpinfo, objequ));
-
-    } else {
-
-      ModelType probtype;
-      S_CHECK_EXIT(mdl_gettype(mdl_src, &probtype));
-
-      if (probtype == MdlType_mcp) {
-        S_CHECK_EXIT(fooc_mcp_primal_mcp(mdl_mcp, NULL, mdl_src));
-
-      } else if (probtype == MdlType_vi ||
-            (probtype == MdlType_emp && mdl_src->empinfo.empdag.type == EmpDag_Single_Vi)) {
-        S_CHECK_EXIT(
-            fooc_mcp_primal_vi(mdl_mcp, NULL, &cons_nl, &cons_lin, mdl_src, &mcpinfo));
-
-      } else { /* TODO: we could have a feasibility problem here */
-        error("%s :: ERROR: unsupported model of type %s\n", __func__,
-                 mdl_getprobtypetxt(probtype));
-        status = Error_WrongModelForFunction;
-        goto _exit;
-      }
-    }
-  }
+   }
 
   /* ----------------------------------------------------------------------
    * If needed, set the matching information. This could be absent if the
    * variable is not present in the Lagrangian 
    * ---------------------------------------------------------------------- */
 
-   rhp_idx * restrict ei_F2vi_primal = mcpinfo.ei_F2vi_primal;
+   rhp_idx * restrict ei_F2vi_primal = fooc_dat.ei_F2vi_primal;
    const EquMeta * restrict emeta = ctr_mcp->equmeta;
-   for (size_t i = mcpinfo.ei_F_start; i < mcpinfo.ei_cons_start; ++i) {
+
+   for (size_t i = fooc_dat.ei_F_start; i < fooc_dat.ei_cons_start; ++i) {
       if (!valid_vi(emeta[i].dual)) { 
-         rhp_idx vi = ei_F2vi_primal ? ei_F2vi_primal[i-mcpinfo.ei_F_start] : i;
+         rhp_idx vi = ei_F2vi_primal ? ei_F2vi_primal[i-fooc_dat.ei_F_start] : i;
          S_CHECK_EXIT(rctr_setequvarperp(ctr_mcp, i, vi));
       }
       
@@ -2033,7 +1894,7 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
    * - number of active variables could be larger than expected, as in the MPEC case
    * ------------------------------------------------------------------------ */
 
-   size_t nvars_expected = mcpinfo.stats->n_primalvars + mcpinfo.stats->n_constraints;
+   size_t nvars_expected = fooc_dat.info->n_primalvars + fooc_dat.info->n_constraints;
    if (ctr_mcp->n < nvars_expected) {
       error("[fooc] ERROR: the number of active variables %zu is smaller than the "
             "expected size %zu\n", (size_t)ctr_mcp->n, nvars_expected);
@@ -2053,144 +1914,18 @@ int fooc_mcp(Model *mdl_mcp, McpDef *mcpdef, McpStats * restrict mcpstats)
 _exit:
 
    if (status == OK) {
-      if (objequs.size > 0) {
-         status = aequ_extendandown(ctr_src->func2eval, &objequs);
+      if (objequs->size > 0) {
+         status = aequ_extendandown(ctr_src->func2eval, objequs);
       }
    }
 
    rosettas_free(&rosettas_vars);
-   aequ_empty(&cons_nl);
-   aequ_empty(&cons_lin);
+   fooc_data_fini(&fooc_dat);
    FREE(cons_idxs);
-   FREE(mp2objequ);
 
    return status;
 }
 
-static bool childless_mp(const EmpDag *empdag, mpid_t mpid)
-{
-   bool res = true;
-
-   if (empdag->mps.Varcs[mpid].len > 0) {
-      error("[fooc] ERROR in %s model '%.*s' #%u: MP(%s) has %u VF children. "
-            "Computing the first-order optimality conditions is not possible\n",
-            mdl_fmtargs(empdag->mdl), empdag_getmpname(empdag, mpid), 
-            empdag->mps.Varcs[mpid].len);
-      res = false;
-   }
-
-   if (empdag->mps.Carcs[mpid].len > 0) {
-      error("[fooc] ERROR in %s model '%.*s' #%u: MP(%s) has %u CTRL children. "
-            "Computing the first-order optimality conditions is not possible\n",
-            mdl_fmtargs(empdag->mdl), empdag_getmpname(empdag, mpid), 
-            empdag->mps.Varcs[mpid].len);
-      res = false;
-   }
-
-   return res;
-}
-/**
- * @brief Analyse the EMP structure to see if we can compute the first order
- * optimality conditions
- *
- * @param mdl  the model
- *
- * @return         the error code
- */
-static NONNULL int fooc_mcp_analyze_emp(Model *mdl, daguid_t *uid) 
-{
-  int status = OK;
-
-   const EmpInfo *empinfo_src = &mdl->mdl_up->empinfo;
-   const EmpDag *empdag = &empinfo_src->empdag;
-
-   assert(empinfo_hasempdag(empinfo_src));
-
-   const DagUidArray *roots = &empdag->roots;
-   unsigned roots_len = roots->len;
-
-   if (roots_len > 1) {
-      TO_IMPLEMENT("EMPDAG with multiple roots: need to implement DAG filtering");
-   }
-
-  /* ----------------------------------------------------------------------
-   * FOOC requires that no VF path are present
-   * ---------------------------------------------------------------------- */
-
-   if (empdag->features.hasVFpath) {
-      Model *mdl_up = mdl->mdl_up;
-      Model *mdl4fooc = rhp_mdl_new(RHP_BACKEND_RHP);
-      char *mdlname;
-      IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_up)));
-
-      TO_IMPLEMENT("rmdl_contract_along_Vpaths() needs to be finished");
-//      S_CHECK(rmdl_contract_along_Vpaths(mdl4fooc, mdl_up));
-
-   }
-
-   daguid_t root = empdag->uid_root;
-   *uid = root;
-
-   if (!valid_uid(root)) {
-      error("[fooc] ERROR in %s model '%.*s' #%u, no valid EMPDAG root\n", mdl_fmtargs(mdl));
-      return Error_EMPRuntimeError;
-   }
-
-   MathPrgm *mp = NULL;
-   Mpe *mpe = NULL;
-   dagid_t id = uid2id(root);
-
-   if (uidisMP(root)) {
-      S_CHECK(empdag_getmpbyid(empdag, id, &mp));
-   } else {
-      S_CHECK(empdag_getmpebyid(empdag, id, &mpe));
-   }
-
-   if (mpe) {
-      UIntArray mps;
-      S_CHECK(empdag_mpe_getchildren(empdag, mpe->id, &mps));
-      unsigned nb_mp = mps.len;
-      if (nb_mp == 0) {
-         error("%s :: empty equilibrium %d ``%s''\n", __func__,
-               mpe->id, empdag_getmpename(empdag, mpe->id));
-         return Error_EMPRuntimeError;
-      }
-
-      for (unsigned i = 0; i < nb_mp; ++i) {
-         mpid_t mpid = uid2id(mps.arr[i]);
-         if (!childless_mp(empdag, mpid)) { status = Error_OperationNotAllowed; }
-      }
-
-   } else {
-
-      if (!mp) {
-         error("[fooc] ERROR in %s model '%.*s' #%u: Empdag root is neither an "
-               "MP or an MPE\n", mdl_fmtargs(mdl));
-         return Error_RuntimeError;
-      }
-
-      if (!childless_mp(empdag, mp->id)) { status = Error_OperationNotAllowed; }
-   }
-
-   return status;
-}
-
-/**
- * @brief Compute the first order optimality conditions as an MCP for an EMP
- *        problem
- *
- * @param mdl      the model to solve
- * @param mcpdata  data for the jacobian computation
- *
- * @return         the error code
- */
-static int fooc_mcp_emp(Model *mdl, McpStats *restrict mcpdata) {
-   daguid_t uid;
-   S_CHECK(fooc_mcp_analyze_emp(mdl, &uid));
-
-   McpDef mcpdef = {.uid = uid};
-   return fooc_mcp(mdl, &mcpdef, mcpdata);
-}
 
 /**
  * @brief Compute the first order optimality conditions as an MCP
@@ -2200,55 +1935,15 @@ static int fooc_mcp_emp(Model *mdl, McpStats *restrict mcpdata) {
  *
  * @return         the error code
  */
-int fooc_create_mcp(Model *mdl, McpStats *restrict mcpdata)
+int fooc_create_mcp(Model *mdl)
 {
    double start = get_thrdtime();
 
    assert(mdl->mdl_up && mdl_is_rhp(mdl->mdl_up));
 
-   ModelType mdltype;
-   S_CHECK(mdl_gettype(mdl->mdl_up, &mdltype));
-
-  if (mdltype == MdlType_mcp) {
-    error("[fooc] ERROR in %s model '%.*s' #%u: the problem type is MCP, which "
-          "already represents optimality conditions\n", mdl_fmtargs(mdl));
-    return Error_UnExpectedData;
-  }
-
-  switch (mdltype) {
-  case MdlType_lp:
-  case MdlType_qcp:
-  case MdlType_nlp: {
-    McpDef mcpdef = {.uid = EMPDAG_UID_NONE}; //, .fops_vars = NULL};
-    S_CHECK(fooc_mcp(mdl, &mcpdef, mcpdata));
-    break;
-    }
-
-  case MdlType_dnlp:
-    error("%s :: ERROR: nonsmooth NLP are not supported\n", __func__);
-    return Error_NotImplemented;
-
-  case MdlType_cns:
-    error("%s :: ERROR: constraints systems are not supported\n", __func__);
-    return Error_NotImplemented;
-
-  case MdlType_mip:
-  case MdlType_minlp:
-  case MdlType_miqcp:
-    error("%s :: ERROR: Model with integer variables are not yet supported\n", __func__);
-    return Error_NotImplemented;
-
-  case MdlType_emp:
-    S_CHECK(fooc_mcp_emp(mdl, mcpdata));
-    break;
-
-  default:
-    error("%s :: ERROR: unknown/unsupported container type %s\n", __func__,
-          mdltype_name(mdltype));
-    return Error_InvalidValue;
-  }
-
    mdl->empinfo.empdag.type = EmpDag_Empty;
+
+   S_CHECK(fooc_mcp(mdl));
 
    mdl->timings->solve.fooc += get_thrdtime() - start;
 
@@ -2263,18 +1958,6 @@ int fooc_create_mcp(Model *mdl, McpStats *restrict mcpdata)
  *
  * @return         the error code
  */
-int fooc_create_vi(Model *mdl, McpStats *restrict mcpdata) {
+int fooc_create_vi(Model *mdl) {
   return Error_NotImplemented;
-}
-
-/**
- * @brief Post-process the result from MCP
- *
- * @param mdl      the model
- *
- * @return         the error code
- */
-int fooc_postprocess(Model *mdl, unsigned n_primal)
-{
-  return OK;
 }

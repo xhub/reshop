@@ -2,6 +2,7 @@
 #include <limits.h>
 
 #include "mdl_data.h"
+#include "printout.h"
 #include "reshop.h"
 
 const char* const mdl_backendnames[] = {
@@ -129,4 +130,11 @@ bool mdltype_isvi(ModelType type)
   default:
     return false;
   }
+}
+
+int backend_throw_notimplemented_error(unsigned backend, const char *fn)
+{
+   error("%s ERROR: support for backend %s not implemented yet\n", fn,
+         backend_name(backend));
+   return Error_NotImplemented;
 }

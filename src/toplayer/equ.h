@@ -20,11 +20,11 @@
 
 struct aequ_block;
 
- /** container for equation */
+/** container for equation */
 typedef struct rhp_aequ {
    AbstractEquVarType type;       /**< type of abstract equation */
    bool own;                      /**< Own the memory by the pointers*/
-   unsigned size;                  /**< size (or length) of the equation*/
+   unsigned size;                 /**< size (or length) of the equation*/
    union {
       rhp_idx start;              /**< start of the indices*/
       rhp_idx *list;              /**< list of indices*/
@@ -33,7 +33,7 @@ typedef struct rhp_aequ {
    };
 } Aequ;
 
-/** abstract equation as block*/
+/** abstract equation as block */
 typedef struct aequ_block {
    unsigned len;                  /**< number of blocks            */
    unsigned max;                  /**< maximum number of blocks    */
@@ -53,8 +53,8 @@ typedef struct equ {
       void *cone_data;       /**< additional cone information                 */
    } p;
 
-   double value;             /**< value                                      */
-   double multiplier;        /**< multipler value                            */
+   double value;             /**< value                                       */
+   double multiplier;        /**< multiplier value                            */
 
    Lequ *lequ;               /**< linear terms                                */
    NlTree *tree;             /**< expression tree for the nonlinear terms     */
@@ -78,6 +78,7 @@ void aequ_init(Aequ* e) NONNULL;
 void aequ_empty(Aequ *e) NONNULL;
 void aequ_reset(Aequ *e) NONNULL;
 void aequ_printnames(const Aequ *e, unsigned mode, const Model *mdl) NONNULL;
+
 
 void equ_dealloc(Equ **equ);
 Equ *equ_alloc(unsigned lin_maxlen) MALLOC_ATTR(equ_dealloc,1);

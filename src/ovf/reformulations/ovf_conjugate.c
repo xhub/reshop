@@ -684,7 +684,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       struct mp_descr descr = { .mdltype = MdlType_qcp, .sense = RhpMin,
                                 .objvar = ovf_vidx, .objequ = ei_rho };
 
-      A_CHECK_EXIT(fs, fops_subset_new(vlen, var_c, elen, eqn_c, &descr));
+      A_CHECK_EXIT(fs, filter_subset_new(vlen, var_c, elen, eqn_c, &descr));
 
       S_CHECK_EXIT(cdat_add_subctr(cdat, fs));
    }

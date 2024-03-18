@@ -84,7 +84,7 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
    if (mdl_reform) {
       /* Reset the type */
       S_CHECK(empdag_fini(&mdl_reform->empinfo.empdag))
-      S_CHECK(rmdl_reset_modeltype(mdl_reform, NULL));
+      S_CHECK(mdl_reset_modeltype(mdl_reform, NULL));
    }
 
    *mdl_reformulated = mdl_reform;

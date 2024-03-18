@@ -491,7 +491,7 @@ int mdl_finalize(Model *mdl)
 
    if (probtype == MdlType_none) {
       if (mdl_is_rhp(mdl)) {
-         S_CHECK(rmdl_analyze_modeltype(mdl, NULL));
+         S_CHECK(mdl_analyze_modeltype(mdl, NULL));
       } else {
          error("[process] ERROR: %s model '%.*s' #%u has no type set\n",
                mdl_fmtargs(mdl));
@@ -522,27 +522,88 @@ int mdl_copystatsfromsolver(Model *mdl, const Model *mdl_solver)
    return mdl->ops->copystatsfromsolver(mdl, mdl_solver);
 }
 
-int mdl_exportmodel(Model *mdl, Model *mdl_dst)
+/**
+ * @brief Export a model to another instance
+ *
+ * This create a new model instance, with possibly a different backend, that
+ * represents the same model instance, possibly filtered.
+ *
+ * @param mdl      The source model
+ * @param mdl_dst  The destination model
+ *
+ * @return         The error code
+ */
+int mdl_export(Model *mdl, Model *mdl_dst)
 {
    /* ----------------------------------------------------------------------
-    * - Finalize EMPDAG
+    * - Finalize the model
     * - Check source model
     * - Check metadata of source model
     * ---------------------------------------------------------------------- */
 
-   S_CHECK(empdag_finalize(mdl));
+   S_CHECK(mdl_finalize(mdl));
 
    S_CHECK(mdl_check(mdl));
    S_CHECK(mdl_checkmetadata(mdl));
 
    /* TODO: this is part of GITLAB #67 */
-   mdl_dst->mdl_up = mdl_borrow(mdl);
-   mdl_dst->ctr.ctr_up = &mdl->ctr;
-   mdl_timings_rel(mdl_dst->timings);
-   mdl_dst->timings = mdl_timings_borrow(mdl->timings);
+   mdl_linkmodels(mdl, mdl_dst);
 
-   return mdl->ops->exportmodel(mdl, mdl_dst);
+   S_CHECK(mdl->ops->export(mdl, mdl_dst));
+
+   /* TODO: hopefully we can remove this */
+   ModelType probtype;
+   mdl_gettype(mdl_dst, &probtype);
+
+   assert(probtype != MdlType_none);
+//   if (probtype == MdlProbType_none) {
+//      S_CHECK(mdl_copyprobtype(mdl_solver, mdl));
+//   }
+
+   return OK;
 }
+
+/**
+ * @brief Export a model into a solvable form
+ *
+ * This create a new model instance, with possibly a different backend, that
+ * shares the same solution set as the source model. If the source model is
+ * a classical optimization problem, then the destination one is another instance.
+ * However, if this is not the case, we seek to derive a model which has the same
+ * solution set. A bilevel/MPEC is transformed into an MPCC. A Nash problem into
+ * an MCP. A VI into an MCP.
+ *
+ * @param mdl      The model
+ * @param mdl_src  The source model
+ *
+ * @return         The error code
+ */
+int mdl_copyassolvable(Model *mdl, Model *mdl_src)
+{
+   /* ----------------------------------------------------------------------
+    * - Finalize the model
+    * - Check source model
+    * - Check metadata of source model
+    * ---------------------------------------------------------------------- */
+
+   S_CHECK(mdl_finalize(mdl_src));
+
+   S_CHECK(mdl_check(mdl_src));
+   S_CHECK(mdl_checkmetadata(mdl_src));
+
+   mdl_linkmodels(mdl_src, mdl);
+
+   S_CHECK(mdl->ops->copyassolvable(mdl, mdl_src));
+
+   /* TODO: hopefully we can remove this */
+   ModelType probtype;
+   mdl_gettype(mdl, &probtype);
+
+   assert(probtype != MdlType_none);
+
+   return OK;
+}
+
 
 int mdl_reportvalues(Model *mdl, Model *mdl_src)
 {
@@ -712,7 +773,7 @@ int mdl_solve(Model *mdl)
    int status = mdl->ops->solve(mdl);
 
    trace_process("[process] %s model '%.*s' #%u solved with solve status %s and"
-                 " model status %s)\n", mdl_fmtargs(mdl),
+                 " model status %s\n", mdl_fmtargs(mdl),
                  mdl_getsolvestatastxt(mdl), mdl_getmodelstatastxt(mdl));
    return status;
 }

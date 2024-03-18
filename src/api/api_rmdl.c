@@ -1519,6 +1519,168 @@ int rhp_add_soc_constraint(Model *mdl, rhp_idx *ei)
 }
 
 /**
+ * @brief Add an equality constraint
+ *
+ * @ingroup publicAPI
+ *
+ * @param      mdl   the model
+ * @param[out] ei    the equation index
+ * @param      name  the name of the constraint
+ *
+ * @return           the error code
+ */
+int rhp_add_equality_constraint_named(Model *mdl, rhp_idx *ei, const char *name)
+{
+   S_CHECK(chk_rmdl(mdl, __func__));
+   S_CHECK(chk_ei_ptr(ei, __func__));
+
+   char *ename;
+   A_CHECK(ename, strdup(name));
+
+   RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
+   S_CHECK(cdat_equname_start(cdat, ename));
+   S_CHECK(rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_0));
+   S_CHECK(cdat_equname_end(cdat));
+
+   return OK;
+}
+
+/**
+ * @brief Add an exponential cone constraint
+ *
+ * @ingroup publicAPI
+ *
+ * @param      mdl   the model
+ * @param[out] ei    the equation index
+ * @param      name  the name of the constraint
+ *
+ * @return           the error code
+ */
+int rhp_add_exp_constraint_named(Model *mdl, rhp_idx *ei, const char *name)
+{
+   S_CHECK(chk_rmdl(mdl, __func__));
+   S_CHECK(chk_ei_ptr(ei, __func__));
+
+   char *ename;
+   A_CHECK(ename, strdup(name));
+
+   RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
+   S_CHECK(cdat_equname_start(cdat, ename));
+   S_CHECK(rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_EXP));
+   S_CHECK(cdat_equname_end(cdat));
+
+   return OK;
+}
+
+/**
+ * @brief Add an greater-than constraint
+ *
+ * @ingroup publicAPI
+ *
+ * @param      mdl   the model
+ * @param[out] ei  the equation index
+ * @param      name  the name of the constraint
+ *
+ * @return           the error code
+ */
+int rhp_add_greaterthan_constraint_named(Model *mdl, rhp_idx *ei, const char *name)
+{
+   S_CHECK(chk_rmdl(mdl, __func__));
+   S_CHECK(chk_ei_ptr(ei, __func__));
+
+   char *ename;
+   A_CHECK(ename, strdup(name));
+
+   RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
+   S_CHECK(cdat_equname_start(cdat, ename));
+   S_CHECK(rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_R_PLUS));
+   S_CHECK(cdat_equname_end(cdat));
+
+   return OK;
+}
+
+/**
+ * @brief Add a less-than constraint
+ *
+ * @ingroup publicAPI
+ *
+ * @param      mdl   the model
+ * @param[out] ei  the equation index
+ * @param      name  the name of the constraint
+ *
+ * @return           the error code
+ */
+int rhp_add_lessthan_constraint_named(Model *mdl, rhp_idx *ei, const char *name)
+{
+   S_CHECK(chk_rmdl(mdl, __func__));
+   S_CHECK(chk_ei_ptr(ei, __func__));
+
+   char *ename;
+   A_CHECK(ename, strdup(name));
+
+   RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
+   S_CHECK(cdat_equname_start(cdat, ename));
+   S_CHECK(rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_R_MINUS));
+   S_CHECK(cdat_equname_end(cdat));
+
+   return OK;
+}
+
+/**
+ * @brief Add a power cone constraint
+ *
+ * @ingroup publicAPI
+ *
+ * @param      mdl   the model
+ * @param[out] ei    the equation index
+ * @param      name  the name of the constraint
+ *
+ * @return           the error code
+ */
+int rhp_add_power_constraint_named(Model *mdl, rhp_idx *ei, const char *name)
+{
+   S_CHECK(chk_rmdl(mdl, __func__));
+   S_CHECK(chk_ei_ptr(ei, __func__));
+
+   char *ename;
+   A_CHECK(ename, strdup(name));
+
+   RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
+   S_CHECK(cdat_equname_start(cdat, ename));
+   S_CHECK(rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_POWER));
+   S_CHECK(cdat_equname_end(cdat));
+
+   return OK;
+}
+
+/**
+ * @brief Add a second-order cone (SOC) constraint
+ *
+ * @ingroup publicAPI
+ *
+ * @param      mdl   the model
+ * @param[out] ei    the equation index
+ * @param      name  the name of the constraint
+ *
+ * @return           the error code
+ */
+int rhp_add_soc_constraint_named(Model *mdl, rhp_idx *ei, const char *name)
+{
+   S_CHECK(chk_rmdl(mdl, __func__));
+   S_CHECK(chk_ei_ptr(ei, __func__));
+
+   char *ename;
+   A_CHECK(ename, strdup(name));
+
+   RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
+   S_CHECK(cdat_equname_start(cdat, ename));
+   S_CHECK(rctr_add_equ_empty(&mdl->ctr, ei, NULL, ConeInclusion, CONE_SOC));
+   S_CHECK(cdat_equname_end(cdat));
+
+   return OK;
+}
+
+/**
  * @brief Delete an equation
  *
  * @ingroup publicAPI

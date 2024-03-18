@@ -1,3 +1,5 @@
+#include <float.h>
+
 #include "reshop.h"
 
 #include "test_basic.h"
@@ -92,10 +94,10 @@ int test_oneobjvarcons1(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   RESHOP_CHECK(rhp_equ_addlin(mdl, eidx, v, vals));
   RESHOP_CHECK(rhp_mdl_setequrhs(mdl, eidx, 1));
 
-  double xvals[] = {0., 1.};
-  double xduals[] = {1., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_LOWER, RHP_BASIS_BASIC};
-  double evals[] = {1.};
+  double xvals[] = {0., NAN};
+  double xduals[] = {1., NAN};
+  enum rhp_basis_status xbas[] = {RHP_BASIS_LOWER, RHP_BASIS_UNSET};
+  double evals[] = {NAN}; /* Any value greater than 1 is ok...*/
   double eduals[] = {0.};
   // Can't rely on test, constraint is degenerate
 //  enum basis_status ebas[] = {RHP_BAS_LOWER};
@@ -244,7 +246,7 @@ int test_twovars1(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   RESHOP_CHECK(rhp_equ_addlin(mdl, cons, v, vals));
   RESHOP_CHECK(rhp_mdl_setequrhs(mdl, cons, 1));
 
-  double xvals[] = {0., 1.};
+  double xvals[] = {0., NAN}; /* For x2, any value >= 1 will do*/
   double eduals[] = {0.};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
@@ -549,7 +551,7 @@ int test_qp3(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
   enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
-  double eduals[] = {-1.};
+  double eduals[] = {1.};
   double evals[] = {1.};
   enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
   struct sol_vals solvals;
@@ -972,7 +974,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   /* Constraint is <x, p> - <p, b> <= 0 */
   rhp_idx cons;
-  RESHOP_CHECK(rhp_add_lessthan_constraint(mdl, &cons));
+  RESHOP_CHECK(rhp_add_lessthan_constraint_named(mdl, &cons, "budget"));
   /* If this is not the first call, use rhp_equ_addlinchk  */
   RESHOP_CHECK(rhp_equ_addlincoeff(mdl, cons, p, b, -1.));
   RESHOP_CHECK(rhp_equ_addbilin(mdl, cons, x, p, 1.));
@@ -1042,6 +1044,10 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
     struct rhp_nlnode **log_node = NULL;
     struct rhp_nlnode **child = NULL;
     RESHOP_CHECK(rhp_nltree_getchild(add_node, &log_node, i));
+    if (fabs(s[i]) < DBL_EPSILON) {
+         RESHOP_CHECK(rhp_nltree_cst(mdl, tree, &log_node, s[i]));
+         continue;
+    }
     /* create a "*" node with two nodes for s[i] * log(x[i]) */
     RESHOP_CHECK(rhp_nltree_arithm(tree, &log_node, 4, 2));
     /* deal with s[i]  */
@@ -1066,7 +1072,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   double evals[5];
   double eduals[5];
   enum rhp_basis_status ebas[5];
-  double objval = {1000};
+  double objval = {1.05806578};
 
   /* ----------------------------------------------------------------------
    * Fill the solution vector
@@ -1081,7 +1087,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   ebas[yidx] = RHP_BASIS_BASIC;
 
   evals[cons] = 0;
-  eduals[cons] = 5e-2;
+  eduals[cons] = -5e-2;
   ebas[cons] = RHP_BASIS_BASIC;
 
   for (size_t i = 0; i < 3; ++i) {
@@ -1097,7 +1103,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
     xbas[pi] = i == 1 ? RHP_BASIS_UNSET : RHP_BASIS_BASIC; /* Fixed variable has weird basis status */
 
     RHP_CHK(rhp_aequ_get(p_fn, i, &p_fni));
-    evals[p_fni] = -b[i]; /*i == 1 ? 0. : 100+i;*/
+    evals[p_fni] = 0.; //-b[i]; /*i == 1 ? 0. : 100+i;*/
     eduals[p_fni] = p_sol[i];
     ebas[p_fni] = RHP_BASIS_BASIC;
 

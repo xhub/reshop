@@ -105,7 +105,7 @@ static inline void *myrealloc(void *ptr, size_t size)
 #define REALLOC_EXIT(ptr,type,n)  REALLOC(ptr,type,n) \
    if (RHP_UNLIKELY(!(ptr))) { status = Error_InsufficientMemory; goto _exit; }
 
-#define REALLOC_BYTES(ptr,size,type) ((ptr) = (type*)realloc((ptr), size)); \
+#define REALLOC_BYTES(ptr,size,type) ((ptr) = (type*)myrealloc((ptr), size)); \
    if (RHP_UNLIKELY(!(ptr))) { return Error_InsufficientMemory; }
 
 
@@ -132,43 +132,6 @@ void backtrace_(const char *expr, int status);
 #endif
 #endif
 
-#define GMSCHK(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
-  error("%s ERROR: call " #EXPR " failed with error = %d\n", __func__, \
-           status42); \
-  return Error_GamsCallFailed; } }
-
-#define G_CHK_EXIT(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
-  error("%s ERROR: call " #EXPR " failed with error = %d\n", __func__, \
-           status42); status = Error_GamsCallFailed; goto _exit; } }
-
-#define GAMS_CHECK1(FN, obj, buf) { int status42 = FN(obj, buf, sizeof(buf)); \
-  if (RHP_UNLIKELY(!status42)) { BACKTRACE(#FN, !status42); \
-    error("%s ERROR: call to " #FN " failed with error = %d\n" \
-        "Gams msg is: %s\n", __func__, status42, buf); \
-  return Error_GamsCallFailed; } }
-
-#define GAMS_CHECK1_EXIT(FN, obj, buf) { int status42 = FN(obj, buf); \
-  if (RHP_UNLIKELY(status42)) { BACKTRACE(#FN, status42); \
-    error("%s ERROR: call to " #FN " failed with error = %d\n" \
-        "Gams msg is: %s\n", __func__, status42, buf); \
-  status = Error_GamsCallFailed; goto _exit;} }
-
-#define GAMS_CHECK0(FN, buf) { int status42 = FN(buf, sizeof(buf)); \
-  if (RHP_UNLIKELY(!status42)) { BACKTRACE(#FN, !status42); printf("Gams msg is: %s\n", buf); \
-  return !status42; } }
-
-#define GAMS_CHECKNbuf(FN, buf, ...) { int status42 = FN(__VA_ARGS__, buf); \
-  if (RHP_UNLIKELY(status42)) { BACKTRACE(#FN, status42); printf("Gams msg is: %s\n", buf); \
-    return status42; } }
-
-#define GAMS_CHECKN(FN, ...) { int status42 = FN(__VA_ARGS__); if (RHP_UNLIKELY(!status42)) { \
-  BACKTRACE(#FN, !status42); return !status42; } }
-
-#define GAMS_CHECK_NZ_BUF(EXPR, gmo, buf) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
-  BACKTRACE(#EXPR, status42); gmoErrorMessage(gmo, buf); \
-  error("%s ERROR: call to " #EXPR " failed with error %d\n" \
-      "Gams msg is: %s\n", __func__, status42, buf); \
-  return Error_GamsCallFailed; } }
 
 #define S_CHECK(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
   BACKTRACE((EXPR), status42); return status42; } }

@@ -13,6 +13,7 @@
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
 #include "filter_ops.h"
+#include "gams_macros.h"
 #include "gams_rosetta.h"
 #include "gams_utils.h"
 #include "instr.h"
@@ -110,12 +111,6 @@ static void _debug_lequ(const CMatElt *me, const Container *ctr)
 #endif
 }
 
-
-static inline bool _iscurrent_equ(Container *ctr, size_t eidx)
-{
-  assert(ctr->rosetta_equs);
-  return !ctr->rosetta_equs || valid_ei(ctr->rosetta_equs[eidx]);
-}
 
 #ifdef DEBUG_NAN
 static void _track_NAN(int nb_equ, double *jacval, int new_idx, int old_idx,
@@ -255,7 +250,6 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
 //       assert(isfinite(ctr->vars[i].value));
        j++;
      }
-     assert(j <= n);
    }
 
    /* ----------------------------------------------------------------------
@@ -347,29 +341,101 @@ static int _check_deleted_equ(struct ctrdata_rhp *cdat, rhp_idx i)
 /**
  * @brief Export an RHP model to a GAMS GMO object
  *
- * @param mdl      the RHP model
+ * @param mdl_src  the RHP model
  * @param mdl_gms  the GAMS model
  *
  * @return         the error code
  */
-int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
+int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
 {
    double start = get_thrdtime();
 
-   assert(mdl_gms->backend == RHP_BACKEND_GAMS_GMO && mdl_is_rhp(mdl));
+   assert(mdl_gms->backend == RHP_BACKEND_GAMS_GMO && mdl_is_rhp(mdl_src));
 
    int status = OK;
    char buffer[2048];
    RESHOP_STATIC_ASSERT(sizeof(buffer) >= GMS_SSSIZE, "");
 
-   Container * restrict ctr_src = &mdl->ctr;
+   Container * restrict ctr_src = &mdl_src->ctr;
    Container * restrict ctr_gms = &mdl_gms->ctr;
    RhpContainerData * restrict cdat = (RhpContainerData *)ctr_src->data;
    GmsContainerData * restrict gms_dst = (GmsContainerData *)ctr_gms->data;
 
+   if (!(mdl_gms->status & MdlInstantiable)) {
+      error("[GMOexport] ERROR: %s model '%.*s' #%u is not instantiable\n",
+            mdl_fmtargs(mdl_gms));
+      return Error_RuntimeError;
+   }
+
+   assert(ctr_gms->n > 0);
+
+  /* ----------------------------------------------------------------------
+   * GAMS/GMO requires to have a objvar. This needs to be checked before
+   * gmdl_cdat_setup()
+   * ---------------------------------------------------------------------- */
+
+   Fops *fops = ctr_src->fops;
+   rhp_idx *rosetta_equs = ctr_src->rosetta_equs;
+   rhp_idx *rosetta_vars = ctr_src->rosetta_vars;
+
+  /* ----------------------------------------------------------------------
+   * 2024.03.12: HACK to make this workable 
+   * ---------------------------------------------------------------------- */
+   if (!rosetta_equs) {
+      unsigned nequs = ctr_nequs_total(ctr_src);
+      MALLOC_(rosetta_equs, rhp_idx, ctr_nequs_total(ctr_src));
+      ctr_src->rosetta_equs = rosetta_equs;
+      for (unsigned i = 0; i < nequs; ++i) {
+         rosetta_equs[i] = i;
+      }
+   }
+
+   if (!rosetta_vars) {
+      unsigned nvars = ctr_nvars_total(ctr_src);
+      MALLOC_(rosetta_vars, rhp_idx, ctr_nvars_total(ctr_src));
+      ctr_src->rosetta_vars = rosetta_vars;
+      for (unsigned i = 0; i < nvars; ++i) {
+         rosetta_vars[i] = i;
+      }
+   }
+
+   ModelType probtype;
+   S_CHECK(mdl_gettype(mdl_src, &probtype));
+
+   bool inject_objvar = false;
+   rhp_idx objvar, objequ = IdxNA;
+
+   if (mdltype_isopt(probtype)) {
+      mdl_getobjvar(mdl_src, &objvar);
+      mdl_getobjequ(mdl_src, &objequ);
+
+      if (!valid_vi(objvar) || !valid_vi(rosetta_vars[objvar])) {
+
+         if (!valid_ei(objequ) || !valid_ei(rosetta_equs[objequ])) {
+            error("[GMOexport] ERROR in %s model '%.*s' #%u has neither a valid "
+                  "objective variable, or a valid objective equation.\n"
+                  "This will result in an unbounded problem, not worth solving it\n",
+                  mdl_fmtargs(mdl_src));
+            return Error_ModelUnbounded;
+         }
+
+
+         S_CHECK(ctr_resize(ctr_gms, ctr_gms->n+1, ctr_gms->m));
+         ctr_gms->n++;
+         inject_objvar = true;
+
+         /* ----------------------------------------------------------------
+          * Equations cannot be copied, since we rearrange them in NL/aff groups
+          * ---------------------------------------------------------------- */
+
+         if (mdl_is_rhp(mdl_src)) {
+            S_CHECK(rctr_func2eval_add(&mdl_src->ctr, objequ));
+         }
+      }
+   }
 
    /* Setup all GAMS objects */
-   S_CHECK(gmdl_cdat_setup(mdl_gms, mdl));
+   S_CHECK(gmdl_cdat_setup(mdl_gms, mdl_src));
 
 
    gmoHandle_t gmo = gms_dst->gmo;
@@ -390,9 +456,6 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
     * it in the _exit.
     * ---------------------------------------------------------------------- */
 
-   IdxArray objequs;
-   rhp_idx_init(&objequs);
-
    /* -----------------------------------------------------------------------
     * Pointer definition
     * ---------------------------------------------------------------------- */
@@ -401,52 +464,13 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
    int *equidx = NULL, *isvarNL = NULL;
    double *jacval = NULL;
 
-
-
-   Fops *fops = ctr_src->fops; assert(fops);
-
-   if (ctr_src->rosetta_vars || ctr_src->rosetta_equs) {
-      error("[GMOexport] ERROR: in %s model '%.*s' #%u, rosetta arrays are "
-            "already present\n", mdl_fmtargs(mdl));
-      status = Error_UnExpectedData;
-      goto _exit;
-   }
-
-   MALLOC_EXIT(ctr_src->rosetta_vars, rhp_idx, cdat->total_n);
-   MALLOC_EXIT(ctr_src->rosetta_equs, rhp_idx, MAX(cdat->total_m, 1));
-
-   rhp_idx *rosetta_equs = ctr_src->rosetta_equs;
-   rhp_idx *rosetta_vars = ctr_src->rosetta_vars;
-
-   /* ----------------------------------------------------------------------
-    * Unfortunately we need to get a valid rosetta_var for the 
-    * ---------------------------------------------------------------------- */
-
-   size_t skip_var = 0;
-
-   for (size_t i = 0; i < cdat->total_n; ++i) {
-
-      if (fops->keep_var(fops->data, i)) {
-         rhp_idx vi = i - skip_var;
-         rosetta_vars[i] = vi;
-      } else {
-         skip_var++;
-         rosetta_vars[i] = IdxDeleted;
-      }
-   }
-
    /* ----------------------------------------------------------------------
     * Now we go through the equations and add them
     * ---------------------------------------------------------------------- */
    size_t skip_equ = 0;
 
-   ModelType mdltype;
-   S_CHECK_EXIT(mdl_gettype(mdl, &mdltype));
-   if (mdltype_isopt(mdltype)) {
-      rhp_idx objequ;
-      rmdl_getobjequ(mdl, &objequ);
-      S_CHECK_EXIT(rhp_idx_add(&objequs, objequ));
-   } else if (mdltype == MdlType_emp) {
+#if 0
+     else if (probtype == MdlProbType_emp) {
       const EmpDag *empdag = &mdl->empinfo.empdag;
       MathPrgm **mplist = empdag->mps.arr;
 
@@ -461,20 +485,14 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
       }
 
    }
+#endif
 
    bool has_metadata = mdltype_hasmetadata(probtype);
 
-   for (size_t i = 0; i < cdat->total_m; ++i) {
+   for (size_t i = 0, len = cdat->total_m; i < len; ++i) {
 
-      /* deleted equations are easily handled */
-      if (!fops->keep_equ(fops->data, i)) {
-         rosetta_equs[i] = IdxDeleted;
-         skip_equ++;
-         continue;
-      }
-
-      rhp_idx ei = i - skip_equ;
-      rosetta_equs[i] = ei;
+      rhp_idx ei = rosetta_equs[i];
+      if (!valid_ei(ei)) { continue; }
 
       assert(ei < ctr_gms->m);
       Equ *e = &ctr_src->equs[i];
@@ -509,15 +527,16 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
          equtype = gmoequ_N;
          break;
       default:
-         error("%s :: equ '%s' has unsupported type %s\n", __func__,
+         error("[GMOexport] ERROR in %s model '%.*s' #%u: equ '%s' has "
+               "unsupported type %s\n", mdl_fmtargs(mdl_src),
                ctr_printequname(ctr_src, e->idx), equtype_name(e->object));
          status = Error_NotImplemented;
          goto _exit;
       }
 
-      if (rhp_idx_findsorted(&objequs, i) != UINT_MAX && equtype != gmoequ_E) {
+      if (objequ == i && equtype != gmoequ_E) {
          /* a RHP source model would have objequ as mapping */
-         if (equtype == gmoequ_N) { assert(mdl_is_rhp(mdl)); equtype = gmoequ_E; }
+         if (equtype == gmoequ_N) { assert(mdl_is_rhp(mdl_src)); equtype = gmoequ_E; }
          else {
             error("[GMOexport] ERROR: objective equation '%s' has type %s, it "
                   "should be %s\n", ctr_printequname(ctr_src, i),
@@ -548,7 +567,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
       double marginal = flip_marginal ? - multiplier : multiplier;
       double gms_marginal = dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na);
 
-      G_CHK_EXIT(gmoAddRow(gmo,
+      GMSCHK_EXIT(gmoAddRow(gmo,
        /* type      */     equtype,                         
        /* match     */     match,                                
                            /*  TODO(xhub) check correctness 
@@ -573,28 +592,13 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 //         assert(gmoM(gmo) == dctNRows(dct));
    }
 
-   /* ----------------------------------------------------------------------
-    * Do some bookkeeping
-    *
-    * if the number of skipped equation and the active one is not equal to
-    * the original one, there are multiple plausible explanation
-    *
-    * - constant equation, with no variables
-    * ---------------------------------------------------------------------- */
-
-
-   S_CHECK_EXIT(rctr_compress_check_equ(ctr_src, ctr_gms, skip_equ));
-
    CALLOC_EXIT(NLequs, bool, ctr_gms->m);
 
    MALLOC_EXIT(equidx, int, ctr_gms->m);
    MALLOC_EXIT(jacval, double, ctr_gms->m);
    MALLOC_EXIT(isvarNL, int, ctr_gms->m);
 
-   rhp_idx objvar;
-   rmdl_getobjvar(mdl, &objvar);
-
-   for (size_t i = 0; i < cdat->total_n; ++i) {
+   for (size_t i = 0, len = cdat->total_n; i < len; ++i) {
 
       rhp_idx vi = rosetta_vars[i];
       if (!valid_vi(vi)) { continue; }
@@ -620,21 +624,6 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
          goto _exit;
       }
 
-      /*  TODO(xhub) this is quite an upper-bound */
-      int nb_equ = 0;
-
-      /* -----------------------------------------------------------------
-       * Count the number of equation in which the variable may appear
-       * ----------------------------------------------------------------- */
-
-      while (vtmp) { nb_equ++; vtmp = vtmp->next_equ; }
-      nb_equ++;
-
-      /* -----------------------------------------------------------------
-       * Realloc the temporary data if needed
-       * ----------------------------------------------------------------- */
-
-
       /* -----------------------------------------------------------------
        * Walk through all the equation where the variable appears
        *
@@ -651,70 +640,73 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
          /* TODO(xhub) this assert is no longer valid with subset
           * assert(model->eqns[vtmp->eidx]); */
 
-         if (_iscurrent_equ(ctr_src, vtmp->ei)) {
+         if (!valid_ei(vtmp->ei) || !valid_ei(rosetta_equs[vtmp->ei])) {
+            vtmp = vtmp->next_equ;
+            continue;
+         }
 
-            /* ----------------------------------------------------------
+         /* ----------------------------------------------------------
              * If the variable is matched to an equation, GAMS needs to see
              * it in the equation ... Make sure we have this kludge
              * ---------------------------------------------------------- */
 
-            if (vtmp->placeholder && ctr_src->varmeta
-                  && ctr_src->varmeta[i].type == VarPrimal) {
-               if (ctr_src->varmeta[i].ppty == VarPerpToViFunction) {
-                  assert(vtmp->ei == ctr_src->varmeta[i].dual);
+         if (vtmp->placeholder && ctr_src->varmeta
+            && ctr_src->varmeta[i].type == VarPrimal) {
 
-                  jacval[indx] = 0.;
+            if (ctr_src->varmeta[i].ppty == VarPerpToViFunction) {
+               assert(vtmp->ei == ctr_src->varmeta[i].dual);
 
-               } else if (ctr_src->varmeta[i].ppty == VarPerpToZeroFunctionVi) {
-                  //vtmp = vtmp->next_equ;
-                  TO_IMPLEMENT_EXIT("Zero Func");
-                  //continue;
-               } else {
-                  error("%s :: variable %s is a placeholder with type "
-                        "'Primal', but has a subtype" "%d\n", __func__,
-                        ctr_printvarname(ctr_src, i), ctr_src->varmeta[i].ppty);
-                  jacval[indx] = SNAN;
-               }
+               jacval[indx] = 0.; //TODO: CHECK if valid
+               //jacval[indx] = GMS_SV_EPS;
 
-            } else if (!vtmp->placeholder) {
-
-               /* TODO(xhub) Use a not available?  */
-               jacval[indx] = dbl_to_gams(vtmp->value, gms_pinf, gms_minf, gms_na);
-
-            } else if (vtmp->placeholder && valid_vi(vtmp->vi)
-
-                && !valid_ei(vtmp->ei) && vtmp->vi == objvar) {
-               vtmp = vtmp->next_equ;
-               continue;
-
+            } else if (ctr_src->varmeta[i].ppty == VarPerpToZeroFunctionVi) {
+               //vtmp = vtmp->next_equ;
+               TO_IMPLEMENT_EXIT("Zero Func");
+               //continue;
             } else {
-              error("[GMOexport] ERROR: variable '%s' is a placeholder but has type %d\n", 
-                    ctr_printvarname(ctr_src, i), ctr_src->varmeta ? ctr_src->varmeta[i].type : -1);
-              jacval[indx] = SNAN;
+               error("%s :: variable %s is a placeholder with type "
+                     "'Primal', but has a subtype" "%d\n", __func__,
+                     ctr_printvarname(ctr_src, i), ctr_src->varmeta[i].ppty);
+               jacval[indx] = SNAN;
             }
 
-            equidx[indx] = ctr_getcurrent_ei(ctr_src, vtmp->ei);
+         } else if (!vtmp->placeholder) {
 
-            assert(vtmp->isNL || isfinite(jacval[indx]));
-            _debug_lequ(vtmp, ctr_src);
-            assert(equidx[indx] < ctr_gms->m);
+            /* TODO(xhub) Use a not available?  */
+            jacval[indx] = dbl_to_gams(vtmp->value, gms_pinf, gms_minf, gms_na);
 
-            isvarNL[indx] = vtmp->isNL ? 1 : 0;
+         } else if (vtmp->placeholder && valid_vi(vtmp->vi)
+            && !valid_ei(vtmp->ei) && vtmp->vi == objvar) {
+            vtmp = vtmp->next_equ;
+            continue;
 
-            /* ----------------------------------------------------------
+         } else {
+            error("[GMOexport] ERROR: variable '%s' is a placeholder but has type %d\n", 
+                  ctr_printvarname(ctr_src, i), ctr_src->varmeta ? ctr_src->varmeta[i].type : -1);
+            jacval[indx] = SNAN;
+         }
+
+         equidx[indx] = rosetta_equs[vtmp->ei];
+
+         assert(vtmp->isNL || isfinite(jacval[indx]));
+         _debug_lequ(vtmp, ctr_src);
+         assert(equidx[indx] < ctr_gms->m);
+
+         isvarNL[indx] = vtmp->isNL ? 1 : 0;
+
+         /* ----------------------------------------------------------
              * Update the NL status of the equation if the variable is
              * non-linear
              * TODO(Xhub) QUAD
              * ---------------------------------------------------------- */
 
-            if (!NLequs[equidx[indx]] && vtmp->isNL) {
-               NLequs[equidx[indx]] = true;
-               DPRINT("Equation %d is NL due to variable #%d (#%d)\n",
-                        equidx[indx], vidx, vtmp->vidx);
-            }
-
-            indx++;
+         if (!NLequs[equidx[indx]] && vtmp->isNL) {
+            NLequs[equidx[indx]] = true;
+            DPRINT("Equation %d is NL due to variable #%d (#%d)\n",
+                   equidx[indx], vidx, vtmp->vidx);
          }
+
+         indx++;
          vtmp = vtmp->next_equ;
       }
 
@@ -726,7 +718,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
          while (me) {
             if ((size_t)me->vi == i) {
-               equidx[indx] = ctr_getcurrent_ei(ctr_src, me->ei);
+               equidx[indx] = rosetta_equs[me->ei];
                jacval[indx] = dbl_to_gams(me->value, gms_pinf, gms_minf, gms_na);
                isvarNL[indx] = me->isNL ? 1 : 0;
 
@@ -745,10 +737,11 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
       }
 #endif
 
+#ifdef TO_DELETE_2024_03_05
       if (ctr_src->varmeta && ctr_src->varmeta[i].ppty == VarPerpToViFunction) {
         bool has_dual = false;
          assert(valid_ei(ctr_src->varmeta[i].dual));
-         rhp_idx e_dual = ctr_getcurrent_ei(ctr_src, ctr_src->varmeta[i].dual);
+         rhp_idx e_dual = rosetta_equs[ctr_src->varmeta[i].dual];
          assert(valid_ei(e_dual));
 
          for (int j = 0; j < indx; ++j) {
@@ -769,6 +762,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
             //isvarNL[indx++] = 0;
          }
       }
+#endif
 
       /*  this assert is not helpful with filtering */
 //      assert((size_t)nb_equ >= indx);
@@ -778,7 +772,7 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
       double marginal = flip_marginal ? - multiplier : multiplier;
       double gms_marginal = dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na);
 
-      G_CHK_EXIT(gmoAddCol(gmo,
+      GMSCHK_EXIT(gmoAddCol(gmo,
          /* type     */    v->type,
          /* lo       */    dbl_to_gams(v->bnd.lb, gms_pinf, gms_minf, gms_na),
          /* level    */    dbl_to_gams(v->value, gms_pinf, gms_minf, gms_na),
@@ -787,8 +781,8 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
          /* basic    */    v->basis == BasisBasic ? 0 : 1,
          /* SOS      */    v->type == VAR_SOS1 || v->type == VAR_SOS2
                                       ? gms_dst->sos_group[vi] : 0,
-         /* prior    */    0,
-         /* scale    */    0.,
+         /* prior    */    1,
+         /* scale    */    1.,
                            indx,
                            equidx,
                            jacval,
@@ -806,95 +800,104 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
 
    }
 
-   S_CHECK_EXIT(rctr_compress_check_var(ctr_src->n, cdat->total_n, skip_var));
-
    for (unsigned j = 0; j < (unsigned) ctr_gms->m; ++j) {
        DPRINT("Equation %d: isNL = %s\n", j, NLequs[j] ? "true" : "false");
    }
 
-   /* \TODO(xhub) this is a hack. It should be moved to another place when we
-    * need to generate the pool. rmdl_compress should already have allocated
-    * the pool ... */
    if (!ctr_src->pool) {
-     A_CHECK_EXIT(ctr_src->pool, pool_new_gams());
+      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool is missing!",
+            mdl_fmtargs(mdl_src));
+      status = Error_Inconsistency;
+      goto _exit;
    }
+
+   if (ctr_src->pool->type != RHP_BACKEND_GAMS_GMO) {
+      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool has type %s, but "
+            "the expected type is %s\n", mdl_fmtargs(mdl_src),
+            backend_name(ctr_src->pool->type), backend_name(RHP_BACKEND_GAMS_GMO));
+      status = Error_Inconsistency;
+      goto _exit;
+   }
+
+   double *nlpool = ctr_src->pool->data;
+
+   if (ctr_src->pool->len > INT_MAX) {
+      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool has size %zu, but "
+            "GAMS has a maximum size limit of %d", mdl_fmtargs(mdl_src),
+            ctr_src->pool->len, INT_MAX);
+      status = Error_SizeTooLarge;
+      goto _exit;
+   }
+   int nlpool_len = (int)ctr_src->pool->len;
 
    /* ----------------------------------------------------------------------
     * Add the opcode to the GMO
     * ---------------------------------------------------------------------- */
 
-   for (size_t i = 0; i < cdat->total_m; ++i) {
+   for (size_t i = 0, len = cdat->total_m; i < len; ++i) {
 
-      if (_iscurrent_equ(ctr_src, i)) {
+      rhp_idx ei = rosetta_equs[i];
+      if (!valid_ei(ei) || !NLequs[ei]) { continue; }
 
-        int ei_gmo = ctr_getcurrent_ei(ctr_src, i);
-        assert(!cdat->equs[i] || i == (unsigned)cdat->equs[i]->ei);
-        assert(ei_gmo < ctr_gms->m);
+      assert(ei < ctr_gms->m);
 
-       /* ------------------------------------------------------------------
+      /* ------------------------------------------------------------------
         * Generate the GAMS opcode
         * ------------------------------------------------------------------ */
 
-        int *instrs = NULL, *args = NULL, codelen;
-        S_CHECK_EXIT(gctr_genopcode(ctr_src, i, &codelen, &instrs, &args));
+      int *instrs = NULL, *args = NULL, codelen;
+      S_CHECK_EXIT(gctr_genopcode(ctr_src, i, &codelen, &instrs, &args));
 
-         /* ----------------------------------------------------------------
+      /* ----------------------------------------------------------------
           * The equation may have no opcode. We still check, for consistency,
           * that the NL flag is not set
           * ---------------------------------------------------------------- */
 
-        if (codelen == 0) {
-           /* We error here otherwise GMO is going to error*/
-           if (NLequs[ei_gmo]) {
-              error("[GMOexport] ERROR: equation '%s' is declared as NL, but "
-                    "has no nlcode\n", ctr_printequname(ctr_src, i));
-              status = Error_Inconsistency;
-              goto _exit;
-          }
-          continue;
-       }
+      if (codelen == 0) {
+         /* We error here otherwise GMO is going to error*/
+         if (NLequs[ei]) {
+            error("[GMOexport] ERROR: equation '%s' is declared as NL, but "
+                  "has no nlcode\n", ctr_printequname(ctr_src, i));
+            status = Error_Inconsistency;
+            goto _exit;
+         }
+         continue;
+      }
 
-       /* ------------------------------------------------------------------
-        * Filter the GAMS opcode: change variable index and/or insert variable
+      /* ------------------------------------------------------------------
+        * Transform the GAMS opcode: change variable index and/or insert variable
         * values
         * ------------------------------------------------------------------ */
 
-        S_CHECK_EXIT(fops->transform_gamsopcode(fops->data, ei_gmo, instrs, args,
-                                                codelen));
+      if (fops) {
+         S_CHECK_EXIT(fops->transform_gamsopcode(fops->data, ei, codelen, instrs, args));
+      }
 
-
-       /* TODO(xhub) this is a hack
-        *
-        * The reason for this bad piece of code is that the pool of the
-        * original container may be modified
-        */
-       /* \TODO(xhub) rework this to use pool_get ?*/
-       double* pool = ctr_src->pool->data;
-       int poolen = (int)ctr_src->pool->len;
 
 #ifndef NDEBUG
-       for (unsigned j = 0; j < (unsigned)codelen; ++j) {
-          _debug_check_nlcode(instrs[j], args[j], ctr_gms->n, poolen);
-       }
+      for (unsigned j = 0; j < (unsigned)codelen; ++j) {
+         _debug_check_nlcode(instrs[j], args[j], ctr_gms->n, nlpool_len);
+      }
 #endif
 
-       /* ------------------------------------------------------------------
+      int ei_gmo = ei;
+      /* ------------------------------------------------------------------
         * The last instruction is (nlStore, eidx)  This value is used
         * inconsistently in GAMS, but we have to properly set the equation
         * index
         * ------------------------------------------------------------------ */
 
-       assert(args[codelen-1] == 1 + ei_gmo && instrs[codelen-1] == nlStore);
+      assert(args[codelen-1] == 1 + ei_gmo && instrs[codelen-1] == nlStore);
 
-       /* ------------------------------------------------------------------
+      /* ------------------------------------------------------------------
         * Insert the opcode in the GMO
         * ------------------------------------------------------------------ */
 
-       G_CHK_EXIT(gmoDirtySetRowFNLInstr(gmo, ei_gmo, codelen, instrs, args, NULL, pool, poolen));
-
-      }
+      GMSCHK_EXIT(gmoDirtySetRowFNLInstr(gmo, ei_gmo, codelen, instrs, args, NULL,
+                                        nlpool, nlpool_len));
 
    }
+
 
    printout(PO_VVV, "[GMOexport] Model stat: # rows: %d (nl: %d); # cols: %d (nl: %d)\n",
             gmoM(gmo), gmoNLM(gmo), gmoN(gmo), gmoNLN(gmo));
@@ -908,12 +911,45 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
     * ---------------------------------------------------------------------- */
 
   if (mdltype_isopt(probtype)) {
-    S_CHECK_EXIT(vi_inbounds(objvar, cdat->total_n, __func__));
-    assert(valid_vi(ctr_getcurrent_vi(ctr_src, objvar)));
 
-    gmoObjVarSet(gmo, ctr_getcurrent_vi(ctr_src, objvar));
+      int objvar_gmo;
+      if (inject_objvar) {
+         objvar_gmo = ctr_gms->n-1;
+
+         /* TODO: ensure uniqueness ...*/
+         strcat(buffer, "reshop_objvar");
+         /* dct, symName, symTyp, symDim, userInfo, symTxt  */
+         dctAddSymbol(dct, buffer, dctvarSymType, 0, 0, "");
+         dctAddSymbolData(dct, NULL);
+
+         rhp_idx ei_objequ = rosetta_equs[objequ];
+         equidx[0] = (int) ei_objequ;
+         jacval[0] = -1.;
+         isvarNL[0] = 0;
+
+         GMSCHK_EXIT(gmoAddCol(gmo,
+         /* type     */       gmovar_X,
+         /* lo       */       gms_minf,
+         /* level    */       0., /* TODO: tune this*/
+         /* up       */       gms_pinf,
+         /* marginal */       0.,
+         /* basic    */       0,
+         /* SOS      */       0,
+         /* prior    */       1,
+         /* scale    */       1.,
+                              1,
+                              equidx,
+                              jacval,
+                              isvarNL));
+      } else {
+         S_CHECK_EXIT(vi_inbounds(objvar, cdat->total_n, __func__));
+         assert(valid_vi(rosetta_vars[objvar]));
+         objvar_gmo = rosetta_vars[objvar];
+      }
+
+    gmoObjVarSet(gmo, objvar_gmo);
     RhpSense sense;
-    S_CHECK_EXIT(rmdl_getsense(mdl, &sense));
+    S_CHECK_EXIT(rmdl_getsense(mdl_src, &sense));
       switch (sense) {
       case RHP_MIN:
          gmoSenseSet(gmo, gmoObj_Min);
@@ -937,13 +973,13 @@ int rmdl_exportasgmo(Model *mdl, Model *mdl_gms)
     * ---------------------------------------------------------------------- */
 
    gmoDictSet(gmo, dct);
-   GAMS_CHECK1_EXIT(gmoCompleteData, gmo, buffer);
+   GMSCHK_BUF_EXIT(gmoCompleteData, gmo, buffer);
 
    /* Some checks  */
    assert(gmoM(gmo) == ctr_gms->m && gmoN(gmo) == ctr_gms->n);
    assert(!mdltype_isopt(probtype) || gmoGetObjName(gmo, buffer));
 
-   bool do_expensive_check = optvalb(mdl, Options_Expensive_Checks);
+   bool do_expensive_check = optvalb(mdl_src, Options_Expensive_Checks);
 
    if (do_expensive_check) {
 
@@ -1026,9 +1062,8 @@ _exit:
    FREE(equidx);
    FREE(jacval);
    FREE(isvarNL);
-   rhp_idx_empty(&objequs);
 
-   mdl->timings->gmo_creation += get_thrdtime() - start;
+   mdl_src->timings->gmo_creation += get_thrdtime() - start;
 
    return status;
 }

@@ -7,15 +7,19 @@
 
 #include "checks.h"
 #include "container.h"
+#include "ctr_rhp.h"
 #include "empdag_data.h"
 #include "empinfo.h"
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
+#include "mathprgm.h"
 #include "mdl_ops.h"
+#include "mdl_rhp.h"
 #include "mdl.h"
 #include "printout.h"
 #include "reshop.h"
 #include "tlsdef.h"
+#include "toplayer_utils.h"
 #include "var.h"
 #include "win-compat.h"
 
@@ -373,7 +377,12 @@ int mdl_getobjequs(const Model *mdl, Aequ *objs)
   } else {
     rhp_idx ei;
     S_CHECK(mdl_getobjequ(mdl, &ei));
-    aequ_setcompact(objs, 1, ei);
+
+      if (valid_ei(ei)) {
+         aequ_setcompact(objs, 1, ei);
+      } else {
+         aequ_reset(objs);
+      }
   }
 
   return OK;
@@ -486,6 +495,191 @@ int mdl_ensure_exportdir(Model *mdl)
             mdl->commondata.exports_dir);
       return Error_SystemError;
    }
+
+   return OK;
+}
+
+McpInfo* mdl_getmcpinfo(Model *mdl)
+{
+   if (mdl->commondata.mdltype != MdlType_mcp) {
+      return NULL;
+   }
+
+   return &mdl->info.mcp;
+}
+
+
+int mdl_solreport(Model *mdl_dst, Model *mdl_src)
+{
+
+   int mstat, sstat;
+
+   trace_solreport("[solreport] %s model '%.*s' #%u: reporting values from %s "
+                   "model '%.*s' #%u\n", mdl_fmtargs(mdl_dst), mdl_fmtargs(mdl_src));
+
+   S_CHECK(mdl_reportvalues(mdl_dst, mdl_src));
+   S_CHECK(ctr_evalequvar(&mdl_dst->ctr));
+
+   /* ------------------------------------------------------------------
+       * Get the solve and model status
+       * ------------------------------------------------------------------ */
+
+   S_CHECK(mdl_getmodelstat(mdl_src, &mstat));
+   S_CHECK(mdl_setmodelstat(mdl_dst, mstat));
+   S_CHECK(mdl_getsolvestat(mdl_src, &sstat));
+   S_CHECK(mdl_setsolvestat(mdl_dst, sstat));
+
+   if (mdl_is_rhp(mdl_dst)) {
+      /* deleted equations and equations in func2eval */
+      S_CHECK(rctr_evalfuncs(&mdl_dst->ctr));
+      /* if required, set the objective function value to the objvar one */
+      S_CHECK(rmdl_fix_objequ_value(mdl_dst));
+   }
+
+   return OK;
+}
+
+/**
+ * @brief Set the model type from scratch
+ *
+ * In the case of a trivial EMPDAG, this changes the problem type from EMP
+ * to the appropriate type.
+ *
+ * @param mdl   the model
+ * @param fops  the filter object
+ *
+ * @return      the error code
+ */
+int mdl_reset_modeltype(Model *mdl, Fops *fops)
+{
+   if (fops) {
+      TO_IMPLEMENT("non-NULL fops needs tp be implemented.");
+   }
+
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
+   S_CHECK(mdl_settype(mdl, MdlType_none));
+
+   S_CHECK(mdl_analyze_modeltype(mdl, fops));
+
+   ModelType mdltype_new;
+   S_CHECK(mdl_gettype(mdl, &mdltype_new));
+
+   if (mdltype == MdlType_emp && mdltype_new != MdlType_emp) {
+
+      EmpDag *empdag = &mdl->empinfo.empdag;
+
+      if (empdag_singleprob(empdag)) {
+
+         MathPrgm *mp = mdl->empinfo.empdag.mps.arr[0];
+         if (!mp) { return error_runtime(); }
+
+         rhp_idx objvar = mp_getobjvar(mp);
+         rhp_idx objequ = mp_getobjequ(mp);
+         RhpSense sense = mp_getsense(mp);
+
+         S_CHECK(mdl_setsense(mdl, sense));
+
+         if (mdltype_isopt(mdltype_new)) {
+            empdag->type = EmpDag_Empty;
+            S_CHECK(mdl_setobjvar(mdl, objvar));
+
+            if (mdl_is_rhp(mdl)) {
+               S_CHECK(rmdl_setobjfun(mdl, objequ));
+            }
+
+         } else if (mdltype_isvi(mdltype_new)) {
+            empdag->type = EmpDag_Empty;
+            assert(!valid_vi(objvar) && !valid_ei(objequ));
+         } else {
+            return error_runtime();
+         }
+
+
+         trace_process("[model] %s model '%.*s' #%u has now type %s with "
+                       "sense %s, objvar = %s, objequ = %s\n", mdl_fmtargs(mdl),
+                       mdltype_name(mdltype_new), sense2str(sense),
+                       mdl_printvarname(mdl, objvar), mdl_printequname(mdl, objequ));
+
+         return OK;
+
+      }
+
+      if (empdag_isempty(empdag)) {
+         return OK;
+      }
+
+      return error_runtime();
+   }
+
+   if (mdltype == mdltype_new ||  (mdltype_isopt(mdltype) && mdltype_isopt(mdltype_new))) {
+      return OK;
+   }
+
+   TO_IMPLEMENT("unsupported reset modeltype");
+}
+
+/**
+ * @brief Analyze the model to set the modeltype (LP, NLP, MIP, ...)
+ *
+ * @param mdl   the model to analyze
+ * @param fops  the filter operations
+ *
+ * @return      the error code
+ */
+int mdl_analyze_modeltype(Model *mdl, Fops *fops)
+{
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
+
+   if (mdltype != MdlType_none) {
+      if (empinfo_hasempdag(&mdl->empinfo) && empinfo_is_hop(&mdl->empinfo) && mdltype != MdlType_emp) {
+        error("[model] ERROR: High-Order Problem data, but the model type is %s rather than %s.\n",
+              mdltype_name(mdltype), mdltype_name(MdlType_emp));
+        return Error_EMPIncorrectInput;
+      }
+      return OK;
+   }
+
+   Container *ctr = &mdl->ctr;
+   S_CHECK(ctr_equvarcounts(ctr));
+
+   const EmpInfo *empinfo = &mdl->empinfo;
+   if (empinfo_hasempdag(empinfo)) {
+      if (empinfo_is_hop(empinfo)) {
+         S_CHECK(mdl_settype(mdl, MdlType_emp));
+         return OK;
+      }
+
+      if (empinfo_is_vi(empinfo)) {
+         S_CHECK(mdl_settype(mdl, MdlType_vi));
+         return OK;
+      }
+
+      assert(empinfo_is_opt(empinfo));
+   }
+
+   S_CHECK(ctr_equvarcounts(ctr));
+
+   bool has_quad = ctr->equvarstats.equs.exprtypes[EquExprQuadratic] > 0;
+   bool has_nl = ctr->equvarstats.equs.exprtypes[EquExprNonLinear] > 0;
+   unsigned *vartypes = ctr->equvarstats.vartypes;
+
+   bool is_integral = vartypes[VAR_I] || vartypes[VAR_B] || vartypes[VAR_SI];
+
+  /* ----------------------------------------------------------------------
+   * TODO: we would fail on MCP/MPEC
+   * ---------------------------------------------------------------------- */
+
+   if (has_nl) {
+      mdltype = is_integral ? MdlType_minlp : MdlType_nlp;
+   } else if (has_quad) {
+      mdltype = is_integral ? MdlType_miqcp : MdlType_qcp;
+   } else {
+      mdltype = is_integral ? MdlType_mip   : MdlType_lp;
+   }
+
+   S_CHECK(mdl_settype(mdl, mdltype));
 
    return OK;
 }

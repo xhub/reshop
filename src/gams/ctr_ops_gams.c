@@ -7,6 +7,7 @@
 #include "ctrdat_gams.h"
 #include "equ.h"
 #include "equvar_helpers.h"
+#include "gams_macros.h"
 #include "gams_option.h"
 #include "gams_rosetta.h"
 #include "macros.h"
@@ -17,6 +18,7 @@
 
 tlsvar char gams_bufvar[GMS_SSSIZE];
 tlsvar char gams_bufequ[GMS_SSSIZE];
+tlsvar char gams_errbuf[GMS_SSSIZE];
 
 /* ------------------------------------------------------------------------
  * Locally defined functions.
@@ -90,7 +92,106 @@ static void gams_deallocdata(Container *ctr)
    ctr->data = NULL;
 }
 
+static int gams_equvarcounts(Container *ctr)
+{
+   int status = OK;
+   const GmsContainerData *gms = ctr->data;
+   gmoHandle_t gmo = gms->gmo;
 
+   enum gmoVarType vtypes[] = {
+      gmovar_X ,
+      gmovar_B ,
+      gmovar_I ,
+      gmovar_S1,
+      gmovar_S2,
+      gmovar_SC,
+      gmovar_SI
+   };
+
+   enum gmoEquType etypes[] = {
+      gmoequ_E,
+      gmoequ_G,
+      gmoequ_L,
+      gmoequ_N,
+      gmoequ_X,
+      gmoequ_C,
+      gmoequ_B,
+   };
+
+   int vtypes_cnt[ARRAY_SIZE(vtypes)] = { 0 };
+   int etypes_cnt[ARRAY_SIZE(etypes)] = { 0 };
+
+
+
+   for (unsigned i = 0, len = ARRAY_SIZE(vtypes); i < len; ++i) {
+      vtypes_cnt[i] = gmoGetVarTypeCnt(gmo, vtypes[i]);
+   }
+
+   for (unsigned i = 0, len = ARRAY_SIZE(etypes); i < len; ++i) {
+      etypes_cnt[i] = gmoGetEquTypeCnt(gmo, etypes[i]);
+   }
+
+   enum gmoEquOrder equorders[] = {
+      gmoorder_ERR, gmoorder_L, gmoorder_Q, gmoorder_NL
+   };
+
+   unsigned equorders_cnt[ARRAY_SIZE(equorders)] = { 0 };
+
+   for (int i = 0, len = gmoM(gmo); i < len; ++i) {
+      int idx = gmoGetEquOrderOne(gmo, i);
+
+      if (idx < 0 || idx >= ARRAY_SIZE(equorders)) {
+         error("[gams] ERROR: equation '%s' has unsupported order %d",
+               ctr_printequname(ctr, i), idx);
+         status = Error_GamsCallFailed;
+      }
+
+      equorders_cnt[idx]++;
+   }
+
+   if (equorders_cnt[gmoorder_ERR] > 0) {
+      error("[gams] ERROR: got %d errors from gmoGetEquOrderOne()\n",
+            equorders_cnt[gmoorder_ERR]);
+   }
+
+   if (etypes_cnt[gmoequ_X] > 0) {
+      TO_IMPLEMENT("GAMS/GMO model with =X= equations");
+   }
+
+   if (etypes_cnt[gmoequ_C] > 0) {
+      TO_IMPLEMENT("GAMS/GMO model with =C= equations");
+   }
+
+   if (etypes_cnt[gmoequ_B] > 0) {
+      TO_IMPLEMENT("GAMS/GMO model with =B= equations");
+   }
+
+  /* ----------------------------------------------------------------------
+   * Report values in container
+   * ---------------------------------------------------------------------- */
+
+   EquVarTypeCounts *equvarstats = &ctr->equvarstats;
+
+   equvarstats->vartypes[VAR_X]    = vtypes_cnt[gmovar_X];
+   equvarstats->vartypes[VAR_B]    = vtypes_cnt[gmovar_B];
+   equvarstats->vartypes[VAR_I]    = vtypes_cnt[gmovar_I];
+   equvarstats->vartypes[VAR_SOS1] = vtypes_cnt[gmovar_S1];
+   equvarstats->vartypes[VAR_SOS2] = vtypes_cnt[gmovar_S2];
+   equvarstats->vartypes[VAR_SC]   = vtypes_cnt[gmovar_SC];
+   equvarstats->vartypes[VAR_SI]   = vtypes_cnt[gmovar_SI];
+
+   equvarstats->equs.cones[CONE_0]       = etypes_cnt[gmoequ_E];
+   equvarstats->equs.cones[CONE_R_PLUS]  = etypes_cnt[gmoequ_G];
+   equvarstats->equs.cones[CONE_R_MINUS] = etypes_cnt[gmoequ_L];
+
+   equvarstats->equs.types[ConeInclusion]        = etypes_cnt[gmoequ_E] + etypes_cnt[gmoequ_G] + etypes_cnt[gmoequ_L];
+
+   equvarstats->equs.exprtypes[EquExprLinear]    = equorders_cnt[gmoorder_L];
+   equvarstats->equs.exprtypes[EquExprQuadratic] = equorders_cnt[gmoorder_Q];
+   equvarstats->equs.exprtypes[EquExprNonLinear] = equorders_cnt[gmoorder_NL];
+
+   return status;
+}
 
 static int gams_evalequvar(Container *ctr)
 {
@@ -807,34 +908,6 @@ static int gams_getvarsval(const Container *ctr, double *vals)
    return OK;
 }
 
-static int gams_isequNL(const Container *ctr, rhp_idx eidx, bool *isNL)
-{
-   int nlflag = gmoGetEquOrderOne(((const struct ctrdata_gams *) ctr->data)->gmo, eidx);
-
-   switch (nlflag) {
-   /*  TODO(xhub) support quadratic expression */
-   case gmoorder_Q:
-   case gmoorder_NL:
-      *isNL = true;
-      break;
-   case gmoorder_L:
-      *isNL = false;
-      break;
-   case gmoorder_ERR:
-      error("%s :: ERROR while probing for the type of equation '%s' #%d.\n",
-            __func__, ctr_printequname(ctr, eidx), eidx);
-      return Error_GamsCallFailed;
-
-   default:
-      error("%s :: wrong return code %d from gmoGetEquOrderOne() when probing "
-            "for the type of equation '%s' #%u \n", __func__, nlflag,
-            ctr_printequname(ctr, eidx), eidx);
-      return Error_GamsCallFailed;
-   }
-
-   return OK;
-}
-
 static int gams_resize(Container *ctr, unsigned n, unsigned m)
 {
    /*  we could call gmoinitdata here? */
@@ -1002,6 +1075,7 @@ const struct container_ops ctr_ops_gams = {
    .deallocdata    = gams_deallocdata,
    .copyequname    = gams_copyequname,
    .copyvarname    = gams_copyvarname,
+   .equvarcounts   = gams_equvarcounts,
    .evalequvar     = gams_evalequvar,
    .evalfunc       = gams_evalfunc,
    .evalgrad       = gams_evalgrad,
@@ -1021,6 +1095,7 @@ const struct container_ops ctr_ops_gams = {
    .getequbasis    = gams_getequbasis,
    .getallequsval  = gams_getequsval,
    .getequtype     = gams_getequtype,
+   .getequexprtype = gams_getequexprtype,
    .getcoljacinfo  = gams_getcoljacinfo, /* RENAME */
    .getrowjacinfo  = gams_getrowjacinfo, /* RENAME */
    .getspecialfloats = gams_getspecialfloats,
@@ -1034,7 +1109,6 @@ const struct container_ops ctr_ops_gams = {
    .getvarbasis    = gams_getvarbasis,
    .getvarub       = gams_getvarub,
    .getallvarsval  = gams_getvarsval,
-   .isequNL        = gams_isequNL,
    .resize         = gams_resize,
    .setequval      = gams_setequval,
    .setequname     = gams_setequname,

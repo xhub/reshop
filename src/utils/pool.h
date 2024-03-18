@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "compat.h"
+#include "rhp_typedefs.h"
 
 /** 
  * @file pool.h
@@ -17,7 +18,7 @@ typedef struct nltree_pool {
    double *data;             /**< array for the numbers */
    size_t len;               /**< current count of numbers stored in data */
    size_t max;               /**< size of the array data */
-   unsigned  type;           /**< type of container owning this pool */
+   BackendType  type;        /**< type of container owning this pool */
    unsigned char cnt;        /**< reference counter */
    bool own;                 /**< true if the array is managed by the program */
 } NlPool;

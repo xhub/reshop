@@ -3,25 +3,17 @@
 #include <float.h>
 #include <string.h>
 
-#include "checks.h"
 #include "container.h"
 #include "cmat.h"
 #include "ctr_rhp.h"
 #include "ctrdat_rhp.h"
-#include "ctrdat_gams.h"
-#include "ctr_rhp_add_vars.h"
 #include "empinfo.h"
 #include "equvar_helpers.h"
-#include "equvar_metadata.h"
 #include "nltree.h"
 #include "filter_ops.h"
-#include "lequ.h"
 #include "macros.h"
-#include "mathprgm.h"
 #include "mdl.h"
-#include "mdl_rhp.h"
 #include "rhp_alg.h"
-#include "rmdl_data.h"
 #include "pool.h"
 #include "printout.h"
 #include "status.h"
@@ -29,21 +21,21 @@
 
 static double _id(double val) { return val; }
 
-int rctr_compress_check_equ(const Container *ctr_src, Container *ctr_dst, size_t skip_equ)
+int ctr_compress_equs_check(const Container *ctr_src, Container *ctr_dst, size_t skip_equ)
 {
-   return rctr_compress_check_equ_x(ctr_src, ctr_dst, skip_equ,  ctr_src->fops);
+   return ctr_compress_equs_check_x(ctr_src, ctr_dst, skip_equ,  ctr_src->fops);
 }
 
-int rctr_compress_check_equ_x(const Container *ctr_src, Container *ctr_dst,
+int ctr_compress_equs_check_x(const Container *ctr_src, Container *ctr_dst,
                               size_t skip_equ, const Fops *fops)
 {
    unsigned total_m;
    CMatElt **deleted_equs;
 
    if (ctr_is_rhp(ctr_src)) {
-      RhpContainerData *ctrdat_src = (RhpContainerData *)ctr_src->data;
-      total_m = ctrdat_src->total_m;
-      deleted_equs = ctrdat_src->deleted_equs;
+      RhpContainerData *cdat_src = (RhpContainerData *)ctr_src->data;
+      total_m = cdat_src->total_m;
+      deleted_equs = cdat_src->deleted_equs;
    } else if (ctr_src->backend == RHP_BACKEND_GAMS_GMO) {
       total_m = ctr_src->m;
       deleted_equs = NULL;
@@ -148,7 +140,7 @@ int rctr_compress_check_equ_x(const Container *ctr_src, Container *ctr_dst,
       }
 
    } else if (n_eq < 0) {
-      error("%s :: the number of active equations in the compressed model is "
+      error("%s ERROR: the number of active equations in the compressed model is "
             "smaller than expected: %zu vs %u. We don't know how to deal with "
             "this case.\n", __func__, ctr_dst->m - n_eq, ctr_dst->m);
       return Error_Inconsistency;
@@ -169,7 +161,7 @@ int rctr_compress_check_equ_x(const Container *ctr_src, Container *ctr_dst,
    return OK;
 }
 
-int rctr_compress_check_var(size_t ctr_n, size_t total_n, size_t skip_var)
+int ctr_compress_vars_check(size_t ctr_n, size_t total_n, size_t skip_var)
 {
    /*  TODO(xhub) how to enforce this when we do our own filtering */
    if (skip_var < total_n - ctr_n) {
@@ -183,492 +175,8 @@ int rctr_compress_check_var(size_t ctr_n, size_t total_n, size_t skip_var)
    return OK;
 }
 
-/**
- * @brief Make sure that the model has an objective equation
- *
- * @param          ctr     the model
- * @param          fops    the filter ops
- * @param[in,out]  objequ  on input, the current objequ, on output a valid objequ
- * @param[out]     e_obj   on output, a pointer to the equation
- *
- * @return                 the error code
- */
-static NONNULL int ctr_ensure_objequ(Container *ctr, Fops *fops,
-                                      rhp_idx *objequ, Equ **e_obj)
-{
-   rhp_idx lobjequ = *objequ;
-   if (!valid_ei(lobjequ) || !fops->keep_equ(fops->data, lobjequ)) {
-      S_CHECK(rctr_reserve_equs(ctr, 1));
-      S_CHECK(rctr_add_equ_empty(ctr, &lobjequ, e_obj, EQ_MAPPING, CONE_NONE));
-      *objequ = lobjequ;
-   } else {
-      Equ * restrict e = &ctr->equs[lobjequ];
-      assert(e->object == EQ_MAPPING && e->cone == CONE_NONE);
-      *e_obj = e;
-//      if (e->object == EQ_MAPPING) {
-//         e->object = EQ_CONE_INCLUSION;
-//         e->cone = CONE_0;
-//      }
-   }
 
-   return OK;
-}
 
-/**
- * @brief Make sure that the model has an new objective equation
- *
- * If the objective equation already existed, the objective variable
- * should be eliminated from the new objective equation
- *
- * If the objective equation did not already existed, then create it and
- * add the objective variable to it
- *
- * @param          ctr     the model
- * @param          fops    the filter ops
- * @param          objvar  the objective variable
- * @param[in,out]  objequ  on input, the current objequ, on output the new objequ
- * @param[out]     e_obj   on output, a pointer to the equation
- *
- * @return                 the error code
- */
-static NONNULL
-int ensure_newobjfunc(Model *mdl, Fops *fops, rhp_idx objvar, rhp_idx *objequ,
-                      Equ **e_obj)
-{
-   rhp_idx lobjequ = *objequ;
-   S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
-
-  /* ------------------------------------------------------------------------
-   * If objequ points to a valid equation, then we check that the objvar
-   * is present. Otherwise, we add a new equation
-   * ------------------------------------------------------------------------ */
-
-   if (!valid_ei(lobjequ) || !fops->keep_equ(fops->data, lobjequ)) {
-      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &lobjequ, e_obj, EQ_MAPPING, CONE_NONE));
-      assert(valid_ei(lobjequ));
-      *objequ = lobjequ;
-      S_CHECK(rmdl_setobjequ(mdl, lobjequ));
-      return rctr_equ_addnewvar(&mdl->ctr, *e_obj, objvar, 1.);
-
-   }
-
-   Lequ *le = mdl->ctr.equs[lobjequ].lequ;
-   double objvar_coeff;
-   unsigned dummyint;
-   S_CHECK(lequ_find(le, objvar, &objvar_coeff, &dummyint));
-
-   if (!isfinite(objvar_coeff)) {
-      error("%s :: objvar '%s' could not be found in equation '%s'\n",
-            __func__, ctr_printvarname(&mdl->ctr, objvar), 
-            ctr_printequname(&mdl->ctr, lobjequ));
-      return Error_IndexOutOfRange;
-   }
-
-   S_CHECK(rmdl_dup_equ(mdl, objequ, 0, objvar));
-   lobjequ = *objequ;
-   Equ *e = &mdl->ctr.equs[lobjequ];
-   *e_obj = e;
-
-   double coeff_inv = -1./objvar_coeff;
-   S_CHECK(lequ_scal(e->lequ, coeff_inv));
-   if (e->tree && e->tree->root) {
-      S_CHECK(nltree_scal(&mdl->ctr, e->tree, coeff_inv));
-   }
-   S_CHECK(cmat_scal(&mdl->ctr, e->idx, coeff_inv));
-
-   double cst = equ_get_cst(e);
-   equ_set_cst(e, cst*coeff_inv);
-
-   return OK;
-}
-
-static int NONNULL rctr_add_objequvar(Container *ctr, Fops *fops,
-                                      rhp_idx *objvar, rhp_idx *objequ)
-{
-   /* ----------------------------------------------------------------------
-    * Ensure that an objective variable exists and add an objective equation
-    * if it is missing.
-    *
-    * There are instance where there is not even an objective function, like
-    * when are given a feasibility problem. In that case, we also have to
-    * add a dummy objective equation.
-    *
-    * If the objequ index was valid, we force the evaluation of the objequ
-    * based on this objvar
-    * ---------------------------------------------------------------------- */
-
-   Equ *e_obj;
-   S_CHECK(ctr_ensure_objequ(ctr, fops, objequ, &e_obj));
-
-   S_CHECK(rctr_reserve_vars(ctr, 1));
-   Avar v;
-   S_CHECK(rctr_add_free_vars(ctr, 1, &v));
-
-   rhp_idx lobjvar = v.start;
-   S_CHECK(rctr_equ_addnewvar(ctr, e_obj, lobjvar, -1.));
-   ctr->vars[lobjvar].value = 0.;
-   *objvar = lobjvar;
-
-   return OK;
-}
-
-/* ----------------------------------------------------------------------
- * TODO(xhub) DOC internal fn
- * ---------------------------------------------------------------------- */
-static int objvar_gamschk(Model *mdl, rhp_idx * restrict objvar,
-                          rhp_idx * restrict objequ, Fops *fops)
-{
-   RhpContainerData *cdata = mdl->ctr.data;
-
-   /* ----------------------------------------------------------------------
-    * If the objective variable is not valid, we add an objective variable
-    * and then 
-    * ---------------------------------------------------------------------- */
-   if (!valid_vi(*objvar) || (fops && !fops->keep_var(fops->data, *objvar))) {
-
-      S_CHECK(rctr_add_objequvar(&mdl->ctr, fops, objvar, objequ));
-
-      cdata->pp.remove_objvars++;
-
-   } else { /* valid objvar index, but if it is a free variable, we need to replace it */
-      Container *ctr = &mdl->ctr;
-      Var *v = &ctr->vars[*objvar];
-      if (v->type != VAR_X || v->is_conic || v->bnd.lb != -INFINITY ||
-         v->bnd.ub != INFINITY) {
-
-         Equ *e_obj;
-         if (!valid_ei(*objequ) || (fops && !fops->keep_equ(fops->data, *objequ))) {
-            S_CHECK(rctr_reserve_equs(ctr, 1));
-            S_CHECK(rctr_add_equ_empty(ctr, objequ, &e_obj, EQ_MAPPING, CONE_NONE));
-            S_CHECK(rctr_equ_addnewvar(ctr, e_obj, *objvar, 1.));
-         } else {
-            e_obj = &mdl->ctr.equs[*objequ];
-            assert(e_obj->cone == CONE_NONE && e_obj->object == EQ_MAPPING);
-            assert(!ctr->equmeta || ctr->equmeta[e_obj->idx].role == EquObjective);
-         }
-
-         S_CHECK(rctr_reserve_vars(ctr, 1));
-         Avar vv;
-         S_CHECK(rctr_add_free_vars(ctr, 1, &vv));
-
-         *objvar = vv.start;
-         S_CHECK(rctr_equ_addnewvar(ctr, e_obj, *objvar, -1.));
-         mdl->ctr.vars[*objvar].value = 0.;
-
-         cdata->pp.remove_objvars++;
-      }
-   }
-
-   return rmdl_checkobjequvar(mdl, *objvar, *objequ);
-}
-
-static int objvarmp_gamschk(Model *mdl, MathPrgm *mp, Fops *fops)
-{
-   rhp_idx objvar, objequ;
-   EmpDag *empdag = &mdl->empinfo.empdag;
-   RhpContainerData *ctrdat = mdl->ctr.data;
-
-   if (!mp) {
-      assert(empdag->type == EmpDag_Empty);
-      objvar = empdag->simple_data.objvar;
-      objequ = empdag->simple_data.objequ;
-   } else {
-      objvar = mp_getobjvar(mp);
-      objequ = mp_getobjequ(mp);
-   }
-
-   rhp_idx objvar_bck = objvar, objequ_bck = objequ;
-   bool update_objequ = !valid_ei(objequ);
-
-   S_CHECK(objvar_gamschk(mdl, &objvar, &objequ, fops));
-
-   if (update_objequ) {
-      if (mp) {
-         S_CHECK(mp_setobjequ(mp, objequ));
-      } else {
-         trace_process("[process] %s model %.*s #%u: objequ is now %s\n",
-                       mdl_fmtargs(mdl), mdl_printequname(mdl, objequ));
-         S_CHECK(rmdl_setobjequ(mdl, objequ));
-      }
-   } else {
-      assert(objequ_bck == objequ);
-   }
-
-   if (objvar_bck != objvar) {
-      if (mp) {
-         S_CHECK(mp_setobjvar(mp, objvar));
-         S_CHECK(mp_objvarval2objequval(mp));
-      } else {
-         assert(mdl->empinfo.empdag.type == EmpDag_Empty);
-
-         trace_process("[process] %s model %.*s #%u: adding objvar %s to objequ %s\n",
-                       mdl_fmtargs(mdl), mdl_printvarname(mdl, objvar),
-                       mdl_printequname(mdl, objequ));
-
-         empdag->simple_data.objvar = objvar;
-         ctrdat->objequ_val_eq_objvar = true;
-      }
-   }
-
-   return OK;
-}
-
-static NONNULL int rmdl_prepare_export_gams(Model *mdl)
-{
-   Container *ctr = &mdl->ctr;
-   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
-
-   /* ----------------------------------------------------------------------
-    * Add an objective variable if there is none since GAMS requires one
-    * Also if there is no objective equation identified, add one
-    *
-    * Warning: we are modifying the number of variables, so make sure we are
-    * not getting any model data!
-    * ---------------------------------------------------------------------- */
-
-   /* \TODO(xhub) we need to get the resulting model_type somehow*/
-   /* \TODO(xhub) this doesn't go well with fops_subset  */
-   Fops *fops = ctr->fops;
-   EmpDag *empdag = &mdl->empinfo.empdag;
-   ProbType probtype = ((RhpModelData*)mdl->data)->probtype;
-   if (probtype_isopt(probtype) && empdag->type == EmpDag_Empty) {
-      return objvarmp_gamschk(mdl, NULL, fops);
-   }
-
-   return OK;
-
-#if 0
-   /* Nothing to do for an EMP model */
-   if (probtype == MdlProbType_emp) {
-   }
-
-   /* ----------------------------------------------------------------------
-    * We need to do the same as before for any MP
-    * ---------------------------------------------------------------------- */
-
-   for (unsigned i = 0, n_mp = empdag_getmplen(empdag); i < n_mp; ++i) {
-      MathPrgm *mp = empdag_getmpfast(empdag, i);
-      if (!mp) continue;
-
-      if (mp_isopt(mp)) {
-         S_CHECK(objvarmp_gamschk(mdl, mp, fops));
-      }
-   }
-
-   return OK;
-#endif
-}
-
-static NONNULL int ensure_deleted_var(Container *ctr, Fops *fops, rhp_idx vi)
-{
-   if (fops->keep_var(fops->data, vi)) {
-      error("%s :: variable '%s' #%u should be inactive but is not marked as such\n",
-            __func__, ctr_printvarname(ctr, vi), vi);
-      return Error_Inconsistency;
-   }
-
-   return OK;
-}
-
-static NONNULL int rmdl_prepare_export_rhp(Model *mdl, Fops *fops)
-{
-   Container *ctr = &mdl->ctr;
-   EmpInfo *empinfo = &mdl->empinfo;
-
-   /* ----------------------------------------------------------------------
-    * We need to remove objective variables and also fixed variables
-    * 
-    * TODO(xhub) URG : we allow ourself to modify an equation in place,
-    * without copying it, which quite bad
-    * ---------------------------------------------------------------------- */
-
-   EmpDag *empdag = &empinfo->empdag;
-   if (empdag->type == EmpDag_Empty) {
-
-      rhp_idx objvar;
-      rmdl_getobjvar(mdl, &objvar);
-
-      if (valid_vi(objvar)) {
-
-         Equ *e_obj;
-         rhp_idx objequ_old;
-         rmdl_getobjequ(mdl, &objequ_old);
-
-         rhp_idx objequ;
-         rmdl_getobjequ(mdl, &objequ);
-         S_CHECK(ensure_newobjfunc(mdl, fops, objvar, &objequ, &e_obj));
-         trace_process("[process] %s model %.*s #%u: objvar '%s' removed; "
-                       "objequ is now '%s'\n", mdl_fmtargs(mdl),
-                       mdl_printvarname(mdl, objvar), mdl_printequname(mdl, objequ));
-
-         if (valid_ei(objequ_old)) {
-
-            S_CHECK(ensure_deleted_var(ctr, fops, objvar));
-            S_CHECK(rctr_add_eval_equvar(ctr, objequ_old, objvar));
-         } /* TODO ensure that objvar values are set  */
-
-         rmdl_setobjvar(mdl, IdxNA);
-      }
-   } else {
-      unsigned mp_len = empdag_getmplen(empdag);
-      assert(mp_len > 0);
-      for (unsigned i = 0; i < mp_len; ++i) {
-         MathPrgm *mp = empdag_getmpfast(empdag, i);
-         if (!mp) continue;
-
-         rhp_idx objvar = mp_getobjvar(mp);
-         rhp_idx objequ = mp_getobjequ(mp);
-
-         if (valid_vi(objvar) && valid_ei(objequ)) {
-            Equ *e_obj;
-            rhp_idx objequ_old = objequ;
-
-            S_CHECK(ensure_newobjfunc(mdl, fops, objvar, &objequ, &e_obj));
-
-            assert(objequ_old != objequ);
-            S_CHECK(rctr_add_eval_equvar(ctr, objequ_old, objvar));
-            S_CHECK(ensure_deleted_var(ctr, fops, objvar));
-            /* TODO ensure that objvar values are set  */
-
-            S_CHECK(mp_setobjvar(mp, IdxNA));
-            S_CHECK(mp_setobjequ(mp, objequ));
-            trace_process("[process] MP(%s): objvar '%s' removed; objequ is now '%s'\n",
-                          empdag_getmpname(empdag, i), mdl_printvarname(mdl, objvar),
-                          mdl_printequname(mdl, objequ));
-         }
-      }
-   }
-
-   /* TODO GITLAB #90 */
-  /* -----------------------------------------------------------------------
-   * We go over all the variables identify fixed variables
-   * ----------------------------------------------------------------------- */
-//  S_CHECK(ctr_fixedvars(ctr));
-
-//  S_CHECK(rmdl_remove_fixedvars(mdl));
-
-   return OK;
-}
-
-static int rctr_prepare_export_gams(Container *ctr, Container *ctr_gms)
-{
-   /* ----------------------------------------------------------------------
-    * The SOS variables need special care:
-    * - copy 
-    * ---------------------------------------------------------------------- */
-
-   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
-   GmsContainerData *gms = (GmsContainerData *)ctr_gms->data;
-
-   if (cdat->sos1.len > 0) {
-
-      S_CHECK(chk_uint2int(cdat->sos1.len, __func__));
-      CALLOC_(gms->sos_group, int, ctr_nvars(ctr_gms));
-
-      for (int i = 0, len = (int)cdat->sos1.len; i < len; i++) {
-         Avar *v = &cdat->sos1.groups[i].v;
-
-         for (unsigned j = 0; j < v->size; ++j) {
-            gms->sos_group[j] = i+1;
-         }
-      }
-   }
-
-   if (cdat->sos2.len > 0) {
-      if (!gms->sos_group) {
-         CALLOC_(gms->sos_group, int, ctr_nvars(ctr_gms));
-      }
-
-      S_CHECK(chk_uint2int(cdat->sos2.len, __func__));
-      for (int i = 0, len = (int)cdat->sos2.len; i < len; i++) {
-
-         Avar *v = &cdat->sos2.groups[i].v;
-         for (unsigned j = 0; j < v->size; ++j) {
-            gms->sos_group[j] = i+1;
-         }
-      }
-   }
-
-   return OK;
-}
-
-/** 
- *  @brief Prepare a ReSHOP model for the export into another one
- *
- *
- *  @param mdl_src   the original model
- *  @param mdl_dst   the destination model
- *
- *  @return          the error code
- */
-int rmdl_prepare_export(Model * restrict mdl_src, Model * restrict mdl_dst)
-{
-   Container *ctr = &mdl_src->ctr;
-   Container *ctr_dst = &mdl_dst->ctr;
-
-   trace_process("[process] %s model %.*s #%u: exporting to %s model %.*s #%u\n",
-                 mdl_fmtargs(mdl_src), mdl_fmtargs(mdl_dst));
-
-   /* Just make sure we increase the stage to make sure objvar are evaluated properly */
-   S_CHECK(rmdl_incstage(mdl_src));
-
-   /* TODO GITLAB #71 */
-   Fops *fops = ctr->fops;
-   assert(fops);
-
-   /* ----------------------------------------------------------------------
-    * There may be no pool in the original container.
-    * We have to be careful in the following to ensure that later on it exists
-    * when we want to use it.
-    * ---------------------------------------------------------------------- */
-
-   if (ctr_dst->pool) {
-      pool_release(ctr_dst->pool);
-   }
-
-   ctr_dst->pool = pool_get(ctr->pool); 
-
-   /* ----------------------------------------------------------------------
-    * If the destination container is
-    * - a GAMS GMO object, we may need to add objective variable(s)
-    * - a RHP, we need to remove any objective variables(s) and change
-    *   the equations.
-    * ---------------------------------------------------------------------- */
-
-   switch (ctr_dst->backend) {
-   case RHP_BACKEND_GAMS_GMO:
-      S_CHECK(rmdl_prepare_export_gams(mdl_src));
-      /* WARNING: this must be executed AFTER we ensure/remove objective variables. */
-      size_t n_dst;
-      size_t m_dst;
-      fops->get_sizes(fops->data, &n_dst, &m_dst);
-      ctr_dst->n = n_dst;
-      ctr_dst->m = m_dst;
-      break;
-   case RHP_BACKEND_RHP:
-      S_CHECK(rmdl_prepare_export_rhp(mdl_src, fops));
-      break;
-   default:
-      error("%s :: unsupported destination model type %d\n",
-               __func__, ctr_dst->backend);
-      return Error_NotImplemented;
-   }
-
-   /* ----------------------------------------------------------------------
-    * Transfer container preparation
-    * ---------------------------------------------------------------------- */
-
-   switch (ctr_dst->backend) {
-   case RHP_BACKEND_GAMS_GMO:
-      S_CHECK(rctr_prepare_export_gams(ctr, ctr_dst));
-      break;
-   case RHP_BACKEND_RHP:
-      break;
-   default: ;
-   }
-
-   return OK;
-}
 
 /**
  * @brief Compress (after optional filtering) the variables of a model into a new one
@@ -795,7 +303,7 @@ int rctr_compress_vars_x(const Container *ctr_src, Container *ctr_dst, Fops *fop
 
    } else if (ctr_dst_n > ((RhpContainerData*)ctr_dst->data)->max_n) {
 
-      error("%s :: The variable space is already allocated, but too small: %zu "
+      error("%s ERROR: The variable space is already allocated, but too small: %zu "
             "is needed; %zu is allocated.\n", __func__, ctr_dst_n,
             ((RhpContainerData*)ctr_dst->data)->max_n);
       return Error_UnExpectedData;
@@ -819,7 +327,7 @@ int rctr_compress_vars_x(const Container *ctr_src, Container *ctr_dst, Fops *fop
    avar_setcompact(&ctrdat_dst->var_inherited.v, nvars, 0);
    avar_setandownlist(&ctrdat_dst->var_inherited.v_src, nvars, rev_rosetta);
 
-   return rctr_compress_check_var(ctr_src->n, ctr_src_n, skip_var);
+   return ctr_compress_vars_check(ctr_src->n, ctr_src_n, skip_var);
 
 _exit:
    FREE(rev_rosetta);
@@ -922,7 +430,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 
    double start = get_walltime();
 
-   S_CHECK(rctr_ensure_pool(ctr));
+   S_CHECK(ctr_ensure_pool(ctr));
 
    offset_pool = ctr->pool->len;
 
@@ -999,8 +507,10 @@ int rmdl_presolve(Model *mdl, unsigned backend)
          FREE(name);
          /* TODO: add option for selection subsolver */
 
-         S_CHECK_EXIT(rmdl_prepare_export(mdl, mdl_solver));
-         S_CHECK_EXIT(mdl_exportmodel(mdl, mdl_solver));
+         mdl_solver->ctr.n = mdl_solver->ctr.m = 0;
+         mdl_solver->status = 0;
+         mdl_solver->ctr.status = 0;
+         S_CHECK_EXIT(mdl_export(mdl, mdl_solver));
 
          /* TODO(Xhub) URG add option for displaying that  */
 #if defined(DEBUG)

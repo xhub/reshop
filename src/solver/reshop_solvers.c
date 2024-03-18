@@ -2,6 +2,8 @@
 #include "container.h"
 /*  TODO(xhub) remove that with ctr and mdl merge */
 #include "empinfo.h"
+#include "mdl_priv.h"
+#include "mdl_transform.h"
 #include "nltree.h"
 #include "fooc.h"
 #include "macros.h"
@@ -159,24 +161,61 @@ static int solve_mcp(Model *mdl, struct jacdata *jacdata)
 int rmdl_solve_asmcp(Model *mdl)
 {
    int status = OK;
-   struct jacdata jacdata;
-   memset(&jacdata, 0, sizeof(jacdata));
+   assert(mdl->mdl_up);
 
-   McpStats mcpdata;
-   S_CHECK(fooc_create_mcp(mdl, &mcpdata));
+  /* ----------------------------------------------------------------------
+   * We expect mdl->mdl_up to contain the model to solve and mdl to be an 
+   * empty shell right now.
+   * ---------------------------------------------------------------------- */
+
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl->mdl_up, &mdltype));
+
+
+  switch (mdltype) {
+  case MdlType_lp:
+  case MdlType_qcp:
+  case MdlType_nlp:
+  case MdlType_emp:
+    S_CHECK(fooc_create_mcp(mdl));
+    break;
+
+  case MdlType_mcp:
+      TO_IMPLEMENT("Model type MCP in rmdl_solve_asmcp()");
+  case MdlType_dnlp:
+    error("%s :: ERROR: nonsmooth NLP are not supported\n", __func__);
+    return Error_NotImplemented;
+
+  case MdlType_cns:
+    error("%s :: ERROR: constraints systems are not supported\n", __func__);
+    return Error_NotImplemented;
+
+  case MdlType_mip:
+  case MdlType_minlp:
+  case MdlType_miqcp:
+    error("%s :: ERROR: Model with integer variables are not yet supported\n", __func__);
+    return Error_NotImplemented;
+
+  default:
+    error("%s :: ERROR: unknown/unsupported container type %s\n", __func__,
+          mdltype_name(mdltype));
+    return Error_InvalidValue;
+  }
+
+   McpInfo *mcpdata;
+   A_CHECK(mcpdata, mdl_getmcpinfo(mdl));
 
    /* TODO: what is the relationship between jacdata.n and mcpdata.n? */
-   jacdata.n_nl = mcpdata.n_nlcons;
-   jacdata.n_primal = mcpdata.n_primalvars;
+   struct jacdata jacdata;
+   memset(&jacdata, 0, sizeof(jacdata));
+   jacdata.n_nl = mcpdata->n_nlcons;
+   jacdata.n_primal = mcpdata->n_primalvars;
    S_CHECK_EXIT(ge_prep_jacdata(&mdl->ctr, &jacdata));
 
    S_CHECK_EXIT(solve_mcp(mdl, &jacdata));
-
-   S_CHECK_EXIT(fooc_postprocess(mdl, mcpdata.n_primalvars));
 
 _exit:
    jacdata_free(&jacdata);
 
    return status;
 }
-

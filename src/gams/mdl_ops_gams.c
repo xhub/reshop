@@ -12,16 +12,21 @@
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
 #include "gams_exportempinfo.h"
+#include "gams_macros.h"
 #include "gams_option.h"
 #include "gams_rosetta.h"
+#include "gams_solve.h"
 #include "gams_utils.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl.h"
 #include "mdl_gams.h"
 #include "mdl_ops.h"
+#include "mdl_rhp.h"
+#include "mdl_transform.h"
 #include "reshop_error_handling.h"
 #include "rhp_options.h"
+#include "rmdl_gams.h"
 #include "rmdl_options.h"
 #include "timings.h"
 #include "toplayer_utils.h"
@@ -130,6 +135,7 @@ static int gams_getobjjacval(const Model *mdl, double *objjacval);
 static int gams_getobjvar(const Model *mdl, int *objvar);
 static int gams_getmodelstat(const Model *mdl, int *modelstat);
 static int gams_getsolvestat(const Model *mdl, int *solvestat);
+static int gams_export(Model *mdl, Model *mdl_dst);
 
 static int gams_allocdata(Model *mdl)
 {
@@ -572,13 +578,63 @@ static int gams_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
    return OK;
 }
 
+static int gams_copyassolvable_no_transform(Model *mdl, Model *mdl_src)
+{
+   BackendType backend = mdl_src->backend;
+
+   switch (backend) {
+   case RHP_BACKEND_GAMS_GMO:
+      return gams_export(mdl_src, mdl);
+   case RHP_BACKEND_JULIA:
+   case RHP_BACKEND_RHP:
+      return mdl_export(mdl_src, mdl);
+   default:
+      return backend_throw_notimplemented_error(backend, __func__);
+   }
+}
+
+static int gams_copyassolvable(Model *mdl, Model *mdl_src)
+{
+   ModelType probtype;
+   S_CHECK(mdl_gettype(mdl_src, &probtype));
+
+   switch (probtype) {
+   case MdlType_lp:
+   case MdlType_nlp:
+   case MdlType_qcp:
+   case MdlType_mip:
+   case MdlType_minlp:
+   case MdlType_miqcp:
+   case MdlType_mcp:
+   case MdlType_mpec:
+      return  gams_copyassolvable_no_transform(mdl, mdl_src);
+   case MdlType_vi: {
+      Model *mdl_mcp;
+      S_CHECK(mdl_transform_tomcp(mdl_src, &mdl_mcp));
+      S_CHECK(gams_copyassolvable_no_transform(mdl, mdl_mcp));
+      mdl_release(mdl_mcp);
+      return OK;
+   }
+   case MdlType_emp: {
+      Model *mdl_gmo_exportable;
+      S_CHECK(mdl_transform_emp_togamsmdltype(mdl_src, &mdl_gmo_exportable));
+      S_CHECK(gams_copyassolvable_no_transform(mdl, mdl_gmo_exportable));
+      mdl_release(mdl_gmo_exportable);
+      return OK;
+   }
+   default:
+      error("%s ERROR: Model type %s is not yet supported\n", __func__, backend_name(probtype));
+      return Error_NotImplemented;
+   }
+}
+
 static int gams_copysolveoptions(Model *mdl, const Model *mdl_src)
 {
    assert(mdl_src);
    GmsContainerData *gms_dst = (GmsContainerData *)mdl->ctr.data;
 
    if (!gms_dst->initialized) {
-      error("%s :: GEV is not initialized!\n", __func__);
+      error("%s ERROR: GEV is not initialized!\n", __func__);
       return Error_NotInitialized;
    }
 
@@ -658,6 +714,88 @@ static int gams_copystatsfromsolver(Model *mdl, const Model *mdl_solver)
    if (gmoModelType(gmo_solver) == gmoProc_mcp &&
       gmoModelStat(gmo) == gmoModelStat_OptimalGlobal) {
       gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
+   }
+
+   return OK;
+}
+
+static int gmdl_prepare_export(Model *mdl, Model *mdl_dst)
+{
+
+   S_CHECK(ctr_prepare_export(&mdl->ctr, &mdl_dst->ctr));
+   
+   if (mdl_dst->ctr.status & (CtrInstantiable)) {
+      mdl_dst->status |= MdlContainerInstantiable;
+   } else {
+      error("[model] ERROR: while preparing the export in %s model '%.*s' #%u: "
+            "container is not ready after %s\n", mdl_fmtargs(mdl_dst), __func__);
+      return Error_RuntimeError;
+   }
+   return OK;
+}
+
+static int gams_export2gmo(Model *mdl, Model *mdl_dst)
+{
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
+
+   switch (mdltype) {
+   case MdlType_lp:
+   case MdlType_nlp:
+   case MdlType_qcp:
+   case MdlType_mip:
+   case MdlType_minlp:
+   case MdlType_miqcp:
+   case MdlType_mcp:
+   case MdlType_mpec:
+      break;
+   case MdlType_vi:
+   case MdlType_emp: {
+
+      
+      error("[gams] ERROR in %s model '%.*s' #%u: type %s not exportable to GMO\n",
+            mdl_fmtargs(mdl), mdltype_name(mdltype));
+      return Error_RuntimeError;
+   }
+   case MdlType_cns:        /**< CNS   Constrained Nonlinear System */
+      error("%s :: CNS is not yet supported\n", __func__);
+      return Error_NotImplemented;
+   case MdlType_dnlp:       /**< DNLP  Nondifferentiable NLP  */
+      error("%s :: nonsmooth NLP are not yet supported\n", __func__);
+      return Error_NotImplemented;
+   default:
+      error("%s :: no solve procedure for a model of type %s\n", __func__,
+            mdltype_name(mdltype));
+      return Error_NotImplemented;
+   }
+
+   S_CHECK(gmdl_prepare_export(mdl, mdl_dst));
+
+   return gmdl_creategmo(mdl, mdl_dst);
+}
+
+static int gams_export2rhp(Model *mdl, Model *mdl_dst)
+{
+   assert(mdl_dst->backend == RHP_BACKEND_RHP);
+
+   if (mdl->ctr.fops) {
+      TO_IMPLEMENT("gams_export2rhp() with filtering");
+   }
+
+   return rmdl_initfromfullmdl(mdl_dst, mdl);
+}
+
+static int gams_export(Model *mdl, Model *mdl_dst)
+{
+   assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+   BackendType backend = mdl_dst->backend;
+
+   assert(!(mdl_dst->status & MdlContainerInstantiable));
+
+   switch (backend) {
+   case RHP_BACKEND_GAMS_GMO: S_CHECK(gams_export2gmo(mdl, mdl_dst)); break;
+   case RHP_BACKEND_RHP:      S_CHECK(gams_export2rhp(mdl, mdl_dst)); break;
+   default: error("%s ERROR: unsupported backend %s", __func__, backend_name(backend));
    }
 
    return OK;
@@ -1108,26 +1246,28 @@ static int gams_setsolvername(Model *mdl, const char *solvername)
 }
 
 const ModelOps mdl_ops_gams = {
-   .allocdata      = gams_allocdata,
-   .deallocdata    = gams_deallocdata,
-   .checkmdl       = gams_checkmdl,
-   .checkobjequvar = gams_checkobjequvar,
-   .copysolveoptions = gams_copysolveoptions,
+   .allocdata           = gams_allocdata,
+   .deallocdata         = gams_deallocdata,
+   .checkmdl            = gams_checkmdl,
+   .checkobjequvar      = gams_checkobjequvar,
+   .copyassolvable      = gams_copyassolvable,
+   .copysolveoptions    = gams_copysolveoptions,
    .copystatsfromsolver = gams_copystatsfromsolver,
-   .getsolvername  = gams_getsolvername,
-   .getmodelstat   = gams_getmodelstat, /* DEL -> solveinfos */
-   .getobjequ      = gams_getobjequ,
-   .getobjjacval   = gams_getobjjacval,
-   .getsense       = gams_getsense,
-   .getobjvar      = gams_getobjvar,
-   .getoption      = gams_getoption,
-   .getsolvestat   = gams_getsolvestat, /* DEL -> solveinfos */
-   .postprocess    = gams_postprocess,
-   .reportvalues   = gams_reportvalues,
-   .setmodelstat   = gams_setmodelstat, /* DEL -> solveinfos */
-   .setsense       = gams_setobjsense,
-   .setobjvar      = gams_setobjvar,
-   .setsolvestat   = gams_setsolvestat, /* DEL -> solveinfos */
-   .setsolvername  = gams_setsolvername,
-   .solve          = gams_solve,
+   .export              = gams_export,
+   .getmodelstat        = gams_getmodelstat, /* DEL -> solveinfos */
+   .getobjequ           = gams_getobjequ,
+   .getobjjacval        = gams_getobjjacval,
+   .getsense            = gams_getsense,
+   .getobjvar           = gams_getobjvar,
+   .getoption           = gams_getoption,
+   .getsolvername       = gams_getsolvername,
+   .getsolvestat        = gams_getsolvestat, /* DEL -> solveinfos */
+   .postprocess         = gams_postprocess,
+   .reportvalues        = gams_reportvalues,
+   .setmodelstat        = gams_setmodelstat, /* DEL -> solveinfos */
+   .setsense            = gams_setobjsense,
+   .setobjvar           = gams_setobjvar,
+   .setsolvestat        = gams_setsolvestat, /* DEL -> solveinfos */
+   .setsolvername       = gams_setsolvername,
+   .solve               = gams_solve,
 };

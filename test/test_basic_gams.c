@@ -5,6 +5,7 @@
 #include "test_basic.h"
 #include "test_common.h"
 #include "test_gams_utils.h"
+#include "colors.h"
 
 //const char* gams_lp_solvers[] = {"baron", "cbc", "conopt", "cplex", "knitro", "minos", "pathnlp", "mosek", "xpress"};
 //// TODO: what breaks here?
@@ -44,17 +45,18 @@ int main(void)
 
 
 #define SOLVE_TEST_INIT(TEST_FN, SOLVER_STR) \
-    if (gams_skip_solver(SOLVER_STR)) { continue; } \
+    if (gams_skip_solver(SOLVER_STR, #TEST_FN)) { continue; } \
     struct rhp_mdl *mdl = test_init(); \
     struct rhp_mdl *mdl_gams = rhp_mdl_new(RHP_BACKEND_GAMS_GMO); \
     if (!mdl_gams) { status = 1; goto _exit; } \
  \
+    rhp_mdl_setname(mdl, #TEST_FN); \
     rhp_mdl_setsolvername(mdl_gams, SOLVER_STR); \
  \
     printf("%s :: %s \n", #TEST_FN, SOLVER_STR); \
     int lstatus = TEST_FN(mdl, mdl_gams); \
     if (lstatus != RHP_OK) { \
-       printf("%s :: %s failed with status %d!\n", #TEST_FN, SOLVER_STR, lstatus); \
+       printf(ANSI_COLOR_RED"%s ERROR: %s failed with status %d!\n"ANSI_COLOR_RESET, #TEST_FN, SOLVER_STR, lstatus); \
        status++; \
     } \
     rhp_mdl_free(mdl_gams); \

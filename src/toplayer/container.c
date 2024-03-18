@@ -207,7 +207,6 @@ unsigned ctr_nvars_max(const Container *ctr)
    }
 
    return ctr->n;
-   
 }
 
 unsigned ctr_nequs_max(const Container *ctr)
@@ -219,17 +218,18 @@ unsigned ctr_nequs_max(const Container *ctr)
 
    return ctr->m;
 }
+
 /**
  *  @brief Resize the container object
  *
  *  This function resize the space for the variables, equations and their
  *  metadata
  *
- *  @param  ctr  the container
- *  @param  n    the new number of variables
- *  @param  m    the new number of equations
+ *  @param  ctr    the container
+ *  @param  nvars  the new number of variables
+ *  @param  nequs  the new number of equations
  *
- *  @return      the error code
+ *  @return        the error code
  */
 int ctr_resize(Container *ctr, unsigned nvars, unsigned nequs)
 {
@@ -238,8 +238,8 @@ int ctr_resize(Container *ctr, unsigned nvars, unsigned nequs)
 
    /*  TODO(xhub) this must go */
    /* TODO GITLAB #104 */
-   ctr->n = 0;
-   ctr->m = 0;
+//   ctr->n = 0;
+//   ctr->m = 0;
 
    nvars = MAX(nvars, 1);
    nequs = MAX(nequs, 1);
@@ -278,7 +278,7 @@ int ctr_resize(Container *ctr, unsigned nvars, unsigned nequs)
    }
 
    if (nequs > old_m) {
-      memset(&ctr->equs[old_m], 0, (nequs-old_m)*sizeof(struct equ));
+      memset(&ctr->equs[old_m], 0, (nequs-old_m)*sizeof(Equ));
       if (init_varmeta) {
          for (unsigned i = old_m; i < nequs; ++i) {
            equmeta_init(&ctr->equmeta[i]);
@@ -587,3 +587,143 @@ int ctr_markequasflipped(Container *ctr, Aequ *e)
 }
 
 
+/**
+ * @brief Prepare the export of a container to another one
+ *
+ * This is mainly to set the dimension of the destination container, and
+ * if necessary, create the rosettas for equations and variables
+ *
+ * @param ctr_src   the source container
+ * @param ctr_dst   the destination container
+ *
+ * @return          the error code
+ */
+int ctr_prepare_export(Container *ctr_src, Container *ctr_dst)
+{
+   Fops *fops = ctr_src->fops;
+
+   assert(!(ctr_dst->status & CtrEquVarInherited));
+
+   S_CHECK(ctr_borrow_nlpool(ctr_dst, ctr_src));
+
+   if (ctr_src->rosetta_vars || ctr_src->rosetta_equs) {
+      error("[%s] ERROR: rosetta arrays are already present\n", __func__);
+      return Error_UnExpectedData;
+   }
+
+   if (!fops) {
+      S_CHECK(ctr_resize(ctr_dst, ctr_src->n, ctr_src->m));
+
+      ctr_dst->n = ctr_src->n;
+      ctr_dst->m = ctr_src->m;
+
+      ctr_dst->status |= CtrEquVarInherited;
+
+      return OK;
+   }
+
+  
+   size_t total_n = ctr_nvars_total(ctr_src);
+   size_t total_m = ctr_nequs_total(ctr_src);
+   MALLOC_(ctr_src->rosetta_vars, rhp_idx, total_n);
+   MALLOC_(ctr_src->rosetta_equs, rhp_idx, MAX(total_m, 1));
+
+
+   rhp_idx *rosetta_equs = ctr_src->rosetta_equs;
+   rhp_idx *rosetta_vars = ctr_src->rosetta_vars;
+
+   size_t skip_equ = 0;
+   for (size_t i = 0; i < total_m; ++i) {
+
+      if (!fops->keep_equ(fops->data, i)) {
+         rosetta_equs[i] = IdxDeleted;
+         skip_equ++;
+         continue;
+      }
+
+      rhp_idx ei = i - skip_equ;
+      rosetta_equs[i] = ei;
+   }
+   size_t nequs = total_m - skip_equ;
+
+   size_t skip_var = 0;
+   for (size_t i = 0; i < total_n; ++i) {
+
+      if (!fops->keep_var(fops->data, i)) {
+         skip_var++;
+         rosetta_vars[i] = IdxDeleted;
+         continue;
+      }
+
+      rhp_idx vi = i - skip_var;
+      rosetta_vars[i] = vi;
+   }
+   size_t nvars = total_n - skip_var;
+
+   S_CHECK(ctr_resize(ctr_dst, nvars, nequs));
+
+   ctr_dst->n = nvars;
+   ctr_dst->m = nequs;
+
+   /* ----------------------------------------------------------------------
+    * Do some bookkeeping
+    * - constant equation, with no variables
+    * ---------------------------------------------------------------------- */
+   S_CHECK(ctr_compress_equs_check(ctr_src, ctr_dst, skip_equ));
+
+   S_CHECK(ctr_compress_vars_check(ctr_src->n, total_n, skip_var));
+
+  /* ----------------------------------------------------------------------
+   * Get the new modeltype
+   * ---------------------------------------------------------------------- */
+
+   ctr_dst->status |= CtrEquVarInherited;
+
+   return OK;
+}
+
+/**
+ * @brief Borrow the NL pool from a parent container
+ *
+ * If no NL pool is present, a new one is created
+ *
+ * @param ctr      the container
+ * @param ctr_src  the source container
+ *
+ * @return         the error code
+ */
+int ctr_borrow_nlpool(Container *ctr, Container *ctr_src)
+{
+   if (ctr->pool) {
+      pool_release(ctr->pool);
+   }
+
+   NlPool *p = pool_get(ctr_src->pool);
+
+   if (!p) {
+      A_CHECK(ctr->pool, pool_new_gams());
+   } else {
+      ctr->pool = p;
+   }
+
+   ctr->status |= CtrHasNlPool;
+
+   return OK;
+}
+
+/**
+ * @brief Ensure that the container as an NL pool
+ *
+ * @param ctr the container
+ *
+ * @return    the error code
+ */
+int ctr_ensure_pool(Container *ctr)
+{
+
+   if (!ctr->pool) {
+      A_CHECK(ctr->pool, pool_new_gams());
+   }
+
+   return OK;
+}

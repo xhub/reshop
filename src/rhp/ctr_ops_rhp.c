@@ -21,6 +21,7 @@
 #include "nltree.h"
 #include "equvar_metadata.h"
 #include "equvar_helpers.h"
+#include "filter_ops.h"
 #include "internal_model_common.h"
 #include "lequ.h"
 #include "macros.h"
@@ -1385,11 +1386,53 @@ static int rctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *ty
    return OK;
 
 }
+
+static int rctr_equvarcounts(Container *ctr)
+{
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+
+   Fops *fops = ctr->fops;
+
+   EquVarTypeCounts *equvarstats = &ctr->equvarstats;
+   memset(equvarstats, 0, sizeof(*equvarstats));
+
+
+   for (size_t i = 0, len = cdat->total_n; i < len; i++) {
+      if (!fops || fops->keep_var(fops->data, i)) {
+         equvarstats->vartypes[ctr->vars[i].type]++;
+      }
+   }
+
+   for (size_t i = 0, len = cdat->total_m; i < len; i++) {
+      if (!fops || fops->keep_equ(fops->data, i)) {
+         Equ *e = &ctr->equs[i];
+
+         equvarstats->equs.cones[e->cone]++;
+         equvarstats->equs.types[e->object]++;
+
+         if (ctr->equs[i].tree) {
+
+            if (ctr->equs[i].is_quad) {
+               equvarstats->equs.exprtypes[EquExprQuadratic]++;
+            } else {
+               equvarstats->equs.exprtypes[EquExprNonLinear]++;
+            }
+         } else {
+            equvarstats->equs.exprtypes[EquExprLinear]++;
+         }
+      }
+   }
+
+   return OK;
+}
+
+
 const struct container_ops ctr_ops_rhp = {
    .allocdata      = rctr_allocdata,
    .deallocdata    = rctr_deallocdata,
    .copyequname    = rctr_copyequname_v,
    .copyvarname    = rctr_copyvarname_v,
+   .equvarcounts   = rctr_equvarcounts,
    .evalequvar     = rctr_evalequvar,
    .evalfunc       = NULL,
    .evalgrad       = NULL,
@@ -1463,6 +1506,7 @@ const struct container_ops ctr_ops_julia = {
    .deallocdata    = rctr_deallocdata,
    .copyequname    = rctr_copyequname_s,
    .copyvarname    = rctr_copyvarname_s,
+   .equvarcounts   = rctr_equvarcounts,
    .evalfunc       = NULL,
    .evalgrad       = NULL,
    .evalgradobj    = NULL,

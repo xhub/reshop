@@ -26,6 +26,7 @@ typedef struct container_ops {
                    double *g, double *gx, int *numerr);
    int (*evalgradobj)(const Container *ctr, double *x, double *f,
                       double *g, double *gx, int *numerr);
+   int (*equvarcounts)(Container *ctr);
    int (*getallequsmult)(const Container *ctr, double *mult);
    int (*getallequsval)(const Container *ctr, double *vals);
    int (*getallvarsmult)(const Container *ctr, double *mult);

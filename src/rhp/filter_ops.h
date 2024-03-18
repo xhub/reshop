@@ -5,8 +5,10 @@
 
 #include "compat.h"
 #include "empdag_data.h"
+#include "equ.h"
 #include "mdl_data.h"
 #include "rhp_fwd.h"
+#include "var.h"
 
 /**
  * @file filter_ops.h
@@ -21,15 +23,14 @@ typedef struct rhp_ctr_filter_ops {
    FopsType type;
    void *data;
    void (*freedata)(void *data) NONNULL;
-   unsigned (*deactivatedequslen)(void *data) NONNULL;
+   //unsigned (*deactivatedequslen)(void *data) NONNULL;
    void (*get_sizes)(void *data, size_t* nvars, size_t* nequs) NONNULL ACCESS_ATTR(write_only, 2) ACCESS_ATTR(write_only, 3);
    bool (*keep_var)(void *data, rhp_idx vi) NONNULL;
    bool (*keep_equ)(void *data, rhp_idx ei) NONNULL;
    rhp_idx (*vars_permutation)(void *data, rhp_idx vi) NONNULL;
-   int (*transform_lequ)(void *data, Equ *e, Equ *edst ) NONNULL;
-   int (*transform_gamsopcode)(void *data, rhp_idx ei, int *instrs, int *args,
-                               unsigned len ) NONNULL;
-   int (*transform_nltree)(void *data, Equ *e, Equ *edst) NONNULL;
+   //int (*transform_lequ)(void *data, Equ *e, Equ *edst ) NONNULL;
+   int (*transform_gamsopcode)(void *data, rhp_idx ei, unsigned len, int *instrs, int *args) NONNULL;
+   //int (*transform_nltree)(void *data, Equ *e, Equ *edst) NONNULL;
 } Fops;
 
 const char *fopstype_name(FopsType type);
@@ -46,5 +47,14 @@ int filter_subset_activate(FopsSubsetData *fs, Model *mdl, unsigned offset_pool 
 
 int fops_subdag_init(Fops *fops, Model *mdl, daguid_t uid) NONNULL;
 int fops_setvarpermutation(Fops *fops, rhp_idx *vperm) NONNULL;
+
+mpid_t fops_singleMP_getmpid(Fops *fops) NONNULL;
+const MpIdArray* fops_Nash_getmpids(Fops *fops) NONNULL;
+daguid_t fops_subdag_getrootuid(Fops *fops) NONNULL;
+Fops* fops_getparent(Fops *fops) NONNULL;
+
+Fops* fops_subdag_new(Model *mdl, daguid_t uid) NONNULL;
+Fops* fops_subdag_activevars_new(Model *mdl, daguid_t uid) NONNULL;
+Fops *fops_singleMP_activevars_new(Model *mdl, mpid_t mpid) NONNULL;
 
 #endif /* FILTER_OPS_H */

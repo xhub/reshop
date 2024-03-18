@@ -7,7 +7,6 @@
  */
 
 #include "gams_option.h"
-#include "mdl_data.h"
 
 typedef enum rmdl_solver {
    RMDL_SOLVER_UNSET,

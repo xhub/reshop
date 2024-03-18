@@ -1,5 +1,7 @@
 #include <assert.h>
+
 #include "fooc_priv.h"
+#include "fooc_data.h"
 #include "macros.h"
 #include "mdl.h"
 #include "printout.h"
@@ -30,18 +32,18 @@ int compute_all_rosettas(Model *mdl_mcp, Rosettas *r)
    rhp_obj_init(&r->mdls);
 
    unsigned total_n = 0, num_mdl = 0;
-   Model *up = mdl_mcp->mdl_up;
+   Model *mdl_up = mdl_mcp->mdl_up;
 
-   while (up) {
+   while (mdl_up) {
       num_mdl++;
-      unsigned mdl_total_n = ctr_nvars_total(&up->ctr);
+      unsigned ctr_total_n = ctr_nvars_total(&mdl_up->ctr);
 
-      rhp_uint_add(&r->mdl_n, mdl_total_n);
-      rhp_uint_add(&r->rosetta_starts, total_n);
-      rhp_obj_add(&r->mdls, up);
+      S_CHECK(rhp_uint_add(&r->mdl_n, ctr_total_n));
+      S_CHECK(rhp_uint_add(&r->rosetta_starts, total_n));
+      S_CHECK(rhp_obj_add(&r->mdls, mdl_up));
 
-      total_n += mdl_total_n;
-      up = up->mdl_up;
+      total_n += ctr_total_n;
+      mdl_up = mdl_up->mdl_up;
    }
 
    if (total_n == 0) {
@@ -49,6 +51,10 @@ int compute_all_rosettas(Model *mdl_mcp, Rosettas *r)
             mdl_fmtargs(mdl_mcp));
       return Error_RuntimeError;
    }
+
+  /* ----------------------------------------------------------------------
+   * Create a continuous array of all the 
+   * ---------------------------------------------------------------------- */
 
    MALLOC_(r->data, rhp_idx, total_n);
    unsigned cur_idx = r->mdl_n.arr[0];
@@ -87,3 +93,44 @@ int compute_all_rosettas(Model *mdl_mcp, Rosettas *r)
 
    return OK;
 }
+
+bool childless_mp(const EmpDag *empdag, mpid_t mpid)
+{
+   bool res = true;
+
+   if (empdag->mps.Varcs[mpid].len > 0) {
+      error("[fooc] ERROR in %s model '%.*s' #%u: MP(%s) has %u VF children. "
+            "Computing the first-order optimality conditions is not possible\n",
+            mdl_fmtargs(empdag->mdl), empdag_getmpname(empdag, mpid), 
+            empdag->mps.Varcs[mpid].len);
+      res = false;
+   }
+
+   if (empdag->mps.Carcs[mpid].len > 0) {
+      error("[fooc] ERROR in %s model '%.*s' #%u: MP(%s) has %u CTRL children. "
+            "Computing the first-order optimality conditions is not possible\n",
+            mdl_fmtargs(empdag->mdl), empdag_getmpname(empdag, mpid), 
+            empdag->mps.Varcs[mpid].len);
+      res = false;
+   }
+
+   return res;
+}
+
+int fooc_check_childless_mps(Model *mdl_mcp, FoocData *fooc_dat)
+{
+   const EmpDag *empdag = &mdl_mcp->mdl_up->empinfo.empdag;
+
+   MpIdArray *mps = &fooc_dat->mps;
+   unsigned n_mps = mps->len;
+
+   for (unsigned i = 0; i < n_mps; ++i) {
+      mpid_t mpid = mps->arr[i];
+      if (!childless_mp(empdag, mpid)) { 
+         return Error_OperationNotAllowed;
+      }
+   }
+
+   return OK;
+}
+

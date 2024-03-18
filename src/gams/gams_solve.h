@@ -3,6 +3,6 @@
 
 #include "rhp_fwd.h"
 
-int mdl_exportasgmo(Model *mdl, Model *mdl_solver) NONNULL;
+int gmdl_creategmo(Model *mdl, Model *mdl_solver) NONNULL;
 
 #endif

@@ -1,36 +1,25 @@
-#include "cmat.h"
-#include "equvar_helpers.h"
+#include "filter_ops.h"
 #include "reshop_config.h"
 
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
 
-#include "checks.h"
+#include "cmat.h"
 #include "cones.h"
-#include "consts.h"
 #include "container.h"
 #include "ctr_rhp.h"
 #include "ctrdat_rhp.h"
 #include "ctrdat_rhp_priv.h"
-#include "empinfo.h"
 #include "equ.h"
-#include "equ_modif.h"
+#include "equvar_helpers.h"
 #include "equvar_metadata.h"
-#include "filter_ops.h"
 #include "internal_model_common.h"
 #include "lequ.h"
 #include "macros.h"
-#include "mathprgm.h"
-#include "mdl.h"
-#include "mdl_rhp.h"
 #include "nltree.h"
 #include "printout.h"
-#include "pool.h"
 #include "reshop.h"
-#include "rhp_model.h"
-#include "rmdl_data.h"
-#include "rmdl_options.h"
 #include "status.h"
 #include "var.h"
 
@@ -349,8 +338,8 @@ int cdat_resize(RhpContainerData *cdat, unsigned max_n, unsigned max_m)
    cdat->max_m = max_m;
 
    if (max_m > 0 && max_m > old_max_m) {
-      S_CHECK(cdat_resize_equs(cdat, max_m, old_max_n));
-   } else {
+      S_CHECK(cdat_resize_equs(cdat, max_m, old_max_m));
+   } else if (max_m == 0) {
       FREE(cdat->equs);
       FREE(cdat->equ_rosetta);
       FREE(cdat->equ_stage);
@@ -358,7 +347,7 @@ int cdat_resize(RhpContainerData *cdat, unsigned max_n, unsigned max_m)
 
    if (max_n > 0 && max_n > old_max_n) {
        S_CHECK(cdat_resize_vars(cdat, max_n, old_max_n));
-   } else {
+   } else if (max_n == 0) {
       FREE(cdat->vars);
       FREE(cdat->last_equ);
    }

@@ -98,177 +98,6 @@ int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
    return OK;
 }
 
-/**
- * @brief Analyze the model to set the modeltype (LP, NLP, MIP, ...)
- *
- * @param mdl   the model to analyze
- * @param fops  the filter operations
- *
- * @return      the error code
- */
-int rmdl_analyze_modeltype(Model *mdl, Fops *fops)
-{
-   bool var_types[VAR_TYPE_LEN] = {false};
-   bool var_cones[CONE_LEN] = {false};
-   bool equ_cones[CONE_LEN] = {false};
-   bool has_quad = false;
-   bool has_nl = false;
-   bool has_perp = false;
-
-   const Container *ctr = &mdl->ctr;
-
-   if (!mdl_is_rhp(mdl)) {
-      BackendType backend = mdl->backend;
-      error("%s ERROR: container is not RHP-like, but rather %s\n", __func__,
-            backend_name(backend));
-      return Error_WrongModelForFunction;
-   }
-
-   ModelType mdltype;
-   S_CHECK(mdl_gettype(mdl, &mdltype));
-
-   if (mdltype != MdlType_none) {
-      if (empinfo_hasempdag(&mdl->empinfo) && empinfo_is_hop(&mdl->empinfo) && mdltype != MdlType_emp) {
-        error("[model] ERROR: High-Order Problem data, but the model type is %s rather than %s.\n",
-              mdltype_name(mdltype), mdltype_name(MdlType_emp));
-        return Error_EMPIncorrectInput;
-      }
-      return OK;
-   }
-
-   const EmpInfo *empinfo = &mdl->empinfo;
-   if (empinfo_hasempdag(empinfo)) {
-      if (empinfo_is_hop(empinfo)) {
-         S_CHECK(mdl_settype(mdl, MdlType_emp));
-         return OK;
-      }
-
-      if (empinfo_is_vi(empinfo)) {
-         S_CHECK(mdl_settype(mdl, MdlType_vi));
-         return OK;
-      }
-
-      assert(empinfo_is_opt(empinfo));
-      
-   }
-
-   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
-   Fops lfops = { .type = FopsEmpty };
-
-   if (!fops) {
-      if (ctr->fops) {
-         fops = ctr->fops;
-      } else {
-         fops = &lfops;
-         S_CHECK(fops_active_init(fops, (Container*)ctr));
-      }
-   }
-
-   /* TODO(xhub) get the analysis for VI, MCP, CNS case */
-   for (size_t i = 0, len = cdat->total_n; i < len; i++) {
-      if (fops->keep_var(fops->data, i)) {
-          var_types[ctr->vars[i].type] = true;
-      }
-   }
-
-   for (size_t i = 0, len = cdat->total_m; i < len; i++) {
-     if (fops->keep_equ(fops->data, i)) {
-
-       equ_cones[ctr->equs[i].cone] = true;
-
-       if (ctr->equs[i].tree) {
-
-         if (ctr->equs[i].is_quad) {
-           has_quad = true;
-         } else {
-           has_nl = true;
-         }
-       }
-     }
-   }
-
-   bool is_integral = var_types[VAR_I] || var_types[VAR_B] || var_types[VAR_SI];
-
-   if (has_nl) {
-      mdltype = is_integral ? MdlType_minlp : MdlType_nlp;
-   } else if (has_quad) {
-      mdltype = is_integral ? MdlType_miqcp : MdlType_qcp;
-   } else {
-      mdltype = is_integral ? MdlType_mip : MdlType_lp;
-   }
-
-   S_CHECK(mdl_settype(mdl, mdltype));
-
-
-   /* HACK to free the memory */
-   if (lfops.type == FopsActive) {
-      assert(fops->freedata);
-      fops->freedata(fops->data);
-   }
-
-   return OK;
-}
-
-int rmdl_reset_modeltype(Model *mdl, Fops *fops)
-{
-   ModelType mdltype;
-   S_CHECK(mdl_gettype(mdl, &mdltype));
-   S_CHECK(mdl_settype(mdl, MdlType_none));
-
-   S_CHECK(rmdl_analyze_modeltype(mdl, fops));
-
-   ModelType mdltype_new;
-   S_CHECK(mdl_gettype(mdl, &mdltype_new));
-
-   if (mdltype == MdlType_emp && mdltype_new != MdlType_emp) {
-
-      EmpDag *empdag = &mdl->empinfo.empdag;
-
-      if (empdag_singleprob(empdag)) {
-
-         MathPrgm *mp = mdl->empinfo.empdag.mps.arr[0];
-         if (!mp) { return error_runtime(); }
-
-         rhp_idx objvar = mp_getobjvar(mp);
-         rhp_idx objequ = mp_getobjequ(mp);
-         RhpSense sense = mp_getsense(mp);
-
-         S_CHECK(mdl_setsense(mdl, sense));
-
-         if (mdltype_isopt(mdltype_new)) {
-            empdag->type = EmpDag_Empty;
-            S_CHECK(mdl_setobjvar(mdl, objvar));
-            S_CHECK(rmdl_setobjfun(mdl, objequ));
-         } else if (mdltype_isvi(mdltype_new)) {
-            empdag->type = EmpDag_Empty;
-            assert(!valid_vi(objvar) && !valid_ei(objequ));
-         } else {
-            return error_runtime();
-         }
-
-
-         trace_process("[model] %s model '%.*s' #%u has now type %s with "
-                       "sense %s, objvar = %s, objequ = %s\n", mdl_fmtargs(mdl),
-                       mdltype_name(mdltype_new), sense2str(sense),
-                       mdl_printvarname(mdl, objvar), mdl_printequname(mdl, objequ));
-
-         return OK;
-
-      }
-
-      if (empdag_isempty(empdag)) {
-         return OK;
-      }
-
-      return error_runtime();
-   }
-
-   if (mdltype == mdltype_new ||  (mdltype_isopt(mdltype) && mdltype_isopt(mdltype_new))) {
-      return OK;
-   }
-
-   TO_IMPLEMENT("unsupported reset modeltype");
-}
 
 static char * get_mdlname_new(Model *mdl_up)
 {
@@ -324,7 +153,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
    mdl_linkmodels(mdl_up, mdl);
   
    /* Not always necessary  */
-   S_CHECK(rctr_inherit_pool(ctr, ctr_up));
+   S_CHECK(ctr_borrow_nlpool(ctr, ctr_up));
 
    /* ----------------------------------------------------------------------
     * Copy the options
@@ -423,17 +252,18 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
     * Copy the variable and eqation metadata
     * --------------------------------------------------------------------- */
 
-   if (ctr_up->varmeta) {
-      if (!ctr->varmeta) { return Error_NullPointer; }
+   ModelType mdltype_up;
+   S_CHECK(mdl_gettype(mdl_up, &mdltype_up));
+
+   if (mdltype_hasmetadata(mdltype_up)) {
+      if (!ctr_up->varmeta || !ctr->varmeta) { return Error_NullPointer; }
+      if (!ctr_up->equmeta || !ctr->equmeta) { return Error_NullPointer; }
       memcpy(ctr->varmeta, ctr_up->varmeta, nvars_up*sizeof(struct var_meta));
-   }
-   if (ctr_up->equmeta) {
-      if (!ctr->equmeta) { return Error_NullPointer; }
       memcpy(ctr->equmeta, ctr_up->equmeta, ctr_up->m*sizeof(struct equ_meta));
    }
 
    if (mdl_is_rhp(mdl_up)) {
-     ((RhpModelData*)mdl->data)->solver = ((RhpModelData*)mdl_up->data)->solver;
+      ((RhpModelData*)mdl->data)->solver = ((RhpModelData*)mdl_up->data)->solver;
    }
 
    /* ---------------------------------------------------------------------
@@ -442,7 +272,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
 
    S_CHECK(empinfo_initfromupstream(mdl));
 
-   S_CHECK(rmdl_analyze_modeltype(mdl, NULL));
+   S_CHECK(mdl_analyze_modeltype(mdl, NULL));
 
   /* ----------------------------------------------------------------------
    * Final adjustements:

@@ -10,7 +10,7 @@
 
 static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
 {
-   int objequ;
+   rhp_idx objequ;
    unsigned n_ineq = 0;
    unsigned n_eq = 0;
    unsigned n_log = 0;
@@ -68,7 +68,6 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
    rhp_idx old_objequ;
    S_CHECK(mdl_getobjequ(pmdl, &old_objequ));
    if (nobj) {
-      bool isobjNL;
 
       EquExprType etype;
 

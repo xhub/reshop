@@ -1,11 +1,7 @@
 #ifndef VAR_H
 #define VAR_H
 
-#include "rhpidx.h"
-#ifndef _ISOC99_SOURCE
-#define _ISOC99_SOURCE      /*  See feature_test_macros(7) */
-#endif
-
+#include "reshop_config.h"
 #include "asnan.h"
 
 #include <assert.h>
@@ -16,6 +12,8 @@
 #include "cones.h"
 #include "equvar_data.h"
 #include "rhp_fwd.h"
+#include "rhpidx.h"
+
 
 /** 
  *  @file var.h
@@ -24,7 +22,7 @@
  */
 
 /** types of variables */
-__extension__ enum var_type ENUM_U8 {
+__extension__ typedef enum var_type ENUM_U8 {
    VAR_X          = 0,        /**< continuous variable            */
    VAR_B          = 1,        /**< binary variable                */
    VAR_I          = 2,        /**< integer variable               */
@@ -41,7 +39,7 @@ __extension__ enum var_type ENUM_U8 {
    VAR_POWER      = 13,       /**< variable in a POWER cone       */
    VAR_DPOWER     = 14,       /**< variable in a dual POWER cone  */
    VAR_TYPE_LEN
-};
+} VarType;
 
 /**
  * @brief Variable bounds
@@ -124,7 +122,7 @@ Avar* avar_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(avar_fre
 Avar* avar_newblock(unsigned block_size) MALLOC_ATTR(avar_free,1);
 
 int avar_get(const Avar *v, unsigned i, rhp_idx *vidx) NONNULL;
-int avar_set_list(Avar *v, unsigned size, rhp_idx *indx) NONNULL;
+int avar_set_list(Avar *v, unsigned size, rhp_idx *list) NONNULL;
 unsigned avar_size(const Avar *v);
 
 void avar_init(Avar* v) NONNULL;
