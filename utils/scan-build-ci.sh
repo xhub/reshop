@@ -18,6 +18,7 @@ valist.Uninitialized,\
 valist.Unterminated \
 make -j $(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2)
 
+# optin.core.EnumCastOutOfRange
 
 # core.AdjustedReturnValue,\
 # core.AttributeNonNull,\
