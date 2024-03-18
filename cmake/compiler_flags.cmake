@@ -62,6 +62,7 @@ macro(SET_C_WARNINGS _TARGETS)
     list(APPEND _just_warnings "disabled-optimization;enum-int-mismatch;literal-range;gnu;implicit-int;array-parameter")
     # TODO: reserved-identifier
       #list(APPEND _just_warnings "reserved-identifier")
+      # list(APPEND _just_warnings "unsafe-buffer-usage"): This is just too verbose and doesn't have any understand. For c++ code
     list(APPEND _just_warnings "bool-operation;no-fixed-enum-extension")
 
 
