@@ -295,7 +295,7 @@ int rhp_gms_fillmdl(Model *mdl)
    }
 
    mdl->commondata.exports_dir_parent = exportdir_tmp;
-   mdl->commondata.own_export_dir_parent = true;
+   mdl->commondata.own_exports_dir_parent = true;
    
    S_CHECK(mdl_settype(mdl, mdltype_from_gams(gmoModelType(gmo))));
 

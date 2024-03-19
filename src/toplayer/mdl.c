@@ -140,8 +140,8 @@ static void mdl_free(Model *mdl)
    empinfo_dealloc(&mdl->empinfo);
    FREE(mdl->commondata.name);
 
-   if (mdl->commondata.own_export_dir_parent) {
-      if (mdl->commondata.delete_export_dirs) {
+   if (mdl->commondata.own_exports_dir_parent) {
+      if (mdl->commondata.delete_exports_dir) {
          rmfn(mdl->commondata.exports_dir_parent);
       }
 
@@ -165,7 +165,7 @@ static void mdl_commondata_init(Model *mdl)
    dat->name = NULL;
    dat->exports_dir = NULL;
    dat->exports_dir_parent = NULL;
-   dat->own_export_dir_parent = false;
+   dat->own_exports_dir_parent = false;
    dat->exports_dir_parent = false;
    dat->mdltype = MdlType_none;
 }
@@ -461,21 +461,21 @@ int mdl_ensure_exportdir(Model *mdl)
 
    if (!mdl->commondata.exports_dir_parent) {
 #if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
-   char *export_dir_template;
-   A_CHECK(export_dir_template, strdup("/tmp/reshop_exports_XXXXXX"));
-   char *res = mkdtemp(export_dir_template);
+   char *exports_dir_template;
+   A_CHECK(exports_dir_template, strdup("/tmp/reshop_exports_XXXXXX"));
+   char *res = mkdtemp(exports_dir_template);
 
    if (!res) {
       perror("mkdtemp");
       return Error_SystemError;
    }
 
-   mdl->commondata.exports_dir_parent = export_dir_template;
+   mdl->commondata.exports_dir_parent = exports_dir_template;
 
 #elif defined(_WIN32)
-   A_CHECK(mdl->commondata.export_dir_parent, win_gettmpdir());
-   mdl->commondata.own_export_dir_parent = true;
-   mdl->commondata.delete_export_dirs = true;
+   A_CHECK(mdl->commondata.exports_dir_parent, win_gettmpdir());
+   mdl->commondata.own_exports_dir_parent = true;
+   mdl->commondata.delete_exports_dir = true;
 #else
 
       printout(PO_INFO, "[model] %s model '%.*s' #%u has no valid export directory."
