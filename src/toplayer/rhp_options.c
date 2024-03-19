@@ -79,7 +79,10 @@ bool optvalb(const Model *mdl, enum rhp_options_enum opt)
 
    char* env_var;
 
-   IO_CALL(asprintf(&env_var, "RHP_%s", rhp_options[opt].name));
+   if (asprintf(&env_var, "RHP_%s", rhp_options[opt].name) < 0) {
+      errormsg("%s ERROR: asprintf() failed!");
+      return false;
+   }
 
    char *s = env_var;
    while (*s) { *s = toupper((unsigned char)*s); s++; }

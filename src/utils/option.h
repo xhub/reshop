@@ -31,7 +31,7 @@ struct option {
       double d;
       int i;
       bool b;
-      char *s;
+      const char *s;
    } value;
 };
 

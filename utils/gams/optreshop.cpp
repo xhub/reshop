@@ -12,12 +12,21 @@
 
 #include "GamsOptionsSpecWriter.hpp"
 
+#ifndef OPTRESHOP_CPP
 extern "C" {
+#endif
+
 #include "rhp_options.h"
 #include "status.h"
 
 #include <cstdarg>
 #include <cstdlib>
+
+
+void printstr(unsigned mode, const char *str);
+void printout(unsigned mode, const char *format, ...);
+void backtrace_(const char *expr, int status);
+
 void printstr(unsigned mode, const char *str)
 {
    puts(str);
@@ -57,7 +66,10 @@ void backtrace_(const char *expr, int status)
 {
    return;
 }
+
+#ifndef OPTRESHOP_CPP
 } // end of extern "C"
+#endif
 
 
 // Note that we keep the advanced stuff to make it easier to implement that in
@@ -65,11 +77,6 @@ void backtrace_(const char *expr, int status)
 
 int main(int argc, char** argv)
 {
-   bool dummy;
-   std::string dummys;
-   int dummyi;
-   double dummyd;
-
    GamsOptions gmsopt("ReSHOP");
    gmsopt.setSeparator("=");
    gmsopt.setGroup("reshop");

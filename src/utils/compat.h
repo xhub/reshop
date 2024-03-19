@@ -118,13 +118,20 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
   #define __has_extension __has_feature // Compatibility with pre-3.0 compilers.
 #endif
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L
-#define RESHOP_STATIC_ASSERT(EXPR, STR) static_assert(EXPR, STR);
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L) || \
+    (defined(__cplusplus) && __cplusplus >= 201103L)
+
+#   define RESHOP_STATIC_ASSERT(EXPR, STR) static_assert(EXPR, STR);
+
 #elif defined(__GNUC__)
+
 #if (defined(__clang__) && __has_extension(c_static_assert)) || \
     (__GNUC__ > 4 || (__GNUC__ == 4 &&  __GNUC_MINOR__ >= 6))
-#define RESHOP_STATIC_ASSERT(EXPR, STR) _Static_assert(EXPR, STR);
+
+#   define RESHOP_STATIC_ASSERT(EXPR, STR) _Static_assert(EXPR, STR);
+
 #endif
+
 #endif
 
 #ifndef RESHOP_STATIC_ASSERT
