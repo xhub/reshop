@@ -33,6 +33,7 @@ void fooc_data_fini(FoocData *fooc_dat)
    aequ_empty(&fooc_dat->cons_lin);
 
    mpidarray_empty(&fooc_dat->mps);
+   FREE(fooc_dat->mp2objequ);
 }
 
 /**

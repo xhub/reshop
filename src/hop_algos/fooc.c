@@ -1589,12 +1589,11 @@ int fooc_mcp(Model *mdl_mcp)
    /* TODO: delete? This should already be done when creating the ctr_mcp? */
    S_CHECK_EXIT(ctr_borrow_nlpool(ctr_mcp, ctr_src));
 
-   if (!ctr_src->rosetta_vars) {
-      MALLOC_EXIT(ctr_src->rosetta_vars, rhp_idx, fooc_dat.src.total_n);
-   }
+   REALLOC_EXIT(ctr_src->rosetta_vars, rhp_idx, fooc_dat.src.total_n);
 
    /*  We allocate + 1 since it simplifies the logic */
-   MALLOC_EXIT(ctr_src->rosetta_equs, rhp_idx, fooc_dat.src.total_m + 1);
+   REALLOC_EXIT(ctr_src->rosetta_equs, rhp_idx, fooc_dat.src.total_m + 1);
+
    rhp_idx *rosetta_equ = ctr_src->rosetta_equs;
 
    if (fops) { /* With filtering, all equation data is copied */
