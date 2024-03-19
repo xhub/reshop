@@ -48,13 +48,13 @@ unsigned rhp_mp_nvars(const struct rhp_mathprgm *mp)
    return mp->vars.len;
 }
 
-_Static_assert(RhpMin == RHP_MIN, "");
-_Static_assert(RhpMax == RHP_MAX, "");
-_Static_assert(RhpFeasibility == RHP_FEAS, "");
-_Static_assert(RhpNoSense == RHP_NOSENSE, "");
+_Static_assert((uint8_t) RhpMin == (uint8_t) RHP_MIN, "");
+_Static_assert((uint8_t) RhpMax == (uint8_t) RHP_MAX, "");
+_Static_assert((uint8_t) RhpFeasibility == (uint8_t) RHP_FEAS, "");
+_Static_assert((uint8_t) RhpNoSense == (uint8_t) RHP_NOSENSE, "");
 
-_Static_assert(MpTypeOpt == RHP_MP_OPT, "");
-_Static_assert(MpTypeVi == RHP_MP_VI, "");
+_Static_assert((uint8_t) MpTypeOpt == (uint8_t) RHP_MP_OPT, "");
+_Static_assert((uint8_t) MpTypeVi == (uint8_t) RHP_MP_VI, "");
 #ifdef GITLAB_83
 //   RHP_MP_MCP,         /**< Mixed Complementarity Problem */
 //   RHP_MP_QVI,         /**< Quasi Variational Inequality */
@@ -65,5 +65,5 @@ _Static_assert(MpTypeQvi == RHP_MP_QVI, "");
 _Static_assert(MpTypeMpcc == RHP_MP_MPCC, "");
 _Static_assert(MpTypeMpec == RHP_MP_MPEC, "");
 #endif
-_Static_assert(MpTypeCcflib == RHP_MP_CCFLIB, "");
-_Static_assert(MpTypeUndef == RHP_MP_UNDEF, "");
+_Static_assert((uint8_t) MpTypeCcflib == (uint8_t) RHP_MP_CCFLIB, "");
+_Static_assert((uint8_t) MpTypeUndef == (uint8_t) RHP_MP_UNDEF, "");

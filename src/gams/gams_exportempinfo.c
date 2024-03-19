@@ -358,7 +358,7 @@ static int _prep_jams_solver(GmsModelData *mdldat, struct ctrdata_gams *gms,
   strncpy(empinfo_dat, buf, GMS_SSSIZE);
 
   /*  Set the solver to JAMS */
-  strncpy(mdldat->solvername, "jams", sizeof("jams"));
+  strncpy(mdldat->solvername, "jams", strlen("jams"));
 
   /*  TODO(xhub) set an option for that */
   gevSetIntOpt(gms->gev, gevKeep, 1);
@@ -491,7 +491,6 @@ static int export_equilibrium_(struct empinfo_dat *file,
  *  supported by GAMS
  *
  *  @param  mdl_gms  the GAMS model (destination)
- *  @param  mdl      the model from which mdl_gms is derived
  *
  *  @return          the error code
  *  */
@@ -572,7 +571,7 @@ int gms_exportempinfo(Model *mdl_gms)
 
     if (empdag_mphaschild(empdag, mp->id)) {
 
-      if (mp->type != RHP_MP_OPT) {
+      if (mp->type != MpTypeOpt) {
         error("%s :: the root MP should have type OPT, got %s (#%d)\n",
                  __func__, mp_gettypestr(mp), mp_gettype(mp));
         return Error_Inconsistency;

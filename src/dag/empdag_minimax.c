@@ -41,7 +41,7 @@ int empdag_minimax_reformulate(Model *mdl)
       MathPrgm *mp = empdag->mps.arr[mp_id];
 
       MpType mptype = mp_gettype(mp);
-      if (mptype != RHP_MP_CCFLIB) {
+      if (mptype != MpTypeCcflib) {
          TO_IMPLEMENT("EMPDAG reformulation for non-CCFLIB MP");
       }
 

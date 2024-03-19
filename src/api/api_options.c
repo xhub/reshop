@@ -151,7 +151,7 @@ int rhp_opt_geti(const char *name, int *i)
    return Error_OptionNotFound;
 }
 
-int rhp_opt_gets(const char *name, char **str)
+int rhp_opt_gets(const char *name, const char **str)
 {
    unsigned index;
    struct option_set *optset;
@@ -161,6 +161,7 @@ int rhp_opt_gets(const char *name, char **str)
       return OK;
    }
 
+   *str = NULL;
    return Error_OptionNotFound;
 }
 

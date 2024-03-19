@@ -567,7 +567,7 @@ int ctr_fixedvars(Container *ctr)
     bool bnd_fixed = (v->type == VAR_X || v->type == VAR_B || v->type == VAR_I) &&
       (v->bnd.lb == v->bnd.ub);
 
-    if (bnd_fixed || v->type == RHP_BASIS_FIXED) {
+    if (bnd_fixed || v->basis == BasisFixed) {
       S_CHECK(rhp_idx_add(&dat, i));
     }
   }

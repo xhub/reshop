@@ -47,7 +47,9 @@ macro(SET_C_WARNINGS _TARGETS)
     add_compile_options (/Wall /wd4061 /wd4710 /wd4100 /wd4820 /wd5045)
   else ()
     # to enable: cast-function-type
-    add_compile_options (-Wall -Wuninitialized -Wextra)
+    FOREACH(_T ${_TARGETS})
+      target_compile_options(${_T} PRIVATE -Wall -Wuninitialized -Wextra)
+    ENDFOREACH()
     set (_just_warnings  "no-cast-function-type;format-overflow=2;format=2")
     list(APPEND _just_warnings "no-c11-extensions;documentation;pointer-to-int-cast;uninitialized-const-reference")
     list(APPEND _just_warnings "pragma-pack;pragma-pack-suspicious-include;tautological-compare;null-pointer-arithmetic")
@@ -66,6 +68,10 @@ macro(SET_C_WARNINGS _TARGETS)
     list(APPEND _just_warnings "bool-operation;no-fixed-enum-extension")
       # This breaks fixed enum
     list(APPEND _just_warnings "no-microsoft-fixed-enum")
+      #
+     list(APPEND _just_warnings "no-missing-braces")
+      #
+     list(APPEND _just_warnings "no-unused-parameter;no-sign-compare")
 
 
 
@@ -79,7 +85,7 @@ macro(SET_C_WARNINGS _TARGETS)
     # Increase the level of some warnings
     # format-truncation=2 does not work as we check whether truncation happens ...
     list(APPEND _error_warnings "implicit-fallthrough=5;attribute-alias=2;array-bounds=2;format-truncation=1")
-    list(APPEND _error_warnings "shift-overflow=2;use-after-free=3;unused-const-variable=2")
+    list(APPEND _error_warnings "shift-overflow=2;use-after-free=3;unused-const-variable=2;enum-compare")
 
     foreach (_ew ${_error_warnings})
       add_c_options("-Werror=${_ew}" ${_TARGETS})

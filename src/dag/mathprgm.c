@@ -349,8 +349,8 @@ int mp_settype(MathPrgm *mp, unsigned type) {
 
    RhpSense sense = mp->sense;
    // Add MpTypeMcp? See GITLAB #83
-   if (((sense == RHP_MAX || sense == RHP_MIN) && (type == MpTypeVi))
-   || ((sense == RHP_FEAS) && (type != MpTypeVi))) {
+   if (((sense == RhpMax || sense == RhpMin) && (type == MpTypeVi))
+   || ((sense == RhpFeasibility) && (type != MpTypeVi))) {
          error("%s :: MP %.*s #%u: type '%s' incompatible with sense '%s'.\n",
                __func__, mp_getnamelen(mp), mp_getname(mp), mp->id,
                mptype_str(type), sense2str(mp->sense));
@@ -785,7 +785,7 @@ rhp_idx mp_getobjequ(const MathPrgm *mp) {
       return mp->opt.objequ;
    }
 
-   if (mp->type == RHP_MP_CCFLIB) {
+   if (mp->type == MpTypeCcflib) {
       return IdxCcflib;
    }
 
@@ -819,7 +819,7 @@ const char *mp_gettypestr(const MathPrgm *mp) {
 }
 
 unsigned mp_getnumzerofunc(const MathPrgm *mp) {
-   if (mp->type == RHP_MP_VI) {
+   if (mp->type == MpTypeVi) {
       return mp->vi.num_zeros;
    }
 
@@ -827,12 +827,12 @@ unsigned mp_getnumzerofunc(const MathPrgm *mp) {
 }
 
 unsigned mp_getnumvars(const MathPrgm *mp) {
-   assert(mp->type != RHP_MP_VI || mp->vars.len - mp_getnumzerofunc(mp) == mp->equs.len - mp_getnumcons(mp));
+   assert(mp->type != MpTypeVi || mp->vars.len - mp_getnumzerofunc(mp) == mp->equs.len - mp_getnumcons(mp));
    return mp->vars.len;
 }
 
 unsigned mp_getnumcons(const MathPrgm *mp) {
-if (mp->type == RHP_MP_VI) {
+if (mp->type == MpTypeVi) {
       return mp->vi.num_cons;
    }
 
@@ -862,7 +862,7 @@ void mp_print(MathPrgm *mp, const Model *mdl) {
                   ctr_printequname(ctr, objequ), objequ);
       }
 
-   } else if (mp->type == RHP_MP_VI) {
+   } else if (mp->type == MpTypeVi) {
       printout(PO_INFO, " (%s)\n\n", "variational inequality");
    } else {
       printout(PO_INFO, " (%s)\n\n", "unknown");

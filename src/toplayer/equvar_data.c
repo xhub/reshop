@@ -63,9 +63,9 @@ const char* basis_name(BasisStatus basis)
 
 #include "reshop.h"
 
-_Static_assert(RHP_BASIS_UNSET == BasisUnset, "");
-_Static_assert(RHP_BASIS_LOWER == BasisLower, "");
-_Static_assert(RHP_BASIS_UPPER == BasisUpper, "");
-_Static_assert(RHP_BASIS_BASIC == BasisBasic, "");
-_Static_assert(RHP_BASIS_SUPERBASIC == BasisSuperBasic, "");
-_Static_assert(RHP_BASIS_FIXED == BasisFixed, "");
+_Static_assert((uint32_t)RHP_BASIS_UNSET == (uint32_t)BasisUnset, "");
+_Static_assert((uint32_t)RHP_BASIS_LOWER == (uint32_t)BasisLower, "");
+_Static_assert((uint32_t)RHP_BASIS_UPPER == (uint32_t)BasisUpper, "");
+_Static_assert((uint32_t)RHP_BASIS_BASIC == (uint32_t)BasisBasic, "");
+_Static_assert((uint32_t)RHP_BASIS_SUPERBASIC == (uint32_t)BasisSuperBasic, "");
+_Static_assert((uint32_t)RHP_BASIS_FIXED == (uint32_t)BasisFixed, "");

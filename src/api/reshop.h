@@ -779,7 +779,7 @@ int rhp_opt_getd(const char *name, double *dval);
 RHP_PUBLIB
 int rhp_opt_geti(const char *name, int *ival);
 RHP_PUBLIB
-int rhp_opt_gets(const char *name, char **str);
+int rhp_opt_gets(const char *name, const char **str);
 RHP_PUBLIB
 int rhp_opt_gettype(const char *name, unsigned *type);
 

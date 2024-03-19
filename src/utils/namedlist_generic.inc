@@ -133,7 +133,7 @@ int RHP_MAKE_STR(add)(struct RHP_LIST_TYPE *dat, RHP_ELT_TYPE elt, const char *n
 }
 #endif
 
-FN_SCOPE const RHP_ELT_TYPE RHP_MAKE_STR(at)(struct RHP_LIST_TYPE *dat, IDX_TYPE i)
+FN_SCOPE RHP_ELT_TYPE RHP_MAKE_STR(at)(struct RHP_LIST_TYPE *dat, IDX_TYPE i)
 {
    return i < dat->len ? dat->list[i] : RHP_ELT_INVALID;
 }

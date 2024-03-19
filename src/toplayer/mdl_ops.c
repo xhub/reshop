@@ -442,7 +442,7 @@ int mdl_checkmetadata(Model *mdl)
 
          break;
       }
-              case EquObjective:
+      case EquObjective:
       {
          /* If we have an objective, there must be no dual variable */
         rhp_idx vi_dual = equ_md->dual;
@@ -454,7 +454,7 @@ int mdl_checkmetadata(Model *mdl)
         }
 
         /* An objective equation has no subtype */
-        if (equ_md->ppty != EquUndefined) {
+        if (equ_md->ppty != EquPptyNone) {
           error("[metadata check] ERROR: %s '%s' has a defined subtype, this is" 
                 " inconsistent!\n", equrole_name(equ_md->role),
                 ctr_printequname(ctr, i));
