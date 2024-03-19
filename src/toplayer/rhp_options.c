@@ -127,7 +127,7 @@ char* optvals(const Model *mdl, enum rhp_options_enum opt)
    if (opt > Options_Last || ((int)opt) < 0) {
       error("%s ERROR: option value %d is outside of the range [0, %d]",
             __func__, opt, Options_Last);
-      return false;
+      return NULL;
    }
 
    struct option *o = &rhp_options[opt];
@@ -135,7 +135,7 @@ char* optvals(const Model *mdl, enum rhp_options_enum opt)
    if (o->type != OptString) {
       error("%s ERROR: option '%s' is of type %s, expecting %s\n", __func__,
             o->name, opttype_name(o->type), opttype_name(OptString));
-      return false;
+      return NULL;
    }
 
    char* env_var;
