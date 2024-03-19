@@ -214,6 +214,8 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #define READ_ONLY(...) 
 #define FALLTHRU 
 
+#define __counted_by(member)
+
 #endif
 
 /* ---------------------------------------------------------------------

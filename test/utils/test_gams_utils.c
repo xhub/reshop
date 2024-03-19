@@ -1,14 +1,15 @@
 #include "reshop_config.h"
 
 #include <stdlib.h>
-#include <strings.h>
 
 #include "test_gams_utils.h"
 #include "reshop.h"
 
 #ifdef _WIN32
-#define strcasecmp _stricmp
-#include <string.h>
+#   define strcasecmp _stricmp
+#   include <string.h>
+#else
+#   include <strings.h>
 #endif
 
 #define ARRAY_SIZE(arr) sizeof(arr)/sizeof(arr[0])

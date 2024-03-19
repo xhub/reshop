@@ -6,6 +6,9 @@
 /* For IO related things  */
 #ifdef _WIN32
 
+/* For _S_IREAD, _S_IWRITE */
+#include <sys/stat.h>
+
 #include <io.h>
 #define open _open
 #define close _close
