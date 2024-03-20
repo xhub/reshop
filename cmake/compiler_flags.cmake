@@ -69,8 +69,6 @@ macro(SET_C_WARNINGS _TARGETS)
       # This breaks fixed enum
     list(APPEND _just_warnings "no-microsoft-fixed-enum")
       #
-     list(APPEND _just_warnings "no-missing-braces")
-      #
      list(APPEND _just_warnings "no-unused-parameter;no-sign-compare")
 
 
