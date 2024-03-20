@@ -189,22 +189,29 @@ int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
 
 int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
 {
-   char buffer[GMS_SSSIZE];
+   char gmoname[GMS_SSSIZE];
 
    S_CHECK(gcdat_new(gms, mdldat));
 
-   if (gmoLoadDataLegacy(gms->gmo, buffer)) {
+   if (gmoLoadDataLegacy(gms->gmo, gmoname)) {
       error("[GAMS] ERROR: Loading model data failed with message '%s'\n",
-            buffer);
+            gmoname);
       return Error_GamsCallFailed;
    }
 
+   gmoNameModel(gms->gmo, gmoname);
    gms->dct = gmoDict(gms->gmo);
+
+   if (!gms->dct) {
+       error("[GAMS] ERROR: GAMS/GMO model named '%s' has no dictionary. "
+             "Check the solver configuration\n", gmoname);
+      return Error_GamsIncompleteSetupInfo;
+   }
+
    gevGetStrOpt(gms->gev, gevNameScrDir, mdldat->scrdir);
 
-   gmoNameModel(gms->gmo, buffer);
    trace_process("[GAMS] Loaded GMO model named '%s' with %u vars and %u equs "
-                 "from %s\n", buffer, gmoN(gms->gmo), gmoM(gms->gmo),
+                 "from %s\n", gmoname, gmoN(gms->gmo), gmoM(gms->gmo),
                  mdldat->gamscntr);
 
    return OK;
