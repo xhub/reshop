@@ -316,7 +316,8 @@ static path_int (path_jacobian_evaluation)(void *id, path_int n, double *x,
    return num_err;
 }
 
-static path_int (path_hessian_evaluation)(void *id, path_int n, double *x, double *l,
+UNUSED static
+path_int (path_hessian_evaluation)(void *id, path_int n, double *x, double *l,
                                    path_int *nnz, path_int *col, path_int *len,
                                    path_int *row, double *data)
 {

@@ -358,7 +358,7 @@ static int _prep_jams_solver(GmsModelData *mdldat, struct ctrdata_gams *gms,
   strncpy(empinfo_dat, buf, GMS_SSSIZE);
 
   /*  Set the solver to JAMS */
-  strncpy(mdldat->solvername, "jams", strlen("jams"));
+  strncpy(mdldat->solvername, "jams", strlen("jams")+1);
 
   /*  TODO(xhub) set an option for that */
   gevSetIntOpt(gms->gev, gevKeep, 1);
@@ -366,7 +366,7 @@ static int _prep_jams_solver(GmsModelData *mdldat, struct ctrdata_gams *gms,
   return OK;
 }
 
-static int _export_bilevel(struct empinfo_dat *file, MathPrgm *mp,
+UNUSED static int _export_bilevel(struct empinfo_dat *file, MathPrgm *mp,
                            Model *mdl) {
   /* ------------------------------------------------------------
    * Here comes the definition of the bilevel problem in GAMS

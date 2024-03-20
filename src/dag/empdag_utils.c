@@ -56,7 +56,7 @@ bool empdag_mphasname(const EmpDag *empdag, unsigned mp_id)
 
 const char* empdag_getmpname(const EmpDag *empdag, mpid_t mpid)
 {
-   int status;
+   UNUSED int status;
 
    if (mpid >= MpId_MaxRegular) {
       return mpid_specialvalue(mpid);
@@ -81,7 +81,7 @@ _exit:
 
 const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid)
 {
-   int status;
+   UNUSED int status;
 
    if (mpid >= MpId_MaxRegular) {
       return mpid_specialvalue(mpid);
@@ -106,7 +106,7 @@ _exit:
 
 const char* empdag_getmpename(const EmpDag *empdag, unsigned id)
 {
-   int status;
+   UNUSED int status;
 
    if (id >= empdag->mpes.len) {
       IO_CALL_EXIT(snprintf(msg, sizeof msg, "ERROR: MPE index %u is out of bound",
@@ -168,7 +168,8 @@ int empdag_exportasdot(Model *mdl)
    const char *latex_dir = mygetenv("RHP_EXPORT_LATEX");
    if (latex_dir) {
       IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", latex_dir, cnt));
-      S_CHECK(empdag2dotfile(&mdl->empinfo.empdag, fname));
+      S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
+      free(fname); fname = NULL;
    }
    myfreeenvval(latex_dir);
 
@@ -176,7 +177,8 @@ int empdag_exportasdot(Model *mdl)
    
    if (empdag_dotdir) {
       IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", empdag_dotdir, cnt));
-      S_CHECK(empdag2dotfile(&mdl->empinfo.empdag, fname));
+      S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
+      free(fname); fname = NULL;
    }
    myfreeenvval(empdag_dotdir);
 
@@ -186,7 +188,8 @@ int empdag_exportasdot(Model *mdl)
       } else {
          const char *export_dir = mdl->commondata.exports_dir;
          IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", export_dir, cnt));
-         S_CHECK(empdag2dotfile(&mdl->empinfo.empdag, fname));
+         S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
+         free(fname); fname = NULL;
       }
    }
 

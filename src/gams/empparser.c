@@ -251,7 +251,6 @@ void interp_showerr(Interpreter *interp)
 
    ptrdiff_t offsetptr2;
    unsigned offset2;
-   const char *linestart;
    if (tok->linenr == interp->linenr) {
       offsetptr2 = tok->start - interp->linestart;
       assert(offsetptr2 >= 0 && offsetptr2 < INT_MAX);
@@ -364,7 +363,7 @@ void tok_payloadprint(const Token *tok, unsigned mode,
    }
 }
 
-NONNULL static void _tok_print(Token *tok, unsigned mode)
+UNUSED NONNULL static void _tok_print(Token *tok, unsigned mode)
 {
    printout(mode, "token '%.*s' of type %s at line %u", tok->len, tok->start,
             toktype2str(tok->type), tok->linenr);
@@ -818,7 +817,7 @@ static bool _tok_untilws(Token *tok, const char * restrict buf, unsigned * restr
    return buf[lpos] == EOF ||  buf[lpos] == '\0';
 }
 
-static bool _tok_untilEOL(Token *tok, const char * restrict buf, unsigned * restrict pos)
+UNUSED static bool _tok_untilEOL(Token *tok, const char * restrict buf, unsigned * restrict pos)
 {
    unsigned lpos = *pos;
    unsigned pos_ = lpos;
@@ -1405,7 +1404,7 @@ int advance(Interpreter * restrict interp, unsigned * restrict p,
 }
 
 /* TODO: DELETE ? */
-static int _chk_labelbasename(Token *tok, Model *mdl)
+UNUSED static int _chk_labelbasename(Token *tok, Model *mdl)
 {
    assert(tok->type == TOK_IDENT);
 
@@ -1471,7 +1470,6 @@ static int imm_set_regentry(Interpreter * restrict interp, const char *basename,
    trace_empinterp("[empinterp] New regentry for label with basename '%.*s'\n",
                    basename_len, basename);
 
-   unsigned loopi = 0;
    for (unsigned i = 0, len = indices->nargs; i < len; ++i) {
 
       IdentData *idxident = &indices->idents[i];
@@ -1512,7 +1510,6 @@ static int imm_set_dagrootlabel(Interpreter * restrict interp, const char *ident
    A_CHECK(interp->dag_root_label, dag_label_new(identname, identname_len, indices->nargs));
    DagLabel *root_label = interp->dag_root_label;
 
-   unsigned loopi = 0;
    for (unsigned i = 0, len = indices->nargs; i < len; ++i) {
 
       IdentData *idxident = &indices->idents[i];
@@ -1571,7 +1568,6 @@ static int imm_add_daglabel(Interpreter * restrict interp, ArcType edge_type,
 
    dagl->daguid = interp->uid_parent;
 
-   unsigned loopi = 0;
    for (unsigned i = 0, len = indices->nargs; i < len; ++i) {
 
       IdentData *idxident = &indices->idents[i];
@@ -1723,7 +1719,7 @@ NONNULL static int ensure_valfn_kwd(Interpreter *interp, unsigned *p)
 static int parse_edgeVF_sum(MathPrgm * restrict mp, Interpreter * restrict interp,
                       unsigned * restrict p)
 {
-   int status = OK;
+   UNUSED int status = OK;
    TO_IMPLEMENT("edgeVF SUM");
 }
 
@@ -1978,7 +1974,6 @@ int parse_VF_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
    PARSER_EXPECTS(interp, "VF name (quoted) is expected",
                   TOK_SINGLE_QUOTE, TOK_DOUBLE_QUOTE);
 
-   bool quote_is_single = toktype == TOK_SINGLE_QUOTE;
    char quote = toktype == TOK_SINGLE_QUOTE ? '\'' : '"';
 
    if (tok_untilchar(&interp->cur, interp->buf, quote, p)) {
@@ -2636,7 +2631,6 @@ int parse_mp(Interpreter *interp, unsigned *p)
     * This MUST be called before finalize
     * --------------------------------------------------------------------- */
 
-   EmpDag *empdag = &interp->mdl->empinfo.empdag;
    if (is_simple_Nash(interp)) {
       S_CHECK(interp->ops->mpe_addmp(interp, 0, mp));
 
@@ -2645,6 +2639,7 @@ int parse_mp(Interpreter *interp, unsigned *p)
    * ---------------------------------------------------------------------- */
 
    } else if (_has_no_parent(interp)) {
+      DBGUSED EmpDag *empdag = &interp->mdl->empinfo.empdag;
       assert(empdag->mps.len == 1);
       parsed_single_mp(interp);
       /* TODO GITLAB #126 */
@@ -3338,7 +3333,7 @@ int parse_load(Interpreter* restrict interp, unsigned * restrict p)
       }
       case dt_alias: {
          GdxSymType alias_type = gdxreader->cursym.alias_type;
-         int alias_idx = gdxreader->cursym.alias_idx;
+         DBGUSED int alias_idx = gdxreader->cursym.alias_idx;
          unsigned idx, dim = gdxreader->cursym.dim;
          GdxAlias a = {.gdxtype = alias_type, .type = gdxsymtype_identtype(alias_type, dim), .dim = dim };
          A_CHECK_EXIT(a.name, strdup(gdxreader->cursym.alias_name));
@@ -3573,7 +3568,7 @@ NONNULL static int create_base_mp(Interpreter *interp, const char *mp_name,
    FREE(interp->regentry);
    interp->regentry = NULL;
 
-   rhp_idx objvar, objequ;
+   rhp_idx objvar;
    S_CHECK(mdl_getobjvar(mdl, &objvar));
 
    if (objvar == IdxNA) {

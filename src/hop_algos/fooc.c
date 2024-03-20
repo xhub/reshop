@@ -53,7 +53,7 @@ struct equ_inh_names {
 
 
 /* TODO: LOW rethink this */
-static const char* empdagc_err(unsigned len)
+UNUSED static const char* empdagc_err(unsigned len)
 {
   switch (len) {
   case IdxEmpDagChildNotFound:

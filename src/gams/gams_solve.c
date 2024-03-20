@@ -17,7 +17,7 @@
 #include "gevmcc.h"
 
 
-static int err_mdlbackend_gmo(Model *mdl)
+UNUSED static int err_mdlbackend_gmo(Model *mdl)
 {
    error("[model] ERROR: can't create a GMO for %s model '%.*s' #%u\n",
          mdl_fmtargs(mdl));
@@ -34,12 +34,12 @@ static int err_mdlbackend_gmo(Model *mdl)
 static int gmdl_gmo2gmo_fops(Model *mdl, Model *mdl_dst, Fops* fops)
 {
    assert(mdl->backend == RHP_BACKEND_GAMS_GMO && mdl_dst->backend == RHP_BACKEND_GAMS_GMO);
-   char buffer[GMS_SSSIZE];
+   UNUSED char buffer[GMS_SSSIZE];
 
    GmsContainerData *gmsdst = mdl_dst->ctr.data;
    GmsContainerData *gmssrc = mdl->ctr.data;
-   gmoHandle_t gmodst = gmsdst->gmo;
-   gmoHandle_t gmosrc = gmssrc->gmo;
+   UNUSED gmoHandle_t gmodst = gmsdst->gmo;
+   UNUSED gmoHandle_t gmosrc = gmssrc->gmo;
 
    /* Dummy */
    int nvars = 0, nequs = 0;

@@ -132,15 +132,15 @@ int ovf_remove_mappings(Model *mdl, OvfDef *ovf_def)
    Container *ctr = &mdl->ctr;
 
    for (unsigned i = 0; i < nargs; ++i) {
-      rhp_idx vi = avar_fget(args, i);
       EquInfo equinfo;
       S_CHECK(rctr_get_equation(ctr, eis[i], &equinfo));
 
-      rhp_idx ei = equinfo.ei;
+      //rhp_idx vi = avar_fget(args, i);
+      //rhp_idx ei = equinfo.ei;
 
    }
 
-   return OK;
+   TO_IMPLEMENT("OVF mapping removal");
 }
 
 int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ovf)

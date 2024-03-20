@@ -61,8 +61,10 @@ static inline unsigned READ_VMUINT(EmpVm *vm)
    return vm->uints.arr[gidx];
 }
 
-//#define DEBUGVMRUN(fmt, ...) \
-//printout(PO_TRACE_EMPINTERP, "[%s] " fmt, opcodes_name(instr), __VA_ARGS__);
+/*
+#define DEBUGVMRUN(fmt, ...) \
+printout(PO_TRACE_EMPINTERP, "[%s] " fmt, opcodes_name(instr), __VA_ARGS__);
+*/
 
 #define DEBUGVMRUN(...) \
 printout(PO_TRACE_EMPINTERP, __VA_ARGS__);
@@ -261,7 +263,6 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
          printstr(mode, "  OVF: NULL!\n");
          break;
       } 
-      unsigned ovf_id = ovf->idx;
       printout(mode, " OVF('%s') ", ovf->name);
       break;
    }
@@ -291,14 +292,14 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
 
 #define PADDING_VERBOSE 60
 
-static int getpadding(int offset)
+DBGUSED static int getpadding(int offset)
 {
    return offset < PADDING_VERBOSE ? PADDING_VERBOSE - offset : 0;
 }
 
-static void print_symiter(VmGmsSymIterator *symiter, EmpVm *vm)
+DBGUSED static void print_symiter(VmGmsSymIterator *symiter, EmpVm *vm)
 {
-   Lexeme *lexeme = &symiter->symbol.lexeme;
+   DBGUSED Lexeme *lexeme = &symiter->symbol.lexeme;
    DEBUGVMRUN("%.*s", lexeme->len, lexeme->start);
    int dim = symiter->symbol.dim;
    if (dim > 0) {
@@ -647,7 +648,7 @@ int empvm_run(struct empvm *vm)
          GIDX_TYPE gidx = READ_GIDX(vm);
 
          unsigned idx = AS_UINT(vm->locals[lidx_idxvar]);
-         int offset0, offset1, offset2;
+         DBGUSED int offset0, offset1, offset2;
          DEBUGVMRUN("loopvar@%u of %n", lidx_loopvar, &offset0);
 
          IntArray set;
@@ -744,8 +745,8 @@ int empvm_run(struct empvm *vm)
          symiter->uels[idx] = uel;
 
          if (uel > 0) symiter->compact = false;
-         int offset1, offset2;
-         Lexeme *lexeme = &symiter->symbol.lexeme;
+         DBGUSED int offset1, offset2;
+         DBGUSED Lexeme *lexeme = &symiter->symbol.lexeme;
          DEBUGVMRUN("%.*s[%u] <- %n", lexeme->len, lexeme->start, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
@@ -767,7 +768,7 @@ int empvm_run(struct empvm *vm)
          int uel = AS_LOOPVAR(vm->locals[lidx]);
          dagl->data[idx] = uel;
 
-         int offset1, offset2;
+         DBGUSED int offset1, offset2;
          DEBUGVMRUN("%.*s[%u] <- %n", dagl->basename_len, dagl->basename, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
@@ -788,7 +789,7 @@ int empvm_run(struct empvm *vm)
          int uel = AS_LOOPVAR(vm->locals[lidx]);
          regentry->uels[idx] = uel;
 
-         int offset1, offset2; 
+         DBGUSED int offset1, offset2; 
          DEBUGVMRUN("%.*s[%u] <- %n", regentry->basename_len,
                     regentry->basename, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})

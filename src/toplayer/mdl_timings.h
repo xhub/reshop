@@ -31,6 +31,10 @@ typedef struct mdl_timings {
    } gams;
 
    struct {
+      SimpleTiming mdl_creation;
+   } rhp;
+
+   struct {
       SimpleTiming analysis;
    } empdag;
 

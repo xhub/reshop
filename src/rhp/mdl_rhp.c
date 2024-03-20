@@ -1,5 +1,3 @@
-#include "internal_model_common.h"
-#include "mdl_priv.h"
 #include "reshop_config.h"
 #include "asnan.h"
 
@@ -16,10 +14,12 @@
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
 #include "filter_ops.h"
+#include "internal_model_common.h"
 #include "lequ.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl.h"
+#include "mdl_priv.h"
 #include "mdl_rhp.h"
 #include "mdl_timings.h"
 #include "nltree.h"
@@ -27,7 +27,6 @@
 #include "reshop.h"
 #include "rmdl_data.h"
 #include "timings.h"
-#include "toplayer_utils.h"
 
 #ifndef NDEBUG
 #define RMDL_DEBUG(str, ...) trace_fooc("[rmdl] DEBUG: " str "\n", __VA_ARGS__)
@@ -35,36 +34,6 @@
 #define RMDL_DEBUG(...)
 #endif
 
-static double _id(double val) { return val; }
-
-int chk_rmdl(const Model *mdl, const char *fn)
-{
-   if (!mdl) {
-      error("%s :: the given model object is NULL!\n", fn);
-      return Error_NullPointer;
-   }
-
-   if (!mdl_is_rhp(mdl)) {
-      error("%s :: ERROR: wrong model backend: expected %d, %d or %d, got %d\n",
-            fn, RHP_BACKEND_RHP, RHP_BACKEND_JULIA, RHP_BACKEND_AMPL, mdl->backend);
-      return Error_InvalidValue;
-   }
-
-   return OK;
-}
-
-int chk_rmdldag(const Model *mdl, const char *fn)
-{
-
-   S_CHECK(chk_rmdl(mdl, fn));
-
-   if (mdl->empinfo.empdag.mps.len == 0) {
-      error("%s :: the model has no an empty EMPDAG\n", fn);
-      return Error_InvalidValue;
-   }
-
-   return OK;
-}
 
 int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
 {
@@ -143,8 +112,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
       return Error_RuntimeError;
    }
 
-   BackendType backend_up = mdl_up->backend;
-   assert(mdl_is_rhp(mdl) && (backend_up == RHP_BACKEND_GAMS_GMO || mdl_is_rhp(mdl_up)));
+   assert(mdl_is_rhp(mdl) && (mdl_up->backend == RHP_BACKEND_GAMS_GMO || mdl_is_rhp(mdl_up)));
 
    trace_process("[process] %s model %.*s #%u: initializing from %s model %.*s #%u\n",
                  mdl_fmtargs(mdl), mdl_fmtargs(mdl_up));
@@ -298,6 +266,8 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
 
    mdl_timings_rel(mdl->timings);
    mdl->timings = mdl_timings_borrow(mdl_up->timings);
+
+   simple_timing_add(&mdl->timings->rhp.mdl_creation, start);
 
    return OK;
 }

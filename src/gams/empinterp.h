@@ -463,22 +463,22 @@ static inline void emptok_settype(struct emptok *tok, enum emptok_type type)
 }
 
 
-NONNULL static
+UNUSED NONNULL static
 enum emptok_type parser_getcurtoktype(const struct interpreter *interp) {
    return interp->cur.type;
 }
 
-NONNULL static
+UNUSED NONNULL static
 enum emptok_type parser_getpeektoktype(const struct interpreter *interp) {
    return interp->peek.type;
 }
 
-NONNULL static
+UNUSED NONNULL static
 enum emptok_type parser_getpretoktype(const struct interpreter *interp) {
    return interp->pre.type;
 }
 
-NONNULL static
+UNUSED NONNULL static
 rhp_idx parser_getequvaridx(const struct interpreter *interp) {
    assert(interp->cur.type == TOK_GMS_VAR || interp->cur.type == TOK_GMS_EQU);
    return interp->cur.payload.idx;

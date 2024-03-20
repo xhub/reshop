@@ -188,7 +188,7 @@ static int _gams_opcode(enum NLNODE_OP code)
    }
 }
 
-static NONNULL
+static NONNULL DBGUSED
 bool chk_gms_opcode(int *instr, int *args, unsigned len, const char* equname)
 {
    bool res = true;
@@ -672,7 +672,6 @@ int build_gams_opcode_v2(const NlNode * restrict node,
        * --------------------------------------------------------------------- */
 
       const NlNode * restrict children[2];
-      unsigned n_children;
       if (!node->children[0]) {
          error("%s :: ERROR: for a node of type %s, the first child is NULL!\n",
                __func__, opcode_names[key]);

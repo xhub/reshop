@@ -28,7 +28,7 @@ void simple_timing_add(SimpleTiming *t, double newtime)
    t->number++;
 }
 
-static const char* simple_timing_print(const SimpleTiming *t, int *ret)
+UNUSED static const char* simple_timing_print(const SimpleTiming *t, int *ret)
 {
    if (t->number == 0) { return NULL; }
 
@@ -85,7 +85,6 @@ int mdl_timings_alloc(Model *mdl)
 
 NONNULL static void printsimple(struct lineppty *l, const char *str, const SimpleTiming *t)
 {
-   int s = 0;
    if (t->number == 0) { return; }
    if (t->number == 1) { printdbl(l, str, t->mean); return; }
 

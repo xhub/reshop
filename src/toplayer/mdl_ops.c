@@ -241,7 +241,6 @@ int mdl_checkmetadata(Model *mdl)
    Fops *fops = ctr->fops, *fops_active, fops_active_dat;
 
    if (mdl_is_rhp(mdl)) {
-      RhpContainerData *cdat = (RhpContainerData *)ctr->data;
       S_CHECK(fops_active_init(&fops_active_dat, ctr));
       fops_active = &fops_active_dat;
    } else if (mdl->backend == RHP_BACKEND_GAMS_GMO) {
@@ -476,6 +475,13 @@ int mdl_checkmetadata(Model *mdl)
 
    if (status == OK) {
       mdl_setmetachecked(mdl);
+   } else {
+      if (num_unattached_vars > 0) {
+         error("[metadata check] ERROR: %u unattached variables\n", num_unattached_vars);
+      }
+      if (num_unattached_equs > 0) {
+         error("[metadata check] ERROR: %u unattached equations\n", num_unattached_equs);
+      }
    }
 
    if (fops_active) { fops_active->freedata(fops_active->data); }

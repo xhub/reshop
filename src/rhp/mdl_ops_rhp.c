@@ -331,7 +331,7 @@ static inline void  _copy_vars_fops(Container * ctr_dst,
 {
    Var * restrict vars_dst = ctr_dst->vars;
    const Var * restrict vars_src = ctr_src->vars;
-   const rhp_idx * restrict rosetta_vars = ctr_dst->rosetta_vars;
+   UNUSED const rhp_idx * restrict rosetta_vars = ctr_dst->rosetta_vars;
    void * restrict fops_data = fops->data;
 
    for (size_t i = 0, j = 0; i < total_n; ++i) {
@@ -890,7 +890,7 @@ int objvar_gamschk(Model *mdl, rhp_idx * restrict objvar,
    return rmdl_checkobjequvar(mdl, *objvar, *objequ);
 }
 
-static NONNULL_AT(1) int ensure_objvar_exists(Model *mdl, Fops *fops)
+static UNUSED NONNULL_AT(1) int ensure_objvar_exists(Model *mdl, Fops *fops)
 {
    rhp_idx objvar, objequ;
    EmpDag *empdag = &mdl->empinfo.empdag;
@@ -900,7 +900,7 @@ static NONNULL_AT(1) int ensure_objvar_exists(Model *mdl, Fops *fops)
    objvar = empdag->simple_data.objvar;
    objequ = empdag->simple_data.objequ;
 
-   rhp_idx objvar_bck = objvar, objequ_bck = objequ;
+   DBGUSED rhp_idx objvar_bck = objvar, objequ_bck = objequ;
    bool update_objequ = !valid_ei(objequ);
 
    S_CHECK(objvar_gamschk(mdl, &objvar, &objequ, fops));
@@ -1034,7 +1034,6 @@ static NONNULL int rmdl_prepare_ctrexport_gams(Model *mdl_src, Model *mdl_dst)
 {
    Container *ctr_src = &mdl_src->ctr;
    Container *ctr_dst = &mdl_dst->ctr;
-   RhpContainerData *cdat = (RhpContainerData *)ctr_src->data;
 
    S_CHECK(ctr_prepare_export(ctr_src, ctr_dst));
 
@@ -1275,8 +1274,6 @@ static int rmdl_export(Model *mdl, Model *mdl_dst)
 
 static int rmdl_solve(Model *mdl)
 {
-  RhpModelData *cdat = (RhpModelData *) mdl->data;
-
    const char *subsolver_log = mygetenv("RHP_OUTPUT_SUBSOLVER_LOG");
    if (subsolver_log) {
       O_Output_Subsolver_Log = 1;

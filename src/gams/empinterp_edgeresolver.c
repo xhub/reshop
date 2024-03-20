@@ -159,7 +159,6 @@ static int dag_resolve_labels(Interpreter *interp)
       daguid_t daguid = dagl->daguid;
       assert(daguid != EMPDAG_UID_NONE);
 
-      unsigned id = uid2id(daguid);
       UIntArray *arcs = &empdag->mps.Carcs[i];
 
       unsigned num_children = dagl->num_children;
@@ -215,7 +214,6 @@ static int dag_resolve_label(Interpreter *interp)
 
    const DagRegister * restrict dagregister = &interp->dagregister;
    const DagLabel2Edge * restrict label2resolve = &interp->label2edge;
-   EmpDag * restrict empdag = &interp->mdl->empinfo.empdag;
 
    unsigned num_err = 0;
 
@@ -223,8 +221,6 @@ static int dag_resolve_label(Interpreter *interp)
       DagLabel *dagl = label2resolve->list[i];
       uint8_t dim = dagl->dim;
       daguid_t daguid = dagl->daguid;
-      unsigned id = uid2id(daguid);
-      UIntArray *arcs = &empdag->mps.Carcs[i];
 
 
       ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,

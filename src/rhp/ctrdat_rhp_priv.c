@@ -81,7 +81,7 @@ void vnames_list_free(struct vnames_list *l)
   FREE(l);
 }
 
-int vnames_list_start(struct vnames_list *l, rhp_idx idx, const char* name)
+int vnames_list_start(struct vnames_list *l, rhp_idx idx, char* name)
 {
   assert(!l->active);
   l->active = true;

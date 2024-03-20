@@ -321,7 +321,6 @@ int rhp_gms_fillmdl(Model *mdl)
    double gms_pinf = gmoPinf(gmo);
    double gms_minf = gmoMinf(gmo);
    double gms_na = gmoValNA(gmo);
-   double gmsUndef = gmoValUndf(gmo);
 
 
    double flip_marginal = gmoSense(gmo) == gmoObj_Max;

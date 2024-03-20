@@ -1,12 +1,8 @@
 #include "container.h"
-#include "equ_modif.h"
-#include "mathprgm.h"
-#include "ctrdat_rhp.h"
+#include "macros.h"
 #include "ovf_common.h"
-#include "ovf_generator.h"
 #include "ovfgen_ops.h"
 #include "printout.h"
-#include "reshop.h"
 #include "status.h"
 
 static rhp_idx ovfdef_varidx(union ovf_ops_data ovfd)
@@ -45,7 +41,6 @@ static int ovfdef_getcoeffs(union ovf_ops_data ovfd, double **coeffs)
 static int ovfdef_add_k(union ovf_ops_data ovfd, Model *mdl,
                      Equ *e, Avar *y, unsigned n_args)
 {
-   int status = OK;
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_add_k(ovf, mdl, e, y, n_args);

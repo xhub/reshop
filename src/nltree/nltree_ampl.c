@@ -608,7 +608,7 @@ _at_least_3_children_error:
  *
  * @return        the error code
  */
-static int nltree_outputNL(Container *ctr, Equ * e, FILE *stream)
+UNUSED static int nltree_outputNL(Container *ctr, Equ * e, FILE *stream)
 {
    assert(e->tree);
    assert(e->tree->root);

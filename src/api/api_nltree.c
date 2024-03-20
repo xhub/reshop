@@ -1,8 +1,8 @@
+#include "checks.h"
 #include "nltree.h"
 #include "nltree_priv.h"
 #include "macros.h"
 #include "mdl.h"
-#include "mdl_rhp.h"
 #include "reshop.h"
 #include "status.h"
 

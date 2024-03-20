@@ -49,6 +49,9 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
 
    S_CHECK(mdl_export(mdl, mdl_solver));
 
+   if (fops_backup) {
+      mdl->ctr.fops = fops_backup;
+   }
 
    return OK;
 }

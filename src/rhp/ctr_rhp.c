@@ -31,7 +31,8 @@
 #define CTR_DEBUG(...)
 #endif
 
-static size_t _pool_zero(enum rhp_backendtype type)
+
+UNUSED static size_t _pool_zero(enum rhp_backendtype type)
 {
    switch (type) {
    case RHP_BACKEND_GAMS_GMO:

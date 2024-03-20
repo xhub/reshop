@@ -6,6 +6,7 @@
 
 #define LOG2(X) ((unsigned) (8*sizeof (unsigned long long) - __builtin_clzll((X)) - 1))
  
+#ifdef UNUSED_ON_20240320
 static unsigned * make_delta(unsigned n)
 {
     unsigned n_delta = LOG2(n);
@@ -47,7 +48,7 @@ static unsigned unibin_search(rhp_idx *arr, unsigned *delta, rhp_idx idx)
         }
     }
 }
-
+#endif
 
 
 /**

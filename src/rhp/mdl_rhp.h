@@ -9,9 +9,6 @@
  * @brief ReSHOP model functions
  */
 
-int chk_rmdl(const Model *mdl, const char *fn);
-int chk_rmdldag(const Model *mdl, const char *fn);
-
 int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ) NONNULL;
 
 int rmdl_dup_equ(Model *mdl, rhp_idx *eidx, unsigned lin_space, rhp_idx vi_no) NONNULL;

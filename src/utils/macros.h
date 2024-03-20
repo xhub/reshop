@@ -175,13 +175,24 @@ void backtrace_(const char *expr, int status);
 #endif
 
 
-#define SYS_CALL(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { int errsv42 = errno; \
-   error("System call '%s' failed!\n", #EXPR); const char *msg42; char buf42[256]; \
-   STRERROR(errsv42, buf42, sizeof(buf42)-1, msg42); error("Error msg is: %s\n", msg42); } }
+#define SYS_CALL(EXPR) { \
+   int status42 = EXPR; \
+   if (RHP_UNLIKELY(status42)) { \
+      int errsv42 = errno; \
+      error("System call '%s' failed!\n", #EXPR); \
+      char *msg42, buf42[256]; \
+      STRERROR(errsv42, buf42, sizeof(buf42)-1, msg42); \
+      error("Error msg is: %s\n", msg42); \
+   } \
+}
 
 #define IO_CALL(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42 < 0)) { \
   error("%s :: write error %d\n", __func__, status42); \
   return Error_SystemError; } }
+
+#define IO_CALL_NULL(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42 < 0)) { \
+  error("%s :: write error %d\n", __func__, status42); \
+  return NULL; } }
 
 #define IO_CALL_EXIT(EXPR) { int res42 = EXPR; if (RHP_UNLIKELY(res42 < 0)) { \
   error("%s :: write error %d\n", __func__, res42); \

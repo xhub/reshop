@@ -41,7 +41,4 @@ enum gams_solvestatus {
    SolveStat_SystemErr    = 13
 };
 
-extern const char * const gams_option_name[];
-extern const unsigned gms_optname_len;
-
 #endif /* GAMS_OPTION_H */

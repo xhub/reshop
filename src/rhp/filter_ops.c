@@ -128,7 +128,7 @@ static void filter_active_freedata(void *data)
    FREE(data);
 }
 
-static unsigned filter_active_deactivatedequslen(void *data)
+UNUSED static unsigned filter_active_deactivatedequslen(void *data)
 {
    FilterActive *dat = (FilterActive *)data;
    FilterDeactivated *deactivated = &dat->deactivated;
@@ -229,11 +229,12 @@ static void perm_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
    args[len-1] = 1 + ei;
 }
 
-static void filter_gamsopcode_rosetta_perm(const rhp_idx * restrict rosetta_vars,
-                                           const rhp_idx * restrict vperm,
-                                           rhp_idx ei, unsigned len,
-                                           const int instrs[static restrict len],
-                                           int args[static restrict len])
+UNUSED static
+void filter_gamsopcode_rosetta_perm(const rhp_idx * restrict rosetta_vars,
+                                    const rhp_idx * restrict vperm,
+                                    rhp_idx ei, unsigned len,
+                                    const int instrs[static restrict len],
+                                    int args[static restrict len])
 {
    for (unsigned i = 0; i < len; ++i) {
       if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
@@ -364,7 +365,8 @@ static NONNULL size_t subset_nequs_rhp(Aequ *e, CMatElt ** equs)
    size_t nequs = 0;
 
    for (unsigned i = 0, len = e->size; i < len; ++i) {
-      rhp_idx vi = aequ_fget(e, i);
+      //TODO(URG) review
+      UNUSED rhp_idx vi = aequ_fget(e, i);
       nequs++;
       //if (equs[vi]) { nequs++; }
    }
@@ -509,6 +511,12 @@ static int filter_subset_gamsopcode(void *data, rhp_idx ei, unsigned len,
 //  TO_IMPLEMENT("");
 //}
 
+static void filter_subset_freedata(void* data)
+{
+   FilterSubset *fs = data;
+   filter_subset_release(fs);
+}
+
 FilterSubset* filter_subset_new(unsigned vlen, Avar vars[vlen], unsigned elen,
                                 Aequ equs[elen], struct mp_descr* mp_d)
 {
@@ -542,7 +550,13 @@ FilterSubset* filter_subset_new(unsigned vlen, Avar vars[vlen], unsigned elen,
    return fs;
 
 _exit:
-   fops_subset_release(fs);
+   /* Calling filter_subset_release here makes GCC whiney ...*/
+   aequ_empty(&fs->equs);
+   avar_empty(&fs->vars);
+   FREE(fs->nlpoolvars.pool_idx);
+   FREE(fs->nlpoolvars.vis);
+   FREE(fs);
+
    return NULL;
 }
 
@@ -574,7 +588,7 @@ static int filter_subset_setvarpermutation(Fops *fops, rhp_idx *vperm)
    return OK;
 }
 
-void fops_subset_release(FilterSubset *fs)
+void filter_subset_release(FilterSubset *fs)
 {
    if (!fs) return;
 
@@ -631,13 +645,7 @@ int fops_active_init(Fops *fops, Container *ctr)
    return OK;
 }
 
-static void filter_subset_freedata(void* data)
-{
-   FilterSubset *fs = data;
-   fops_subset_release(fs);
-}
-
-static unsigned filter_subset_deactivatedequslen(void *data) { return 0; }
+UNUSED static unsigned filter_subset_deactivatedequslen(void *data) { return 0; }
 
 void fops_subset_init(Fops *fops, FilterSubset *fs)
 {

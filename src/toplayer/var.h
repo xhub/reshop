@@ -122,7 +122,7 @@ Avar* avar_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(avar_fre
 Avar* avar_newblock(unsigned block_size) MALLOC_ATTR(avar_free,1);
 
 int avar_get(const Avar *v, unsigned i, rhp_idx *vidx) NONNULL;
-int avar_set_list(Avar *v, unsigned size, rhp_idx *list) NONNULL;
+int avar_set_list(Avar *v, unsigned size, rhp_idx list[static size]) NONNULL;
 unsigned avar_size(const Avar *v);
 
 void avar_init(Avar* v) NONNULL;

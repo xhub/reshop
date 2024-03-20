@@ -161,21 +161,6 @@ static int err_noobj(MathPrgm *mp) {
    return Error_InvalidValue;
 }
 
-static int _chk_mpid(const Model *mdl, unsigned mp_id, const char * fn)
-{
-   if (mp_id == UINT_MAX) {
-      error("%s :: invalid MP id!\n", fn);
-      return Error_EMPRuntimeError;
-   }
-   if (mp_id >= mdl->empinfo.empdag.mps.len) {
-      error("%s :: MP id %u >= %u the number of MPs\n", fn, mp_id,
-            mdl->empinfo.empdag.mps.len);
-      return Error_EMPRuntimeError;
-   }
-
-   return OK;
-}
-
 static unsigned mp_getnamelen_(const MathPrgm * mp, unsigned mp_id)
 {
    assert(mp->mdl);
@@ -207,7 +192,7 @@ NONNULL static bool _mp_own_var(const MathPrgm *mp, rhp_idx vidx) {
 }
 
 /* We assume that eidx is valid */
-static bool isconstraint_opt(MathPrgm *mp, rhp_idx eidx) {
+UNUSED static bool isconstraint_opt(MathPrgm *mp, rhp_idx eidx) {
    if (eidx == mp->opt.objequ) {
       return false;
    }
@@ -215,7 +200,7 @@ static bool isconstraint_opt(MathPrgm *mp, rhp_idx eidx) {
    return true;
 }
 
-static bool isconstraint_vi(MathPrgm *mp, rhp_idx eidx) {
+UNUSED static bool isconstraint_vi(MathPrgm *mp, rhp_idx eidx) {
    if (mp->vi.num_cons > 0) {
       if (mp->mdl->ctr.equmeta[eidx].role == EquConstraint) {
          return false;

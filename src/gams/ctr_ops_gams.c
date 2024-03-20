@@ -45,7 +45,6 @@ static int gams_getvarmult(const Container *ctr, rhp_idx vi, double *mult);
 static int gams_getvarperp(const Container *ctr, rhp_idx vi, int *match);
 static int gams_getvarbasis(const Container *ctr, rhp_idx vi, int *basis);
 static int gams_setequbasis(Container *ctr, rhp_idx ei, int basis);
-static int gams_setintopt(Container *ctr, unsigned opt, int ival);
 static int gams_setvarval(Container *ctr, rhp_idx vi, double val);
 static int gams_setvarmult(Container *ctr, rhp_idx vi, double mult);
 static int gams_setvarbasis(Container *ctr, rhp_idx vi, int basis);
@@ -716,7 +715,7 @@ static int gams_copyequname(const Container *ctr, rhp_idx ei, char *name,
 }
 
 
-static int gams_getnnz(const Container *ctr, int *nnz)
+UNUSED static int gams_getnnz(const Container *ctr, int *nnz)
 {
    (*nnz) = gmoNZ(((const struct ctrdata_gams *) ctr->data)->gmo);
    return OK;
@@ -852,7 +851,7 @@ static int gams_getvarbasis(const Container *ctr, rhp_idx vi, int *basis)
    return OK;
 }
 
-static int gams_getvartype(const Container *ctr, rhp_idx vi, int *type)
+UNUSED static int gams_getvartype(const Container *ctr, rhp_idx vi, int *type)
 {
    assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
@@ -997,24 +996,6 @@ static int gams_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *ty
    return OK;
 }
 
-static int gams_setintopt(Container *ctr, unsigned opt, int ival)
-{
-   struct ctrdata_gams *gms;
-
-   gms = ctr->data;
-
-   if (opt < gms_optname_len) {
-      if (gams_option_name[opt]) {
-         gevSetIntOpt(gms->gev, gams_option_name[opt], ival);
-         return OK;
-      }
-
-      return Error_NotFound;
-   }
-
-   return Error_IndexOutOfRange;
-}
-
 static int gams_setcst(Container *ctr, rhp_idx ei, double val)
 {
    error("%s :: Not implemented\n", __func__);
@@ -1033,7 +1014,7 @@ static int gams_setvarval(Container *ctr, rhp_idx vi, double varl)
    return Error_IndexOutOfRange;
 }
 
-static int gams_setvarname(Container *ctr, rhp_idx vi, const char *name)
+UNUSED static int gams_setvarname(Container *ctr, rhp_idx vi, const char *name)
 {
    error("%s :: GAMS model does not support setting a variable name"
                       " after its creation.\n", __func__);

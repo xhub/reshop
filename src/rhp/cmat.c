@@ -32,7 +32,7 @@
 
 
 
-static bool cmat_chk_equvaridx(RhpContainerData *cdat, rhp_idx ei, rhp_idx vi)
+DBGUSED static bool cmat_chk_equvaridx(RhpContainerData *cdat, rhp_idx ei, rhp_idx vi)
 {
    if (!cdat) { return false; }
    if (!valid_ei_(ei, cdat->total_m, __func__)) { return false; }
@@ -1153,7 +1153,6 @@ int cmat_scal(Container *ctr, rhp_idx ei, double coeff)
    assert(cmat_chk_equvaridx(cdat, ei, IdxNA));
 
    CMatElt * restrict me = cdat->equs[ei]; assert(me);
-   CMatElt * restrict prev_e = NULL;
 
    /* Add all the variables from that equation  */
    while (me) {
@@ -1251,7 +1250,7 @@ int cmat_chk_expensive(Container *ctr)
 
    struct equ_meta * restrict emd = ctr->equmeta;
 
-   for (rhp_idx i = 0, len = cdat->total_m; i < len; ++i)
+   for (rhp_idx i = 0, len = total_m; i < len; ++i)
    {
       CMatElt *ce = cdat->equs[i];
 

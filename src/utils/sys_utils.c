@@ -9,7 +9,7 @@
 
 
 /**
- * @brief TRim the newline in a string
+ * @brief Trim the newline in a string
  *
  * @param[in,out] str the string
  * @param         len the length of the string 
@@ -27,10 +27,9 @@ void trim_newline(char *str, size_t len)
 const char* exe_getfullpath(const char *executable)
 {
 #if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
-   int status = OK;
    char *cmd;
 
-   IO_CALL_EXIT(asprintf(&cmd, "which %s", executable));
+   IO_CALL_NULL(asprintf(&cmd, "which %s", executable));
 
    // Execute the command using popen and read the output
    FILE *pipe = popen(cmd, "r");
@@ -64,6 +63,5 @@ const char* exe_getfullpath(const char *executable)
    return cmd;
 #endif
 
-_exit:
    return NULL;
 }

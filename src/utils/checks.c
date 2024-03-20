@@ -27,6 +27,51 @@ int chk_mdl(const Model *mdl, const char *fn)
    return OK;
 }
 
+int chk_gmdl(const Model *mdl, const char *fn)
+{
+   if (!mdl) {
+      error("%s :: the given model object is NULL!\n", fn);
+      return Error_NullPointer;
+   }
+
+   if (mdl->backend != RHP_BACKEND_GAMS_GMO) {
+      error("%s ERROR: %s model '%*s' #%u has wrong backend: expected %s\n",
+            fn, mdl_fmtargs(mdl), backend_name(RHP_BACKEND_GAMS_GMO));
+      return Error_InvalidValue;
+   }
+
+   return OK;
+}
+
+int chk_rmdl(const Model *mdl, const char *fn)
+{
+   if (!mdl) {
+      error("%s :: the given model object is NULL!\n", fn);
+      return Error_NullPointer;
+   }
+
+   if (!mdl_is_rhp(mdl)) {
+      error("%s ERROR: %s model '%*s' #%u has wrong backend: expected %s, %s or %s\n",
+            fn, mdl_fmtargs(mdl), backend_name(RHP_BACKEND_RHP),
+            backend_name(RHP_BACKEND_JULIA), backend_name(RHP_BACKEND_AMPL));
+      return Error_InvalidValue;
+   }
+
+   return OK;
+}
+
+int chk_rmdldag(const Model *mdl, const char *fn)
+{
+
+   S_CHECK(chk_rmdl(mdl, fn));
+
+   if (mdl->empinfo.empdag.mps.len == 0) {
+      error("%s ERROR: the %s model '%.*s' #%u has an empty EMPDAG\n", fn, mdl_fmtargs(mdl));
+      return Error_InvalidValue;
+   }
+
+   return OK;
+}
 
 int chk_aequ(const Aequ *e, const char *fn)
 {

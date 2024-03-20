@@ -1,3 +1,4 @@
+#include "compat.h"
 #include "reshop_config.h"
 
 #include <stdio.h>
@@ -101,6 +102,28 @@ int rhp_gms_readempinfo(Model *mdl, const char *fname)
    return OK;
 }
 
+NONNULL static int check_gmshandles(struct rhp_gams_handles *gmsh)
+{
+   if (!gmsh->gh) {
+      errormsg("[GAMS] ERROR: NULL gmo object!\n");
+      return Error_NullPointer;
+   }
+   if (!gmsh->eh) {
+      errormsg("[GAMS] ERROR: NULL gev object!\n");
+      return Error_NullPointer;
+   }
+   if (!gmsh->dh) {
+      errormsg("[GAMS] ERROR: NULL dict object!\n");
+      return Error_NullPointer;
+   }
+   if (!gmsh->ch) {
+      errormsg("[GAMS] ERROR: NULL cfg object!\n");
+      return Error_NullPointer;
+   }
+
+   return OK;
+}
+
 /**
  * @brief initialize the internal data of the GAMS model
  *
@@ -111,8 +134,11 @@ int rhp_gms_readempinfo(Model *mdl, const char *fname)
  */
 int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
 {
+   S_CHECK(chk_gmdl(mdl, __func__));
    GmsModelData *mdldat = mdl->data;
    GmsContainerData *gms = mdl->ctr.data;
+
+   S_CHECK(check_gmshandles(gmsh));
 
    gms->gmo = gmsh->gh;
    gms->gev = gmsh->eh;

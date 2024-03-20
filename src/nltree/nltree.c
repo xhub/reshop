@@ -461,9 +461,8 @@ static int _nlnode_replacevarbycst(NlNode* node, rhp_idx vi,
       } else if (op == NLNODE_VAR || op == NLNODE_CST) {
         continue;
       } else {
-         if ((info = _nlnode_replacevarbycst(child, vi, pool_idx)) != OK) {
-            return info;
-         }
+         info = _nlnode_replacevarbycst(child, vi, pool_idx);
+         if (info != OK) { return info; }
       }
    }
 
@@ -694,7 +693,7 @@ static void print_node_graph(const NlNode* node, FILE* f, const Container *ctr)
 
 void nltree_print_dot(const NlTree* tree, const char* filename, const Container *ctr)
 {
-   int status = OK;
+   UNUSED int status = OK;
    if (!tree || !tree->root) return;
 
    FILE* f = fopen(filename, "w");
@@ -1349,10 +1348,7 @@ _chain_node:
    assert(lnode->op == NLNODE_ADD && lnode->children_max > 0 && !lnode->children[0]);
    *node = &lnode->children[0];
 
-_add_var_in_model:
-   {
    S_CHECK(cmat_equ_add_nlvar(ctr, tree->idx, vi, NAN));
-   }
 
    return OK;
 }
@@ -1547,7 +1543,6 @@ static int nltree_add_expr_common(NlTree *tree, const NlNode *node,
  */
 int nltree_add_nlexpr(NlTree *tree, NlNode *node, NlPool *pool, double cst)
 {
-   NlNode **add_node;
    NlNode *lnode;
    unsigned children_from_node, offset = 0;
 
@@ -1786,8 +1781,6 @@ int nltree_bootstrap(Equ *e, unsigned n_nodes_estimate,
    return OK;
 }
 
-
-static int _eval(const NlNode *node, const Container *ctr, double *val);
 
 static int _check_math_error2(unsigned fn_code, double x1, double x2)
 {

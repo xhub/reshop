@@ -8,7 +8,7 @@
 #include "nl_utils.h"
 #include "printout.h"
 
-static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
+UNUSED static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
 {
    rhp_idx objequ;
    unsigned n_ineq = 0;
@@ -165,7 +165,7 @@ static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
    return OK;
 }
 
-static int nl_write_nlexpr(Container *ctr, FILE *stream, Container *pctr)
+UNUSED static int nl_write_nlexpr(Container *ctr, FILE *stream, Container *pctr)
 {
    
    return OK;

@@ -225,6 +225,11 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 
 #endif
 
+
+/* This is useful for variable only used in debug mode.
+ * They are useful as they make the code cleaner */
+#define DBGUSED UNUSED
+
 /* ---------------------------------------------------------------------
  * Help scan-build reason about the ownership of memory (unix.Malloc checker)
  * Very limited information available online.

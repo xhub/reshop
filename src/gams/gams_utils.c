@@ -31,7 +31,7 @@ static void sub_brackets(char *str, size_t len, char c_open, char c_close)
 }
 
 /* Per https://www.gams.com/latest/docs/UG_GAMSPrograms.html#UG_GAMSPrograms_Identifiers */
-static bool valid_gams_identifier(const char *name)
+UNUSED static bool valid_gams_identifier(const char *name)
 {
    const char *name_bck = name;
    while (*name != '\0') {

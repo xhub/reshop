@@ -3,8 +3,6 @@
 #include "checks.h"
 #include "container.h"
 #include "container_helpers.h"
-#include "ctr_rhp.h"
-#include "gams_solve.h"
 #include "macros.h"
 #include "mdl.h"
 #include "mdl_rhp.h"
@@ -58,7 +56,6 @@ int rhp_postprocess(Model *mdl_solver)
    double start = get_thrdtime();
    S_CHECK(chk_mdl(mdl_solver, __func__));
 
-   int mstat, sstat;
    Model *mdl = mdl_solver;
    Model *mdl_up = mdl_solver->mdl_up;
    assert(mdl_up);

@@ -26,7 +26,7 @@ static inline bool _all_finite(size_t len, const double *vals)
 }
 
 
-static bool lequ_chk_idxs(Lequ *le, Avar *v) {
+UNUSED static bool lequ_chk_idxs(Lequ *le, Avar *v) {
    switch (v->type) {
    case EquVar_Compact:
       for (size_t i = 0; i < v->size; ++i) {

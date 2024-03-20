@@ -1037,7 +1037,6 @@ NONNULL static
 bool valid_foreign_equ_ctrlchildren(const Model *mdl, rhp_idx ei, mpid_t mp_id,
                                    EmpDagDfsData *dfsdata)
 {
-   const EmpDag *empdag = &mdl->empinfo.empdag;
    bool mdl_is_rhp_ = mdl_is_rhp(mdl);
 
    VarMeta *varmeta = mdl->ctr.varmeta;
@@ -1045,7 +1044,6 @@ bool valid_foreign_equ_ctrlchildren(const Model *mdl, rhp_idx ei, mpid_t mp_id,
    double jacval;
    rhp_idx vi;
    int nlflags;
-   daguid_t uid;
 
    do {
       if (mdl_is_rhp_) {
@@ -1101,7 +1099,7 @@ int report_error_foreign_equ(const Model *mdl, rhp_idx ei, mpid_t mp_id)
    double jacval;
    rhp_idx vi;
    int nlflags;
-   daguid_t uid;
+
    do {
       if (mdl_is_rhp_) {
          S_CHECK(rctr_walkequ(&mdl->ctr, ei, &iterator, &jacval, &vi, &nlflags));
@@ -1213,7 +1211,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
 
    unsigned num_err = 0;
    bool mdl_is_rhp_ = mdl_is_rhp(mdl);
-   const Fops * restrict fops = mdl_is_rhp_ ? rmdl_getfops(mdl) : NULL;
+   UNUSED const Fops * restrict fops = mdl_is_rhp_ ? rmdl_getfops(mdl) : NULL;
 
    for (unsigned i = 0, len = equs->len; i < len; ++i) {
       rhp_idx ei = equs->arr[i];
@@ -1543,9 +1541,9 @@ int empdag_analysis(EmpDag * restrict empdag)
 
       int rc;
       if (uidisMP(uid)) {
-         rc = dfs_mpInNashOrRoot(uid2id(uid), &dfsdata, pathdata);
+         rc = dfs_mpInNashOrRoot(idx, &dfsdata, pathdata);
       } else {
-         rc = dfs_mpe(uid2id(uid), &dfsdata, pathdata);
+         rc = dfs_mpe(idx, &dfsdata, pathdata);
       }
 
       if (rc != 0) return error_rc(rc);

@@ -11,7 +11,7 @@ tlsvar char buf[128];
 
 const char *mpid_specialvalue(mpid_t mp_id)
 {
-   int status = OK;
+   UNUSED int status = OK;
 
    if (!(mp_id & MpId_SpecialValueMask)) {
       IO_CALL_EXIT(snprintf(buf, sizeof buf,

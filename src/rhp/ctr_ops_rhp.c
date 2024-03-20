@@ -43,19 +43,19 @@
  * Locally defined functions used in other static functions.
  * ------------------------------------------------------------------------ */
 
-static int rctr_notimpl_(Container *ctr)
+UNUSED static int rctr_notimpl_(Container *ctr)
 {
    error("%s :: missing function!\n", __func__);
    return Error_NotImplemented;
 }
 
-static int rctr_notimpl2_(const Container *ctr, double* unused)
+UNUSED static int rctr_notimpl2_(const Container *ctr, double* unused)
 {
    error("%s :: missing function!\n", __func__);
    return Error_NotImplemented;
 }
 
-static int rctr_notimpl3_(const Container *ctr, int idx, int *value)
+UNUSED static int rctr_notimpl3_(const Container *ctr, int idx, int *value)
 {
   error("%s :: missing function!\n", __func__);
   return Error_NotImplemented;
@@ -836,7 +836,7 @@ static int rctr_getequname_s(const Container *ctr, rhp_idx eidx, const char **na
    return OK;
 }
 
-static int rctr_getvarname_s(const Container *ctr, rhp_idx vidx, const char **name)
+UNUSED static int rctr_getvarname_s(const Container *ctr, rhp_idx vidx, const char **name)
 {
    S_CHECK(rhp_chk_ctr(ctr, __func__));
 
@@ -1342,7 +1342,7 @@ static int rctr_setequtype(Container *ctr, rhp_idx eidx, unsigned type, unsigned
    return OK;
 }
 
-static int _rmdl_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
+UNUSED static int _rmdl_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
 {
    struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
    S_CHECK(vi_inbounds(vi, model->total_n, __func__));
@@ -1484,7 +1484,7 @@ const struct container_ops ctr_ops_rhp = {
    .setvarub       = rctr_setvarub,
 };
 
-static int rctr_copyvarname(const Container *ctr, int i, char *str, unsigned len)
+UNUSED static int rctr_copyvarname(const Container *ctr, int i, char *str, unsigned len)
 {
    if (ctr->backend == RHP_BACKEND_RHP) {
       return rctr_copyvarname_v(ctr, i, str, len);
@@ -1492,7 +1492,7 @@ static int rctr_copyvarname(const Container *ctr, int i, char *str, unsigned len
    return rctr_copyvarname_s(ctr, i, str, len);
 }
 
-static int rctr_copyequname(const Container *ctr, int i, char *str, unsigned len)
+UNUSED static int rctr_copyequname(const Container *ctr, int i, char *str, unsigned len)
 {
    if (ctr->backend == RHP_BACKEND_RHP) {
       return rctr_copyequname_v(ctr, i, str, len);

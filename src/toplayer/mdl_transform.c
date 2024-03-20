@@ -24,7 +24,7 @@
  *
  * @return         the error code
  */
-static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl) 
+UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl) 
 {
    int status = OK;
 
@@ -46,11 +46,11 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl)
 
    if (empdag->features.hasVFpath) {
       Model *mdl_up = mdl->mdl_up;
-      Model *mdl4fooc = rhp_mdl_new(RHP_BACKEND_RHP);
       char *mdlname;
       IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_up)));
 
       TO_IMPLEMENT("rmdl_contract_along_Vpaths() needs to be finished");
+      //Model *mdl4fooc = rhp_mdl_new(RHP_BACKEND_RHP);
 //      S_CHECK(rmdl_contract_along_Vpaths(mdl4fooc, mdl_up));
 
    }
@@ -279,7 +279,6 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
    * ---------------------------------------------------------------------- */
 
    mp_upper = mdl_rhp_for_fooc->empinfo.empdag.mps.arr[upper_id];
-   IdxArray mpvars = mp_upper->vars;
    IdxArray mpequs = mp_upper->equs;
    Avar v_upper;
    //avar_setlist(&v_upper, mpvars.len, mpvars.list);
@@ -291,9 +290,6 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
       aequ_setlist(&e_upper, mpequs.len, mpequs.arr);
       S_CHECK(rmdl_appendequs(mdl_mpec, &e_upper));
    }
-
-   rhp_idx cur_vi = ctr_nvars(&mdl_mpec->ctr);
-   rhp_idx cur_ei = ctr_nequs(&mdl_mpec->ctr);
 
    /* The objective variable of the original problem disappeared when we did the
     * model export to fooc. */

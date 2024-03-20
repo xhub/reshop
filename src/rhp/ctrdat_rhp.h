@@ -9,6 +9,7 @@
 #include "compat.h"
 #include "equ.h"
 /*  TODO(Xhub) rework the solvestatus */
+#include "filter_ops.h"
 #include "rhp_fwd.h"
 #include "var.h"
 
@@ -52,7 +53,7 @@ typedef struct equ_info {
 struct auxmdl {
    unsigned len;
    unsigned max;
-   struct filter_subset **filter_subset;
+   FilterSubset **filter_subset;
 };
 
 /** Inherited equations  */
@@ -164,12 +165,12 @@ int cdat_alloc(Container *ctr, unsigned max_n, unsigned max_m) NONNULL;
 int cdat_dealloc(Container *ctr, RhpContainerData* ctrdat);
 int cdat_add_subctr(RhpContainerData* ctrdat, struct filter_subset* fs) NONNULL;
 OWNERSHIP_TAKES(2)
-int cdat_equname_start(RhpContainerData* ctrdat, const char *name ) NONNULL;
+int cdat_equname_start(RhpContainerData* ctrdat, char *name) NONNULL;
 int cdat_equname_end(RhpContainerData* ctrdat) NONNULL;
 int cdat_equ_init(RhpContainerData *ctrdat, rhp_idx ei) NONNULL;
 int cdat_resize(RhpContainerData *ctrdat, unsigned max_n, unsigned max_m ) NONNULL;
 OWNERSHIP_TAKES(2)
-int cdat_varname_start(RhpContainerData* ctrdat, const char *name ) NONNULL;
+int cdat_varname_start(RhpContainerData* ctrdat, char *name) NONNULL;
 int cdat_varname_end(RhpContainerData* ctrdat ) NONNULL;
 int cdat_add2free(RhpContainerData *ctrdat, void *mem) NONNULL;
 

@@ -108,14 +108,14 @@ const char * identtype_str(IdentType type)
 }
 
 
-static int vm_gms_filter_start(Interpreter* restrict interp);
 static int vm_gmssymiter_alloc(Compiler* restrict c, const IdentData *ident,
                                VmGmsSymIterator **f, unsigned *gidx);
 
-
-//#define jumps_add_verbose(jumps, j) (\
-//trace_empparser("%s :: JUMP: adding to " #jumps " at pos %u; depth = %5u; addr = %5u\n", __func__, (jumps)->len, (j).depth, (j).addr), \
-// jumps_add(jumps, j))
+/*
+#define jumps_add_verbose(jumps, j) (\
+trace_empparser("%s :: JUMP: adding to " #jumps " at pos %u; depth = %5u; addr = %5u\n", __func__, (jumps)->len, (j).depth, (j).addr), \
+ jumps_add(jumps, j))
+*/
 
 #define jumps_add_verbose jumps_add
 
@@ -1853,7 +1853,7 @@ int vm_labeldef_condition(Interpreter * interp, unsigned * restrict p,
    Tape * const tape = &_tape;
 
    /* TODO: this could be useful to rewind */
-   unsigned codelen_atstart = vm->code.len;
+   UNUSED unsigned codelen_atstart = vm->code.len;
 
    begin_scope(c, __func__);
 
@@ -1930,7 +1930,7 @@ int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
    Tape * const tape = &_tape;
 
    /* TODO: this could be useful to rewind */
-   unsigned codelen_atstart = vm->code.len;
+   UNUSED unsigned codelen_atstart = vm->code.len;
 
    begin_scope(c, __func__);
 
@@ -1999,7 +1999,7 @@ static int vm_add_edges(Interpreter * interp, unsigned * restrict p, ArcType edg
    assert(gmsindices->nargs > 0);
 
    /* TODO URG: review if this is sound */
-   Compiler *c = ensure_vm_mode(interp);
+   UNUSED Compiler *c = ensure_vm_mode(interp);
 
    /* ---------------------------------------------------------------------
     * If the scope depth is 0, we are not in a loop. Then, the daguid needs

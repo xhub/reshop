@@ -54,7 +54,7 @@ void cleanup_snans_funcs(void)
    snan_funcs_len = 0;
 }
 
-const char *nansstr(const char *func, unsigned char code)
+const char *nansstr(const char *func, UNUSED unsigned char code)
 {
    unsigned i = 0;
    while (i < snan_funcs_len && snan_funcs[i].func) {
@@ -98,6 +98,8 @@ const char *nansstr(const char *func, unsigned char code)
    return snan_str;
 }
 
+#ifdef UNUSED_ON_20240320
+
 static void find_snan(double snan)
 {
    union u { double d; unsigned i[2]; };
@@ -111,6 +113,7 @@ static void find_snan(double snan)
    assert(isnan(snan));
 
 }
+#endif
 
 double rhp_asnan(unsigned code)
 {

@@ -14,12 +14,12 @@
 
 
 //NOLINTBEGIN
-static int imm_gms_resolve_param(Interpreter* restrict interp, unsigned * restrict p)
+UNUSED static int imm_gms_resolve_param(Interpreter* restrict interp, unsigned * restrict p)
 {
    TO_IMPLEMENT("GAMS Parameter resolution not imnplemented in immediate mode");
 }
 
-static int imm_gms_resolve_set(Interpreter* restrict interp, unsigned * restrict p)
+UNUSED static int imm_gms_resolve_set(Interpreter* restrict interp, unsigned * restrict p)
 {
    TO_IMPLEMENT("GAMS Set resolution not imnplemented in immediate mode");
 }
@@ -207,7 +207,7 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
 
       S_CHECK(parser_expect_peek(interp, "Closing ')' is required", TOK_RPAREN));
 
-      ptrdiff_t sym_total_len = interp->peek.start - interp->cur.start + interp->peek.len;
+      UNUSED ptrdiff_t sym_total_len = interp->peek.start - interp->cur.start + interp->peek.len;
 
       assert(sym_total_len >= 0 && sym_total_len < INT_MAX);
 
@@ -236,8 +236,8 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
 NONNULL static
 int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
 {
-   const char* basename = emptok_getstrstart(&interp->cur);
-   unsigned basename_len = emptok_getstrlen(&interp->cur);
+   UNUSED const char* basename = emptok_getstrstart(&interp->cur);
+   UNUSED unsigned basename_len = emptok_getstrlen(&interp->cur);
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
@@ -537,10 +537,8 @@ static int imm_mp_ccflib_new(Interpreter* restrict interp, unsigned ccflib_idx,
 
 static int imm_mp_ccflib_finalize(Interpreter* restrict interp, MathPrgm *mp)
 {
-   /* TODO: while are we doing thing here? */
+   /* TODO: what are we doing thing here? */
    S_CHECK(imm_common_nodefini(interp));
-
-   EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
    return rhp_uint_add(&interp->edgevfovjs, mp->id);
 }
@@ -564,7 +562,7 @@ static const char* imm_ovf_getname(UNUSED Interpreter* restrict interp, void *ov
    return ovfdef->name;
 }
 
-static int read_param(UNUSED Interpreter *interp, UNUSED unsigned *p,
+UNUSED static int read_param(UNUSED Interpreter *interp, UNUSED unsigned *p,
                       UNUSED IdentData *data, UNUSED DblScratch *scratch,
                       UNUSED unsigned *param_size)
 {
@@ -582,7 +580,7 @@ static int imm_ctr_markequasflipped(Interpreter* restrict interp)
    return ctr_markequasflipped(&interp->mdl->ctr, e);
 }
 
-static int imm_ctr_dualvar(Interpreter *interp, bool is_flipped)
+UNUSED static int imm_ctr_dualvar(Interpreter *interp, bool is_flipped)
 {
   /* ----------------------------------------------------------------------
    * Statement is   dualvar v [-] e

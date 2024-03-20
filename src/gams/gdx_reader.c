@@ -30,7 +30,7 @@ static void GDX_CALLCONV _test_membership(UNUSED const int *Indx,
    test_result = true;
 }
 
-static void GDX_CALLCONV store_vector(const int *Indx, const double *Vals)
+UNUSED static void GDX_CALLCONV store_vector(const int *Indx, const double *Vals)
 {
    assert(vector_pos < GMS_MAX_INDEX_DIM && vector_global);
    if (gdxerr != OK) return;
@@ -46,7 +46,7 @@ static void GDX_CALLCONV store_subset(const int Indx[], UNUSED const double Vals
    gdxerr = rhp_int_addsorted(subset, Indx[subset_pos]);
 }
 
-static void GDX_CALLCONV store_vector_filt(const int Indx[], const double Vals[])
+UNUSED static void GDX_CALLCONV store_vector_filt(const int Indx[], const double Vals[])
 {
    assert(vector_pos < GMS_MAX_INDEX_DIM);
    assert(vector_filter);

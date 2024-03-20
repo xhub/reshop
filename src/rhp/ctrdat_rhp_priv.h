@@ -39,7 +39,7 @@ struct vnames* vnames_getregular(struct vnames *vnames) NONNULL;
 
 void vnames_list_free(struct vnames_list *l);
 struct vnames_list* vnames_list_new(void) MALLOC_ATTR(vnames_list_free,1);
-int vnames_list_start(struct vnames_list *l, rhp_idx idx, const char* name) NONNULL;
+int vnames_list_start(struct vnames_list *l, rhp_idx idx, char* name) NONNULL;
 void vnames_list_stop(struct vnames_list *l, rhp_idx idx) NONNULL;
 
 void vnames_lookup_free(VecNamesFoocLookup* dat);

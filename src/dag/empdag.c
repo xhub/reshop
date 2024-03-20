@@ -18,7 +18,6 @@
 #include "mdl.h"
 #include "printout.h"
 #include "print_utils.h"
-#include "rmdl_data.h"
 #include "string_utils.h"
 
 #include "empdag_mp.h"
@@ -310,7 +309,6 @@ int empdag_fini(EmpDag *empdag)
 
    if (mp_len == 0) { return OK; }
 
-   int pos = 3;
    printout(PO_INFO, "\nEmpdag for %s model '%.*s' #%u has type %s\n",
             mdl_fmtargs(empdag->mdl), empdag_typename(empdag->type));
 

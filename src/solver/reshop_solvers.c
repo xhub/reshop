@@ -1,14 +1,10 @@
 #include "asprintf.h"
 #include "container.h"
 /*  TODO(xhub) remove that with ctr and mdl merge */
-#include "empinfo.h"
-#include "mdl_priv.h"
-#include "mdl_transform.h"
 #include "nltree.h"
 #include "fooc.h"
 #include "macros.h"
 #include "mdl.h"
-#include "ctrdat_rhp.h"
 #include "mdl_gams.h"
 #include "mdl_rhp.h"
 #include "open_lib.h"
@@ -52,31 +48,6 @@ tlsvar void* plugin_pathvi_handle = NULL;
     }
   }
 #endif
-
-static int _load_pathvi(void)
-{
-   if (!solver_pathvi) {
-      if (!plugin_pathvi_handle) {
-         plugin_pathvi_handle = open_library(DLL_FROM_NAME("reshop_pathvi"), 0);
-         if (!plugin_pathvi_handle) {
-            error("%s :: Could not find "DLL_FROM_NAME("reshop_pathvi")". "
-                     "Some functionalities may not be available\n", __func__);
-            return Error_SystemError;
-         }
-      }
-
-      *(void **) (&solver_pathvi) = get_function_address(plugin_pathvi_handle, "pathvi_solve");
-      if (!solver_pathvi) {
-         error("%s :: Could not find function named pathvi_solve"
-                  " in " DLL_FROM_NAME("reshop_pathvi")". Some functionalities may not "
-                  "be available\n", __func__);
-         return Error_SystemError;
-      }
-
-   }
-
-   return OK;
-}
 
 
 #ifndef NDEBUG

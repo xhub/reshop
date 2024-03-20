@@ -80,7 +80,6 @@ int rhp_equ_addquadabsolute(Model *mdl, rhp_idx ei, size_t nnz, unsigned *i,
       e->is_quad = true;
    }
 
-   NlNode *node = NULL;
    NlNode **addr = &e->tree->root;
 
    /* Prep the tree and get the address of the node in addr  */
@@ -144,7 +143,6 @@ int rhp_equ_addquadrelative(Model *mdl, rhp_idx ei, Avar *v_row,
       e->is_quad = true;
    }
 
-   NlNode *node = NULL;
    NlNode **addr = &e->tree->root;
 
    /* Prep the tree and get the address of the node in addr  */

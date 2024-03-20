@@ -370,7 +370,7 @@ _exit:
    return status;
 }
 
-static NONNULL int _print_cone_relation(enum cone cone, FILE *f)
+UNUSED static NONNULL int _print_cone_relation(enum cone cone, FILE *f)
 {
    int status = OK;
 
@@ -438,7 +438,7 @@ _exit:
    return status;
 }
 
-static NONNULL int _print_equconerev(Equ *e, FILE *f)
+UNUSED static NONNULL int _print_equconerev(Equ *e, FILE *f)
 {
    S_CHECK(_print_equconesymbol(e, f));
    S_CHECK(_print_cone_relation_rev(e->cone, f));

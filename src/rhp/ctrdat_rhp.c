@@ -30,8 +30,6 @@
 //#define RHP_DEBUG
 //#define DEBUG_MR
 
-static double _id(double val) { return val; }
-
 /**
  * @brief Add a variable to evaluate via a given equation
  *
@@ -492,7 +490,7 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
       struct auxmdl *s_subctr = &cdat->stage_auxmdl[s];
 
       for (size_t i = 0; i < s_subctr->len; ++i) {
-         fops_subset_release(s_subctr->filter_subset[i]);
+         filter_subset_release(s_subctr->filter_subset[i]);
       }
 
       FREE(s_subctr->filter_subset);
@@ -590,29 +588,29 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
  * @warning this function takes ownership of the string given as argument.
  * That is, this will be passed as argument to free.
  *
- * @param model  model representation
+ * @param cdat  model representation
  * @param name   "basename" for the variable. This function takes ownership of the pointer
  *
  * @return       the error code
  */
-int cdat_varname_start(RhpContainerData* ctrdat, const char *name)
+int cdat_varname_start(RhpContainerData* cdat, char *name)
 {
   struct vnames *vnames;
-  A_CHECK(vnames, vnames_getregular(&ctrdat->var_names.v));
+  A_CHECK(vnames, vnames_getregular(&cdat->var_names.v));
   struct vnames_list *l;
   A_CHECK(l, vnames->list);
 
   if (l->active) {
-    error("%s :: a variable name is already active\n", __func__);
-    FREE(name);
+    error("%s ERROR: a variable name is already active\n", __func__);
+    free(name);
     return Error_Inconsistency;
   }
 
    if (!valid_vi(vnames->start)) {
-    vnames->start = ctrdat->total_n;
+    vnames->start = cdat->total_n;
   }
 
-  return vnames_list_start(l, ctrdat->total_n, name);
+  return vnames_list_start(l, cdat->total_n, name);
 }
 
 int cdat_varname_end(RhpContainerData* ctrdat)
@@ -623,7 +621,7 @@ int cdat_varname_end(RhpContainerData* ctrdat)
   A_CHECK(l, vnames->list);
 
    if (!l->active) {
-      error("%s :: call without an active variable name\n", __func__);
+      error("%s ERROR: call without an active variable name\n", __func__);
       return Error_Inconsistency;
    }
 
@@ -634,7 +632,7 @@ int cdat_varname_end(RhpContainerData* ctrdat)
    return OK;
 }
 
-int cdat_equname_start(RhpContainerData* ctrdat, const char *name)
+int cdat_equname_start(RhpContainerData* ctrdat, char *name)
 {
   struct vnames *vnames;
   struct vnames_list *l;
@@ -647,8 +645,8 @@ int cdat_equname_start(RhpContainerData* ctrdat, const char *name)
    A_CHECK(l, vnames->list);
 
    if (l->active) {
-      error("%s :: an equation name is already active\n", __func__);
-      FREE(name);
+      error("%s ERROR: an equation name is already active\n", __func__);
+      free(name);
       return Error_Inconsistency;
    }
 

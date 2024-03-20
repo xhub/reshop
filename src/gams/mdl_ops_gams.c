@@ -130,7 +130,6 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
    return OK;
 }
 
-static int gams_getintopt(const Model *mdl, unsigned opt, int *ival);
 static int gams_getobjjacval(const Model *mdl, double *objjacval);
 static int gams_getobjvar(const Model *mdl, int *objvar);
 static int gams_getmodelstat(const Model *mdl, int *modelstat);
@@ -205,22 +204,6 @@ static void gams_deallocdata(Model *mdl)
    FREE(mdl->data);
 }
 
-static int gams_getintopt(const Model *mdl, unsigned opt, int *ival)
-{
-   GmsContainerData *gms = mdl->ctr.data;
-
-   if (opt < gms_optname_len) {
-      if (gams_option_name[opt]) {
-         (*ival) = gevGetIntOpt(gms->gev, gams_option_name[opt]);
-         return OK;
-      }
-
-      return Error_NotFound;
-   }
-
-   return Error_IndexOutOfRange;
-}
-
 static int gams_getmodelstat(const Model *mdl, int *modelstat)
 {
    int stat;
@@ -242,18 +225,20 @@ static int gams_solve(Model *mdl)
 {
    double start = get_walltime();
    char buf[GMS_SSSIZE], optname[GMS_SSSIZE+3];
-   int islinear, solverid, solverswitch, solverlog, rc, numerr;
+   int solverid, solverlog, rc;
 
    Container *ctr = &mdl->ctr;
    GmsModelData *mdldat = mdl->data;
    GmsContainerData *gms = ctr->data;
 
    if (!gms->gmo) {
-      error("%s :: GMO object is NULL \n", __func__);
+      error("%s ERROR in %s model '%.*s' #%u: GMO object is NULL \n", __func__,
+            mdl_fmtargs(mdl));
       return Error_NullPointer;
    }
    if (!gms->gev) {
-      error("%s :: GEV object is NULL \n", __func__);
+      error("%s ERROR in %s model '%.*s' #%u: GEV object is NULL \n", __func__,
+            mdl_fmtargs(mdl));
       return Error_NullPointer;
    }
 
@@ -965,7 +950,6 @@ static int gams_reportvalues_from_gams(Container *ctr, const Container *ctr_src)
 
 static int rmdl_resetvarbasis_v2(Container *ctr, double objmaxmin)
 {
-   unsigned objsense;
    double minf, pinf, nan;
 
    ctr_getspecialfloats(ctr, &pinf, &minf, &nan);
@@ -1086,7 +1070,7 @@ static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
    bool flip_multiplier = false;
    EquMeta * restrict equmeta = NULL;
    VarMeta * restrict varmeta = NULL;
-   unsigned mp_len = mdl_src->empinfo.empdag.mps.len;
+   DBGUSED unsigned mp_len = mdl_src->empinfo.empdag.mps.len;
    MathPrgm ** const mps = mdl_src->empinfo.empdag.mps.arr;
 
    switch (objsense) {

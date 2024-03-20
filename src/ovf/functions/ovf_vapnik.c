@@ -9,7 +9,7 @@
 #define OVF_NAME vapnik
 #define SIZE_U(n) 2*n
 
-const static struct ovf_param_def loss_epsilon = {
+static const struct ovf_param_def loss_epsilon = {
    .name = "epsilon",
    .help = "Bounds on the variable u. If a scalar, -kappa <= u <= kappa. \
             If a vector, than previous inequality is understood componentwise",

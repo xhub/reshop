@@ -60,7 +60,7 @@
 #endif
 
 
-static int _debug_check_nlcode(int opcode, int value, size_t nvars, size_t poolen)
+UNUSED static int _debug_check_nlcode(int opcode, int value, size_t nvars, size_t poolen)
 {
 #ifndef NDEBUG
    switch (gams_get_optype(opcode)) {
@@ -134,7 +134,7 @@ static void _track_NAN(int nb_equ, double *jacval, int new_idx, int old_idx,
 }
 
 #else /*  DEBUG_NAN */
-static void _track_NAN(int nb_equ, double *jacval, int new_idx, int old_idx,
+UNUSED static void _track_NAN(int nb_equ, double *jacval, int new_idx, int old_idx,
                        int *equidx, int *isvarNL)
 {
    return;
@@ -467,7 +467,6 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
    /* ----------------------------------------------------------------------
     * Now we go through the equations and add them
     * ---------------------------------------------------------------------- */
-   size_t skip_equ = 0;
 
 #if 0
      else if (probtype == MdlProbType_emp) {
@@ -1067,109 +1066,3 @@ _exit:
 
    return status;
 }
-
-int rmdl_resetequbasis(Container *ctr, double objmaxmin)
-{
-   unsigned objsense;
-   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *) ctr->data;
-
-   for (unsigned i = 0; i < cdat->total_m; i++) {
-      if (ctr->equs[i].basis != BasisBasic) {
-         int gams_type;
-         S_CHECK(cone_to_gams_relation_type(ctr->equs[i].cone, &gams_type));
-         if (gams_type == gmoequ_E) {
-            if (ctr->equs[i].multiplier * objmaxmin >= 0.) {
-               ctr->equs[i].basis = BasisLower;
-            } else {
-               ctr->equs[i].basis = BasisUpper;
-            }
-         } else if (gams_type == gmoequ_G) {
-            ctr->equs[i].basis = BasisLower;
-         } else if (gams_type == gmoequ_L) {
-            ctr->equs[i].basis = BasisUpper;
-         } else {
-            ctr->equs[i].basis = BasisSuperBasic;
-         }
-      }
-   }
-
-   return OK;
-}
-
-int rmdl_resetvarbasis(Container *ctr, double objmaxmin)
-{
-   unsigned objsense;
-   double lev, lb, ub, minf, pinf, nan;
-   struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
-
-   ctr_getspecialfloats(ctr, &pinf, &minf, &nan);
-   /* TODO: add option for that */
-   double tol_bnd = 1e-8;
-
-   for (size_t i = 0; i < model->total_n; i++) {
-      if (ctr->vars[i].basis != BasisBasic) {
-         lev = ctr->vars[i].value;
-         lb = ctr->vars[i].bnd.lb;
-         ub = ctr->vars[i].bnd.ub;
-
-         if (lb != minf && ub != pinf) {
-            if (fabs(lb - ub) < tol_bnd) {
-
-               /* ---------------------------------------------------------
-                * Fixed variable
-                * --------------------------------------------------------- */
-
-               if (ctr->vars[i].multiplier * objmaxmin >= 0.) {
-                  ctr->vars[i].basis = BasisLower;
-               } else {
-                  ctr->vars[i].basis = BasisUpper;
-               }
-            } else {
-
-               /* ---------------------------------------------------------
-                * Doubly-bounded variable
-                * --------------------------------------------------------- */
-
-               if (fabs(lev - lb) < tol_bnd) {
-                  ctr->vars[i].basis = BasisLower;
-               } else if (fabs(lev - ub) < tol_bnd) {
-                  ctr->vars[i].basis = BasisUpper;
-               } else {
-                  ctr->vars[i].basis = BasisSuperBasic;
-               }
-            }
-         } else if (lb != minf) {
-
-            /* ------------------------------------------------------------
-             * Lower bounded
-             * ------------------------------------------------------------ */
-            if (fabs(lev - lb) < tol_bnd) {
-               ctr->vars[i].basis = BasisLower;
-            } else {
-               ctr->vars[i].basis = BasisSuperBasic;
-            }
-         } else if (ub != pinf) {
-
-            /* ------------------------------------------------------------
-             * Upper bounded
-             * ------------------------------------------------------------ */
-
-            if (fabs(lev - ub) < tol_bnd) {
-               ctr->vars[i].basis = BasisUpper;
-            } else {
-               ctr->vars[i].basis = BasisSuperBasic;
-            }
-         } else {
-
-            /* ------------------------------------------------------------
-             * Free
-             * ------------------------------------------------------------ */
-            ctr->vars[i].basis = BasisSuperBasic;
-         }
-      }
-   }
-
-   return OK;
-}
-
-

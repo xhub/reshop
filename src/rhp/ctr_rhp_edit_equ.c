@@ -15,7 +15,7 @@
 #include "status.h"
 
 
-static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
+UNUSED static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
 {
    bool valid_vimap = valid_vi(vi_map);
    if (!valid_ei_(ei, rctr_totalm(ctr), __func__)) { return false; }
@@ -38,7 +38,7 @@ static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
 
 int rctr_equ_addnewvar(Container *ctr, Equ *e, rhp_idx vi, double val)
 {
-   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   UNUSED RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    rhp_idx ei = e->idx;
 
    assert(valid_ei_(ei, cdat->total_m, __func__));
@@ -397,7 +397,7 @@ static int _equ_add_nl_part(Container *ctr, Equ *dst, Equ *src, double coeffp)
 /* ------------------------------------------------------------------------
  * Add the nonlinear expression of src to dst, possibly with translation
  * ------------------------------------------------------------------------ */
-static int _equ_add_nl_part_rosetta(Container *ctr, Equ * dst, Equ *src,
+UNUSED static int _equ_add_nl_part_rosetta(Container *ctr, Equ * dst, Equ *src,
                                     const rhp_idx *rosetta)
 {
    return _equ_add_nl_part_x(ctr, dst, src, 1., rosetta);

@@ -217,5 +217,6 @@ _exit:
    mpidarray_empty(&VFdag_starts);
    mpidarray_empty(&daguids);
    mpidarray_empty(&VFdag_mpids);
-   return OK;
+
+   return status;
 }

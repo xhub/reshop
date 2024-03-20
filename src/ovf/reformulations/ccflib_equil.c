@@ -63,6 +63,7 @@ static int ccflib_equil_dfs_primal(dagid_t mpid, DfsData *dfsdat, DagMpArray *mp
                                    const DagMpArray *mps_old);
 
 
+#ifdef UNUSED_AS_OF_20240320
 static void ws_init(DfsWorkspace *ws)
 {
    ws->size = 0;
@@ -83,6 +84,7 @@ static void* ws_getmem(DfsWorkspace *ws, size_t size)
 
    return ws->mem;
 }
+#endif
 
 /**
  * @brief Instanciate the CCFLIB node whose children are EMPDAG nodes
@@ -421,7 +423,6 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpAr
     * --------------------------------------------------------------------- */
 
    MathPrgm *mp = mps->arr[mpid_primal];
-   RhpSense parent_sense = mp_getsense(mp);
    EmpDag *empdag = dfsdat->empdag;
 
    /* ---------------------------------------------------------------------
@@ -459,8 +460,8 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpAr
    RhpSense path_sense = dfsdat->path_sense;
 
    UIntArray *rarcs = mps->rarcs;
-   ArcVFData edgeVFdual_bck = dfsdat->edgeVFdual;
-   ArcVFData edgeVFprimal_bck = dfsdat->edgeVFprimal;
+   //ArcVFData edgeVFdual_bck = dfsdat->edgeVFdual;
+   //ArcVFData edgeVFprimal_bck = dfsdat->edgeVFprimal;
    mpid_t mpid_dual_bck = dfsdat->mpid_dual;
 
    for (unsigned i = 0, len = mps_old->Varcs[mpid_primal].len; i < len; ++i) {
@@ -558,7 +559,6 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
    assert(dfsdat->mpid_primal < mps->len);
 
    MathPrgm *mp_dual = mps->arr[mpid_dual];
-   RhpSense mp_sense = mp_getsense(mp_dual);
 
    DualData dualdat;
    S_CHECK(mp_ccflib_instantiate(dfsdat->empdag, mpid_dual, dfsdat, &dualdat));
@@ -676,7 +676,7 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
 
 _exit:
 
-   return OK;
+   return status;
 }
 
 

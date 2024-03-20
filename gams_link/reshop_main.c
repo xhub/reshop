@@ -108,7 +108,8 @@ int rhpReadyAPI(rhpRec_t *jh, gmoHandle_t gh, optHandle_t oh)
    if (gmoDictionary(gh)) {
       jh->dh = gmoDict(gh);
    } else {
-      jh->dh = NULL;
+      gevLogStat(jh->eh, "*** ReSHOP ERROR: GMO lacks a dictionary. This is not supported");
+      rc = 1; goto _exit;
    }
 
    if (!cfgCreateD(&jh->ch, sysdir, msg, sizeof(msg))) {
@@ -294,7 +295,7 @@ _exit:
    if (rc) {
       gmoSolveStatSet(jh->gh, gmoSolveStat_InternalErr);
       gmoModelStatSet(jh->gh, gmoModelStat_ErrorNoSolution);
-      /* or gmoModelStat_ErrorUnknown ? */
+      /* TODO(GAMS review) would gmoModelStat_ErrorUnknown be better? */
    }
 
    /*  TODO(xhub) is this the right place to free, or in rhpFree? */

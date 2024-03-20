@@ -19,8 +19,6 @@
 #include "status.h"
 #include "timings.h"
 
-static double _id(double val) { return val; }
-
 int ctr_compress_equs_check(const Container *ctr_src, Container *ctr_dst, size_t skip_equ)
 {
    return ctr_compress_equs_check_x(ctr_src, ctr_dst, skip_equ,  ctr_src->fops);
