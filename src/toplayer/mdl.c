@@ -479,7 +479,7 @@ int mdl_ensure_exportdir(Model *mdl)
 #else
 
       printout(PO_INFO, "[model] %s model '%.*s' #%u has no valid export directory."
-               "Set RHP_EXPORT_DIR to provide one.\n");
+               "Set RHP_EXPORT_DIR to provide one.\n", mdl_fmtargs(mdl));
       return Error_NotFound;
 
 #endif

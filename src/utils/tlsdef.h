@@ -31,7 +31,7 @@
     #define tlsvar
 
   // clang does not support threads.h but does not define __STDC_NO_THREADS__
-  #elif __STDC_VERSION__ >= 201112L && !defined(_WIN32) && (!defined(__STDC_NO_THREADS__) || __STDC_NO_THREADS__ == 0)
+  #elif __STDC_VERSION__ >= 201112L && !defined(_WIN32) && !(defined __APPLE__) && (!defined(__STDC_NO_THREADS__) || __STDC_NO_THREADS__ == 0)
     #include <threads.h>
     #define tlsvar thread_local
   #else
@@ -40,6 +40,8 @@
       #define tlsvar __thread
     #elif defined(_WIN32) && (defined(__ICC) || defined(__clang__))
       #define tlsvar __declspec(thread)
+    #elif defined(__APPLE__)  // Apple seems to support this
+      #define tlsvar thread_local
     #elif defined(RESHOP_ALLOW_GLOBAL)
       #define tlsvar
     #else

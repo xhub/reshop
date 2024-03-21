@@ -486,13 +486,13 @@ _Pragma("GCC diagnostic push")
 _Pragma("GCC diagnostic ignored \"-Wpedantic\"")
 #endif
 
-tlsvar static void* path_io[] = {
+static tlsvar void* path_io[] = {
    NULL,                         /*  User data */
    (void*)path_print,
    (void*)flush_dummy,
 };
 
-tlsvar static void* mcp_iface[] = {
+static tlsvar void* mcp_iface[] = {
    NULL,                         /* Interface data  */
    (void*)path_problem_size,                 /*  */
    (void*)path_bounds,
@@ -506,7 +506,7 @@ tlsvar static void* mcp_iface[] = {
    (void*)path_basis,                   /* Basis information  */
 };
 
-tlsvar static void* presolve_iface[] = {
+static tlsvar void* presolve_iface[] = {
    NULL,                         /* Presolve data  */
    NULL,                         /* Start pre-solve   */
    NULL,                         /* Start post-solve  */
