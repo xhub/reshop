@@ -214,8 +214,8 @@ static void filter_active_size(void *data, size_t* n, size_t* m)
 
 static void perm_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
                                       rhp_idx ei, unsigned len,
-                                      const int instrs[static restrict len],
-                                      int args[static restrict len])
+                                      const int instrs VMT(static restrict len),
+                                      int args VMT(static restrict len))
 {
    for (unsigned i = 0; i < len; ++i) {
       if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
@@ -233,8 +233,8 @@ UNUSED static
 void filter_gamsopcode_rosetta_perm(const rhp_idx * restrict rosetta_vars,
                                     const rhp_idx * restrict vperm,
                                     rhp_idx ei, unsigned len,
-                                    const int instrs[static restrict len],
-                                    int args[static restrict len])
+                                    const int instrs VMT(static restrict len),
+                                    int args VMT(static restrict len))
 {
    for (unsigned i = 0; i < len; ++i) {
       if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
@@ -249,8 +249,8 @@ void filter_gamsopcode_rosetta_perm(const rhp_idx * restrict rosetta_vars,
 }
 
 static int perm_active_gamsopcode(void *data, rhp_idx ei, unsigned len,
-                                    int instrs[static restrict len],
-                                    int args[static restrict len])
+                                    int instrs VMT(static restrict len),
+                                    int args VMT(static restrict len))
 {
    FilterActive *dat = (FilterActive *)data;
    Container *ctr = dat->ctr;

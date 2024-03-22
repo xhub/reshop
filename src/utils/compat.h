@@ -273,6 +273,19 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 
 #endif
 
+/* ----------------------------------------------------------------------
+ * Variably modified types are very iseful, but older compiler are lost here
+ * ---------------------------------------------------------------------- */
+
+// Note: Newer LLVM-based intel compiler define __INTEL_LLVM_COMPILER
+#if defined(__INTEL_COMPILER) || (defined(_MSC_VER) && !defined(__clang__))
+#   define VMT(...)  /* __VA_ARGS__ */
+
+#else
+
+#   define VMT(...)  [__VA_ARGS__]
+
+#endif
 
 #define rhp_idx int
 
