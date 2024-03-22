@@ -139,7 +139,7 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #endif
 
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_LLVM_COMPILER)
 
 #define RHP_LIKELY(x) (__builtin_expect(!!(x),1))
 #define RHP_UNLIKELY(x) (__builtin_expect(!!(x),0))
@@ -253,13 +253,13 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
  * For packing enums and such
  * ---------------------------------------------------------------------- */
 
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202300L) || \
-    (defined(__GNUC__) && (__GNUC__ >= 13)) || \
-    (defined(__clang__) && (__clang_major__ >= 17))
-
 #   ifndef __GNUC__
 #      define __extension__ /* */
 #   endif
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202300L) || \
+    (defined(__GNUC__) && (__GNUC__ >= 13)) || \
+    (defined(__clang__) && (__clang_major__ >= 17))
 
 #include <stdint.h>
 
