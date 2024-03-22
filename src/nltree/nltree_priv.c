@@ -171,7 +171,6 @@ int nlnode_copy_rosetta(NlNode** new_node, const NlNode* node,
     * Iterate over the children (DFS)
     * ---------------------------------------------------------------------- */
 
-   size_t add_nodes = 0;
    for (unsigned i = 0, len = node->children_max; i < len; ++i)
    {
       if (!node->children[i]) {
@@ -198,7 +197,6 @@ int nlnode_copy_rosetta(NlNode** new_node, const NlNode* node,
       }
 
       S_CHECK(nlnode_copy_rosetta(&node2->children[i], node->children[i], tree, rosetta));
-      add_nodes += 1;
    }
 
    (*new_node) = node2;

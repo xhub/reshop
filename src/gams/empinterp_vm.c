@@ -47,6 +47,7 @@
       (uint16_t)((vm->code.ip[-2] << 8) | vm->code.ip[-1]))
 
 #ifndef NDEBUG
+
 static inline VmValue read_global(EmpVm *vm)
 {
    GIDX_TYPE gidx = READ_GIDX(vm);
@@ -61,21 +62,31 @@ static inline unsigned READ_VMUINT(EmpVm *vm)
    return vm->uints.arr[gidx];
 }
 
+static inline unsigned READ_VMINT(EmpVm *vm)
+{
+   GIDX_TYPE gidx = READ_GIDX(vm);
+   assert(gidx < vm->ints.len);
+   return vm->ints.arr[gidx];
+}
+
 /*
 #define DEBUGVMRUN(fmt, ...) \
 printout(PO_TRACE_EMPINTERP, "[%s] " fmt, opcodes_name(instr), __VA_ARGS__);
 */
 
-#define DEBUGVMRUN(...) \
-printout(PO_TRACE_EMPINTERP, __VA_ARGS__);
-#define DEBUGVMRUN_EXEC(EXPR) EXPR
-#else
+#   define DEBUGVMRUN(...) \
+       printout(PO_TRACE_EMPINTERP, __VA_ARGS__);
+#   define DEBUGVMRUN_EXEC(EXPR) EXPR
 
-#define read_global(vm) (vm->globals.arr[READ_GIDX(vm)])
-#define READ_VMINT(vm)  (vm->ints.arr[READ_GIDX(vm)])
-#define DEBUGVMRUN(...) 
-#define DEBUGVMRUN_EXEC(EXPR)
-#endif
+#else /* defined(NDEBUG) */
+
+#   define read_global(vm) (vm->globals.arr[READ_GIDX(vm)])
+#   define READ_VMINT(vm)  (vm->ints.arr[READ_GIDX(vm)])
+#   define READ_VMUINT(vm)  (vm->uints.arr[READ_GIDX(vm)])
+#   define DEBUGVMRUN(...) 
+#   define DEBUGVMRUN_EXEC(EXPR)
+
+#endif /* !defined(NDEBUG) */
 
 
 #define MY_NOP(x) x
@@ -95,7 +106,7 @@ printout(PO_TRACE_EMPINTERP, __VA_ARGS__);
     } while (false)
 
 
-static inline bool identisequvar(IdentType type)
+DBGUSED static inline bool identisequvar(IdentType type)
 {
    if (type == IdentVar || type == IdentEqu) return true;
 
@@ -632,13 +643,11 @@ int empvm_run(struct empvm *vm)
          break;
       }
       case OP_PUSH_VMUINT: {
-         GIDX_TYPE slot = READ_GIDX(vm);
-         push(vm, UINT_VAL(vm->uints.arr[slot]));
+         push(vm, UINT_VAL(READ_VMUINT(vm)));
          break;
       }
       case OP_PUSH_VMINT: {
-         GIDX_TYPE slot = READ_GIDX(vm);
-         push(vm, INT_VAL(vm->ints.arr[slot]));
+         push(vm, INT_VAL(READ_VMINT(vm)));
          break;
       }
       case OP_UPDATE_LOOPVAR: {

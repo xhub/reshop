@@ -57,12 +57,11 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
    S_CHECK_EXIT(daguidarray_add(&daguids, empdag_src->uid_root));
 
    const DagMpArray *mps = &empdag_src->mps;
-   const DagMpeArray *nashs = &empdag_src->mpes;
+   DBGUSED const DagMpeArray *nashs = &empdag_src->mpes;
 
 
 
    for (unsigned i = 0; i < daguids.len; ++i) {
-      Mpe *mpe = NULL;
 
       daguid_t node = daguids.arr[i];
 
@@ -78,7 +77,6 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
          seen_uid[nidx] = true;
 
          assert(uid2id(node) < nashs->len);
-         mpe = empdag_src->mpes.arr[uid2id(node)];
 
          DagUidArray *c = &empdag_src->mpes.arcs[uid2id(node)];
          memcpy(&daguids.arr[daguids.len], c->arr, c->len * sizeof(daguid_t));
@@ -94,8 +92,6 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
      /* ----------------------------------------------------------------------
       * We potentially have the start of a VFtree
       * ---------------------------------------------------------------------- */
-
-      MathPrgm *mp = empdag_src->mps.arr[mpid];
 
       DagUidArray *c = &empdag_src->mps.Carcs[mpid];
       memcpy(&daguids.arr[daguids.len], c->arr, c->len * sizeof(daguid_t));
@@ -181,6 +177,7 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
    * Now reformulate
    * ---------------------------------------------------------------------- */
 
+   #if 0
    EmpDag *empdag = &mdl->empinfo.empdag;
 
    typedef enum {
@@ -210,7 +207,7 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
       }
 
    }
-
+   #endif
 
 _exit:
    FREE(objequs);

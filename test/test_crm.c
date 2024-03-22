@@ -248,7 +248,11 @@ static int _DFS_ovf(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
    argtheta_name = strdup(rhp_mdl_printvarname(mdl, theta_idx));
    RESHOP_CHECK(rhp_add_varsnamed(mdl, n_children, argTheta, argtheta_name));
 
-   asprintf(&defargname, "arg%s", argtheta_name);
+   if (asprintf(&defargname, "arg%s", argtheta_name) < 0) {
+      (void)fprintf(stderr, "asprintf() failed in %s\n", __func__);
+      return 1;
+   }
+
    defArgTheta = rhp_aequ_new();
    RESHOP_CHECK(rhp_add_consnamed(mdl, n_children, RHP_CON_EQ, defArgTheta, defargname));
 
@@ -458,7 +462,7 @@ _exit:
 }
 
 /* Solve a simple hydro problem over a tree */
-static int test_ecvarup_msp_dag(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
+UNUSED static int test_ecvarup_msp_dag(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 {
    int status = 0;
 

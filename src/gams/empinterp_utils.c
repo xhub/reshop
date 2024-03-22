@@ -20,8 +20,8 @@ static inline TokenType ident2toktype(IdentType type)
    }
 }
 
-/* TODO: delete ?*/
-static inline IdentType toktype2ident(TokenType toktype, unsigned dim)
+/* TODO: delete ? 2024.03.22: seems like it could be useful */
+UNUSED static inline IdentType toktype2ident(TokenType toktype, unsigned dim)
 {
    switch(toktype) {
    case TOK_GMS_SET:

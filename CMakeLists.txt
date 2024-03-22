@@ -419,7 +419,7 @@ file(GLOB_RECURSE GAMS_C_FILES src/gams/wrapped/*.c)
 
 if (C_COMPILER_GNU_LIKE)
    set_source_files_properties(${GAMS_C_FILES} PROPERTIES COMPILE_OPTIONS
-    "-Wno-error=shadow;-Wformat-overflow=0;-Wno-shadow;-Wno-pedantic;-Wno-error=pedantic")
+    "-Wno-error=shadow;-Wno-format-overflow;-Wno-shadow;-Wno-pedantic;-Wno-error=pedantic")
 endif()
 
 # See https://www.gams.com/latest/docs/RN_33.html

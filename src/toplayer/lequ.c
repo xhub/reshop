@@ -14,7 +14,7 @@
 
 #include "dctmcc.h"
 
-static inline bool _all_finite(size_t len, const double *vals)
+DBGUSED static inline bool _all_finite(size_t len, const double *vals)
 {
    for (size_t i = 0; i < len; ++i) {
       if (!isfinite(vals[i])) {

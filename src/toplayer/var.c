@@ -1,12 +1,9 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "checks.h"
-#include "consts.h"
 #include "macros.h"
 #include "mdl.h"
 #include "printout.h"
-#include "reshop.h"
 #include "status.h"
 #include "var.h"
 
@@ -573,8 +570,10 @@ int var_set_bounds(Var *v, double lb, double ub)
 
 void var_print(const Var *var)
 {
-   printout(PO_INFO, " Level = %5.2f, Bound = [%5.2e,%5.2e]\n",
-            var->value, var->bnd.lb, var->bnd.ub);
+   const char *vtypename = var->type < VAR_TYPE_LEN ? var_type_names[var->type] :
+                                                      "INVALID";
+   printout(PO_INFO, " Level = %5.2f; Bound = [%5.2e,%5.2e]; Type = %s\n",
+            var->value, var->bnd.lb, var->bnd.ub, vtypename);
 }
 
 int var_compar(const void *a, const void *b)

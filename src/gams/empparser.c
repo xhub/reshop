@@ -2855,6 +2855,10 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
             emptok_getstrlen(&interp->peek), emptok_getstrstart(&interp->peek),
             toktype2str(toktype));
       return Error_EMPIncorrectSyntax;
+   } else {
+      trace_empparser("[empinterp] OVF parameter %s was not found\n",
+                      pdef->name);
+      return OK;
    }
 
    trace_empparser("[empinterp] OVF parameter %s parsed with type %s\n",
@@ -3243,7 +3247,7 @@ _err_EOF_fname:
 
 }
 
-static inline bool alias_as_expected(GamsSymData *cursymdata, int type, int idx)
+DBGUSED static inline bool alias_as_expected(GamsSymData *cursymdata, int type, int idx)
 {
    return (cursymdata->type == type) && (cursymdata->idx == idx);
 }
@@ -3450,10 +3454,10 @@ _err_symname:
 /**
  * @brief This function adds a node to the EMPDAG with the appropriate type
  *
- * @param mdl 
- * @param addr 
- * @param type   the type of 
- * @return 
+ * @param interp  the interpreter
+ * @param p       the position pointer
+ *
+ * @return        the error code
  */
 int parse_labeldef(Interpreter * restrict interp, unsigned *p)
 {

@@ -44,7 +44,7 @@ static inline NONNULL void sort_jaccol(struct jacdata *restrict jacdata,
    }
 }
 
-static inline bool _chk_sort(unsigned *list, size_t len)
+DBGUSED static inline bool _chk_sort(unsigned *list, size_t len)
 {
    rhp_idx prev = list[0];
    for (size_t i = 1; i < len; ++i) {

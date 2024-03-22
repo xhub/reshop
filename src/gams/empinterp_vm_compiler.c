@@ -190,7 +190,7 @@ static inline int _emit_jumpback_len(Tape *tape, unsigned loop_start)
    return emit_short(tape, offset);
 }
 
-static inline int emit_jump_back(Tape *tape, unsigned loop_start) {
+UNUSED static inline int emit_jump_back(Tape *tape, unsigned loop_start) {
    S_CHECK(emit_byte(tape, OP_JUMP_BACK));
    return _emit_jumpback_len(tape, loop_start);
 }
@@ -210,7 +210,8 @@ static inline int emit_jump(Tape *tape, uint8_t instr, unsigned *jump_addr) {
    return OK;
 }
 
-static inline int make_global(EmpVm *vm, VmValue value, GIDX_TYPE *i) {
+/* TODO(cleanup): this should be used rather than direct acess */
+UNUSED static inline int make_global(EmpVm *vm, VmValue value, GIDX_TYPE *i) {
    S_CHECK(vmvals_add(&vm->globals, value));
    unsigned idx = vm->globals.len-1;
    if (idx > GIDX_MAX) {
@@ -690,7 +691,8 @@ int loop_increment(Tape * restrict tape, LoopIterators* restrict iterators)
    return OK;
 }
 
-static inline int no_outstanding_jump(Jumps * restrict jumps, unsigned depth)
+DBGUSED static inline
+int no_outstanding_jump(Jumps * restrict jumps, unsigned depth)
 {
    if (O_Output & PO_TRACE_EMPPARSER) {
    trace_empparsermsg("[empcompiler] outstanding jumps:\n");

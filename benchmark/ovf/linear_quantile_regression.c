@@ -41,7 +41,7 @@ static void str2uint(const char *str, unsigned *s, const char *argname)
    *s = val;
 }
 
-int main(int argc, char **argv)
+int main(UNUSED int argc, char **argv)
 {
 
    unsigned s_default = 10000;
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
    char *argv0 = argv[0];
 	char const *formulation = "equilibrium", *solvername = "";
-   bool init_var = false;
+   UNUSED bool init_var = false;
 
 	ARG_BEGIN {
 		if (0) { 
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 			puts("  -h, --help              display this help and exit");
 			return EXIT_SUCCESS;
 		} else {FALLTHRU default:
-			fprintf(stderr,
+			(void)fprintf(stderr,
 			        "%s: invalid option '%s'\n"
 			        "Try '%s --help' for more information.\n",
 			        argv0, *argv, argv0);

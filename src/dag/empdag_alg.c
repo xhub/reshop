@@ -490,7 +490,7 @@ static int dfs_mpC(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pa
 static int dfs_mpV(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
 static int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
 
-static inline
+DBGUSED static inline 
 bool pathtype_is_VF(DagPathType pathtype) {
 
   return pathtype == DfsPathVFMin || pathtype == DfsPathVFMax;
@@ -655,7 +655,7 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
    if (Vlen > 0) {
       RhpSense sense_parent = mp_getsense(empdag->mps.arr[mpid]);
       assert(sense_parent == RhpMax || sense_parent == RhpMin);
-      DagPathType cur_pathtype = sense_parent == RhpMin ? DfsPathVFMin : DfsPathVFMax;
+      DagPathType cur_pathtype = sense2pathtype(sense_parent);
 
       pathdata_child.pathtype = cur_pathtype;
       pathdata_child.saddle_path_start = mpid;
@@ -785,7 +785,7 @@ int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathd
    if (Vlen > 0) {
       RhpSense sense = mp_getsense(empdag->mps.arr[mpid]);
       assert(sense == RhpMax || sense == RhpMin);
-      DagPathType cur_pathtype = sense == RhpMin ? DfsPathVFMin : DfsPathVFMax;
+      DagPathType cur_pathtype = sense2pathtype(sense);
       pathdata_child.pathtype = cur_pathtype;
       pathdata_child.saddle_path_start = mpid;
       pathdata_child.saddle_path_registered = false;
@@ -871,7 +871,7 @@ int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
    return OK;
 }
 
-NONNULL static inline
+DBGUSED NONNULL static inline
 bool empdag_chk_vitype(const VarMeta *varmeta)
 {
    /* TODO(URG): this should not always return true */

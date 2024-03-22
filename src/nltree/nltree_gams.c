@@ -166,7 +166,7 @@ static size_t _nltree_getsizeopcode(const Equ *e)
       if (!(*nodestack)) { error("%s :: insufficient memory!\n", __func__); \
         status = Error_InsufficientMemory; goto _exit; } }
 
-#define POP_FROM_STACK(s) if (s) { --s; } else { \
+#define POP_FROM_STACK(s) if (s) { --(s); } else { \
   error("%s :: invalid opcode stack", __func__); \
            status = Error_InvalidOpCode; goto _exit; }
 
@@ -238,7 +238,6 @@ bool chk_gms_opcode(int *instr, int *args, unsigned len, const char* equname)
  *  If the equation contains a nonlinear expression, translate it into an
  *  expression tree. Otherwise, just create an empty expression tree
  *
- *  @param  e        the equation
  *  @param  codelen  the length of the opcode
  *  @param  instrs   the instructions
  *  @param  args     the arguments
@@ -269,7 +268,8 @@ NlTree* nltree_buildfromgams(unsigned codelen, const int * restrict instrs,
    MALLOC_NULL(nodestack, NlNode *, codelen);
    nodestack[0] = NULL;
 
-   size_t nb_nodes = 1;
+   /* TODO: this is unsused, why? */
+   UNUSED size_t nb_nodes = 1;
 
    size_t k = 0;
    while (k < codelen) {
@@ -506,6 +506,7 @@ static void _translate_instr(enum NLNODE_OP key, int *instr,
    }
 }
 
+#ifdef UNUSED_20240322
 NONNULL static inline
 int process_arithm_child(const NlNode * restrict child,
                          int * restrict instrs,
@@ -534,6 +535,7 @@ int process_arithm_child(const NlNode * restrict child,
    return build_gams_opcode_v2(child, instrs, args, indx);
 
 }
+#endif
 
 /* ---------------------------------------------------------------------
  * This function processed the last 2 children of a arithmetic OP node
