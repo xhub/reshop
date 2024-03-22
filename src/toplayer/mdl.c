@@ -473,15 +473,16 @@ int mdl_ensure_exportdir(Model *mdl)
    mdl->commondata.exports_dir_parent = exports_dir_template;
 
 #elif defined(_WIN32)
+
    A_CHECK(mdl->commondata.exports_dir_parent, win_gettmpdir());
    mdl->commondata.own_exports_dir_parent = true;
    mdl->commondata.delete_exports_dir = true;
+
 #else
 
       printout(PO_INFO, "[model] %s model '%.*s' #%u has no valid export directory."
                "Set RHP_EXPORT_DIR to provide one.\n", mdl_fmtargs(mdl));
       return Error_NotFound;
-
 #endif
    }
 

@@ -60,12 +60,11 @@ char *strndup(const char *str, size_t chars)
 
 char *win_gettmpdir(void)
 {
-   int status = OK;
    unsigned path_len = 260;
    char *tempDir;
    MALLOC_NULL(tempDir, char, path_len);
 
-   DWORD result = GetTempPath(path_len, tempDir);
+   DWORD result = GetTempPath(path_len, tempDir), dw;
 
    if (result == 0) {
       goto _err;
@@ -85,15 +84,15 @@ char *win_gettmpdir(void)
    if (UuidToString(&uuid, &str) != RPC_S_OK) { goto _err; }
 
    char *tmpdir;
-   IO_CALL_EXIT(asprintf(&tmpdir, "%s" DIRSEP "reshop_%s", tempDir, str));
+   IO_CALL_NULL(asprintf(&tmpdir, "%s" DIRSEP "reshop_%s", tempDir, str));
 
    RpcStringFree(&str);
 
    return tmpdir;
 
 _err:
-   DWORD dw = GetLastError();
-   error("%s ERROR: GetTempPath() triggered error %d\n", __func__, dw);
+   dw = GetLastError();
+   error("%s ERROR: GetTempPath() triggered error %lu\n", __func__, dw);
    return NULL;
 
 _exit:

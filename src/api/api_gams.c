@@ -37,15 +37,15 @@ static int adddir2PATH(const char *dir, Model *mdl)
    char *pathval;
    MALLOC_(pathval, char, bufsize);
 
-   DWORD ret = GetEnvironmentVariableA("PATH", pathval, bufsize);
+   DWORD ret = GetEnvironmentVariableA("PATH", pathval, bufsize), err;
 
    if (ret == 0) {
 _err1:
-      DWORD err = GetLastError();
+      err = GetLastError();
       if (err == ERROR_ENVVAR_NOT_FOUND) {
          error("%s ERROR: could not get the PATH environment variable!\n", __func__);
       } else {
-         error("%s RUNTIME ERROR (code = %u)", err);
+         error("%s RUNTIME ERROR (code = %lu)",__func__, err);
       }
       return Error_SystemError;
 

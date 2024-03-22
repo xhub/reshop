@@ -18,6 +18,7 @@ extern "C" {
 
 #include "rhp_options.h"
 #include "status.h"
+#include "option_priv.h"
 
 #include <cstdarg>
 #include <cstdlib>
@@ -77,6 +78,8 @@ void backtrace_(const char *expr, int status)
 
 int main(int argc, char** argv)
 {
+   option_init();
+
    GamsOptions gmsopt("ReSHOP");
    gmsopt.setSeparator("=");
    gmsopt.setGroup("reshop");
