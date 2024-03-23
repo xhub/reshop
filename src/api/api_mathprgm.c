@@ -48,13 +48,13 @@ unsigned rhp_mp_nvars(const struct rhp_mathprgm *mp)
    return mp->vars.len;
 }
 
-RESHOP_STATIC_ASSERT((uint8_t) RhpMin == (uint8_t) RHP_MIN, "");
-RESHOP_STATIC_ASSERT((uint8_t) RhpMax == (uint8_t) RHP_MAX, "");
-RESHOP_STATIC_ASSERT((uint8_t) RhpFeasibility == (uint8_t) RHP_FEAS, "");
-RESHOP_STATIC_ASSERT((uint8_t) RhpNoSense == (uint8_t) RHP_NOSENSE, "");
+RESHOP_STATIC_ASSERT((uint8_t) RhpMin == (uint8_t) RHP_MIN, "")
+RESHOP_STATIC_ASSERT((uint8_t) RhpMax == (uint8_t) RHP_MAX, "")
+RESHOP_STATIC_ASSERT((uint8_t) RhpFeasibility == (uint8_t) RHP_FEAS, "")
+RESHOP_STATIC_ASSERT((uint8_t) RhpNoSense == (uint8_t) RHP_NOSENSE, "")
 
-RESHOP_STATIC_ASSERT((uint8_t) MpTypeOpt == (uint8_t) RHP_MP_OPT, "");
-RESHOP_STATIC_ASSERT((uint8_t) MpTypeVi == (uint8_t) RHP_MP_VI, "");
+RESHOP_STATIC_ASSERT((uint8_t) MpTypeOpt == (uint8_t) RHP_MP_OPT, "")
+RESHOP_STATIC_ASSERT((uint8_t) MpTypeVi == (uint8_t) RHP_MP_VI, "")
 #ifdef GITLAB_83
 //   RHP_MP_MCP,         /**< Mixed Complementarity Problem */
 //   RHP_MP_QVI,         /**< Quasi Variational Inequality */
@@ -65,5 +65,5 @@ RESHOP_STATIC_ASSERT(MpTypeQvi == RHP_MP_QVI, "");
 RESHOP_STATIC_ASSERT(MpTypeMpcc == RHP_MP_MPCC, "");
 RESHOP_STATIC_ASSERT(MpTypeMpec == RHP_MP_MPEC, "");
 #endif
-RESHOP_STATIC_ASSERT((uint8_t) MpTypeCcflib == (uint8_t) RHP_MP_CCFLIB, "");
-RESHOP_STATIC_ASSERT((uint8_t) MpTypeUndef == (uint8_t) RHP_MP_UNDEF, "");
+RESHOP_STATIC_ASSERT((uint8_t) MpTypeCcflib == (uint8_t) RHP_MP_CCFLIB, "")
+RESHOP_STATIC_ASSERT((uint8_t) MpTypeUndef == (uint8_t) RHP_MP_UNDEF, "")

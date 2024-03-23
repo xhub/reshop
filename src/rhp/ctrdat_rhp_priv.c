@@ -307,4 +307,4 @@ bool rctr_eq_not_deleted(RhpContainerData *cdat, rhp_idx ei)
 }
 
 // everybody can dream ...
-//RESHOP_STATIC_ASSERT(rmdl_solvernames[__RMDL_SOLVER_SIZE] == NULL, "Sync error rmdl_solvernames");
+//RESHOP_STATIC_ASSERT(rmdl_solvernames[__RMDL_SOLVER_SIZE] == NULL, "Sync error rmdl_solvernames")

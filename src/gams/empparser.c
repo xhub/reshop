@@ -318,10 +318,10 @@ final_error_line:
 
 const char * toktype2str(TokenType type)
 {
-   RESHOP_STATIC_ASSERT(ARRAY_SIZE(kw_modeling_str) == TOKLEN_MDL_KW, "review kw_modeling_str");
-   RESHOP_STATIC_ASSERT(ARRAY_SIZE(kw_str) == TOKLEN_OTHER_KW, "review kw_str");
-   RESHOP_STATIC_ASSERT(ARRAY_SIZE(probtype_str) == TOKLEN_PROBTYPE, "review kw_str");
-   RESHOP_STATIC_ASSERT(ARRAY_SIZE(tok_str) == TOKLEN_OTHER, "review kw_str");
+   RESHOP_STATIC_ASSERT(ARRAY_SIZE(kw_modeling_str) == TOKLEN_MDL_KW, "review kw_modeling_str")
+   RESHOP_STATIC_ASSERT(ARRAY_SIZE(kw_str) == TOKLEN_OTHER_KW, "review kw_str")
+   RESHOP_STATIC_ASSERT(ARRAY_SIZE(probtype_str) == TOKLEN_PROBTYPE, "review kw_str")
+   RESHOP_STATIC_ASSERT(ARRAY_SIZE(tok_str) == TOKLEN_OTHER, "review kw_str")
 
    if (type <= TOKRANGE_MDL_KW_END) return kw_modeling_str[type];
    assert(type >= TOKRANGE_OTHER_KW_START);

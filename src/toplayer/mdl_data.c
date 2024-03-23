@@ -59,6 +59,7 @@ const unsigned mdltypeslen = sizeof(mdltypesnames_offsets)/sizeof(unsigned);
 
 RESHOP_STATIC_ASSERT(sizeof(mdltypesnames_offsets)/sizeof(unsigned) == (MdlType_last+1),
       "Inconsistency in problem types")
+
 const char* mdltype_name(ModelType type)
 {
    if (type >= mdltypeslen) { return "unknown problem type"; }   

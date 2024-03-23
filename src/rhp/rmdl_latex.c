@@ -61,7 +61,7 @@ static const unsigned varnames_offsets[] = {
 DEFINE_STR()
 };
 
-RESHOP_STATIC_ASSERT(sizeof(varnames_offsets)/sizeof(varnames_offsets[0]) ==  VAR_TYPE_LEN,
+RESHOP_STATIC_ASSERT(sizeof(varnames_offsets)/sizeof(varnames_offsets[0]) == VAR_TYPE_LEN,
                      "var_type and var_type_latex must be synchronized")
 
 

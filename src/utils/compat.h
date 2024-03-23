@@ -135,7 +135,7 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #endif
 
 #ifndef RESHOP_STATIC_ASSERT
-#define RESHOP_STATIC_ASSERT(EXPR, STR)
+#define RESHOP_STATIC_ASSERT(EXPR, STR) 
 #endif
 
 
