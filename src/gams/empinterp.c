@@ -135,7 +135,7 @@ int empinterp_process(Model *mdl, const char *fname)
 {
    trace_empinterp("[empinterp] Processing file '%s'\n", fname);
 
-   FILE *fptr = fopen(fname, "r");
+   FILE *fptr = fopen(fname, "rb");
    if (!fptr) {
       error("[empinterp] ERROR: could not open empinfo file '%s'.\n", fname);
       return Error_FileOpenFailed;
@@ -156,12 +156,16 @@ int empinterp_process(Model *mdl, const char *fname)
 
    MALLOC_EXIT(interp.buf, char, size+1);
 
-   size_t read = fread(interp.buf, sizeof(char), size, fptr);
+   UNUSED size_t read = fread(interp.buf, sizeof(char), size, fptr);
+
+   /* On windows, there might be a translation of the linefeed */
+#if !defined(_WIN32)
    if (read < size) {
       error("[empinterp] Could not read file '%s'.\n", fname);
       status = Error_RuntimeError;
       goto _exit;
    }
+#endif
 
    interp.buf[read] = '\0';
    interp.read = read;
