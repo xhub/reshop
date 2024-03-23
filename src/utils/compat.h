@@ -283,7 +283,7 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 
 #else
 
-#   define VMT(...)  [__VA_ARGS__]
+#   define VMT(...)  __VA_ARGS__
 
 #endif
 
