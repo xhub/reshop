@@ -78,6 +78,7 @@ void backtrace_(const char *expr, int status)
 
 int main(int argc, char** argv)
 {
+   /* It is necessary to initialize the options in a platform without C constructor support */
    option_init();
 
    GamsOptions gmsopt("ReSHOP");
