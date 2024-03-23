@@ -93,7 +93,7 @@ _err1:
 #if defined(_WIN32)
    FREE(pathval);
    if (!SetEnvironmentVariableA("PATH", new_path)) {
-       error("%s ERROR: EnvironmentVariable failed (%d)\n", GetLastError());
+      error("%s ERROR: EnvironmentVariable failed (%lu)\n", __func__, GetLastError());
       return Error_SystemError;
    }
 #else

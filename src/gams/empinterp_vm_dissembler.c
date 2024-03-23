@@ -301,7 +301,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          return Error_EMPRuntimeError;
       }
 
-      printout(mode, "[%5u]  [%5ld]  %28s ", i, vm->code.ip-instr_start-1, opcodes_name(opcode));
+      printout(mode, "[%5u]  [%5td]  %28s ", i, vm->code.ip-instr_start-1, opcodes_name(opcode));
       unsigned argc =  opcodes_argc[opcode];
       const OpCodeArg *argv = opcodes_argv[opcode];
       unsigned val = UINT_MAX;
@@ -384,7 +384,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          case OPARG_JUMP_FWD: {
             val16 = READ_SHORT(vm);
             if (&vm->code.ip[val16] > &instr_start[vm->code.len]) {
-               error("\n Forward jump too far (%u > %ld)\n", val16,
+               error("\n Forward jump too far (%u > %td)\n", val16,
                       &instr_start[vm->code.len]-vm->code.ip);
                status = Error_EMPRuntimeError;
             }
@@ -394,14 +394,14 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                status = Error_EMPRuntimeError;
             }
             int offset;
-            printout(mode, " @%ld%n", (vm->code.ip - instr_start) + val16, &offset);
+            printout(mode, " @%td%n", (vm->code.ip - instr_start) + val16, &offset);
             printout(mode, "%*s", 20-offset, opcodes_name(opcode_));
             break;
          }
          case OPARG_JUMP_BCK: {
             val16 = READ_SHORT(vm);
             if (val16 > vm->code.ip - instr_start) {
-               error("Backward jump value too big %u > %ld\n", val16, vm->code.ip - instr_start);
+               error("Backward jump value too big %u > %td\n", val16, vm->code.ip - instr_start);
                status = Error_EMPRuntimeError;
             }
             uint8_t opcode_ = vm->code.ip[-val16];
@@ -410,7 +410,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                status = Error_EMPRuntimeError;
             }
             int offset;
-            printout(mode, " @%ld%n", (vm->code.ip - instr_start) - val16, &offset);
+            printout(mode, " @%td%n", (vm->code.ip - instr_start) - val16, &offset);
             printout(mode, "%*s", 20-offset, opcodes_name(opcode_));
             break;
          }

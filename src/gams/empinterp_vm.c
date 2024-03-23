@@ -622,7 +622,7 @@ int empvm_run(struct empvm *vm)
             }
          }
 
-         trace_empinterp("[%5ld] %30s%10s",
+         trace_empinterp("[%5td] %30s%10s",
                          (vm->code.ip - vm->instr_start) - 1, opcodes_name(instr), "");
       }
 

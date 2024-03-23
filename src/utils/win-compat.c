@@ -84,7 +84,10 @@ char *win_gettmpdir(void)
    if (UuidToString(&uuid, &str) != RPC_S_OK) { goto _err; }
 
    char *tmpdir;
-   IO_CALL_NULL(asprintf(&tmpdir, "%s" DIRSEP "reshop_%s", tempDir, str));
+   if (asprintf(&tmpdir, "%s" DIRSEP "reshop_%s", tempDir, str) < 0) {
+      errormsg("%s ERROR: asprintf() failed!\n");
+      return NULL;
+   }
 
    RpcStringFree(&str);
 
@@ -93,10 +96,6 @@ char *win_gettmpdir(void)
 _err:
    dw = GetLastError();
    error("%s ERROR: GetTempPath() triggered error %lu\n", __func__, dw);
-   return NULL;
-
-_exit:
-   errormsg("%s ERROR: asprintf() failed!\n");
    return NULL;
 }
 

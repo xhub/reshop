@@ -85,7 +85,7 @@ void* get_function_address(void* handle, const char* func)
   if (!ptr)
   {
     DWORD err = GetLastError();
-    error("[open_library] Error %d while trying to find procedure %s\n", err, func);
+    error("[open_library] Error %lu while trying to find procedure %s\n", err, func);
   }
 #else
   ptr = dlsym(handle, func);
