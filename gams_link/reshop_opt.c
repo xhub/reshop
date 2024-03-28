@@ -14,7 +14,6 @@
 #include "reshop.h"
 //#include "reshop-gams.h"
 #include "reshop_priv.h"
-#include "status.h"
 
 #define MAX(a, b) a > b ? a : b
 
@@ -179,7 +178,7 @@ int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir)
    int status42 = fn(s, __VA_ARGS__); \
    if (status42) { \
       char msg[1024]; \
-      snprintf(msg, sizeof(msg), "ERROR: Call to " #fn " for option '%s' failed with error %s (%d)\n", \
+      (void)snprintf(msg, sizeof(msg), "ERROR: Call to " #fn " for option '%s' failed with error %s (%d)\n", \
          s, rhp_status_descr(status42), status42); \
       gevLogStatPChar(jh->eh, msg); \
       status = status42; \

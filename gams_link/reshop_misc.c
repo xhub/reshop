@@ -1,6 +1,11 @@
-#include "compat.h"
 #include "reshop_priv.h"
 #include "reshop.h"
+
+#if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_LLVM_COMPILER)
+#   define UNUSED __attribute__((unused))
+#else
+#   define UNUSED
+#endif
 
 /** @brief Print out log or status message to the screen.
  *         It strips off one new line if it exists.
