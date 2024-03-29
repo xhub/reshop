@@ -12,35 +12,64 @@
 #define GMS_CONFIG_FILE "gmscmpun.txt"
 #endif
 
+#define GAMSSOLVER_ID rhp
+/* TODO: support modifyproblem */
+//#define GAMSSOLVER_HAVEMODIFYPROBLEM
+#include "GamsEntryPoints_tpl.c"
+
+#define EPNAME(FNAME) GAMSSOLVER_CONCAT(GAMSSOLVER_ID, FNAME)
+
+DllExport void STDCALL EPNAME(Initialize)(void)
+{
+   gmoInitMutexes();
+   gevInitMutexes();
+   gdxInitMutexes();
+   optInitMutexes();
+#ifdef GAMS_BUILD
+   palInitMutexes();
+#endif
+}
+
+DllExport void STDCALL EPNAME(Finalize)(void)
+{
+   gmoFiniMutexes();
+   gevFiniMutexes();
+   gdxFiniMutexes();
+   optFiniMutexes();
+#ifdef GAMS_BUILD
+   palFiniMutexes();
+#endif
+}
+
 /** @brief Create a RESHOP object.
  *
  *  @param jh        RESHOP object is stored to jh
  *  @param msgbuf    message buffer to which error string is printed
  *  @param msgbuflen length of the message buffer
  */
-void rhpCreate(rhpRec_t **jh, char *msgbuf, int msgbuflen)
+DllExport int STDCALL EPNAME(Create)(void **Cptr, char *msgBuf, int msgBufLen)
 {
-   msgbuf[0] = '\0';
+   rhpRec_t **jh = (rhpRec_t **)Cptr;
+   msgBuf[0] = '\0';
    assert(jh && NULL == (*jh));
    (*jh) = (rhpRec_t *) calloc(1, sizeof(rhpRec_t));
    if (!*jh) {
-      strncat(msgbuf, "Could not allocate ReSHOP object\n", msgbuflen);
+      strncat(msgBuf, "Could not allocate ReSHOP object\n", msgBufLen);
+      return 1;
    }
+
+   return 0;
 }
 
 /** @brief Destroy the given ReSHOP object.
  *
  *  @param jhptr    the ReSHOP object we are to destroy
  */
-void rhpFree(rhpRec_t **jhptr)
+DllExport void STDCALL EPNAME(Free)( void** Cptr)
 {
-   rhpRec_t *jh;
+   if (!Cptr || !*Cptr) { return; }
 
-   if (!jhptr || !*jhptr) {
-      return;
-   }
-
-   jh = (*jhptr);
+   rhpRec_t *jh = *(rhpRec_t **)Cptr;
 
    if (jh->gh) {
       if (jh->oh && jh->oh_created) {
@@ -73,12 +102,18 @@ void rhpFree(rhpRec_t **jhptr)
  *  @return status 0 if successful
  *                 1 otherwise
  */
-int rhpReadyAPI(rhpRec_t *jh, gmoHandle_t gh, optHandle_t oh)
+DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 {
    char msg[GMS_SSSIZE], sysdir[GMS_SSSIZE];
    int rc = 0;
    bool opt_need_init;
    struct rhp_mdl *mdl = NULL;
+
+   rhpRec_t *jh = (rhpRec_t *)Cptr;
+   if (!jh) {
+      fprintf(stderr, "*** ERROR: private structure is NULL\n");
+      rc = 1; goto _exit;
+   }
 
    if (!gh) {
       fprintf(stderr, "*** ERROR: ReSHOP link expects non-NULL GMO handle\n");
@@ -197,16 +232,13 @@ int rhpReadyAPI(rhpRec_t *jh, gmoHandle_t gh, optHandle_t oh)
          rc = 1; goto _exit;
       }
 
-      if (!oh) {
-         if (!optCreate(&jh->oh, msg, sizeof(msg))) {
-            gevLogStatPChar(jh->eh, "*** ReSHOP ERROR: Could not create option struct: ");
-            gevLogStat(jh->eh, msg);
-            rc = 1; goto _exit;
-         }
-         jh->oh_created = 1;
-      } else {
-         jh->oh = oh;
+      if (!optCreate(&jh->oh, msg, sizeof(msg))) {
+         gevLogStatPChar(jh->eh, "*** ReSHOP ERROR: Could not create option struct: ");
+         gevLogStat(jh->eh, msg);
+         rc = 1; goto _exit;
       }
+
+      jh->oh_created = 1;
       opt_need_init = true;
    } else {
       opt_need_init = false;
@@ -271,8 +303,9 @@ _exit:
    return rc;
 }
 
-int rhpCallSolver(rhpRec_t *jh)
+DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
 {
+   rhpRec_t *jh = (rhpRec_t *)Cptr;
    int rc;
    char msg[GMS_SSSIZE];
    struct rhp_mdl *mdl_solver  = NULL;

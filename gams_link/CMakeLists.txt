@@ -8,7 +8,6 @@ endif ()
 
 set (RESHOP_GAMS_INTERFACE ${RESHOP_GAMS_INTERFACE} PARENT_SCOPE)
 
-set(RESHOP_GAMS_INTERFACE_C_FILES "apiwrap/reshop/rhpcclib.c")
 list(APPEND RESHOP_GAMS_INTERFACE_C_FILES "reshop_main.c"
                                           "reshop_misc.c"
                                           "reshop_opt.c")
@@ -40,9 +39,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
   target_link_options (${RESHOP_GAMS_INTERFACE} PRIVATE
     LINKER:--warn-common LINKER:--allow-shlib-undefined -nostartfiles LINKER:-Bsymbolic
     LINKER:--no-undefined LINKER:-z,defs LINKER:-z,now LINKER:-z,relro)
-elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
-  target_link_options (${RESHOP_GAMS_INTERFACE} PRIVATE
-    LINKER:-def:${CMAKE_SOURCE_DIR}/gams_link/apiwrap/reshop/${RESHOP_GAMS_INTERFACE}.def)
 elseif(APPLE)
   target_link_options (${RESHOP_GAMS_INTERFACE} PRIVATE "-Wl,-rpath,@loader_path/")
 endif()

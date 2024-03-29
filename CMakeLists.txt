@@ -212,6 +212,7 @@ set (RESHOP_LIBNAME "reshop")
 include_directories ("${PROJECT_BINARY_DIR}")
 include_directories ("external")
 include_directories ("external/itostr")
+include_directories ("external/gamslink")
 
 #This is for reshop_config.h and others
 include_directories ("${CMAKE_BINARY_DIR}/generated/")

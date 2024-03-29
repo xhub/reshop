@@ -1,9 +1,11 @@
 #ifndef RESHOP_PRIV_H
 #define RESHOP_PRIV_H
 
-#include "rhp.h"
-#include "gevmcc.h"
 #include "cfgmcc.h"
+#include "dctmcc.h"
+#include "gevmcc.h"
+#include "gmomcc.h"
+#include "optcc.h"
 
 #ifdef GAMS_BUILD
 #include "palmcc.h"
@@ -27,7 +29,7 @@ struct timeinfo {
    double cum_grad;
 };
 
-struct rhpRec {
+typedef struct rhpRec {
    optHandle_t oh;              /**< GAMS option object                     */
    gmoHandle_t gh;              /**< GAMS model object                      */
    gevHandle_t eh;              /**< GAMS environment object                */
@@ -40,7 +42,7 @@ struct rhpRec {
 
    struct timeinfo timeinfo;    /**< record timing statistics               */
    struct rhp_mdl *mdl;         /**< ReSHOP model storage */
-};
+} rhpRec_t;
 
 #if defined(__cplusplus)
 extern "C" {
