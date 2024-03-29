@@ -1,3 +1,6 @@
+
+$if not set solver $set solver reshop
+
 Positive Variables x, y1, y2;
 Variables          objout, objin;
 
@@ -13,14 +16,14 @@ e4..    - 4*x + 4*y1 + 5*y2 =l=  4;
 
 Model bard / all /;
 
-option emp=reshop
+option emp=%solver%
 option mpec=knitro
 
 $echo bilevel x min objin y1 y2 defin e1 e2 e3 e4 > "%emp.info%"
 
 solve bard use emp min objout;
 
-$onEcho > reshop.opt
+$onEcho > %solver%.opt
 empinfoFile=empinfo_dag.txt
 $offEcho
 
@@ -33,7 +36,7 @@ bard.optfile=1;
 bard.iterlim=0;
 solve bard using emp;
 
-$onEcho > reshop.op2
+$onEcho > %solver%.op2
 empinfoFile=empinfo_dag2.txt
 $offEcho
 
@@ -46,7 +49,7 @@ bard.optfile=2;
 
 solve bard using emp;
 
-$onEcho > reshop.op3
+$onEcho > %solver%.op3
 empinfoFile=empinfo_dag3.txt
 $offEcho
 
