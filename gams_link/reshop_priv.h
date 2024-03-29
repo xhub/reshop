@@ -5,6 +5,10 @@
 #include "gevmcc.h"
 #include "cfgmcc.h"
 
+#ifdef GAMS_BUILD
+#include "palmcc.h"
+#endif
+
 #include "reshop.h"
 
 #define LOGMASK         0x1
@@ -29,6 +33,9 @@ struct rhpRec {
    gevHandle_t eh;              /**< GAMS environment object                */
    dctHandle_t dh;              /**< GAMS dictionary object                 */
    cfgHandle_t ch;              /**< GAMS configuration object              */
+#ifdef GAMS_BUILD
+   palHandle_t ph;              /**< GAMS PAL object                        */
+#endif
    int oh_created;              /**< TRUE if GAMS option object was created */
 
    struct timeinfo timeinfo;    /**< record timing statistics               */

@@ -36,7 +36,10 @@ void rhpFree(rhpRec_t **jhptr)
 {
    rhpRec_t *jh;
 
-   assert(jhptr && (*jhptr));
+   if (!jhptr || !*jhptr) {
+      return;
+   }
+
    jh = (*jhptr);
 
    if (jh->gh) {
@@ -48,6 +51,10 @@ void rhpFree(rhpRec_t **jhptr)
          cfgFree(&jh->ch);
       }
    }
+
+#ifdef GAMS_BUILD
+   if (jh->ph) { palFree(&jh->ph); }
+#endif
 
    if (jh->mdl) {
       rhp_mdl_free(jh->mdl);
@@ -138,8 +145,41 @@ int rhpReadyAPI(rhpRec_t *jh, gmoHandle_t gh, optHandle_t oh)
       rc = 1; goto _exit;
    }
 
+
    /* Restore sysdir */
    sysdir[sysdir_len] = '\0';
+
+#ifdef GAMS_BUILD
+  if (!palCreateD(&jh->ph, sysdir, msg, sizeof(msg))) {
+      gevLogStat(jh->eh, "*** ReSHOP ERROR: Could not create PAL object");
+      rc = 1; goto _exit;
+  }
+
+   /* Query the name of the solver to get its def file */
+   int si = gevGetIntOpt(jh->eh, gevCurSolver);
+   gevId2Solver(jh->eh, si, msg);
+
+#if PALAPIVERSION >= 3
+   palSetSystemName(jh->ph, msg);
+ 
+    /* print auditline */
+    palGetAuditLine(jh->ph, msg);
+    gevStatAudit(jh->eh, msg);
+#endif
+
+#define PALPTR jh->ph
+#define GEVPTR jh->eh
+#include "cmagic2.h"
+
+   if  (palLicenseCheck(jh->ph, gmoM(gh), gmoN(gh), gmoNZ(gh), gmoNLNZ(gh), gmoNDisc(gh))) {
+      while (palLicenseGetMessage(jh->ph, msg, sizeof(msg))) {
+         gevLogStat(jh->eh, msg);
+      }
+      gmoSolveStatSet(gh, gmoSolveStat_License);
+      gmoModelStatSet(gh, gmoModelStat_LicenseError);
+      rc = 1; goto _exit;
+   }
+#endif
 
    /* TODO(GAMS review): do we need this? */
    gevTerminateInstall(jh->eh);

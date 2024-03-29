@@ -107,7 +107,7 @@ int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir)
       gevId2Solver(eh, solver_id, solvername);
 
       if (!cfgDefFileName(ch, solvername, buf)) {
-         /* Get the default def file: gamsSysdir/optpath.def */
+         /* Get the default def file: gamsSysdir/optreshop.def */
          rc = concat(eh, sysdir, "optreshop.def", buf);
          if (rc > 0) return rc;
       } else {
