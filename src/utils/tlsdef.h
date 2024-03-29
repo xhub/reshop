@@ -35,7 +35,7 @@
 #endif
 
 /* crashes now. Investigate __declspec(thread) and LoadLibrary  */
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__INTEL_LLVM_COMPILER)
 #define tlsvar
 #endif
 
@@ -52,7 +52,7 @@
 #      include <threads.h>
 #      define tlsvar thread_local
 
-#   elif defined(__GNUC__) || (defined(__ICC) && defined(__linux))
+#   elif defined(__GNUC__) || (defined(__ICC) && defined(__linux)) || defined(__INTEL_LLVM_COMPILER)
 #      define tlsvar __thread
 
 #   elif defined(_WIN32) && (defined(__ICC) || defined(__clang__))
