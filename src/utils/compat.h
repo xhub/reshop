@@ -42,7 +42,7 @@
 
   #define getpid _getpid
 
-// hardcode this has it is extremely unlikely to change ...
+// hardcode this as it is extremely unlikely to change ...
    #define PATH_MAX 260
 
 #if defined(_WIN64)
@@ -227,7 +227,9 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 
 
 /* This is useful for variable only used in debug mode.
- * They are useful as they make the code cleaner */
+ * They are useful as they make the code cleaner, but with NDEBUG,
+ * the compiler might complain about them
+ */
 #define DBGUSED UNUSED
 
 /* ---------------------------------------------------------------------
@@ -253,15 +255,15 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
  * For packing enums and such
  * ---------------------------------------------------------------------- */
 
-#   ifndef __GNUC__
-#      define __extension__ /* */
-#   endif
+#ifndef __GNUC__
+#   define __extension__ /* */
+#endif
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202300L) || \
     (defined(__GNUC__) && (__GNUC__ >= 13)) || \
     (defined(__clang__) && (__clang_major__ >= 17))
 
-#include <stdint.h>
+#   include <stdint.h>
 
 #   define ENUM_U8  : uint8_t
 #   define ENUM_U32 : uint32_t
@@ -289,4 +291,4 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 
 #define rhp_idx int
 
-#endif /* RESHOP_COMPAT_H  */
+#endif /* RESHOP_COMPAT_H */
