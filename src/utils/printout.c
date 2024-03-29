@@ -16,6 +16,7 @@
 #endif
 
 #include "macros.h"
+#include "option_priv.h" /* Need when no constructor priority is available */
 #include "printout.h"
 #include "reshop.h"
 #include "tlsdef.h"
@@ -286,6 +287,10 @@ static tlsvar struct printout_ops print_ops = {
 
 CONSTRUCTOR_ATTR_PRIO(1000) void logging_syncenv(void)
 {
+#ifdef NO_CONSTRUCTOR_PRIO
+   option_init();
+#endif
+
    rhp_syncenv();
 
    /* See https://no-color.org/ */
