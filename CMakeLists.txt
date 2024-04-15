@@ -82,8 +82,7 @@ option(GAMSSYSDIR
 option(DISTRIB
   "Build for the distribution of files: on Linux, disables recent glibc symbols" OFF)
 
-option(BUILD_DOCUMENTATION "Create and install the HTML based API        
-documentation (requires Doxygen)" OFF)
+option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" OFF)
 
 option(BUILD_PYTHON
    "Build a python bindings (argument is a list of python interpreter)" "")
@@ -332,11 +331,11 @@ if(NOT GAMSSYSDIR)
    if (GAMS_OUTPUT)
       string(REGEX MATCH "SYSDIR=([^\n]*)\n" _DUMMY ${GAMS_OUTPUT})
       if (CMAKE_MATCH_1)
-         set(GAMSDIR "${CMAKE_MATCH_1}")
+         set(GAMSDIR "${CMAKE_MATCH_1}" CACHE PATH "GAMS system directory")
       else ()
          string(REGEX MATCH "SysDir=([^\n]*)\n" _DUMMY ${GAMS_OUTPUT})
          if (CMAKE_MATCH_1)
-            set(GAMSDIR "${CMAKE_MATCH_1}")
+            set(GAMSDIR "${CMAKE_MATCH_1}" CACHE PATH "GAMS system directory")
          endif()
       endif()
       string(REGEX MATCH "GAMS_RELEASE=([0-9]+)\..*\n" _DUMMY ${GAMS_OUTPUT})
@@ -398,7 +397,7 @@ endif()
 
 # TODO: document this overwrite?
 if (GAMSSYSDIR)
-   SET(GAMSDIR "${GAMSSYSDIR}")
+   SET(GAMSDIR "${GAMSSYSDIR}" CACHE PATH "GAMS system directory")
 endif(GAMSSYSDIR)
 
 if(NOT GAMSDIR)
@@ -406,6 +405,8 @@ if(NOT GAMSDIR)
   - Fix your GAMS install: the gams executable must be in the PATH
   - Specify a gams directory with the C apifiles via the GAMSSYSDIR cmake variable")
 endif (NOT GAMSDIR)
+
+
 
 #################################################
 # END of GAMS driver management
