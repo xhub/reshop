@@ -9,7 +9,7 @@ scalar tol / %TESTTOL% /;
 scalar told / 1e-8 /;
 
 
-option emp = reshop;
+
 option decimals = 8;
 
 
@@ -110,7 +110,7 @@ obj5.. w5 =E= rho5;
 model huber_fit / all /;
 
 
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=equilibrium
 subsolveropt=1
 output_subsolver_log=1
@@ -134,7 +134,7 @@ rho3.l = 0.;
 rho4.l = 0.;
 rho5.l = 0.;
 
-$onecho > reshop.op2
+$onecho > %gams.emp%.op2
 ovf_reformulation=fenchel
 subsolveropt=1
 output_subsolver_log=1
@@ -158,7 +158,7 @@ rho3.l = 0.;
 rho4.l = 0.;
 rho5.l = 0.;
 
-$onecho > reshop.op3
+$onecho > %gams.emp%.op3
 ovf_reformulation=gauge
 subsolveropt=1
 output_subsolver_log=1
@@ -178,7 +178,7 @@ check(huber_fit)
 
 $ontext
 
-$onecho > reshop.op3
+$onecho > %gams.emp%.op3
 ovf_reformulation=conjugate
 $offecho
 

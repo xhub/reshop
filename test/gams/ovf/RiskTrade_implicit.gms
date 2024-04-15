@@ -5,7 +5,7 @@ $onecho > jams.opt
 subsolveropt=1
 $offecho
 
-option emp = reshop
+
 
 * Hydro-thermal model
 *
@@ -206,7 +206,7 @@ x2.up(s,h)=a(h);
 *sh2.fx('2','2')=2.64;
 *sh2.fx('7','2')=2.23;
 
-$onecho > reshop.op7
+$onecho > %gams.emp%.op7
 ovf_reformulation=%OVF_METHOD%
 output_subsolver_log=1
 subsolveropt=1
@@ -392,7 +392,7 @@ loop(s, put ytp(s,t);)
 putclose empinfo /;
 
 * Hot start from risk neutral
-$onecho > reshop.op8
+$onecho > %gams.emp%.op8
 ovf_reformulation=%OVF_METHOD%
 output_subsolver_log=1
 subsolveropt=1

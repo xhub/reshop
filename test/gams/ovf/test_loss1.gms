@@ -7,7 +7,7 @@ $offtext
 $if not set TESTTOL $set TESTTOL 1e-10
 scalar tol / %TESTTOL% /;
 
-option emp = reshop;
+
 
 $macro check_status(m) \
 abort$[not((m.solvestat = %solvestat.NormalCompletion%) and ((m.modelstat = %modelstat.Optimal%) or m.modelstat = %modelstat.locallyOptimal%))] 'Wrong results', m.solvestat, m.modelstat;\
@@ -198,7 +198,7 @@ obj4.. w4 =E= rho4;
 
 model huber_fit / all /;
 
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=equilibrium
 output_subsolver_log=1
 $offecho
@@ -215,7 +215,7 @@ rho4.l = 0.;
 rho5.l = 0.;
 $offtext
 
-$onecho > reshop.op2
+$onecho > %gams.emp%.op2
 ovf_reformulation=fenchel
 output_subsolver_log=1
 $offecho
@@ -237,7 +237,7 @@ $offtext
 
 
 $ontext
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=conjugate
 write_agent_model=no
 $offecho

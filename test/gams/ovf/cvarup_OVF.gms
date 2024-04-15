@@ -47,9 +47,9 @@ empinfo.nd = 10;
 put empinfo /'OVF cvarup rho z ' theta; loop(i, put p(i));
 putclose /;
 
-option emp = reshop
 
-$onecho > reshop.opt
+
+$onecho > %gams.emp%.opt
 ovf_reformulation=%ovf_method%
 subsolveropt=1
 output_subsolver_log=1
@@ -83,7 +83,7 @@ $exit
 
 w.l = 0.;
 
-$onecho > reshop.op2
+$onecho > %gams.emp%.op2
 ovf_reformulation=fenchel
 subsolveropt=1
 output_subsolver_log=1
@@ -105,7 +105,7 @@ $offecho
 
 w.l = 0.;
 
-$onecho > reshop.op4
+$onecho > %gams.emp%.op4
 ovf_reformulation=conjugate
 convergence_tolerance=1e-11
 subsolveropt=1

@@ -62,6 +62,8 @@ e_subcase() { printf "${cyan}➜ %s${reset}\n" "$@"
 NOCOMP=${NOCOMP:+1}
 NOFAIL=${NOFAIL:+1}
 
+: "${EMPSLV:=reshopdev}"
+
 NUMDIFF_TOL=2e-10
 
 status=0
@@ -69,11 +71,11 @@ status=0
 exec_gams() {
    local gms_name=$1
    shift
-   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=2 keep=1 optfile=1 "$@"
+   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=2 keep=1 optfile=1 emp="$EMPSLV" "$@"
    status=$?
    if [ $status != 0 ]; then
       e_error "$1 with args has failed: status = ${status}"
-      env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=4 keep=1 optfile=1 "$@"
+      env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=4 keep=1 optfile=1 emp="$EMPSLV" "$@"
       env RHP_LOG=all gams "${gms_name}" lo=4 keep=1 optfile=1 "$@"
       e_error "gams $gms_name $* FAILED!"
       [ -z ${NO_EXIT_EARLY+x} ] && exit 1;

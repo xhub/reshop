@@ -1,5 +1,5 @@
 $if not set OVF_METHOD $set OVF_METHOD "equilibrium"
-option emp=reshop
+
 
 Scalar tol;
 tol = 1e-4;
@@ -89,16 +89,14 @@ $onecho > path.opt
 convergence_tolerance=1e-10
 $offecho
 
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=%OVF_METHOD%
-convergence_tolerance=1e-10
 subsolveropt 1
 $offecho
 
-$onecho > reshop.op2
+$onecho > %gams.emp%.op2
 ovf_reformulation=%OVF_METHOD%
 EMPInfoFile=empinfo2.dat
-convergence_tolerance=1e-10
 subsolveropt 1
 $offecho
 
@@ -137,3 +135,8 @@ hydro_emp.optfile = 1
 solve hydro_emp min w using emp;
 
 abort$[ abs(w.l - wRef) > tol ] 'objective function value differ', w.l;
+
+* test an empty EMPDAG
+putclose empinfo /' '/;
+hydro_emp.optfile = 0;
+solve hydro_emp min w using emp;

@@ -1,5 +1,5 @@
 $if not set OVF_METHOD $set OVF_METHOD "equilibrium"
-option emp=reshop
+
 
 Scalar tol;
 tol = 1e-4;
@@ -90,7 +90,7 @@ loop(parent,
 OVF ecvarup theta1 argTheta1 0.8 0.5
 $offecho
 
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 *ovf_reformulation=equilibrium
 *ovf_reformulation=fenchel
 *ovf_reformulation=conjugate

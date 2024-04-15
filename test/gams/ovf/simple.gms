@@ -4,7 +4,7 @@ Simple example of QS functions for machine learning
 
 $offtext
 
-option emp = reshop;
+
 option decimals = 8;
 
 Set i, j;
@@ -117,7 +117,7 @@ obj1.. w1 =E= rho1;
 model huber_fit / all /;
 
 
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=equilibrium
 convergence_tolerance=1e-11
 subsolveropt=1

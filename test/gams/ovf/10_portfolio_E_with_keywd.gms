@@ -125,14 +125,13 @@ obj_emp..	objective =e= EV_r;
 put emp 'OVF expectedvalue EV_r rs '/;
 putclose emp;
 
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=equilibrium
 output_subsolver_log=1
 subsolveropt=1
 export_models=1
 $offecho
 
-option emp=reshop;
 model portemp / defr_full, obj_emp, budget /;
 solve portemp using emp max objective;
 abort$[portemp.modelStat <> %MODELSTAT.LOCALLY OPTIMAL%]    'bad model status', portemp.modelStat;

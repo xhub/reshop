@@ -10,7 +10,7 @@ scalar tol / %TESTTOL% /;
 $if not set version $set version 1
 $if not dexist test_res $call mkdir test_res
 
-option emp=reshop
+
 
 $macro check_status(m) \
 abort$[not((m.solvestat = %solvestat.NormalCompletion%) and ((m.modelstat = %modelstat.Optimal%) or m.modelstat = %modelstat.locallyOptimal%))] 'Wrong results', m.solvestat, m.modelstat;\
@@ -203,7 +203,7 @@ $onecho > cplex.opt
 epagap=1e-12
 $offecho
 
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=equilibrium
 subsolveropt=1
 output_subsolver_log=1
@@ -253,7 +253,7 @@ rho3.l = 0.;
 rho4.l = 0.;
 rho5.l = 0.;
 
-$onecho > reshop.op2
+$onecho > %gams.emp%.op2
 ovf_reformulation=fenchel
 subsolveropt=1
 output_subsolver_log=1
@@ -332,7 +332,7 @@ rho3.l = 0.;
 rho4.l = 0.;
 rho5.l = 0.;
 
-$onecho > reshop.op3
+$onecho > %gams.emp%.op3
 ovf_reformulation=gauge
 subsolveropt=1
 output_subsolver_log=1
@@ -377,7 +377,7 @@ $offtext
 
 
 $ontext
-$onecho > reshop.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=conjugate
 write_agent_model=no
 $offecho

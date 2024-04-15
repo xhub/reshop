@@ -45,16 +45,17 @@ e_note() { printf "${underline}${bold}${blue}Note:${reset}  ${blue}%s${reset}\n"
 e_subcase() { printf "${cyan}➜ %s${reset}\n" "$@"
 }
 
+: "${EMPSLV:=reshopdev}"
 
 exec_gams() {
    local gms_name=$1
    shift
    set +e
-   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=2 keep=1 optfile=1 emp=reshop "$@"
+   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=2 keep=1 optfile=1 emp="$EMPSLV" "$@"
    local status=$?
    if [ $status != 0 ]; then
       e_error "${gms_name} with args has failed: status = ${status}"
-      env RHP_LOG=all gams "${gms_name}" lo=4 keep=1 optfile=1 emp=reshop "$@" 
+      env RHP_LOG=all gams "${gms_name}" lo=4 keep=1 optfile=1 emp="$EMPSLV" "$@" 
       [ -z ${NO_EXIT_EARLY+x} ] && exit 1;
    fi
    set -e
