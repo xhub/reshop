@@ -28,7 +28,7 @@ static const char* const ovf_reformulation_names[][2] = {
    { "conjugate",   "Conjugate-based reformulation" },
 };
 
-const char* ovf_getreformulationstr(size_t i)
+const char* ovf_getreformulationstr(unsigned i)
 {
    if (i != OVF_Scheme_Unset && i <= OVF_Scheme_Last) {
       return ovf_reformulation_names[i-1][0];

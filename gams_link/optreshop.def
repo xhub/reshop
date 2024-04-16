@@ -15,6 +15,9 @@ ovf_reformulation enumstr 0 "equilibrium" 1 1 scheme for reformulating OVF varia
 png_viewer string 0 "" 1 1 Executable to display png
 save_empdag boolean 0 0 1 1 Save EMPDAG as png
 save_ovfdag boolean 0 0 1 1 Save OVFDAG as png
+solve_single_opt_as enumstr 0 "nlp" 1 1 How to solve an empdag with a single MP
+ "mcp" 1 Solve single optimization problem as MCP (KKT system)
+ "nlp" 1 Solve single optimization problem as an optimization problem
 subsolveropt integer 0 0 0 999 1 1 Subsolver option file number
 time_limit integer 0 3600 0 maxint 1 1 Maximum running time in seconds
 *

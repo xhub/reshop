@@ -36,4 +36,6 @@ typedef struct ovf_genops OvfGenOps;
 
 typedef struct mp_descr MpDescr;
 
+struct option;
+
 #endif

@@ -16,6 +16,7 @@ enum rhp_options_enum {
    Options_Output,
    Options_Output_Subsolver_Log,
    Options_Png_Viewer,
+   Options_SolveSingleOptAs,
    Options_Subsolveropt,
    Options_Time_Limit,
    Options_Export_EmpDag,
@@ -36,6 +37,7 @@ extern tlsvar struct option rhp_options[];
 int option_addcommon(struct option_list *list) NONNULL;
 
 bool optvalb(const Model *mdl, enum rhp_options_enum opt) NONNULL;
+int optvali(const Model *mdl, enum rhp_options_enum opt) NONNULL;
 char* optvals(const Model *mdl, enum rhp_options_enum opt) MALLOC_ATTR(free, 1);
 
 #endif /* RHP_OPTIONS_H */

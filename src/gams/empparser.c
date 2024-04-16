@@ -27,6 +27,7 @@
 #include "ovf_fn_helpers.h"
 #include "ovf_parameter.h"
 #include "printout.h"
+#include "rhp_options_data.h"
 #include "status.h"
 #include "toplayer_utils.h"
 #include "win-compat.h"
@@ -60,6 +61,7 @@ static const char * const kw_modeling_str[] = {
    "implicit",
    "max",
    "min",
+   "modeltype",
    "nash",
    "ovf",
    "sharedequ",
@@ -884,8 +886,35 @@ static void _chk_kw(const char *str1, const char *str2, unsigned len,
    }
 }
 
-/**
- * @brief Parse an alphanumeric sequence
+static int chk_wildcard_vars_allowed(Interpreter *interp)
+{
+   S_CHECK(old_style_check(interp));
+
+   mpid_t mpid = interp->finalize.mp_owns_remaining_vars;
+   if (!mpid_regularmp(mpid)) { return OK; }
+
+   error("[empinterp] ERROR line %u: MP(%s) is already owning the variables not "
+         "explicitely assigned. It is ill-defined to have more than 1 such MP\n",
+         interp->linenr, empdag_getmpname(&interp->mdl->empinfo.empdag, mpid));
+
+   return Error_EMPIncorrectInput;
+}
+
+static int chk_wildcard_equs_allowed(Interpreter *interp)
+{
+   S_CHECK(old_style_check(interp));
+
+   mpid_t mpid = interp->finalize.mp_owns_remaining_equs;
+   if (!mpid_regularmp(mpid)) { return OK; }
+
+   error("[empinterp] ERROR line %u: MP(%s) is already owning the equations not "
+         "explicitely assigned. It is ill-defined to have more than 1 such MP\n",
+         interp->linenr, empdag_getmpname(&interp->mdl->empinfo.empdag, mpid));
+
+   return Error_EMPIncorrectInput;
+}
+
+/** @brief Parse an alphanumeric sequence
  *
  * @param tok 
  * @param buf 
@@ -1016,6 +1045,9 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
                   default: ;
                   }
                }
+            break;
+         case 'O':
+         case 'o': if (len == 9) { _chk_kw("deltype", &buf[pos_+2], 7, tok, TOK_MODELTYPE); }
             break;
          default: ;
          }
@@ -1154,7 +1186,7 @@ static int _lexer(Interpreter *interp, enum ParseMode mode, unsigned *pos)
       if (tok->type == TOK_REAL) goto _exit;
    }
 
-   if (isalnum(line[p]) ||  line[p] == '_') {
+   if (isalnum(line[p]) || line[p] == '_') {
       status = tok_alphanum(tok, line, pos, interp);
       goto _exit;
    }
@@ -2226,7 +2258,7 @@ static int mp_opt_add_name(MathPrgm * restrict mp)
 
 static int err_wildcard(unsigned linenr)
 {
-   error("[empparser] ERROR at line %u: the wildcard '*' in a problem is no"
+   error("[empparser] ERROR at line %u: the wildcard '*' in a problem is no "
          "longer supported. Specify all the variables attached to this problem\n",
          linenr);
 
@@ -2268,7 +2300,14 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
    S_CHECK(advance(interp, p, &toktype));
 
    /* Provide better error message for old-style syntax */
-   if (toktype == TOK_STAR) { return err_wildcard(interp->linenr); }
+   if (toktype == TOK_STAR) {
+      if (old_style_check(interp) != OK || !mp) { return err_wildcard(interp->linenr); }
+
+      S_CHECK(chk_wildcard_vars_allowed(interp));
+
+      interp->finalize.mp_owns_remaining_vars = mp->id;
+      S_CHECK(advance(interp, p, &toktype));
+   }
 
    /* ---------------------------------------------------------------------
     * We either have a '+', which signals a edgeVF specification, or a variable
@@ -2321,7 +2360,14 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
    }
 
    /* Provide better error message for old-style syntax */
-   if (toktype == TOK_STAR) { return err_wildcard(interp->linenr); }
+   if (toktype == TOK_STAR) {
+      if (old_style_check(interp) != OK || !mp) { return err_wildcard(interp->linenr); }
+
+      S_CHECK(chk_wildcard_vars_allowed(interp));
+
+      interp->finalize.mp_owns_remaining_vars = mp->id;
+      S_CHECK(advance(interp, p, &toktype));
+   }
 
    /* ------------------------------------------------------------------
     * Read equations/label belonging to this mp
@@ -2381,13 +2427,23 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
             /* If we reached a node definition, exit */
             if (toktype == TOK_COLON) { goto exit_while; }
          }
-         
+ 
          /* ----------------------------------------------------------------
           * We have a MP or MPE in the constraints
           * ---------------------------------------------------------------- */
          S_CHECK(add_edge4label(interp, p, imm_add_Ctrl_edge, vm_add_Ctrl_edge))
       }
 
+      S_CHECK(advance(interp, p, &toktype));
+   }
+
+   /* Provide better error message for old-style syntax */
+   if (toktype == TOK_STAR) {
+      if (old_style_check(interp) != OK || !mp) { return err_wildcard(interp->linenr); }
+
+      S_CHECK(chk_wildcard_equs_allowed(interp));
+
+      interp->finalize.mp_owns_remaining_equs = mp->id;
       S_CHECK(advance(interp, p, &toktype));
    }
 
@@ -3812,6 +3868,8 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
 {
 
   /* ----------------------------------------------------------------------
+   * OLD JAMS SYNTAX
+   *
    * dualequ statement are of the form: 
    *
    * dualequ [-] equ var
@@ -3851,7 +3909,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
    if (_has_dualequ(interp) && empdag->roots.len != 1) {
 
       int offset;
-      error("[empinterp] %nERROR:  the 'dualequ' keyword has already being "
+      error("[empinterp] %nERROR: the 'dualequ' keyword has already being "
             "parsed, but there are %u EMPDAG roots, rather than 1\n", &offset,
             empdag->roots.len);
 
@@ -3888,8 +3946,8 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
       S_CHECK(empdag_mpeaddmpbyid(empdag, root, mp->id));
 
       /* This MP owns all remaining variables and equation */
-      assert(!mpid_regularmp(interp->finalize.mp_owns_remaining_vars));
-      assert(!mpid_regularmp(interp->finalize.mp_owns_remaining_equs));
+      S_CHECK(chk_wildcard_vars_allowed(interp));
+      S_CHECK(chk_wildcard_equs_allowed(interp));
       interp->finalize.mp_owns_remaining_vars = mp->id;
       interp->finalize.mp_owns_remaining_equs = mp->id;
    }
@@ -3931,6 +3989,39 @@ int parse_dualvar(Interpreter * restrict interp, unsigned * restrict p)
    return OK;
 }
 
+static int parse_modeltype(Interpreter * restrict interp, unsigned * restrict p)
+{
+  /* ----------------------------------------------------------------------
+   * OLD JAMS SYNTAX
+   *
+   * modeltype statement are of the form: 
+   *
+   * modeltype (mcp|nlp|minlp)
+   *
+   * This keyword is valid in JAMS compatibility mode
+   * ---------------------------------------------------------------------- */
+   TokenType toktype;
+   S_CHECK(advance(interp, p, &toktype))
+
+   PARSER_EXPECTS(interp, "after modeltype, expecting nlp or mcp or minlp", TOK_NLP, TOK_MCP, TOK_MINLP);
+
+   switch (toktype) {
+   case TOK_NLP:
+      rhp_options[Options_SolveSingleOptAs].value.i = Opt_SolveSingleOptAsOpt;
+      break;
+   case TOK_MCP:
+      rhp_options[Options_SolveSingleOptAs].value.i = Opt_SolveSingleOptAsMcp;
+      break;
+   case TOK_MINLP:
+      errormsg("[emparser] ERROR: MINLP is not yet a supported modeltype\n");
+      return Error_NotImplemented;
+   default:
+      return runtime_error(interp->linenr);
+   }
+
+   return advance(interp, p, &toktype);
+}
+
 int labdeldef_parse_statement(Interpreter* restrict interp, unsigned* restrict p)
 {
    TokenType toktype;
@@ -3962,26 +4053,27 @@ int labdeldef_parse_statement(Interpreter* restrict interp, unsigned* restrict p
 static inline int expect_statement(Interpreter * restrict interp)
 {
    switch (interp->cur.type) {
-   case TOK_EOF:
    case TOK_BILEVEL:
    case TOK_DAG:
    case TOK_DUALEQU:
    case TOK_DUALVAR:
+   case TOK_EOF:
    case TOK_EQUILIBRIUM:
    case TOK_EXPLICIT:
    case TOK_GDXIN:
+   case TOK_IDENT:
    case TOK_IMPLICIT:
-   case TOK_LOOP:
    case TOK_LOAD:
+   case TOK_LOOP:
    case TOK_MAX:
    case TOK_MIN:
-   case TOK_VI:
+   case TOK_MODELTYPE:
    case TOK_NASH:
    case TOK_OVF:
    case TOK_SHAREDEQU:
    case TOK_VALFN:
+   case TOK_VI:
    case TOK_VISOL:
-   case TOK_IDENT:
       return OK;
    default:
       parser_err(interp, "expecting a statement");
@@ -4037,6 +4129,9 @@ int process_statements(Interpreter * restrict interp, unsigned * restrict p,
    case TOK_MIN:
    case TOK_VI:
       S_CHECK_EXIT(parse_mp(interp, p));
+      break;
+   case TOK_MODELTYPE:
+      S_CHECK_EXIT(parse_modeltype(interp, p));
       break;
    case TOK_NASH:
       S_CHECK_EXIT(parse_Nash(interp, p));

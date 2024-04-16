@@ -26,7 +26,7 @@ enum ovf_scheme {
 extern tlsvar struct option ovf_options[];
 extern tlsvar struct option_set ovf_optset;
 
-const char* ovf_getreformulationstr(size_t i);
+const char* ovf_getreformulationstr(unsigned i);
 
 #define O_Ovf_Reformulation \
    ovf_options[Options_Ovf_Reformulation].value.i

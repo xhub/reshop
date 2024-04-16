@@ -1531,7 +1531,6 @@ int empdag_analysis(EmpDag * restrict empdag)
       empdag_setrootprobtype(empdag, EmpDag_RootEquil);
    }
 
-
    for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
       daguid_t uid = empdag->roots.arr[i], idx = uid2id(uid);
 

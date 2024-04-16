@@ -405,7 +405,8 @@ int rctr_compress_equs(const Container *ctr_src, Container *ctr_dst)
  *  This function solves all the optimization problems that were stored as
  *  subproblems. Those are usually used to initialize variables values
  *
- *  @param ctr  the container
+ *  @param mdl     the model
+ *  @param backend the backend to use 
  *
  *  @return     the error code
  */
@@ -514,9 +515,10 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 #if defined(DEBUG)
          strncpy(ctr_solver->data, "CONVERTD", GMS_SSSIZE-1);
          S_CHECK_EXIT(ctr_callsolver(&mdl_solver));
-         strncpy(ctr_solver->data, "", GMS_SSSIZE-1);
-         S_CHECK_EXIT(ctr_callsolver(&mdl_solver));
+         mdl_setsolvername(mdl_solver, "");
 #endif
+         
+         S_CHECK_EXIT(mdl_solve(mdl_solver));
          /* Phase 1: report the values from the solver to the RHP */
          /* TODO(xhub) optimize and iterate over the valid equations */
 

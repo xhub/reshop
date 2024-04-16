@@ -8,6 +8,7 @@
 #include "checks.h"
 #include "env_utils.h"
 #include "macros.h"
+#include "rhp_options_data.h"
 #include "status.h"
 #include "option.h"
 #include "option_priv.h"
@@ -44,7 +45,21 @@ const char *opttype_name(OptType type)
    }
 }
 
+  /* ----------------------------------------------------------------------
+   * When additing an OptChoice, one needs to add code in the following 3 functions
+   * ---------------------------------------------------------------------- */
 
+typedef struct {
+   const char *name;
+   int (*setopt)(struct option *opt, const char *optval);
+   void (*getopts)(const char *const (**strs)[2], unsigned *len);
+   const char*(*getcurname)(unsigned i);
+} OptChoiceData;
+
+static const OptChoiceData optchoices[] = {
+   { "ovf_reformulation", optovf_setreformulation, optovf_getreformulationdata, ovf_getreformulationstr},
+   { "solve_single_opt_as", optsingleopt_set, optsingleopt_getdata, optsingleopt_getcurstr},
+};
 
 int optchoice_set(struct option *opt, const char *optval)
 {
@@ -52,9 +67,13 @@ int optchoice_set(struct option *opt, const char *optval)
       return Error_RuntimeError;
    }
 
-   if (!strcasecmp(opt->name, "ovf_reformulation")) {
-      return optovf_setreformulation(opt, optval);
+   for (unsigned i = 0; i < ARRAY_SIZE(optchoices); ++i) {
+      const OptChoiceData *optdat = &optchoices[i];
+      if (!strcasecmp(opt->name, optdat->name)) {
+         return optdat->setopt(opt, optval);
+      }
    }
+
    return OK;
 }
 
@@ -64,9 +83,12 @@ int optchoice_getopts(struct option *opt, const char *const (**strs)[2], unsigne
       return Error_RuntimeError;
    }
 
-   if (!strcasecmp(opt->name, "ovf_reformulation")) {
-      optovf_getreformulationdata(strs, len);
-      return OK;
+   for (unsigned i = 0; i < ARRAY_SIZE(optchoices); ++i) {
+      const OptChoiceData *optdat = &optchoices[i];
+      if (!strcasecmp(opt->name, optdat->name)) {
+         optdat->getopts(strs, len);
+         return OK;
+      }
    }
 
    return Error_OptionNotFound;
@@ -78,12 +100,14 @@ const char* optchoice_getdefaultstr(struct option *opt)
       return NULL;
    }
 
-   if (!strcasecmp(opt->name, "ovf_reformulation")) {
-      return ovf_getreformulationstr(opt->value.i);
+   for (unsigned i = 0; i < ARRAY_SIZE(optchoices); ++i) {
+      const OptChoiceData *optdat = &optchoices[i];
+      if (!strcasecmp(opt->name, optdat->name)) {
+         return optdat->getcurname(opt->value.i);
+      }
    }
 
    return NULL;
-   
 }
 
 static int posint(int *min, int *max)

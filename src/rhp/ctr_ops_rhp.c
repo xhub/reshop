@@ -30,10 +30,10 @@
 #include "status.h"
 
 #include "itostr.h"
-//#define EXPORT_MODEL_DEBUG
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && 0
 #define RCTR_DEBUG(str, ...) trace_fooc("[rctr] DEBUG: " str "\n", __VA_ARGS__)
+#define RCTR_FULL_DEBUG
 #else
 #define RCTR_DEBUG(...)
 #endif
@@ -269,7 +269,7 @@ static int cdat_sort_eval_equvar_(Container *ctr)
          continue;
       }
 
-#ifndef NDEBUG
+#ifdef RCTR_FULL_DEBUG
       RCTR_DEBUG("Final costs %s", "");
       for (unsigned j = 0; j < len; ++j) {
          rhp_idx vi = pairs[j].var;
@@ -286,7 +286,7 @@ static int cdat_sort_eval_equvar_(Container *ctr)
 
       qsort(pairs, len, sizeof(pairs[0]), &compar_equvar_pair);
 
-#ifndef NDEBUG
+#ifdef RCTR_FULL_DEBUG
       RCTR_DEBUG("Final sorting order%s", "");
       for (unsigned j = 0; j < len; ++j) {
          rhp_idx vi = pairs[j].var;

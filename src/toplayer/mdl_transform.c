@@ -14,6 +14,7 @@
 #include "mdl_transform.h"
 #include "reshop.h"
 #include "rhp_fwd.h"
+#include "rhp_options_data.h"
 #include "var.h"
 
 /**
@@ -347,10 +348,25 @@ int mdl_transform_emp_togamsmdltype(Model *mdl_src, Model **mdl_target)
    switch (empdag_type) {
    case EmpDag_Empty:
    case EmpDag_Single_Opt:
-   case EmpDag_Opt:
-      /* This is necessary to ensure that we can release mdl_target */
-      *mdl_target = mdl_borrow(mdl_src);
-      return OK;
+   case EmpDag_Opt: {
+
+      int singleopt_solmethod = optvali(mdl_src, Options_SolveSingleOptAs);
+      switch (singleopt_solmethod) {
+      case Opt_SolveSingleOptAsOpt:
+         /* This is necessary to ensure that we can release mdl_target */
+         *mdl_target = mdl_borrow(mdl_src);
+         S_CHECK(mdl_reset_modeltype(mdl_src, NULL));
+         return OK;
+      case Opt_SolveSingleOptAsMcp:
+         return mdl_transform_tomcp(mdl_src, mdl_target);
+      default:
+         error("%s ERROR while transforming %s model '%.*s' #%u: invalid value"
+               " %d for option %s", __func__, mdl_fmtargs(mdl_src),
+               singleopt_solmethod, rhp_options[Options_SolveSingleOptAs].name);
+         return Error_InvalidValue;
+      }
+
+   }
    case EmpDag_Single_Vi:
    case EmpDag_Vi:
    case EmpDag_Mopec:

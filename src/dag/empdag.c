@@ -231,7 +231,8 @@ static int empdag_infertype(EmpDag *empdag)
       return OK;
    }
 
-   if (empdag->features.constraint & EmpDag_EquilConstraint) {
+   if (empdag->features.constraint & EmpDag_EquilConstraint || 
+       empdag->features.constraint & EmpDag_ViConstraint) {
       assert(empdag->features.rootnode != EmpDag_RootVi);
 
       switch (empdag->features.rootnode) {

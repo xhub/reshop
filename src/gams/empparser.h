@@ -24,6 +24,7 @@ typedef enum emptok_type {
    TOK_IMPLICIT,
    TOK_MAX,
    TOK_MIN,
+   TOK_MODELTYPE,
    TOK_NASH,
    TOK_OVF,
    TOK_SHAREDEQU,

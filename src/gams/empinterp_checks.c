@@ -165,3 +165,20 @@ int mp_sanity_check(Interpreter *interp)
    return OK;
 }
 
+/**
+ * @brief Check that the file processed so far is of the OLD JAMS flavor
+ *
+ * @param interp the EMP interpreter
+ *
+ * @return       the error code
+ */
+int old_style_check(Interpreter *interp)
+{
+   if (_has_dag(interp)) {
+      error("[empinterp] ERROR line %u: old style empinfo and EMPDAG are mutually "
+            "exclusive", interp->linenr);
+      return Error_EMPIncorrectSyntax;
+   }
+
+   return OK;
+}

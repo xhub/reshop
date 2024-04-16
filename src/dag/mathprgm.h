@@ -72,7 +72,7 @@ typedef struct rhp_mathprgm {
   RhpSense sense;              /**< mathprgm sense                       */
   MpType type;                 /**< mathprgm type                        */
 //  enum EmpDAGType type_subdag; /**< type of the subdag of this node      */
-  ModelType probtype;           /**< problem type                         */
+   ModelType probtype;           /**< problem type                         */
    MpStatus status;
 
   Model *mdl;                  /**< model for this MP                    */

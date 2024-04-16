@@ -4,8 +4,7 @@
 #include <stdbool.h>
 
 #include "compat.h"
-
-struct option;
+#include "rhp_fwd.h"
 
 enum option_setid {
    OptSet_Main = 0,
