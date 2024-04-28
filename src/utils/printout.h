@@ -44,7 +44,6 @@ static inline int error_runtime(void)
 
 #define trace_model               trace_stack
 
-
 #define SOLREPORT_FMT             "val = % 3.2e; mult = % 3.2e; basis = %-11s"
 #define solreport_gms(e)          (e)->value, (e)->multiplier, basis_name((e)->basis)
 #define solreport_gms_v(v)        (v)->value, (v)->multiplier, basis_name((v)->basis)
