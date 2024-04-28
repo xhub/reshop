@@ -774,7 +774,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
             }
          } else if (key == NLNODE_ADD && idx0 >= 0) {
 #ifndef NDEBUG
-            printf("%s: NLNODE_ADD with only 1 child!\n", __func__);
+            printout(PO_DEBUG, "%s: NLNODE_ADD with only 1 child!\n", __func__);
 #endif
             indx = build_gams_opcode_v2(node->children[idx0], instrs, args, indx);
             goto _exit;
