@@ -22,6 +22,8 @@
 
 */
 
+#include <inttypes.h>
+
 #include "dctmcc.h"
 #include "empdag.h"
 #include "empinterp_edgebuilder.h"
@@ -690,7 +692,7 @@ int empvm_run(struct empvm *vm)
       case OP_LOCAL_COPYFROM_GIDX: {
          uint8_t slot = READ_BYTE(vm);
          vm->locals[slot] = read_global(vm);
-         DEBUGVMRUN("lvar@%u = %lu\n", slot, vm->locals[slot] & MASK_PAYLOAD_32);
+         DEBUGVMRUN("lvar@%u = %" PRIu64 "\n", slot, vm->locals[slot] & MASK_PAYLOAD_32);
          break;
       }
       case OP_LOCAL_COPYOBJLEN: {
