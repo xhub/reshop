@@ -1057,7 +1057,7 @@ int empvm_run(struct empvm *vm)
          const empapi fn = callobj.fn;
          ptrdiff_t argc = callobj.argc;
          assert(argc <= vm->stack_top - vm->stack);
-         DEBUGVMRUN("%s with %ld stack args\n", empapis_names[api_idx], argc);
+         DEBUGVMRUN("%s with %td stack args\n", empapis_names[api_idx], argc);
 
          int rc = fn(&vm->data, argc, vm->stack_top - argc);
          if (rc != OK) {
@@ -1079,7 +1079,7 @@ int empvm_run(struct empvm *vm)
          const empnewobj fn = callobj.fn;
          ptrdiff_t argc = callobj.argc;
          assert(argc <= vm->stack_top - vm->stack);
-         DEBUGVMRUN("%s with %ld stack args\n", empnewobjs_names[newobj_call_idx],
+         DEBUGVMRUN("%s with %td stack args\n", empnewobjs_names[newobj_call_idx],
                     argc);
 
          void *o = fn(&vm->data, argc, vm->stack_top - argc);
