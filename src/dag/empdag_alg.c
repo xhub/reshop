@@ -106,10 +106,10 @@ static inline const char* empdag_errstr(int rc)
 }
 
 /* We cannot use an enum here as UINT_MAX doesn't fit in it */
-#define  NodeIdxDAG       UINT_MAX
-#define  NodeIdxNoParent  (UINT_MAX-1)
-#define  NodeIdxError     (UINT_MAX-2)
-#define  NodeIdxMaxValid  (UINT_MAX-10)
+#define  NodeIdxErrDAG        UINT_MAX
+#define  NodeIdxErrNoParent  (UINT_MAX-1)
+#define  NodeIdxErrGeneric   (UINT_MAX-2)
+#define  NodeIdxMaxValid     (UINT_MAX-10)
 
 #define  valid_nidx(ni)   ((ni) < NodeIdxMaxValid)
 
@@ -304,13 +304,13 @@ nidx_t nidx_parent(const EmpDagDfsData *dfsdata, nidx_t node_idx)
    }
 
    if (num_parents == 0) {
-      return NodeIdxNoParent;
+      return NodeIdxErrNoParent;
    }
    if (num_parents > 1) {
-      return NodeIdxDAG;
+      return NodeIdxErrDAG;
    }
 
-   return NodeIdxError;
+   return NodeIdxErrGeneric;
 }
 
 NONNULL static inline
@@ -350,19 +350,20 @@ void report_error_nolca(const EmpDag *empdag, rhp_idx vi, rhp_idx ei,
          "the external variable '%s' belongs to MP(%s). No common ancestor between"
          " the two MP could be found\n", ctr_printequname(&empdag->mdl->ctr, ei),
          empdag_getname(empdag, mp_id), ctr_printvarname(&empdag->mdl->ctr, vi),
-         empdag_getname(empdag, mp_vi));
+         empdag_getname2(empdag, mp_vi));
 }
 
 NONNULL static 
 void report_error_badlca(const EmpDag *empdag, rhp_idx vi, rhp_idx ei,
-                      mpid_t mp_vi, mpid_t mp_id, daguid_t uid_lca)
+                         mpid_t mp_vi, mpid_t mp_id, daguid_t uid_lca)
 {
-   error("[empdag] ERROR: in equation '%s', which belongs to MP(%s), "
-         "the external variable '%s' belongs to MP(%s). The common ancestor %s(%s) "
-         " between the two MP is not an MPE, as it should be.\n",
-         ctr_printequname(&empdag->mdl->ctr, ei),
-         empdag_getname(empdag, mp_id), ctr_printvarname(&empdag->mdl->ctr, vi),
-         empdag_getname(empdag, mp_vi), daguid_type2str(uid_lca),
+   int offset;
+   error("[empdag] ERROR: %nin equation '%s', which belongs to MP(%s), "
+         "the external variable '%s' belongs to MP(%s).\n", &offset,
+         ctr_printequname(&empdag->mdl->ctr, ei), empdag_getname(empdag, mp_id),
+         ctr_printvarname(&empdag->mdl->ctr, vi), empdag_getname2(empdag, mp_vi));
+   error("%*sThe common ancestor %s(%s) between the two MP is not a Nash node, "
+         "as it should be.\n", offset, "", daguid_type2str(uid_lca),
          empdag_getname(empdag, uid_lca));
 }
 
@@ -439,7 +440,7 @@ NONNULL static
 nidx_t lca(nidx_t u, nidx_t v, const EmpDagDfsData * dfsdata) {
    /* ---------------------------------------------------------------------
     * The gist of the algorithm is as follow:
-    * - The [ preorder, postorder ] guarantues that any successor node has
+    * - The [ preorder, postorder ] guarantees that any successor node has
     *   an interval which is a subset of its parent node.
     * - GOAL: find the node which interval is a superset of both original nodes
     * - The first two checks look for this.
@@ -461,12 +462,12 @@ nidx_t lca(nidx_t u, nidx_t v, const EmpDagDfsData * dfsdata) {
 
    /* we have dfsdata->preorder[v] <= dfsdata->preorder[u] */
 
-   /* Here we test for >= as otherwise we might have issue if u and v are the
-    * same node */
-   if(dfsdata->postorder[v] >= dfsdata->postorder[u]) { return v; }
+   /* Test for >= to avoid issues if u and v are the same node */
+   if (dfsdata->postorder[v] >= dfsdata->postorder[u]) { return v; }
 
+   /* */
    nidx_t parent_u = nidx_parent(dfsdata, u);
-   return valid_nidx(parent_u) ? lca(u, parent_u, dfsdata) : parent_u;
+   return valid_nidx(parent_u) ? lca(v, parent_u, dfsdata) : parent_u;
 }
 
 typedef enum {

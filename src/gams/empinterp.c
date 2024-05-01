@@ -354,7 +354,7 @@ int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
    }
 
    if (type == IdentNotFound) {
-      error("[empinterp] ERROR line %u: ident '%.*s' has not been found\n",
+      error("[empinterp] ERROR line %u: ident '%.*s' is unknown\n",
             interp->linenr, emptok_getstrlen(&interp->cur),
             emptok_getstrstart(&interp->cur));
       status = Error_EMPIncorrectInput;

@@ -19,27 +19,30 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
 
    if (toktype == TOK_SINGLE_QUOTE) {
       has_single_quote = true;
-      S_CHECK(advance(interp, p, &toktype));
    } else if (toktype == TOK_DOUBLE_QUOTE) {
       has_double_quote = true;
-      S_CHECK(advance(interp, p, &toktype));
    }
 
-   PARSER_EXPECTS(interp, "A string (UEL (set element), subset, variable) is required",
-                  TOK_GMS_SET, TOK_GMS_UEL, TOK_STAR, TOK_REAL, TOK_IDENT);
+   if (has_single_quote || has_double_quote) {
+      char quote = toktype == TOK_SINGLE_QUOTE ? '\'' : '"';
+      S_CHECK(parser_asUEL(interp, p, quote, &toktype));
 
-   /* -----------------------------------------------------------------
-    * If we have a real, it could still be a UEL
-    * ------------------------------------------------------- */
-
-   if (toktype == TOK_REAL && (has_single_quote || has_double_quote)) {
-      S_CHECK(gms_find_ident_in_dct(interp, &interp->cur));
-      toktype = parser_getcurtoktype(interp);
-      if (toktype != TOK_GMS_UEL) {
-         error("%s :: the number '%.*s' is not a UEL\n", __func__,
-               interp->cur.len, interp->cur.start);
-         return Error_EMPIncorrectInput;
+      if (toktype == TOK_UNSET) {
+         const Token *tok = &interp->cur;
+         error("[empinterp] ERROR line %u: %c%.*s%c is not a UEL\n", interp->linenr,
+               quote, tok->len, tok->start, quote);
+         return Error_EMPIncorrectSyntax;
       }
+
+      if (toktype != TOK_STAR && toktype != TOK_GMS_UEL) {
+         return runtime_error(interp->linenr);
+      }
+
+   } else {
+      S_CHECK(advance(interp, p, &toktype));
+      PARSER_EXPECTS(interp, "A string (subset, variable) is required",
+                     TOK_GMS_SET, TOK_STAR, TOK_IDENT);
+
    }
 
    switch (toktype) {
@@ -87,21 +90,7 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
       return runtime_error(interp->linenr);
    }
 
-   return OK;
-
 _finalize:
-
-   /* TODO: do we require UELs to be quoted? */
-
-   if (!has_single_quote && !has_double_quote) { return OK;}
-
-   S_CHECK(advance(interp, p, &toktype));
-
-   if (has_single_quote) {
-      S_CHECK(parser_expect(interp, "Closing \"'\" expected", TOK_SINGLE_QUOTE));
-   } else if (has_double_quote) {
-      S_CHECK(parser_expect(interp, "Closing '\"' expected", TOK_DOUBLE_QUOTE));
-   }
 
    return OK;
 }
@@ -121,6 +110,12 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
 {
    TokenType toktype;
    unsigned nargs = 0;
+
+  /* ----------------------------------------------------------------------
+   * We are expecting to be called at gmssymb('a', '1')
+   *                                          ^
+   * On exit, we 
+   * ---------------------------------------------------------------------- */
 
    do {
       if (nargs == GMS_MAX_INDEX_DIM) {
@@ -149,7 +144,7 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
  * @brief Function to parse gams indices
  *
  * This takes care of parsing the indices of a label definition. Compared to
- * parse_gmsindices, we just disallow  '*'
+ * parse_gmsindices, we disallow '*'
  *
  * @param interp 
  * @param p 
@@ -162,6 +157,12 @@ int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
    TokenType toktype;
    unsigned nargs = 0;
 
+  /* ----------------------------------------------------------------------
+   * We are parsing n('a',...):
+   *                  ^
+   * TODO: we should add UELs that cannot be found in the DCT
+   * ---------------------------------------------------------------------- */
+
    do {
       if (nargs == GMS_MAX_INDEX_DIM) {
          error("[empinterp] ERROR line %u: while parsing the arguments to the "
@@ -173,7 +174,7 @@ int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
 
       S_CHECK(resolve_tokenasgmsidx(interp, p, idxdata, nargs));
       if (idxdata->idents[nargs].type == IdentUniversalSet) {
-         errormsg("[empcompiler] ERROR: '*' is not a valid index in a label "
+         errormsg("[empinterp] ERROR: '*' is not a valid index in a label "
                   "definition\n");
          return Error_EMPIncorrectSyntax;
       }

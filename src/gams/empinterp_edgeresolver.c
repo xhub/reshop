@@ -144,12 +144,57 @@ static int addedge(Interpreter *interp, daguid_t daguid, daguid_t child_daguid,
 
 static int dag_resolve_labels(Interpreter *interp)
 {
-
    const DagRegister * restrict dagregister = &interp->dagregister;
    const DagLabels2Edges * restrict labels2resolve = &interp->labels2edges;
    EmpDag * restrict empdag = &interp->mdl->empinfo.empdag;
 
    unsigned num_err = 0;
+
+  /* ----------------------------------------------------------------------
+   * First check that all basename do exists and are well defined
+   *
+   * TODO: we do a double check, might be quadratic in the number of labels.
+   * ---------------------------------------------------------------------- */
+
+   int status = OK;
+   unsigned dagreg_len = dagregister->len;
+
+   for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
+      DagLabels *dagl = labels2resolve->list[i];
+
+      unsigned num_children = dagl->num_children;
+
+      if (num_children == 0) {
+         error("[empinterp] ERROR: empty daglabel for node '%s'.\n",
+               empdag_getname(empdag, dagl->daguid));
+         status = Error_EMPIncorrectInput;
+         continue;
+      }
+
+      const char *basename = dagl->basename;
+      uint16_t basename_len = dagl->basename_len;
+      bool found = false;
+
+      for (unsigned j = 0; j < dagreg_len; ++j) {
+         const DagRegisterEntry *entry = dagregister->list[j];
+         if (entry->basename_len == basename_len &&
+            !strncasecmp(basename, entry->basename, basename_len)) {
+            found = true;
+            break;
+         }
+      }
+
+      if (!found) {
+         error("[empinterp] ERROR: no problem with name '%.*s' is defined\n", basename_len, basename);
+         num_err++;
+         status = Error_EMPIncorrectInput;
+      }
+   }
+
+   if (status != OK) {
+      error("[empinterp] %u fatal error%s while resolving labels, exiting\n", num_err, num_err > 1 ? "s" : "");
+      return status;
+   }
 
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
       DagLabels *dagl = labels2resolve->list[i];
@@ -163,12 +208,6 @@ static int dag_resolve_labels(Interpreter *interp)
 
       unsigned num_children = dagl->num_children;
 
-      if (num_children == 0) {
-         error("[empinterp] ERROR: empty daglabel for node '%s'.\n",
-               empdag_getname(empdag, dagl->daguid));
-         continue;
-      }
-
       ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,
          .basename_len = dagl->basename_len, .basename = dagl->basename};
       memcpy(edge.uels, dagl->data, sizeof(int)*dim);
@@ -178,7 +217,7 @@ static int dag_resolve_labels(Interpreter *interp)
 
       const int * restrict positions = &dagl->data[dim];
       for (unsigned j = 0, nlabels = num_children; j < nlabels; ++j, child += num_vars) {
-         
+ 
          for (uint8_t k = 0; k < num_vars; ++k) {
             assert(positions[k] < dim);
             edge.uels[positions[k]] = child[k];
@@ -216,6 +255,37 @@ static int dag_resolve_label(Interpreter *interp)
    const DagLabel2Edge * restrict label2resolve = &interp->label2edge;
 
    unsigned num_err = 0;
+
+   int status = OK;
+   unsigned dagreg_len = dagregister->len;
+
+   for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
+      DagLabel *dagl = label2resolve->list[i];
+
+      const char *basename = dagl->basename;
+      uint16_t basename_len = dagl->basename_len;
+      bool found = false;
+
+      for (unsigned j = 0; j < dagreg_len; ++j) {
+         const DagRegisterEntry *entry = dagregister->list[j];
+         if (entry->basename_len == basename_len &&
+            !strncasecmp(basename, entry->basename, basename_len)) {
+            found = true;
+            break;
+         }
+      }
+
+      if (!found) {
+         error("[empinterp] ERROR: no problem with name '%.*s' is defined\n", basename_len, basename);
+         num_err++;
+         status = Error_EMPIncorrectInput;
+      }
+   }
+
+   if (status != OK) {
+      error("[empinterp] %u fatal error%s while resolving labels, exiting\n", num_err, num_err > 1 ? "s" : "");
+      return status;
+   }
 
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
       DagLabel *dagl = label2resolve->list[i];

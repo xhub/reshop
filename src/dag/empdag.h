@@ -289,6 +289,7 @@ bool empdag_mphasname(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getmpname(const EmpDag *empdag, mpid_t mpid);
 const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getmpename(const EmpDag *empdag, mpeid_t mpeid);
+const char *empdag_getmpename2(const EmpDag *empdag, mpeid_t mpeid);
 unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp) NONNULL;
 const struct rhp_empdag_arcVF* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
                                             mpid_t mpid_child) NONNULL;
@@ -341,6 +342,7 @@ int empdag_single_MP_to_Nash(EmpDag* empdag) NONNULL;
 
 const char* empdag_printid(const EmpDag *empdag) NONNULL;
 const char* empdag_getname(const EmpDag *empdag, unsigned uid) NONNULL;
+const char* empdag_getname2(const EmpDag *empdag, unsigned uid) NONNULL;
 const char* empdag_printmpid(const EmpDag *empdag, mpid_t mpid) NONNULL;
 const char* empdag_printmpeid(const EmpDag *empdag, mpeid_t mpeid) NONNULL;
 const char* empdag_typename(EmpDagType type);

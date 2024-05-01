@@ -16,12 +16,12 @@
 //NOLINTBEGIN
 UNUSED static int imm_gms_resolve_param(Interpreter* restrict interp, unsigned * restrict p)
 {
-   TO_IMPLEMENT("GAMS Parameter resolution not imnplemented in immediate mode");
+   TO_IMPLEMENT("GAMS Parameter resolution not implemented in immediate mode");
 }
 
 UNUSED static int imm_gms_resolve_set(Interpreter* restrict interp, unsigned * restrict p)
 {
-   TO_IMPLEMENT("GAMS Set resolution not imnplemented in immediate mode");
+   TO_IMPLEMENT("GAMS Set resolution not implemented in immediate mode");
 }
 //NOLINTEND
 
@@ -152,28 +152,30 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
 
          if (toktype == TOK_SINGLE_QUOTE) {
             has_single_quote = true;
-            S_CHECK(peek(interp, &p2, &toktype));
          } else if (toktype == TOK_DOUBLE_QUOTE) {
             has_double_quote = true;
-            S_CHECK(peek(interp, &p2, &toktype));
          }
 
-         PARSER_EXPECTS_PEEK(interp,
-                             "A string (UEL (set element), subset, variable) is required",
-                             TOK_GMS_SET, TOK_GMS_UEL, TOK_STAR, TOK_REAL);
+         if (has_single_quote || has_double_quote) {
+            char quote = toktype == TOK_SINGLE_QUOTE ? '\'' : '"';
+            S_CHECK(parser_peekasUEL(interp, &p2, quote, &toktype));
 
-         /* -----------------------------------------------------------------
-          * If we have a real, it could still be a UEL
-          * ----------------------------------------------------------------- */
-
-         if (toktype == TOK_REAL) {
-            S_CHECK(gms_find_ident_in_dct(interp, &interp->peek));
-            toktype = parser_getpeektoktype(interp);
-            if (toktype != TOK_GMS_UEL) {
-               error("[empinterp] ERROR: the number '%.*s' is not a UEL\n",
-                     interp->peek.len, interp->peek.start);
-               return Error_EMPIncorrectInput;
+            if (toktype == TOK_UNSET) {
+               const Token *tok = &interp->peek;
+               error("[empinterp] ERROR line %u: %c%.*s%c is not a UEL\n", interp->linenr,
+                     quote, tok->len, tok->start, quote);
+               return Error_EMPIncorrectSyntax;
             }
+
+            if (toktype != TOK_STAR && toktype != TOK_GMS_UEL) {
+               return runtime_error(interp->linenr);
+            }
+
+         } else {
+            S_CHECK(peek(interp, &p2, &toktype));
+            PARSER_EXPECTS_PEEK(interp, "A string (subset, variable) is required",
+                           TOK_GMS_SET, TOK_STAR, TOK_IDENT);
+
          }
 
          switch (toktype) {
@@ -194,14 +196,6 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
          i++;
 
          S_CHECK(peek(interp, &p2, &toktype));
-
-         if (has_single_quote) {
-            S_CHECK(parser_expect_peek(interp, "Closing \"'\" expected", TOK_SINGLE_QUOTE));
-            S_CHECK(peek(interp, &p2, &toktype));
-         } else if (has_double_quote) {
-            S_CHECK(parser_expect_peek(interp, "Closing '\"' expected", TOK_DOUBLE_QUOTE));
-            S_CHECK(peek(interp, &p2, &toktype));
-         }
 
       } while (toktype == TOK_COMMA);
 
@@ -492,6 +486,10 @@ static int imm_ovf_setparam(Interpreter* restrict interp, void *ovfdef_data, uns
    }
    }
 
+   if (O_Output & PO_TRACE_EMPINTERP) {
+      ovf_param_print(param, PO_TRACE_EMPINTERP);
+   }
+
    return OK;
 }
 
@@ -605,6 +603,57 @@ UNUSED static int imm_ctr_dualvar(Interpreter *interp, bool is_flipped)
    return mdl_setdualvars(interp->mdl, v, e);
 }
 
+static int imm_read_param(Interpreter *interp, unsigned *p, IdentData *data,
+                          const char *ident_str, unsigned *param_gidx)
+{
+   TO_IMPLEMENT("read_param in immediate mode");
+}
+
+static int imm_read_elt_vector(Interpreter *interp, const char *identstr,
+                               IdentData *ident, GmsIndicesData *gmsindices, double *val)
+{
+   unsigned idx;
+   const NamedVecArray *container = ident->type == IdentVector ? 
+      &interp->globals.vectors : &interp->globals.localvectors;
+
+   idx = namedvec_findbyname_nocase(container, identstr);
+   if (idx == UINT_MAX) {
+      error("[empinterp] unexpected runtime error: couldn't find vector '%s'\n", identstr);
+      return Error_EMPRuntimeError;
+   }
+
+   const Lequ * vec = &container->list[idx];
+   
+   if (gmsindices->nargs != 1) {
+      error("[empinterp] ERROR line %u: GAMS indices for symbol '%s' has dimension %u, expected 1\n", 
+            interp->linenr, identstr, gmsindices->nargs);
+      return Error_EMPRuntimeError;
+   }
+
+   IdentData *id = &gmsindices->idents[0];
+
+   if (id->type != IdentUEL) {
+      error("[empinterp] ERROR line %u: GAMS indices for symbol '%s' has dimension %u, expected 1\n", 
+            interp->linenr, identstr, gmsindices->nargs);
+      return Error_EMPRuntimeError;
+   }
+
+   unsigned uel = id->idx;
+
+   int *uels = vec->vis;
+   for (unsigned i = 0, len = vec->len; i < len; ++i) {
+      if (uels[i] == uel) {
+         *val = vec->coeffs[i];
+         return OK;
+      }
+   }
+
+   error("[empinterp] ERROR line %u: could not find UEL '%*s' #%u in vector '%s'\n",
+         interp->linenr, id->lexeme.len, id->lexeme.start, uel, identstr);
+
+   return Error_EMPIncorrectInput;
+}
+
 const ParserOps parser_ops_imm = {
    .type = ParserOpsImm,
    .ccflib_new            = imm_mp_ccflib_new,
@@ -632,4 +681,6 @@ const ParserOps parser_ops_imm = {
    .ovf_check             = imm_ovf_check,
    .ovf_param_getvecsize  = imm_ovf_param_getvecsize,
    .ovf_getname           = imm_ovf_getname,
+   .read_param            = imm_read_param,
+   .read_elt_vector       = imm_read_elt_vector,
 };

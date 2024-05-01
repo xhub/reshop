@@ -193,12 +193,32 @@ typedef struct AliasArray {
 #define RHP_ELT_INVALID ((struct gdxalias) {.name = NULL, .index = 0})
 #include "namedlist_generic.inc"
 
+typedef struct gdxparam {
+   int idx;
+   int dim;
+} GdxParam;
+
+typedef struct ParamArray {
+   unsigned len;
+   unsigned max;
+   GdxParam *list;
+   const char **names;
+} NamedParamArray;
+
+#define RHP_LOCAL_SCOPE
+#define RHP_LIST_PREFIX params
+#define RHP_LIST_TYPE ParamArray
+#define RHP_ELT_TYPE struct gdxparam
+#define RHP_ELT_INVALID ((struct gdxparam) {.idx = -1, .dim = -1})
+#include "namedlist_generic.inc"
+
 typedef struct {
    AliasArray aliases;
    NamedIntsArray sets;
    NamedMultiSets multisets;
    NamedVecArray vectors;
-   NamedScalarArray  scalars;
+   NamedScalarArray scalars;
+   NamedParamArray params;
    NamedIntsArray localsets;
    NamedVecArray localvectors;
 } CompilerGlobals;
@@ -425,6 +445,9 @@ typedef struct parser_ops {
    unsigned (*ovf_param_getvecsize)(Interpreter* restrict interp, void *ovfdef_data,
                                     const struct ovf_param_def *pdef);
    const char *(*ovf_getname)(Interpreter* restrict interp, void *ovfdef_data);
+   int (*read_elt_vector)(Interpreter *interp, const char *vectorname,
+                          IdentData *ident, GmsIndicesData *gmsindices,
+                          double *val);
    int (*read_param)(Interpreter *interp, unsigned *p, IdentData *data,
                       const char *ident_str, unsigned *param_gidx);
 } ParserOps;

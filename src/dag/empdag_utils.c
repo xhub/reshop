@@ -9,9 +9,11 @@
 #include "tlsdef.h"
 
 static tlsvar char bufMPE[3*sizeof(unsigned)*CHAR_BIT/8+5];
+static tlsvar char bufMPE2[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char bufMP[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char bufMP2[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char msg[3*sizeof(unsigned)*CHAR_BIT/8+41];
+static tlsvar char msg2[3*sizeof(unsigned)*CHAR_BIT/8+41];
 
 const char *daguid_type2str(unsigned uid)
 {
@@ -124,6 +126,26 @@ _exit:
    return "RUNTIME ERROR";
 }
 
+const char* empdag_getmpename2(const EmpDag *empdag, unsigned id)
+{
+   UNUSED int status;
+
+   if (id >= empdag->mpes.len) {
+      IO_CALL_EXIT(snprintf(msg2, sizeof msg2, "ERROR: MPE index %u is out of bound",
+                            id));
+      return msg;
+   }
+
+   const char *mpe_name = empdag->mpes.names[id];
+   if (mpe_name) { return mpe_name; }
+   IO_CALL_EXIT(snprintf(bufMPE2, sizeof bufMPE2, "ID %u", id));
+
+   return bufMPE2;
+
+_exit:
+   return "RUNTIME ERROR";
+}
+
 /**
  * @brief Return the name of an EMP DAG element
  *
@@ -153,6 +175,39 @@ const char *empdag_getname(const EmpDag *empdag, unsigned uid)
 
    assert(uidisMPE(uid));
    return empdag_getmpename(empdag, id);
+}
+
+/**
+ * @brief Return the name of an EMP DAG element
+ *
+ *        If the element has its name set, then returns it
+ *        Otherwise return a string representation of its ID.
+ *
+ *        This function uses a different buffer to empdag_getname()
+ *
+ * @param empdag  the EMPDAG
+ * @param uid     the UID of the object
+ *
+ * @return        the string
+ */
+const char *empdag_getname2(const EmpDag *empdag, unsigned uid)
+{
+
+   if (!valid_uid(uid)) {
+      return "ERROR: invalid UID!";
+   }
+
+   /* ---------------------------------------------------------------------
+    * Deals with MP case first and then MPE (which is almost identical)
+    * --------------------------------------------------------------------- */
+
+   unsigned id = uid2id(uid);
+   if (uidisMP(uid)) {
+      return empdag_getmpname2(empdag, id);
+   } 
+
+   assert(uidisMPE(uid));
+   return empdag_getmpename2(empdag, id);
 }
 
 

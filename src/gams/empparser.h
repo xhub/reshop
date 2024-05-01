@@ -25,11 +25,11 @@ typedef enum emptok_type {
    TOK_MAX,
    TOK_MIN,
    TOK_MODELTYPE,
+   TOK_MP,
    TOK_NASH,
    TOK_OVF,
    TOK_SHAREDEQU,
    TOK_VALFN,
-   TOK_VF,
    TOK_VI,
    TOK_VISOL,
    /* "Other" Keywords (TODO: find a better name) Keep in sync with kw_str  */
@@ -156,6 +156,10 @@ int parse_DAG(Interpreter *interp, unsigned *p) NONNULL;
 int parse_Nash(Interpreter *interp, unsigned *p) NONNULL;
 int parse_ovf(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
 
+NONNULL int parser_asUEL(Interpreter *interp, unsigned * restrict p, char quote,
+                          TokenType *toktype);
+NONNULL int parser_peekasUEL(Interpreter *interp, unsigned * restrict p, char quote,
+                             TokenType *toktype);
 
 
 #endif /* EMPPARSER_H */
