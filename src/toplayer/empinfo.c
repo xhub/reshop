@@ -42,6 +42,7 @@ int empinfo_alloc(EmpInfo *empinfo, Model *mdl)
 
    empdag_init(&empinfo->empdag, mdl);
 
+
    return OK;
 }
 

@@ -16,11 +16,17 @@ typedef enum IdentType {
    IdentLocalVector,
    IdentLocalParam,
    IdentLoopIterator,
-   IdentSet,
-   IdentMultiSet,
+   IdentAlias,
+   IdentGmdSet,
+   IdentGdxSet,
+   IdentGmdMultiSet,
+   IdentGdxMultiSet,
    IdentScalar,
+   IdentGmdScalar,
    IdentVector,
+   IdentGmdVector,
    IdentParam,
+   IdentGmdParam,
    IdentUEL,
    IdentUniversalSet,
    IdentVar,
@@ -28,22 +34,24 @@ typedef enum IdentType {
    IdentTypeMaxValue,
 } IdentType;
 
+// TODO: Replace GamsSymData iwht IdentData?
 /** Data associated with a GAMS symbol */
-typedef struct gms_dct {
+typedef struct gams_symb_data {
    int idx;                       /**< 1-based index     */
    int dim;                       /**< Symbol dimension  */
    int type;                      /**< Symbol type       */
    int alias_idx;                 /**< Alias index     */
    int alias_type;                /**< Alias type       */
+   void *ptr;                     /**< Pointer associated with symbol */
    char alias_name[GMS_SSSIZE];   /**< name of the alias */
    bool read;                     /**< true if the object was successfully read */
 } GamsSymData;
 
-typedef struct multiset {
+typedef struct gdx_multiset {
    int idx;           /**< 1-based index in GDX file */
    int dim;           /**< Symbol dimension  */
    int uels[GMS_MAX_INDEX_DIM];
    struct gdx_reader * gdxreader; /**< struct where this array has been found */
-} MultiSet;
+} GdxMultiSet;
 
 #endif // !EMPPARSER_DATA_H

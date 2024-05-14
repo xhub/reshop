@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 bool dir_exists(const char *dirname) NONNULL;
+int file_readable(const char *fname) NONNULL;
 int new_unique_dirname(char *newdir, unsigned newdir_len) NONNULL;
 
 #endif /* RESHOP_FS_FUNC_H */

@@ -16,7 +16,7 @@ typedef struct gdx_reader {
    void*       dcth;
    GamsSymData cursym;
    IntArray    setobj; 
-   MultiSet    multiset;
+   GdxMultiSet    multiset;
    double      scalar;
    Lequ * restrict vector;
 } GdxReader;
@@ -29,7 +29,7 @@ int gdx_reader_init(GdxReader *reader, Model *mdl, const char *fname);
 
 int gdx_reader_readsym(GdxReader *reader, const char *symname) NONNULL;
 int gdx_reader_find(GdxReader *reader, const char *symname) NONNULL;
-int gdx_reader_getsubset(GdxReader * restrict reader, MultiSet * restrict set,
+int gdx_reader_getsubset(GdxReader * restrict reader, GdxMultiSet * restrict set,
                          unsigned pos, IntArray * restrict res) NONNULL;
 int gdx_reader_boolean_test(GdxReader * restrict reader, struct vm_gms_sym_iterator *filter,
                             bool *res) NONNULL;

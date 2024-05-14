@@ -380,7 +380,7 @@ int gdx_reader_boolean_test(GdxReader * restrict reader, VmGmsSymIterator *filte
    return OK;
 }
 
-int gdx_reader_getsubset(GdxReader * restrict reader, MultiSet * restrict set,
+int gdx_reader_getsubset(GdxReader * restrict reader, GdxMultiSet * restrict set,
                          unsigned pos, IntArray * restrict res)
 {
    int status = OK;

@@ -271,10 +271,10 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
       if (IS_STR(v)) { printout(mode, "%30s\n", AS_STR(v));
       } else if (IS_REGENTRY(v)) {
          DagRegisterEntry *regentry = AS_REGENTRY(v);
-         printout(mode, "%30.*s\n", regentry->basename_len, regentry->basename);
+         printout(mode, "%30.*s\n", regentry->nodename_len, regentry->nodename);
       } else if (IS_ARCOBJ(v)) {
          DagLabels *dagl = AS_ARCOBJ(v);
-         printout(mode, "%30.*s\n", dagl->basename_len, dagl->basename);
+         printout(mode, "%30.*s\n", dagl->nodename_len, dagl->nodename);
       } else if (IS_GMSSYMITER(v)) {
          VmGmsSymIterator *symiter = AS_GMSSYMITER(v);
          IdentData *sym = &symiter->symbol;
@@ -433,7 +433,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                VM_CHK(valid_vmidx(val, vm->data.globals->localvectors.len, "local vectors"));
                printstr(mode, vm->data.globals->localvectors.names[val]);
                break;
-            case IdentSet:
+            case IdentGdxSet:
                VM_CHK(valid_vmidx(val, vm->data.globals->sets.len, "global sets"));
                printstr(mode, vm->data.globals->sets.names[val]);
                break;

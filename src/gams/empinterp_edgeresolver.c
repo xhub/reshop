@@ -51,9 +51,9 @@ static daguid_t dagregister_find(const DagRegister *dagreg, ProblemEdge *edge)
    for (unsigned i = 0, len = dagreg->len; i < len; ++i) {
       const DagRegisterEntry *entry = dagreg->list[i];
 
-      if (entry->basename_len != basename_len ||
+      if (entry->nodename_len != basename_len ||
           entry->dim != edge_dim ||
-          strncasecmp(basename, entry->basename, basename_len) != 0) {
+          strncasecmp(basename, entry->nodename, basename_len) != 0) {
          goto _loop;
       }
 
@@ -61,7 +61,7 @@ static daguid_t dagregister_find(const DagRegister *dagreg, ProblemEdge *edge)
          if (uels[j] != entry->uels[j]) goto _loop;
       }
 
-      return entry->daguid;
+      return entry->daguid_parent;
 _loop:
       ;
    }
@@ -166,19 +166,19 @@ static int dag_resolve_labels(Interpreter *interp)
 
       if (num_children == 0) {
          error("[empinterp] ERROR: empty daglabel for node '%s'.\n",
-               empdag_getname(empdag, dagl->daguid));
+               empdag_getname(empdag, dagl->daguid_parent));
          status = Error_EMPIncorrectInput;
          continue;
       }
 
-      const char *basename = dagl->basename;
-      uint16_t basename_len = dagl->basename_len;
+      const char *basename = dagl->nodename;
+      uint16_t basename_len = dagl->nodename_len;
       bool found = false;
 
       for (unsigned j = 0; j < dagreg_len; ++j) {
          const DagRegisterEntry *entry = dagregister->list[j];
-         if (entry->basename_len == basename_len &&
-            !strncasecmp(basename, entry->basename, basename_len)) {
+         if (entry->nodename_len == basename_len &&
+            !strncasecmp(basename, entry->nodename, basename_len)) {
             found = true;
             break;
          }
@@ -201,7 +201,7 @@ static int dag_resolve_labels(Interpreter *interp)
       int * restrict child = dagl->uels_var;
       uint8_t num_vars = dagl->num_var;
       uint8_t dim = dagl->dim;
-      daguid_t daguid = dagl->daguid;
+      daguid_t daguid = dagl->daguid_parent;
       assert(daguid != EMPDAG_UID_NONE);
 
       UIntArray *arcs = &empdag->mps.Carcs[i];
@@ -209,7 +209,7 @@ static int dag_resolve_labels(Interpreter *interp)
       unsigned num_children = dagl->num_children;
 
       ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,
-         .basename_len = dagl->basename_len, .basename = dagl->basename};
+         .basename_len = dagl->nodename_len, .basename = dagl->nodename};
       memcpy(edge.uels, dagl->data, sizeof(int)*dim);
 
       /* Reserve the space for the edges */
@@ -262,14 +262,14 @@ static int dag_resolve_label(Interpreter *interp)
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
       DagLabel *dagl = label2resolve->list[i];
 
-      const char *basename = dagl->basename;
-      uint16_t basename_len = dagl->basename_len;
+      const char *basename = dagl->nodename;
+      uint16_t basename_len = dagl->nodename_len;
       bool found = false;
 
       for (unsigned j = 0; j < dagreg_len; ++j) {
          const DagRegisterEntry *entry = dagregister->list[j];
-         if (entry->basename_len == basename_len &&
-            !strncasecmp(basename, entry->basename, basename_len)) {
+         if (entry->nodename_len == basename_len &&
+            !strncasecmp(basename, entry->nodename, basename_len)) {
             found = true;
             break;
          }
@@ -290,11 +290,11 @@ static int dag_resolve_label(Interpreter *interp)
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
       DagLabel *dagl = label2resolve->list[i];
       uint8_t dim = dagl->dim;
-      daguid_t daguid = dagl->daguid;
+      daguid_t daguid = dagl->daguid_parent;
 
 
       ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,
-         .basename_len = dagl->basename_len, .basename = dagl->basename};
+         .basename_len = dagl->nodename_len, .basename = dagl->nodename};
 
       memcpy(edge.uels, dagl->uels, dim*sizeof(int));
 
@@ -367,7 +367,7 @@ int empinterp_set_empdag_root(Interpreter *interp)
    DagLabel *dagl = interp->dag_root_label;
 
    ProblemEdge edge = {.type = dagl->arc_type,  .dim = dagl->dim,
-      .basename_len = dagl->basename_len, .basename = dagl->basename};
+      .basename_len = dagl->nodename_len, .basename = dagl->nodename};
 
    root_daguid = dagregister_find(dagregister, &edge);
 

@@ -5,8 +5,9 @@
 #include "empinterp.h"
 
 #include "dctmcc.h"
+#include "gmdcc.h"
 
-enum DctResolveDataType {
+enum GmsResolveDataType {
    GmsSymIteratorTypeImm,
    GmsSymIteratorTypeVm,
 };
@@ -18,26 +19,35 @@ typedef struct {
    GmsSymIterator *symiter;
 } GmsSymIteratorImm;
 
-struct vm_gms_sym_iterator;
+typedef struct vm_gms_sym_iterator VmGmsSymIterator;
 
-typedef struct  {
-   enum DctResolveDataType type;
+typedef struct {
+   enum GmsResolveDataType type;
    union {
       GmsSymIteratorImm imm;
-      struct vm_gms_sym_iterator *vm;
+      VmGmsSymIterator *vm;
    } symiter;
-   IntScratch *scratch;
+   IntScratch *iscratch;
+   DblScratch *dscratch;
+   int itmp;
+   double dtmp;
+   unsigned nrecs;
+   bool allrecs;
    union {
       Avar *v;
       Aequ *e;
    } payload;
-} DctResolveData;
+} GmsResolveData;
 
-int dct_resolve(dctHandle_t dct, DctResolveData * restrict data) NONNULL;
+int dct_resolve(dctHandle_t dct, GmsResolveData * restrict data) NONNULL;
 void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset);
 void dct_printuelwithidx(dctHandle_t dct, int uel, unsigned mode) NONNULL;
 
-int genlabelname(DagRegisterEntry * restrict entry, dctHandle_t dcth,
+int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data) NONNULL;
+void gmd_printuel(gmdHandle_t gmd, int uel, unsigned mode, int *offset);
+void gmd_printuelwithidx(gmdHandle_t gmd, int uel, unsigned mode) NONNULL;
+
+int genlabelname(DagRegisterEntry * restrict entry, Interpreter *interp,
                  char **labelname) NONNULL;
 OWNERSHIP_RETURNS
 DagRegisterEntry* regentry_new(const char *basename, unsigned basename_len, 

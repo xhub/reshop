@@ -8,11 +8,14 @@
 #include "empinterp_priv.h"
 #include "empinterp_vm_compiler.h"
 #include "empparser_priv.h"
+#include "gamsapi_utils.h"
 #include "gdx_reader.h"
 #include "gams_empinfofile_reader.h"
 #include "mathprgm.h"
 #include "mdl.h"
 #include "mdl_gams.h"
+
+#include "gmdcc.h"
 
 NONNULL
 static inline void parsedkwds_init(InterpParsedKwds *state)
@@ -44,8 +47,7 @@ static void finalization_init(InterpFinalization *finalize)
    finalize->mp_owns_remaining_vars = MpId_NA;
 }
 
-NONNULL
-static void interp_init(Interpreter *interp, Model *mdl, const char *fname)
+void interp_init(Interpreter *interp, Model *mdl, const char *fname)
 {
    interp->peekisactive = false;
    interp->linenr = 1;
@@ -56,8 +58,15 @@ static void interp_init(Interpreter *interp, Model *mdl, const char *fname)
    interp->empinfo_fname = fname;
 
    interp->mdl = mdl;
-   interp->dct = ((struct ctrdata_gams*)mdl->ctr.data)->dct;
-   assert(interp->dct);
+   if (mdl) {
+      interp->dct = ((struct ctrdata_gams*)mdl->ctr.data)->dct;
+      assert(interp->dct);
+   } else {
+      interp->dct = NULL;
+   }
+
+   interp->gmd = NULL;
+   interp->gmdout = NULL;
 
    emptok_init(&interp->cur, 0);
    emptok_init(&interp->peek, 0);
@@ -95,7 +104,7 @@ static void interp_init(Interpreter *interp, Model *mdl, const char *fname)
    rhp_uint_init(&interp->edgevfovjs);
 }
 
-NONNULL static void interp_free(Interpreter *interp)
+NONNULL void interp_free(Interpreter *interp)
 {
    if (interp->pre.type != TOK_UNSET) {
       tok_free(&interp->pre);
@@ -131,9 +140,12 @@ NONNULL static void interp_free(Interpreter *interp)
    rhp_uint_empty(&interp->edgevfovjs);
 }
 
-int empinterp_process(Model *mdl, const char *fname) 
+int interp_create_buf(Interpreter *interp)
 {
-   trace_empinterp("[empinterp] Processing file '%s'\n", fname);
+   assert(interp->empinfo_fname);
+   int status = OK;
+
+   const char *fname = interp->empinfo_fname;
 
    FILE *fptr = fopen(fname, "rb");
    if (!fptr) {
@@ -141,35 +153,132 @@ int empinterp_process(Model *mdl, const char *fname)
       return Error_FileOpenFailed;
    }
 
-   int status = OK;
-
-   Interpreter interp;
-   interp_init(&interp, mdl, fname);
-
-   /* ---------------------------------------------------------------------
-    * Read the file content in memory
-    * --------------------------------------------------------------------- */
-
    SYS_CALL(fseek(fptr, 0L, SEEK_END));
    size_t size = ftell(fptr);
    SYS_CALL(fseek(fptr, 0L, SEEK_SET)); // rewind to start
 
-   MALLOC_EXIT(interp.buf, char, size+1);
+   MALLOC_EXIT(interp->buf, char, size+1);
 
-   UNUSED size_t read = fread(interp.buf, sizeof(char), size, fptr);
+   UNUSED size_t read = fread(interp->buf, sizeof(char), size, fptr);
 
    /* On windows, there might be a translation of the linefeed */
 #if !defined(_WIN32)
    if (read < size) {
       error("[empinterp] Could not read file '%s'.\n", fname);
-      status = Error_RuntimeError;
-      goto _exit;
+      return Error_RuntimeError;
    }
 #endif
 
-   interp.buf[read] = '\0';
-   interp.read = read;
-   interp.linestart = interp.buf;
+   interp->buf[read] = '\0';
+   interp->read = read;
+   interp->linestart = interp->buf;
+
+_exit:
+   SYS_CALL(fclose(fptr));
+
+   return status;
+}
+
+static int interp_loadgmdsets(Interpreter *interp)
+{
+   assert(interp->gmd); assert(interp->dct);
+
+   gmdHandle_t gmd = interp->gmd;
+   dctHandle_t dct = interp->dct;
+   int nsymbols;
+   GMD_CHK(gmdInfo, gmd, GMD_NRSYMBOLS, &nsymbols, NULL, NULL);
+
+   IntArray set;
+   rhp_int_init(&set);
+   char setname[GMS_SSSIZE];
+
+   trace_empinterp("[empinterp] Loading sets from GMD: ");
+
+   for (int i = 0; i < nsymbols; ++i) {
+      void *symptr;
+      int symtype, symdim, nrecs;
+      GMD_CHK(gmdGetSymbolByIndex, gmd, i, &symptr);
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_TYPE, &symtype, NULL, NULL);
+
+      if (symtype != GMS_DT_SET) { continue; }
+
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_DIM, &symdim, NULL, NULL);
+
+      if (symdim != 1) { continue; }
+
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &nrecs, NULL, NULL);
+      assert(nrecs > 0);
+
+      S_CHECK(rhp_int_reserve(&set, nrecs))
+
+      void *symiterptr;
+      GMD_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
+
+      bool has_next;
+      do {
+         char uel[GLOBAL_UEL_IDENT_SIZE];
+         GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uel)
+         int uelidx = dctUelIndex(dct, uel);
+         if (uelidx < 0) {
+            error("[empinterp] ERROR: cound't find UEL '%s' in DCT\n", uel);
+            return Error_GamsCallFailed;
+         }
+
+         rhp_int_add(&set, uelidx);
+         has_next = gmdRecordHasNext(gmd, symiterptr);
+         if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
+      } while (has_next);
+
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, setname);
+      S_CHECK(namedints_add(&interp->globals.sets, set, strdup(setname)));
+
+      trace_empinterp("%s ", setname);
+   }
+
+   trace_empinterp("\n");
+
+   return OK;
+}
+
+int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fname) 
+{
+   trace_empinterp("[empinterp] Processing file '%s'\n", empinfo_fname);
+
+   int status = OK;
+
+   Interpreter interp;
+   interp_init(&interp, mdl, empinfo_fname);
+
+   /* ---------------------------------------------------------------------
+    * Read the file content in memory. If there is a GMD filename, load it
+    * --------------------------------------------------------------------- */
+
+   S_CHECK_EXIT(interp_create_buf(&interp));
+
+   if (gmd_fname) {
+      char msg[GMS_SSSIZE];
+      gmdHandle_t gmd;
+
+      if (!gmdCreate(&gmd, msg, sizeof(msg))) {
+         error("[empinterp] ERROR: cannot create GMD object: %s\n", msg);
+         return Error_EMPRuntimeError;
+      }
+
+      GMD_CHK(gmdInitFromGDX, gmd, gmd_fname);
+
+      if (O_Output & PO_TRACE_EMPINTERP) {
+         int nuels, nsymbols;
+         GMD_CHK(gmdInfo, gmd, GMD_NRUELS, &nuels, NULL, NULL);
+         GMD_CHK(gmdInfo, gmd, GMD_NRSYMBOLS, &nsymbols, NULL, NULL);
+
+         trace_empinterp("[empinterp] Loaded GMD from file '%s': %d UELs, %d symbols\n",
+                         gmd_fname, nuels, nsymbols);
+      }
+
+      interp.gmd = gmd;
+
+      S_CHECK_EXIT(interp_loadgmdsets(&interp));
+   }
 
    /* ---------------------------------------------------------------------
     * Phase I: parse for keywords and if there is a DAG, create the nodes
@@ -182,7 +291,7 @@ int empinterp_process(Model *mdl, const char *fname)
 
    bool eof = skip_spaces_commented_lines(&interp, &p);
    if (eof) {
-      printout(PO_LOGFILE, "[empinterp] Empinfo file %s has no statement\n", fname);
+      printout(PO_INFO, "[empinterp] Empinfo file %s has no statement\n", empinfo_fname);
 
       goto _exit;
    }
@@ -235,7 +344,6 @@ _exit:
 
    }
 
-   SYS_CALL(fclose(fptr));
    interp_free(&interp);
 
    return status;
@@ -281,25 +389,23 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
 
    if (idx != UINT_MAX) {
       ident->idx = idx;
-      ident->type = IdentSet;
+      ident->type = IdentGdxSet;
       ident->dim = 1;
       ident->ptr = &sets->list[idx];
       goto _exit;
    }
-      
 
    NamedMultiSets *multisets = &interp->globals.multisets;
    idx = multisets_findbyname_nocase(multisets, identstr);
 
    if (idx != UINT_MAX) {
-      MultiSet ms = multisets_at(multisets, idx);
+      GdxMultiSet ms = multisets_at(multisets, idx);
       ident->idx = ms.idx;
-      ident->type = IdentMultiSet;
+      ident->type = IdentGdxMultiSet;
       ident->dim = ms.dim;
       ident->ptr = ms.gdxreader;
       goto _exit;
    }
-      
 
    NamedScalarArray *scalars = &interp->globals.scalars;
    idx = namedscalar_findbyname_nocase(scalars, identstr);
@@ -311,7 +417,6 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
       ident->ptr = &scalars->list[idx];
       goto _exit;
    }
-      
 
    NamedVecArray *vectors = &interp->globals.vectors;
    idx = namedvec_findbyname_nocase(vectors, identstr);
@@ -323,7 +428,6 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
       ident->ptr = &vectors->list[idx];
       goto _exit;
    }
-      
 
    /* TODO: Params */
 
@@ -456,7 +560,6 @@ int empinterp_finalize(Interpreter *interp)
             S_CHECK(mp_addconstraint(mp, i));
          }
       }
-      
    }
 
    if (mpid_regularmp(mp_vars)) {
@@ -478,7 +581,6 @@ int empinterp_finalize(Interpreter *interp)
             S_CHECK(mp_addvar(mp, i));
          }
       }
-      
    }
 
    if (mpid_regularmp(mp_equs)) {

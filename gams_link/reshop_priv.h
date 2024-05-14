@@ -6,6 +6,7 @@
 #include "gevmcc.h"
 #include "gmomcc.h"
 #include "optcc.h"
+#include "gmdcc.h"
 
 #ifdef GAMS_BUILD
 #include "palmcc.h"

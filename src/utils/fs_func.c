@@ -3,6 +3,16 @@
 #include <string.h>
 #include <sys/types.h>
 
+#ifdef _WIN32
+#include <io.h>
+#define F_OK 0
+#define R_OK 4
+#define access _access
+
+#else /* _WIN32 */
+#include <unistd.h>
+#endif
+
 
 #include "fs_func.h"
 #include "printout.h"
@@ -76,4 +86,17 @@ int new_unique_dirname(char *newdir, unsigned newdir_len)
    } while (true);
 
    return OK;
+}
+
+int file_readable(const char *fname)
+{
+   if (!access(fname, R_OK)) { return 0; }
+
+   if (!access(fname, F_OK)) {
+      error("ERROR! Cannot read (permission issue) file '%s'\n", fname);
+   } else {
+      error("ERROR! File '%s' does not exists\n", fname);
+   }
+
+   return Error_FileOpenFailed;
 }

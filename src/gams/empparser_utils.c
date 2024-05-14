@@ -39,8 +39,8 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
       }
 
    } else {
-      S_CHECK(advance(interp, p, &toktype));
-      PARSER_EXPECTS(interp, "A string (subset, variable) is required",
+      //S_CHECK(advance(interp, p, &toktype));
+      PARSER_EXPECTS(interp, "A set or variable is required",
                      TOK_GMS_SET, TOK_STAR, TOK_IDENT);
 
    }
@@ -48,7 +48,7 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
    switch (toktype) {
    case TOK_GMS_UEL:
       data->type = IdentUEL;
-      data->idx = interp->cur.gms_dct.idx; 
+      data->idx = interp->cur.symdat.idx; 
       data->dim = 0;
 
       goto _finalize;
@@ -60,9 +60,18 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
       goto _finalize;
    case TOK_IDENT:
       break; /* We deal with this case now */
-   case TOK_GMS_SET:
-      TO_IMPLEMENT("Token TOK_GMS_SET");
-      break; 
+   case TOK_GMS_SET: {
+      Token *tok = &interp->cur;
+      data->type = IdentGmdSet;
+      data->idx = tok->symdat.idx;
+      data->dim = 1;
+      data->ptr = tok->symdat.ptr;
+      data->lexeme.start = tok->start;
+      data->lexeme.len = tok->len;
+      data->lexeme.linenr = tok->linenr;
+      idxdata->num_sets++;
+      goto _finalize;
+   }
    default:
       error("%s :: unexpected failure.\n", __func__);
       return Error_RuntimeError;
@@ -74,13 +83,14 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
    assert(toktype == TOK_IDENT);
 
    RESOLVE_IDENTAS(interp, data, "GAMS index must fulfill these conditions.",
-                   IdentLoopIterator, IdentLocalSet, IdentSet);
+                   IdentLoopIterator, IdentLocalSet, IdentGdxSet);
 
    switch (data->type) {
    case IdentLocalSet:
       idxdata->num_localsets++;
       break;
-   case IdentSet:
+   case IdentGdxSet: //TODO: this should not be true in Emb mode
+      assert(!embmode(interp));
       idxdata->num_sets++;
       break;
    case IdentLoopIterator:
@@ -190,61 +200,4 @@ int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
    return parser_expect(interp, "Closing ')' expected for GAMS indices", TOK_RPAREN);
 
 }
-/**
- * @brief Function to parse loop sets
- *
- * It is similar as parse_gmsindices(), but only IdentSet and IdentLocalSet
- * are allowed
- *
- * @param interp 
- * @param p 
- * @param idxdata 
- * @return 
- */
-int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
-                   GmsIndicesData * restrict idxdata)
-{
-   assert(emptok_gettype(&interp->cur) == TOK_LPAREN);
-
-   TokenType toktype;
-   unsigned nargs = 0;
-
-   do {
-      if (nargs == GMS_MAX_INDEX_DIM) {
-         error("[empinterp] ERROR line %u: while parsing the sets to loop over, "
-               "more than %u were parsed.\n", interp->linenr, GMS_MAX_INDEX_DIM);
-         return Error_EMPIncorrectSyntax;
-      }
-
-      /* get the next token */
-      S_CHECK(advance(interp, p, &toktype));
-      S_CHECK(parser_expect(interp, "Sets to loop over must are identifiers",
-                            TOK_IDENT));
-
-      IdentData *data = &idxdata->idents[nargs];
-      RESOLVE_IDENTAS(interp, data, "Loop indices must fulfill these conditions.",
-                      IdentLocalSet, IdentSet);
-
-      switch (idxdata->idents[nargs].type) {
-      case IdentLocalSet:
-         idxdata->num_localsets++;
-         break;
-      case IdentSet:
-         idxdata->num_sets++;
-         break;
-      default:
-         return runtime_error(interp->linenr);
-      }
-
-      nargs++;
-
-      S_CHECK(advance(interp, p, &toktype));
-
-   } while (toktype == TOK_COMMA);
-
-   idxdata->nargs = nargs;
-
-   return parser_expect(interp, "Closing ')' expected for loop set(s).", TOK_RPAREN);
-}
-
 

@@ -55,6 +55,9 @@ int rhp_gms_loadlibs(const char* sysdir);
 RHP_PUBLIB
 int rhp_gms_fillmdl(struct rhp_mdl *mdl);
 
+RHP_PUBLIB
+int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir, unsigned char codelen, const char *code, unsigned char argslen, const char *args);
+
 #undef RHP_PUBLIB
 
 #endif /* RESHOP_GAMS_H */

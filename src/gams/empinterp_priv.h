@@ -12,8 +12,6 @@
 #define RHP_ELT_INVALID ((GdxReader) {.fname = NULL, .gdxh = NULL})
 #include "list_generic.inc"
 
-int gms_find_ident_in_dct(Interpreter * restrict interp, Token * restrict tok) NONNULL;
-
 void interp_showerr(Interpreter *interp) NONNULL;
 int process_statements(Interpreter * restrict interp, unsigned * restrict p,
                         TokenType toktype) NONNULL;
@@ -25,6 +23,11 @@ const char * identtype_str(IdentType type);
  * --------------------------------------------------------------------- */
 
 int skip_spaces_commented_lines(Interpreter *interp, unsigned *p) NONNULL;
+int interp_create_buf(Interpreter *interp) NONNULL;
+NONNULL_AT(1,3)
+void interp_init(Interpreter *interp, Model *mdl, const char *fname);
+NONNULL void interp_free(Interpreter *interp);
+
 
 /* ---------------------------------------------------------------------
  * Start inline functions
@@ -222,6 +225,11 @@ static inline bool _has_no_parent(Interpreter *interp)
    InterpParsedKwds pk = interp->state;
    return !(pk.has_equilibrium || pk.has_implicit_Nash || pk.has_dag_node ||
             pk.bilevel_in_progress);
+}
+
+static inline bool embmode(Interpreter *interp)
+{
+   return interp->ops && interp->ops->type == ParserOpsEmb;
 }
 
 #endif // !EMPINTERP_PRIV_H

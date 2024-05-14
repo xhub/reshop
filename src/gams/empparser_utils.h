@@ -6,8 +6,6 @@
 
 int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
                      GmsIndicesData * restrict idxdata) NONNULL;
-int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
-                   GmsIndicesData * restrict idxdata) NONNULL;
 int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
                           GmsIndicesData * restrict idxdata);
 

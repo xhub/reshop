@@ -1,3 +1,4 @@
+#include "gamsapi_utils.h"
 #include "reshop_config.h"
 
 #include <stdarg.h>
@@ -5,6 +6,7 @@
 #include "empinfo.h"
 #include "empinterp.h"
 #include "empinterp_edgebuilder.h"
+#include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
 #include "empinterp_vm.h"
@@ -82,13 +84,18 @@ const char * identtype_str(IdentType type)
    const char *identtype_str_[IdentTypeMaxValue] = {
    [IdentNotFound]        = "not found",
    [IdentLoopIterator]    = "loop iterator",
-   [IdentSet]             = "GAMS set (1D)",
+   [IdentGmdSet]           = "GAMS set (1D, from GMD)",
+   [IdentGdxSet]           = "GAMS set (1D, from GDX)",
    [IdentLocalSet]        = "local GAMS set",
-   [IdentMultiSet]        = "GAMS set (multidimensional)",
+   [IdentGdxMultiSet]        = "GAMS set (multidimensional, from GDX)",
+   [IdentGmdMultiSet]        = "GAMS set (multidimensional, from GMD)",
    [IdentLocalMultiSet]   = "local GAMS multiset",
    [IdentScalar]          = "GAMS scalar parameter",
+   [IdentGmdScalar]          = "GAMS scalar parameter",
    [IdentVector]          = "GAMS vector parameter",
+   [IdentGmdVector]          = "GAMS vector parameter",
    [IdentParam]           = "GAMS multidimensional parameter",
+   [IdentGmdParam]           = "GAMS multidimensional parameter",
    [IdentLocalScalar]     = "local scalar",
    [IdentLocalVector]     = "local vector",
    [IdentLocalParam]      = "local parameter",
@@ -107,6 +114,28 @@ const char * identtype_str(IdentType type)
    return "INVALID IDENTIFIER";
 }
 
+NONNULL static int tok2ident(Token * restrict tok, IdentData * restrict ident) 
+{
+   GamsSymData *symdat = &tok->symdat;
+
+   switch (tok->type) {
+   case TOK_GMS_SET:
+   case TOK_GMS_MULTISET:
+   case TOK_GMS_PARAM:
+      break;
+   default:
+      return runtime_error(tok->linenr);
+   }
+
+   ident->type = symdat->type;
+   ident->dim = symdat->dim;
+   ident->idx = symdat->idx;
+   ident->lexeme.start = tok->start;
+   ident->lexeme.len = tok->len;
+   ident->lexeme.linenr = tok->linenr;
+
+   return OK;
+}
 
 static int vm_gmssymiter_alloc(Compiler* restrict c, const IdentData *ident,
                                VmGmsSymIterator **f, unsigned *gidx);
@@ -165,7 +194,10 @@ _exit:
 
 NONNULL static Compiler* ensure_vm_mode(Interpreter *interp)
 {
-   interp->ops = &parser_ops_compiler;
+   if (interp->ops->type != ParserOpsEmb) {
+      interp->ops = &parser_ops_compiler;
+   }
+
    Compiler *c = interp->compiler;
 
    if (!c) {
@@ -283,7 +315,19 @@ static inline int end_scope(Interpreter *interp, UNUSED Tape* tape) {
       assert(c->truey_jumps.len == 0 && c->falsey_jumps.len == 0);
       /* no keyword is active */
       interp_resetlastkw(interp);
-      interp->ops = &parser_ops_imm;
+
+      /* TODO: think whether we want to do a "symbolic" check in Emb mode? */
+      if (!embmode(interp) && c->vm->code.len > 0) {
+         trace_empparsermsg("[empinterp] VM execution\n");
+         S_CHECK(vmcode_add(&c->vm->code, OP_END, interp->linenr));
+         S_CHECK(empvm_run(c->vm));
+      }
+
+      c->vm->code.len = 0;
+
+      if (interp->ops->type == ParserOpsCompiler) {
+         interp->ops = &parser_ops_imm;
+      }
    }
 
    return OK;
@@ -400,6 +444,7 @@ static int gen_localvarname(const Lexeme *lexeme, const char *suffix,
                             const char **name, unsigned *namelen)
 {
    const char *ident = lexeme->start;
+   assert(ident);
    unsigned identlen = lexeme->len;
 
    unsigned suffix_len = strlen(suffix);
@@ -475,11 +520,22 @@ static int loop_init(Interpreter * restrict interp, Tape * restrict tape,
 
       IdentType type = ident->type;
       switch (type) {
-      case IdentSet: {
+      case IdentGdxSet: {
          IntArray loopset = namedints_at(&interp->globals.sets, ident->idx);
          assert(valid_set(loopset));
 
          S_CHECK(rhp_uint_add(&vm->uints, loopset.len));
+         iterator->idxmax_gidx = vm->uints.len-1;
+         break;
+      }
+      case IdentGmdSet: {
+         assert(interp->gmd);
+         int nrecs;
+         GMD_CHK(gmdSymbolInfo, interp->gmd, ident->ptr, GMD_NRRECORDS, &nrecs, NULL, NULL);
+         if (nrecs < 0) {
+            return runtime_error(interp->linenr);
+         }
+         S_CHECK(rhp_uint_add(&vm->uints, (unsigned)nrecs));
          iterator->idxmax_gidx = vm->uints.len-1;
          break;
       }
@@ -666,7 +722,8 @@ int loop_increment(Tape * restrict tape, LoopIterators* restrict iterators)
       S_CHECK(emit_bytes(tape, OP_LOCAL_INC, idx_i, OP_PUSH_LIDX, idx_i));
 
       switch (ident->type) {
-      case IdentSet:
+      case IdentGdxSet:
+      case IdentGmdSet:
          S_CHECK(emit_byte(tape, OP_PUSH_VMUINT));
          S_CHECK(EMIT_GIDX(tape, iter->idxmax_gidx));
          break;
@@ -732,8 +789,8 @@ static int dctsymb2ident(const Token * restrict tok, IdentData *equvar)
       return Error_EMPRuntimeError;
    }
 
-   equvar->dim = tok->gms_dct.dim;
-   equvar->idx = tok->gms_dct.idx;
+   equvar->dim = tok->symdat.dim;
+   equvar->idx = tok->symdat.idx;
    equvar->lexeme.linenr = tok->linenr;
    equvar->lexeme.len = tok->len;
    equvar->lexeme.start = tok->start;
@@ -779,12 +836,12 @@ static int vm_regentry_alloc(Compiler* restrict c, const char *basename,
 }
 
 static int vm_daglabels_alloc(Compiler* restrict c, DagLabels **dagc,
-                              const char* basename, unsigned basename_len,
+                              const char* nodename, unsigned nodename_len,
                               uint8_t dim, uint8_t num_vars, unsigned size,
                               ArcType arc_type, unsigned *gidx)
 {
    DagLabels *ldagc;
-   A_CHECK(ldagc, dag_labels_new(basename, basename_len, dim, num_vars, size));
+   A_CHECK(ldagc, dag_labels_new(nodename, nodename_len, dim, num_vars, size));
    ldagc->arc_type = arc_type;
 
    S_CHECK(vmvals_add(&c->vm->globals, ARCOBJ_VAL(ldagc)));
@@ -838,15 +895,17 @@ static int gmsindices_process(GmsIndicesData *indices, LoopIterators *iterators,
       /* -------------------------------------------------------------------
        * We add this ident to the loopiterators
        * ------------------------------------------------------------------- */
-      case IdentSet:
+      case IdentGdxSet:
+      case IdentGmdSet:
       case IdentLocalSet:
          iterators->iteridx2dim[loopi] = i;
          memcpy(&iterators->idents[loopi], idxident, sizeof(*idxident));
          loopi++;
          break;
       default:
-         error("%s ERROR: unexpected failure: got ident '%s' at position %u.\n",
-               __func__, identtype_str(idxident->type), i);
+         error("[empcompiler] ERROR: unexpected failure: got ident type '%s' "
+               "for lexeme '%*s' at position %u.\n", identtype_str(idxident->type),
+               idxident->lexeme.len, idxident->lexeme.start, i);
          return Error_RuntimeError;
       }
    }
@@ -894,7 +953,7 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
 
 
 static int arcobj_init(Interpreter * restrict interp, Tape * restrict tape,
-                        const char* labelname, unsigned labelname_len,
+                        const char* nodename, unsigned nodename_len,
                         ArcType arc_type, GmsIndicesData *indices,
                         LoopIterators *iterators, unsigned *edgeobj_gidx)
 {
@@ -904,7 +963,7 @@ static int arcobj_init(Interpreter * restrict interp, Tape * restrict tape,
    uint8_t dim = indices->nargs;
    uint8_t num_vars = indices->num_sets + indices->num_localsets;
    unsigned dagl_template_gidx;
-   S_CHECK(vm_daglabels_alloc(c, &dagc, labelname, labelname_len, dim,
+   S_CHECK(vm_daglabels_alloc(c, &dagc, nodename, nodename_len, dim,
                               num_vars, 0, arc_type, &dagl_template_gidx));
    *edgeobj_gidx = dagl_template_gidx;
 
@@ -957,7 +1016,7 @@ static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
 
    IdentData ident_gmsarray;
    S_CHECK(RESOLVE_IDENTAS(interp, &ident_gmsarray, "In a conditional, a GAMS set is expected",
-                           IdentLocalSet, IdentSet, IdentMultiSet));
+                           IdentLocalSet, IdentGdxSet, IdentGmdSet, IdentGdxMultiSet, IdentGmdMultiSet));
 
    TokenType toktype;
 
@@ -1054,7 +1113,7 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
 
    switch (toktype) {
    case TOK_GMS_UEL:
-      uel_idx = interp->cur.gms_dct.idx;
+      uel_idx = interp->cur.symdat.idx;
       break;
    case TOK_IDENT:
       RESOLVE_IDENTAS(interp, &ident, "a GAMS parameter is expected",
@@ -1104,7 +1163,7 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
 
    switch (toktype) {
    case TOK_GMS_UEL:
-      uel_idx = interp->cur.gms_dct.idx;
+      uel_idx = interp->cur.symdat.idx;
       break;
    case TOK_IDENT:
       RESOLVE_IDENTAS(interp, &ident, "a GAMS parameter is expected",
@@ -1384,8 +1443,8 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
  *
  * @return                the error code
  */
-static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labelname,
-                               unsigned labelname_len, ArcType arc_type,
+static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *nodename,
+                               unsigned nodename_len, ArcType arc_type,
                                GmsIndicesData *gmsindices)
 {
    Compiler *c = interp->compiler;
@@ -1396,7 +1455,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
    /* This defines the loop iterators and the edgeobj*/
    LoopIterators loopiters = {.size = 0};
    unsigned edge_gidx;
-   S_CHECK(arcobj_init(interp, tape, labelname, labelname_len, arc_type,
+   S_CHECK(arcobj_init(interp, tape, nodename, nodename_len, arc_type,
                         gmsindices, &loopiters, &edge_gidx));
 
    assert(vmval_is_arcobj(&vm->globals, edge_gidx) == OK);
@@ -1482,8 +1541,8 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
 NONNULL static
 int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
 {
-   const char* basename = emptok_getstrstart(&interp->cur);
-   unsigned basename_len = emptok_getstrlen(&interp->cur);
+   const char* nodename = emptok_getstrstart(&interp->cur);
+   unsigned nodename_len = emptok_getstrlen(&interp->cur);
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
@@ -1496,10 +1555,73 @@ int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcTyp
    }
 
 
-   S_CHECK(vm_gmsindicesasarc(interp, p, basename, basename_len, edge_type, &indices));
+   S_CHECK(vm_gmsindicesasarc(interp, p, nodename, nodename_len, edge_type, &indices));
    assert(interp->cur.type == TOK_RPAREN);
 
    return advance(interp, p, &toktype);
+}
+
+/**
+ * @brief Function to parse loop sets
+ *
+ * It is similar as parse_gmsindices(), but only IdentSet and IdentLocalSet
+ * are allowed
+ *
+ * @param interp 
+ * @param p 
+ * @param idxdata 
+ * @return 
+ */
+static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
+                   GmsIndicesData * restrict idxdata)
+{
+   assert(emptok_gettype(&interp->cur) == TOK_LPAREN);
+
+   TokenType toktype;
+   unsigned nargs = 0;
+
+   do {
+      if (nargs == GMS_MAX_INDEX_DIM) {
+         error("[empinterp] ERROR line %u: while parsing the sets to loop over, "
+               "more than %u were parsed.\n", interp->linenr, GMS_MAX_INDEX_DIM);
+         return Error_EMPIncorrectSyntax;
+      }
+
+      /* get the next token */
+      S_CHECK(advance(interp, p, &toktype));
+      PARSER_EXPECTS(interp, "Sets to loop over must are identifiers",
+                            TOK_IDENT, TOK_GMS_SET);
+
+      IdentData *data = &idxdata->idents[nargs];
+
+      if (toktype == TOK_GMS_SET) {
+         S_CHECK(tok2ident(&interp->cur, data));
+      } else {
+      RESOLVE_IDENTAS(interp, data, "Loop indices must fulfill these conditions.",
+                      IdentLocalSet, IdentGdxSet);
+      }
+
+      switch (idxdata->idents[nargs].type) {
+      case IdentLocalSet:
+         idxdata->num_localsets++;
+         break;
+      case IdentGdxSet:
+      case IdentGmdSet:
+         idxdata->num_sets++;
+         break;
+      default:
+         return runtime_error(interp->linenr);
+      }
+
+      nargs++;
+
+      S_CHECK(advance(interp, p, &toktype));
+
+   } while (toktype == TOK_COMMA);
+
+   idxdata->nargs = nargs;
+
+   return parser_expect(interp, "Closing ')' expected for loop set(s).", TOK_RPAREN);
 }
 
 /**
@@ -1568,13 +1690,14 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
 
       IdentData *ident = &gmsindices.idents[0];
       RESOLVE_IDENTAS(interp, ident, "GAMS index must fulfill these conditions.",
-                      IdentLocalSet, IdentSet);
+                      IdentLocalSet, IdentGdxSet, IdentGmdSet);
 
       switch (ident->type) {
       case IdentLocalSet:
          gmsindices.num_localsets++;
          break;
-      case IdentSet:
+      case IdentGdxSet:
+      case IdentGmdSet:
          gmsindices.num_sets++;
          break;
       default:
@@ -1662,9 +1785,6 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
     * If we are back to the general scope, we execute the VM now
     * --------------------------------------------------------------------- */
 
-   if (c->scope_depth == 0) {
-   }
-
    return OK;
 }
 
@@ -1696,11 +1816,17 @@ int parse_defvar(Interpreter * restrict interp, unsigned * restrict p)
    Lexeme lexeme = {.linenr = interp->linenr, .len = interp->pre.len, .start = interp->pre.start};
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
-   PARSER_EXPECTS(interp, "local variable can be defined from a set or parameter", TOK_IDENT);
+   PARSER_EXPECTS(interp, "local variable can be defined from a set or parameter",
+                  TOK_GMS_SET, TOK_GMS_MULTISET, TOK_GMS_PARAM, TOK_IDENT);
 
    IdentData ident;
-   RESOLVE_IDENTAS(interp, &ident, "a GAMS set is expected",
-                   IdentLocalSet, IdentSet, IdentVector, IdentLocalVector);
+
+   if (toktype == TOK_IDENT) {
+      RESOLVE_IDENTAS(interp, &ident, "a GAMS set is expected",
+                      IdentLocalSet, IdentGdxSet, IdentVector, IdentLocalVector);
+   } else {
+      S_CHECK(tok2ident(&interp->cur, &ident));
+   }
 
    unsigned dummylen;
    const char *lvar_name = NULL;
@@ -1711,7 +1837,8 @@ int parse_defvar(Interpreter * restrict interp, unsigned * restrict p)
    enum OpCode opcode_add, opcode_reset;
    switch(ident.type) {
    case IdentLocalSet:
-   case IdentSet: {
+   case IdentGdxSet:
+   case IdentGmdSet: {
       IntArray set = {.len = 0, .max = 5};
       MALLOC_(set.arr, int, set.max);
       S_CHECK(namedints_add(&interp->globals.localsets, set, lvar_name));
@@ -1941,7 +2068,7 @@ int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
    LoopIterators iterators;
    unsigned regentry_gidx;
    S_CHECK(regentry_init(interp, labelname, labelname_len, gmsindices,
-                            &iterators, tape, &regentry_gidx));
+                         &iterators, tape, &regentry_gidx));
    S_CHECK(loop_initandstart(interp, tape, &iterators));
 
    /* ---------------------------------------------------------------------
@@ -2242,7 +2369,7 @@ static int c_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
    S_CHECK(c_gms_resolve(interp, p));
 
    interp_restore_savedtok(interp);
-   interp->cur.gms_dct.read = true;
+   interp->cur.symdat.read = true;
 
    filter->active = false;
 
@@ -2826,6 +2953,8 @@ const struct parser_ops parser_ops_compiler = {
    .ccflib_new = c_ccflib_new,
    .ccflib_finalize = c_ccflib_finalize,
    .ctr_markequasflipped = c_ctr_markequasflipped,
+   .gms_get_uelidx        = get_uelidx_via_dct,
+   .gms_get_uelstr        = get_uelstr_via_dct,
    .gms_parse = c_gms_parse,
    .identaslabels = c_identaslabels,
    .mp_addcons = c_mp_addcons,
@@ -2849,31 +2978,31 @@ const struct parser_ops parser_ops_compiler = {
    .ovf_param_getvecsize = c_ovf_param_getvecsize,
    .ovf_getname = c_ovf_getname,
    .read_param = c_read_param,
+   .resolve_lexeme_as_gmssymb = resolve_lexeme_as_gmssymb_via_dct,
 };
 
 
 int empvm_finalize(Interpreter *interp)
 {
-
    Compiler *c = interp->compiler;
-
 
    if (c->scope_depth != 0) {
       error("[empcompiler] ERROR: after parsing the file, the compiler depth"
-               "is nonzero: %u", c->scope_depth);
+            "is nonzero: %u", c->scope_depth);
    }
    /* no keyword is active */
    interp_resetlastkw(interp);
 
    assert(c->truey_jumps.len == 0 && c->falsey_jumps.len == 0);
 
-   if (c->vm->code.len > 0) {
+   /* TODO: think whether we want to do a "symbolic" check in Emb mode? */
+   if (!embmode(interp) && c->vm->code.len > 0) {
       trace_empparsermsg("[empinterp] VM execution\n");
       S_CHECK(vmcode_add(&c->vm->code, OP_END, interp->linenr));
       S_CHECK(empvm_run(c->vm));
-      c->vm->code.len = 0;
    }
 
+   c->vm->code.len = 0;
    return OK;
 }
 
@@ -2890,7 +3019,7 @@ int empvm_finalize(Interpreter *interp)
  */
 int c_switch_to_compmode(Interpreter *interp, bool *switched)
 {
-   if (interp->ops->type != ParserOpsCompiler) {
+   if (interp->ops->type != ParserOpsCompiler && interp->ops->type != ParserOpsEmb) {
       *switched = true;
 
       EmpVm *vm = interp->compiler->vm;
@@ -2913,7 +3042,10 @@ int c_switch_to_compmode(Interpreter *interp, bool *switched)
 int c_switch_to_immmode(Interpreter *interp)
 {
    S_CHECK(empvm_finalize(interp));
-   interp->ops = &parser_ops_imm;
+
+   if (interp->ops->type != ParserOpsEmb) {
+      interp->ops = &parser_ops_imm;
+   }
 
    EmpVm *vm = interp->compiler->vm;
    vm->data.uid_parent = EMPDAG_UID_NONE;

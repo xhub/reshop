@@ -17,6 +17,7 @@
 
 int mp_setobjequ_internal(MathPrgm *mp, rhp_idx objequ) NONNULL;
 int mp_setobjvar_internal(MathPrgm *mp, rhp_idx vidx) NONNULL;
+MathPrgm *mp_new_fake(void) NONNULL;
 
 static inline void _setvarrole(MathPrgm *mp, rhp_idx vi, VarRole type)
 {

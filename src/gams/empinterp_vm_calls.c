@@ -42,7 +42,7 @@ NONNULL_AT(1) static
 int vm_common_nodeinit(VmData *data, daguid_t uid, DagRegisterEntry *regentry)
 {
    if (regentry) {
-      regentry->daguid = uid;
+      regentry->daguid_parent = uid;
       DagRegisterEntry *regentry_;
       A_CHECK(regentry_, regentry_dup(regentry));
 
@@ -89,7 +89,7 @@ static void* ccflib_newobj(VmData *data, unsigned argc, const VmValue *values)
 
    } else if (IS_REGENTRY(stack2)) {
       regentry = AS_REGENTRY(stack2);
-      genlabelname(regentry, data->dct, &label);
+      genlabelname(regentry, data->interp, &label);
 
    } else {
       error("[empvm_run] ERROR in %s: 2nd argment has the wrong type. Please "
@@ -122,7 +122,7 @@ static void* mp_newobj(VmData *data, unsigned argc, const VmValue *values)
 
    } else if (IS_REGENTRY(stack2)) {
       regentry = AS_REGENTRY(stack2);
-      genlabelname(regentry, data->dct, &label);
+      genlabelname(regentry, data->interp, &label);
 
    } else {
       error("[empvm_run] ERROR in %s: 2nd argment has the wrong type. Please "
@@ -152,7 +152,7 @@ static void* mpe_newobj(VmData *data, unsigned argc, const VmValue *values)
 
    } else if (IS_REGENTRY(stackval)) {
       regentry = AS_REGENTRY(stackval);
-      genlabelname(regentry, data->dct, &label);
+      genlabelname(regentry, data->interp, &label);
 
    } else {
       error("[empvm_run] ERROR in %s: 2nd argument has the wrong type. Please "
@@ -206,14 +206,14 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
    if (len > 0) {
       DagLabels *dagl = data->labels2edges->list[len-1];
       assert(dagl->num_children > 0);
-      has_child = dagl->daguid == ccflib_uid;
+      has_child = dagl->daguid_parent == ccflib_uid;
       if (has_child) { num_children = dagl->num_children; }
    }
 
    len = data->label2edge->len;
    if (!has_child && len > 0) { 
       DagLabel *daglabel_last = data->label2edge->list[len-1];
-      has_child = daglabel_last->daguid == ccflib_uid;
+      has_child = daglabel_last->daguid_parent == ccflib_uid;
       if (has_child) { num_children = 1; }
    }
 

@@ -64,7 +64,7 @@ int mdl_check(Model *mdl)
    S_CHECK(mdl_getobjvar(mdl, &objvar))
    S_CHECK(mdl_getobjequ(mdl, &objequ))
    S_CHECK(mdl_getsense(mdl, &sense))
-   bool has_optobj =  valid_vi(objvar) || valid_ei(objequ);
+   bool has_optobj = valid_vi(objvar) || valid_ei(objequ);
 
    ModelType probtype;
    S_CHECK(mdl_gettype(mdl, &probtype));
@@ -89,12 +89,21 @@ int mdl_check(Model *mdl)
       }
       break;
    case MdlType_emp:
-      if (mdl->empinfo.empdag.mps.len == 0 && valid_optsense(sense)) {
+      if (mdl->empinfo.empdag.mps.len == 0) {
+         if (!valid_optsense(sense)) {
+            int offset;
+            error("[model check] ERROR: %n%s model '%.*s' #%u of type %s has no "
+                  "EMPinfo structure and is not an optimization problem.\n",
+                  &offset, mdl_fmtargs(mdl), mdltype_name(probtype));
+            error("%*sSpecify the EMPinfo structure.\n", offset, "");
+            return Error_InvalidModel;
+
+         }
          if (!has_optobj) {
-         error("[model check] ERROR: %s model '%.*s' #%u of type %s has neither"
-               " an objective variable or an objective function.\n", mdl_fmtargs(mdl),
-               mdltype_name(probtype));
-         return Error_InvalidModel;
+            error("[model check] ERROR: %s model '%.*s' #%u of type %s has neither"
+                  " an objective variable or an objective function.\n", mdl_fmtargs(mdl),
+                  mdltype_name(probtype));
+            return Error_InvalidModel;
          }
       }
       /* TODO where to check the compatibility between empdag and objective stuff */

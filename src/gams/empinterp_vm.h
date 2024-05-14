@@ -188,7 +188,10 @@ typedef struct {
    Avar v_extend;
    IntScratch e_data;
    IntScratch v_data;
+   IntScratch iscratch;
    DblScratch dscratch;
+   int itmp;
+   double dtmp;
    ArcVFObjArray arcvfobjs;
    daguid_t uid_grandparent;    /**< uid of the parent node                */
    daguid_t uid_parent;         /**< uid of the parent node                */
@@ -197,6 +200,8 @@ typedef struct {
    Avar *v_current;
    Model *mdl;
    void *dct;
+   void *gmd;
+   Interpreter *interp;
    CompilerGlobals *globals;
    DagRegister *dagregister;
    DagLabels *daglabels;

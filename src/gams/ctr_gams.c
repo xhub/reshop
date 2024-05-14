@@ -24,6 +24,7 @@
 
 #include "gmomcc.h"
 #include "optcc.h"
+#include "gmdcc.h"
 
 /* Looks like this is only used here. In the future, might be non-static if needed */
 static int gams_chk_ctrdata(const Container *ctr, const char *fn)
@@ -153,6 +154,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
    }
    strcat(buffer, GMS_CONFIG_FILE);
 
+   /* This is required to get any solver */
    if (cfgReadConfig(gms->cfg, buffer)) {
       error("[GAMS] ERROR: could not read configuration file %s\n", buffer);
       return Error_GamsCallFailed;
@@ -257,6 +259,11 @@ int gams_load_libs(const char *sysdir)
    }
    CHK_CORRECT_LIBVER(gdx, GDX, msg);
 
+   if (!gmdLibraryLoaded() && !gmdGetReadyD(sysdir, msg, sizeof(msg))) {
+      error("%s\n", msg);
+      return 1;
+   }
+   CHK_CORRECT_LIBVER(gmd, GMD, msg);
    return OK;
 }
 
@@ -266,6 +273,7 @@ void gams_unload_libs(void)
    if (dctLibraryLoaded()) dctLibraryUnload();
    if (gdxLibraryLoaded()) gdxLibraryUnload();
    if (gevLibraryLoaded()) gevLibraryUnload();
+   if (gmdLibraryLoaded()) gmdLibraryUnload();
    if (gmoLibraryLoaded()) gmoLibraryUnload();
    if (optLibraryLoaded()) optLibraryUnload();
 }

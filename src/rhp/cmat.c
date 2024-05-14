@@ -1422,7 +1422,7 @@ int cmat_chk_expensive(Container *ctr)
          }
          case vnone:
              error("[cmat/check] ERROR in equation %s: variable %s is found in "
-                   "the container matrix, but isn't found in the equation data",
+                   "the container matrix, but isn't found in the equation data\n",
                    ctr_printequname(ctr, ei), ctr_printvarname(ctr, vi));
               cmat_elt_print(PO_ERROR, ce, ctr);
              status = Error_Inconsistency;
@@ -1439,13 +1439,22 @@ _end:
       }
 
       int offset;
-      if (nlinvar > 0 || nNLvar > 0) {
-         error("[cmat/check] %nERROR in equation %s: %u linear variables and %u "
-               "nonlinear variables are absent from the container matrix\n",
-               &offset, ctr_printequname(ctr, i), nlinvar, nNLvar);
+      bool missing_linvar = nlinvar > 0;
+      bool missing_nlvar  = nNLvar  > 0;
+      if (missing_linvar || missing_nlvar) {
+         error("[cmat/check] %nERROR in equation %s: ", &offset, ctr_printequname(ctr, i));
+         if (missing_linvar) {
+            error("%u linear variables ", nlinvar);
+            if (missing_nlvar) { errormsg(" and "); }
+            else { errormsg("\n"); }
+         }
+         if (missing_nlvar) {
+            error("%u nonlinear variables are absent from the container matrix\n",
+                  nNLvar);
+         }
 
          for (unsigned vi = 0; vi < total_n; ++vi) {
-            if (vtags[vi] == vnone || vtags[vi] == vchecked)  {continue; }
+            if (vtags[vi] == vnone || vtags[vi] & vchecked)  { continue; }
 
             error("%*s variable %s\n", offset+4, vtag2str(vtags[vi]),
                   ctr_printvarname(ctr, vi));

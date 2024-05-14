@@ -240,7 +240,8 @@ static MathPrgm *mp_alloc(Model *mdl) {
    return mp;
 }
 
-MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl) {
+MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl)
+{
    MathPrgm *mp;
    AA_CHECK(mp, mp_alloc(mdl));
 
@@ -268,6 +269,11 @@ MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl) {
    MP_DEBUG("Starting MP #%u\n", mp->id);
 
    return mp;
+}
+
+MathPrgm *mp_new_fake(void)
+{
+   return mp_alloc(NULL);
 }
 
 MathPrgm *mp_dup(const MathPrgm *mp_src,

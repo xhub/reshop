@@ -1,5 +1,6 @@
 #include "empinfo.h"
 #include "empinterp.h"
+#include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
 #include "empparser_priv.h"
@@ -32,11 +33,11 @@ int parser_filter_start(Interpreter* restrict interp)
    interp->gms_sym_iterator.active = true;
    interp->gms_sym_iterator.compact = true;
    interp->gms_sym_iterator.loop_needed = false;
-   interp->gms_sym_iterator.indices.nargs = interp->cur.gms_dct.dim;
+   interp->gms_sym_iterator.indices.nargs = interp->cur.symdat.dim;
 
-   assert(interp->cur.gms_dct.dim < GMS_MAX_INDEX_DIM);
-   
-   memset(&interp->gms_sym_iterator.uels, 0, sizeof(int)*interp->cur.gms_dct.dim);
+   assert(interp->cur.symdat.dim < GMS_MAX_INDEX_DIM);
+
+   memset(&interp->gms_sym_iterator.uels, 0, sizeof(int)*interp->cur.symdat.dim);
 
    return OK;
 }
@@ -54,7 +55,7 @@ int parser_filter_set(Interpreter* restrict interp, unsigned i, int val)
 
    assert(interp->gms_sym_iterator.active && i < GMS_MAX_INDEX_DIM);
    interp->gms_sym_iterator.uels[i] = val;
-   
+
    if (val > 0) {
       interp->gms_sym_iterator.compact = false;
    }
@@ -66,7 +67,7 @@ NONNULL_AT(1) static
 int imm_common_nodeinit(Interpreter *interp, daguid_t uid, DagRegisterEntry *regentry)
 {
    if (regentry) {
-      regentry->daguid = uid;
+      regentry->daguid_parent = uid;
       S_CHECK(dagregister_add(&interp->dagregister, regentry));
    }
 
@@ -93,13 +94,13 @@ static int imm_gms_resolve(Interpreter* restrict interp)
 {
    assert(interp->gms_sym_iterator.active && !interp->gms_sym_iterator.loop_needed);
    TokenType toktype = parser_getcurtoktype(interp);
-   DctResolveData data;
+   GmsResolveData data;
 
    data.type = GmsSymIteratorTypeImm;
    data.symiter.imm.toktype = toktype;
-   data.symiter.imm.symidx = interp->cur.gms_dct.idx;
+   data.symiter.imm.symidx = interp->cur.symdat.idx;
    data.symiter.imm.symiter = &interp->gms_sym_iterator;
-   data.scratch = &interp->cur.iscratch;
+   data.iscratch = &interp->cur.iscratch;
 
    dctHandle_t dct = interp->dct;
 
@@ -180,10 +181,10 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
 
          switch (toktype) {
          case TOK_GMS_SET:
-            S_CHECK(parser_filter_set(interp, i, -interp->peek.gms_dct.idx));
+            S_CHECK(parser_filter_set(interp, i, -interp->peek.symdat.idx));
             break;
          case TOK_GMS_UEL:
-            S_CHECK(parser_filter_set(interp, i, interp->peek.gms_dct.idx));
+            S_CHECK(parser_filter_set(interp, i, interp->peek.symdat.idx));
             break;
          case TOK_STAR:
             S_CHECK(parser_filter_set(interp, i, 0));
@@ -205,10 +206,10 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
 
       assert(sym_total_len >= 0 && sym_total_len < INT_MAX);
 
-      if (i != interp->cur.gms_dct.dim) {
+      if (i != interp->cur.symdat.dim) {
          error("[empinterp] ERROR: GAMS symbol '%.*s' has dimension %d but %u "
                "indices were given!\n",
-               interp->cur.len, interp->cur.start, interp->cur.gms_dct.dim, i);
+               interp->cur.len, interp->cur.start, interp->cur.symdat.dim, i);
          return Error_EMPIncorrectInput;
       }
 
@@ -220,7 +221,7 @@ static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
 
    S_CHECK(imm_gms_resolve(interp));
 
-   interp->cur.gms_dct.read = true;
+   interp->cur.symdat.read = true;
 
    return OK;
 }
@@ -260,7 +261,7 @@ static int imm_mp_new(Interpreter *interp, RhpSense sense, MathPrgm **mp)
 
    DagRegisterEntry *regentry = interp->regentry;
    if (regentry) {
-      S_CHECK(genlabelname(regentry, interp->dct, &labelname));
+      S_CHECK(genlabelname(regentry, interp, &labelname));
       interp->regentry = NULL;
    }
 
@@ -311,7 +312,7 @@ static int imm_mp_finalize(UNUSED Interpreter *interp, MathPrgm *mp)
 
       rhp_idx objequ = mp_getobjequ(mp);
       assert(valid_ei(objequ)); // TODO support the case where there is no objequ
-      
+ 
       EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
       ArcVFData edgevf;
@@ -370,7 +371,7 @@ static int imm_mpe_new(Interpreter *interp, Mpe **mpe)
 
    DagRegisterEntry *regentry = interp->regentry;
    if (regentry) {
-      S_CHECK(genlabelname(regentry, interp->dct, &labelname));
+      S_CHECK(genlabelname(regentry, interp, &labelname));
       interp->regentry = NULL;
    }
 
@@ -516,7 +517,7 @@ static int imm_mp_ccflib_new(Interpreter* restrict interp, unsigned ccflib_idx,
 
    DagRegisterEntry *regentry = interp->regentry;
    if (regentry) {
-      S_CHECK(genlabelname(regentry, interp->dct, &label));
+      S_CHECK(genlabelname(regentry, interp, &label));
       interp->regentry = NULL;
    }
 
@@ -659,6 +660,8 @@ const ParserOps parser_ops_imm = {
    .ccflib_new            = imm_mp_ccflib_new,
    .ccflib_finalize       = imm_mp_ccflib_finalize,
    .ctr_markequasflipped  = imm_ctr_markequasflipped,
+   .gms_get_uelidx        = get_uelidx_via_dct,
+   .gms_get_uelstr        = get_uelstr_via_dct,
    .gms_parse             = imm_gms_parse,
    .identaslabels         = imm_identaslabels,
    .mp_addcons            = imm_mp_addcons,
@@ -683,4 +686,5 @@ const ParserOps parser_ops_imm = {
    .ovf_getname           = imm_ovf_getname,
    .read_param            = imm_read_param,
    .read_elt_vector       = imm_read_elt_vector,
+   .resolve_lexeme_as_gmssymb = resolve_lexeme_as_gmssymb_via_dct,
 };

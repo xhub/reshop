@@ -23,7 +23,7 @@ typedef struct empinfo {
 } EmpInfo;
 
 void empinfo_dealloc(EmpInfo *empinfo);
-int empinfo_alloc(EmpInfo *, Model *mdl);
+int empinfo_alloc(EmpInfo *empinfo, Model *mdl);
 int empinfo_initfromupstream(Model *mdl) NONNULL;
 
 bool empinfo_is_hop(const EmpInfo *empinfo) NONNULL;

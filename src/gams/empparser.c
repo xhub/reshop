@@ -51,6 +51,8 @@
  * - v8 parsing: https://github.com/v8/v8/blob/master/src/parsing/scanner-inl.h
  * ------------------------------------------------------------------------- */
 
+enum { SCRATCHDBL_DEFAULT = 100 };
+
 static const char * const kw_modeling_str[] = {
    "bilevel",
    "dag",
@@ -96,10 +98,11 @@ static const char * const tok_str[] = {
    "a string",
    "INTEGER",
    "a number",
+   "GAMS alias",
    "GAMS equation",
+   "GAMS multiset",
    "GAMS parameter",
    "GAMS set",
-   "GAMS symbol",
    "GAMS UEL",
    "GAMS variable",
    "DEFVAR",
@@ -173,8 +176,8 @@ static inline IdentType gdxsymtype_identtype(GdxSymType type, unsigned dim)
 {
    switch(type) {
    case dt_set:
-      if (dim == 1) return IdentSet;
-      return IdentMultiSet;
+      if (dim == 1) return IdentGdxSet;
+      return IdentGdxMultiSet;
    case dt_par:
       if (dim == 0) return IdentScalar;
       if (dim == 1) return IdentVector;
@@ -222,6 +225,8 @@ void interp_showerr(Interpreter *interp)
 
    struct emptok * restrict tok;
 
+   if (interp->err_shown) { return ; }
+
    if (interp->peekisactive) {
       tok = &interp->peek;
    } else {
@@ -234,7 +239,7 @@ void interp_showerr(Interpreter *interp)
 
       const char * restrict end = strpbrk(tok->start, "\n");
       if (!end) { end = &tok->start[strlen(tok->start)]; }
-      error("[empparser] line %u follows:\n%.*s", interp->linenr, (int)(end-start), start);
+      error("[empparser] line %u follows:\n%.*s\n", interp->linenr, (int)(end-start), start);
       goto final_error_line;
    }
 
@@ -341,14 +346,14 @@ void tok_payloadprint(const Token *tok, unsigned mode,
 {
    switch (tok->type) {
    case TOK_GMS_EQU:
-      if (tok->gms_dct.read) {
+      if (tok->symdat.read && mdl) {
          aequ_printnames(&tok->payload.e, mode, mdl);
       } else {
          printstr(mode, "\n");
       }
       break;
    case TOK_GMS_VAR:
-      if (tok->gms_dct.read) {
+      if (tok->symdat.read && mdl) {
          avar_printnames(&tok->payload.v, mode, mdl);
       } else {
          printstr(mode, "\n");
@@ -371,7 +376,7 @@ UNUSED NONNULL static void _tok_print(Token *tok, unsigned mode)
             toktype2str(tok->type), tok->linenr);
 }
 
-static enum mdl_type tok2probtype(TokenType toktype)
+static enum mdl_type toktype2probtype(TokenType toktype)
 {
    enum mdl_type type;
    switch (toktype) {
@@ -516,7 +521,7 @@ const struct parse_rules rules[] = {
    [TOK_GMS_EQU]       = {NULL,      NULL,     PREC_NONE},
    [TOK_GMS_PARAM]     = {NULL,      NULL,     PREC_NONE},
    [TOK_GMS_SET]       = {NULL,      NULL,     PREC_NONE},
-   [TOK_GMS_SYMBOL]    = {NULL,      NULL,     PREC_NONE},
+   [TOK_GMS_ALIAS]    = {NULL,      NULL,     PREC_NONE},
    [TOK_GMS_UEL]       = {NULL,      NULL,     PREC_NONE}, 
    [TOK_GMS_VAR]       = {NULL,      NULL,     PREC_NONE}, 
    [TOK_DEFVAR]        = {NULL,      NULL,     PREC_NONE},
@@ -644,6 +649,43 @@ static inline int _eof(Token *tok)
    return OK;
 }
 
+/* ----------------------------------------------------------------------
+ *
+ * ---------------------------------------------------------------------- */
+
+
+#define validc(c) ((c) != '\0' && (c) != EOF) 
+#define notEOL(c) (validc(c) && (c) != '\n') 
+
+static inline void inc_linenr(Interpreter *interp, unsigned p)
+{
+   interp->linenr++;
+   interp->linestart = &interp->buf[p];
+}
+
+int skip_spaces_commented_lines(Interpreter *interp, unsigned *p)
+{
+
+   unsigned _p = (*p);
+   const char * restrict buf = interp->buf;
+
+  /* ----------------------------------------------------------------------
+   * We want to skip over spaces and commented lines at the top
+   * ---------------------------------------------------------------------- */
+
+   while(isspace(buf[_p])) { if (buf[_p] == '\n') { inc_linenr(interp, _p+1); } _p++; }
+
+   while (buf[_p] == '*') {
+      while (notEOL(buf[_p])) _p++;
+
+      while(isspace(buf[_p])) { if (buf[_p] == '\n') { inc_linenr(interp, _p+1); } _p++; }
+   }
+
+   *p = _p;
+
+   return !validc(buf[_p]);
+}
+
 static inline bool parser_skipwsuntilEOL(Interpreter *interp, unsigned * restrict p)
 {
    unsigned _p;
@@ -651,10 +693,10 @@ static inline bool parser_skipwsuntilEOL(Interpreter *interp, unsigned * restric
 
    _p = (*p);
 
-   while ((buf[_p] != '\0' && buf[_p] != EOF) && isspace(buf[_p]) && buf[_p] != '\n') _p++;
+   while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
 
    (*p) = _p;
-   return buf[_p] == '\0' || buf[_p] == EOF;
+   return !validc(buf[_p]);
 }
 
 static inline bool parser_skipws_peek(const Interpreter *interp, unsigned * restrict p)
@@ -664,14 +706,14 @@ static inline bool parser_skipws_peek(const Interpreter *interp, unsigned * rest
 
    _p = (*p);
 
-   while (buf[_p] != '\0' && isspace(buf[_p]) && buf[_p] != '\n') _p++;
+   while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
 
    while (buf[_p] == '\n') {
       _p++;
 
       /* In peek mode we don't want to change things the state of interp */
 
-      while (buf[_p] != '\0' && isspace(buf[_p]) && buf[_p] != '\n') _p++;
+      while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
 
       /* -------------------------------------------------------------------
        * Skip commented line
@@ -692,7 +734,7 @@ static inline bool parser_skipws(Interpreter *interp, unsigned * restrict p)
 
    _p = (*p);
 
-   while (buf[_p] != '\0' && isspace(buf[_p]) && buf[_p] != '\n') _p++;
+   while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
 
    while (buf[_p] == '\n') {
       _p++;
@@ -701,18 +743,52 @@ static inline bool parser_skipws(Interpreter *interp, unsigned * restrict p)
       interp->linestart_old = interp->linestart;
       interp->linestart = &buf[_p];
 
-      while (buf[_p] != '\0' && isspace(buf[_p]) && buf[_p] != '\n') _p++;
+      while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
 
       /* -------------------------------------------------------------------
        * Skip commented line
        * ------------------------------------------------------------------- */
       if (buf[_p] == '*') {
-         while (buf[_p] != '\0' && buf[_p] != '\n') _p++;
+         while (notEOL(buf[_p])) _p++;
       }
    }
 
    (*p) = _p;
    return buf[_p] == '\0' || buf[_p] == EOF;
+}
+
+static bool tok_UELstr(Token *tok, const char * restrict buf, unsigned * restrict pos, char quote)
+{
+  /* ----------------------------------------------------------------------
+   * The UEL/label spec indicate that leading spaces matter, but trailing ones don't
+   * https://www.gams.com/latest/docs/UG_GAMSPrograms.html#UG_GAMSPrograms_Labels
+   *
+   * So as we are right after the quote:
+   * 1) we first advance until the first non-blank is reached (within the line and file limit)
+   * 2) we advance until the end quote or a blank is reached (within the line and file limit)
+   * 3) if we have a blank, we advance until we consume the quote (within the line and file limit)
+   *
+   * If we have an EOL/EOF, or we don't reach the ending quote, we error by returning true
+   * The callee is responsible for checking that we have an ending quote
+   * ---------------------------------------------------------------------- */
+
+   unsigned _p = (*pos), pos_ini = (*pos);
+
+   while (validc(buf[_p]) && isspace(buf[_p]) && buf[_p] != '\n') _p++;
+
+   while (validc(buf[_p]) && !isspace(buf[_p]) && buf[_p] != quote) _p++; 
+
+   /* This is the length */
+   unsigned len = _p - pos_ini;
+   if (buf[_p] == ' ') {
+      while (validc(buf[_p]) && buf[_p] == ' ' && buf[_p] != quote) _p++; 
+   }
+
+   *pos = _p;
+   tok->len = len;
+   tok->start = &buf[pos_ini];
+
+   return !(validc(buf[_p]));
 }
 
 /**
@@ -875,47 +951,48 @@ static bool tok_untilchar(Token *tok, const char * restrict buf, char c,
    return buf[lpos] == EOF ||  buf[lpos] == '\0';
 }
 
-NONNULL static int tok_asUEL(Token *tok, TokenType *toktype, Model *mdl)
+NONNULL static int tok_asUEL(Token *tok, TokenType *toktype, Interpreter *interp)
 {
    if (tok->len == 1 && tok->start[0] == '*') {
       *toktype = TOK_STAR;
       return OK;
    }
 
-   GmsContainerData *gms = (GmsContainerData*)mdl->ctr.data;
+   GamsSymData *symdat = &tok->symdat;
 
-   GamsSymData *gms_dct = &tok->gms_dct;
-
-   if (emptok_getstrlen(tok) >= GMS_SSSIZE) { goto _not_found; }
+   size_t tok_len = emptok_getstrlen(tok);
+   if (tok_len >= GMS_SSSIZE) { goto _not_found; }
 
    /* Copy string to end it with NUL */
-   char *uelstr;
-   { _TOK_GETSTRTMP(tok, mdl, uelstr); }
+   char uelstr[GMS_SSSIZE];
+   strncpy(uelstr, tok->start, tok_len);
+   uelstr[tok_len] = '\0';
 
-   int uelindex = dctUelIndex(gms->dct, uelstr);
-   if (uelindex <= 0) {
+   int uelidx;
+   S_CHECK(interp->ops->gms_get_uelidx(interp, uelstr, &uelidx));
+   if (uelidx <= 0) {
      /* ----------------------------------------------------------------------
       * TODO: this is a hack as we currently have a hard time with the put
       * command adding spaces around UELs.
       * ---------------------------------------------------------------------- */
 
-      if (uelstr[tok->len-1] == ' ') {
-         unsigned pos = tok->len-1;
-         while (pos > 0 && uelstr[pos] == ' ') { uelstr[pos] = '\0'; pos--;}
-         uelindex = dctUelIndex(gms->dct, uelstr);
-         if (uelindex <= 0) { goto _not_found; }
+      if (uelstr[0] == ' ') {
+         unsigned pos = 1;
+         while (pos < tok_len && uelstr[pos] == ' ') { uelstr[pos] = '\0'; pos++; }
+         S_CHECK(interp->ops->gms_get_uelidx(interp, &uelstr[pos], &uelidx));
+         if (uelidx <= 0) { goto _not_found; }
       } else {
          goto _not_found;
       }
    }
 
    *toktype = TOK_GMS_UEL;
-   gms_dct->idx = uelindex;
+   symdat->idx = uelidx;
 
    return OK;
 
 _not_found:
-   gms_dct->idx = IdxNotFound;
+   symdat->idx = IdxNotFound;
    *toktype = TOK_UNSET;
 
    return OK;
@@ -934,14 +1011,15 @@ _not_found:
  * @return         The error code
  */
 int parser_asUEL(Interpreter *interp, unsigned * restrict p, char quote,
-                          TokenType *toktype)
+                 TokenType *toktype)
 {
   /* ----------------------------------------------------------------------
-   * Whitespaces at the beginning of a UEL should be ignored 
+   * Steps:
+   * - Get the UEL string, inside the quotes
+   * - ReSolve the UEL
    * ---------------------------------------------------------------------- */
 
-   if (parser_skipwsuntilEOL(interp, p) ||
-       tok_untilchar(&interp->cur, interp->buf, quote, p)) {
+   if (tok_UELstr(&interp->cur, interp->buf, p, quote)) {
       *toktype = TOK_EOF;
       return Error_EMPIncorrectSyntax;
    }
@@ -958,7 +1036,17 @@ int parser_asUEL(Interpreter *interp, unsigned * restrict p, char quote,
    (*p)++;
 
    Token *tok = &interp->cur;
-   return tok_asUEL(tok, toktype, interp->mdl);
+   tok->type = TOK_GMS_UEL;
+
+   S_CHECK(tok_asUEL(tok, toktype, interp));
+
+   if (O_Output & PO_TRACE_EMPPARSER) {
+      trace_empparser("[empparser] Token '%.*s' (%s)", tok->len, tok->start,
+                      toktype2str(tok->type));
+      tok_payloadprint(tok, PO_TRACE_EMPPARSER, interp->mdl);
+   }
+
+   return OK;
 }
 
 /**
@@ -980,13 +1068,12 @@ int parser_peekasUEL(Interpreter *interp, unsigned * restrict p, char quote,
    * Whitespaces at the beginning of a UEL should be ignored 
    * ---------------------------------------------------------------------- */
 
-   if (parser_skipwsuntilEOL(interp, p) ||
-       tok_untilchar(&interp->peek, interp->buf, quote, p)) {
+   if (tok_UELstr(&interp->peek, interp->buf, p, quote)) {
       *toktype = TOK_EOF;
       return Error_EMPIncorrectSyntax;
    }
 
-   if (interp->buf[*p] != quote) {
+    if (interp->buf[*p] != quote) {
       char errmsg[] = "Closing X expected";
       errmsg[8] = quote;
       error("[empinterp] Error line %u: %s", interp->linenr, errmsg);
@@ -999,7 +1086,16 @@ int parser_peekasUEL(Interpreter *interp, unsigned * restrict p, char quote,
 
     Token *tok = &interp->peek;
 
-   return tok_asUEL(tok, toktype, interp->mdl);
+   S_CHECK(tok_asUEL(tok, toktype, interp));
+
+   if (O_Output & PO_TRACE_EMPPARSER) {
+      trace_empparser("[empparser] Token '%.*s' (%s)", tok->len, tok->start,
+                      toktype2str(tok->type));
+      trace_empparsermsg(" (peek) ");
+      tok_payloadprint(tok, PO_TRACE_EMPPARSER, interp->mdl);
+   }
+
+   return OK;
 }
 
 bool tok_untilwsorchar(Token *tok, const char * restrict buf, char c,
@@ -1260,7 +1356,7 @@ is_gms_ident:
    /* ---------------------------------------------------------------------
     * In this step, we determine if the token is a GAMS object
     * --------------------------------------------------------------------- */
-   S_CHECK(gms_find_ident_in_dct(interp, tok));
+   S_CHECK(interp->ops->resolve_lexeme_as_gmssymb(interp, tok));
 
    if (tok->type != TOK_IDENT) goto _exit;
 
@@ -1464,84 +1560,6 @@ static inline bool toktype_dagnode_kw(TokenType toktype)
 }
 
 
-/**
- * @brief Try to resolve ident as a gams symbol
- *
- * @param interp 
- * @param tok 
- * @return 
- */
-int gms_find_ident_in_dct(Interpreter * restrict interp, Token * restrict tok)
-{
-   Model *mdl = interp->mdl;
-   GmsContainerData *gms = (GmsContainerData*)mdl->ctr.data;
-
-   struct gms_dct *gms_dct = &tok->gms_dct;
-   char *sym_name;
-   int symindex, uelindex;
-
-   if (emptok_getstrlen(tok) >= GMS_SSSIZE) { goto _not_found; }
-
-   /* Copy string to end it with NUL */
-   { _TOK_GETSTRTMP(tok, mdl, sym_name); }
-
-   symindex = dctSymIndex(gms->dct, sym_name);
-   if (symindex <= 0) { /* We do not fail here as it could be a UEL */
-      uelindex = dctUelIndex(gms->dct, sym_name);
-      if (uelindex <= 0) goto _not_found;
-
-      tok->type = TOK_GMS_UEL;
-      gms_dct->idx = uelindex;
-
-      return OK;
-   }
-
-   gms_dct->idx = symindex;
-
-   /* ---------------------------------------------------------------------
-    * Save the dimension of the symbol index
-    * --------------------------------------------------------------------- */
-
-   /* What does a negative value of symdim means? */
-   int symdim = MAX(dctSymDim(gms->dct, symindex), 1);
-   gms_dct->dim = symdim;
-
-   /* ---------------------------------------------------------------------
-    * Save the type of the symbol
-    * --------------------------------------------------------------------- */
-
-   int symtype = dctSymType(gms->dct, symindex);
-   gms_dct->type = symtype;
-   switch (symtype) {
-   case dctvarSymType:
-      tok->type = TOK_GMS_VAR;
-      break;
-   case dcteqnSymType:
-      tok->type = TOK_GMS_EQU;
-      break;
-   case dctsetSymType:
-      tok->type = TOK_GMS_SET;
-      break;
-   case dctparmSymType: /* We should error here */
-      tok->type = TOK_GMS_PARAM;
-      break;
-   case dctfuncSymType:
-   case dctacrSymType:
-   default:
-      tok->type = TOK_GMS_SYMBOL;
-   }
-
-   gms_dct->read = false;
-
-   return OK;
-
-_not_found:
-   gms_dct->idx = IdxNotFound;
-   tok->type = TOK_IDENT;
-
-   return OK;
-}
-
 int advance(Interpreter * restrict interp, unsigned * restrict p,
              TokenType *toktype)
 {
@@ -1656,7 +1674,7 @@ static int imm_set_regentry(Interpreter * restrict interp, const char *basename,
          error("[empinterp] ERROR line %u: '*' not allowed in label\n", interp->linenr);
          return Error_EMPIncorrectSyntax;
       case IdentLoopIterator:
-      case IdentSet:
+      case IdentGdxSet:
       case IdentLocalSet:
          error("[empinterp] ERROR line %u: %s '%.*s' not allowed in label\n",
                interp->linenr, identtype_str(idxident->type), idxident->lexeme.len,
@@ -1699,7 +1717,7 @@ static int imm_set_dagrootlabel(Interpreter * restrict interp, const char *ident
          return Error_EMPIncorrectSyntax;
 
       case IdentLoopIterator:
-      case IdentSet:
+      case IdentGdxSet:
       case IdentLocalSet:
          error("[empinterp] ERROR line %u: %s '%.*s' not allowed in label\n",
                interp->linenr, identtype_str(idxident->type), idxident->lexeme.len,
@@ -1740,7 +1758,7 @@ static int imm_add_daglabel(Interpreter * restrict interp, ArcType edge_type,
       return Error_EMPRuntimeError;
    }
 
-   dagl->daguid = interp->uid_parent;
+   dagl->daguid_parent = interp->uid_parent;
 
    for (unsigned i = 0, len = indices->nargs; i < len; ++i) {
 
@@ -1754,7 +1772,7 @@ static int imm_add_daglabel(Interpreter * restrict interp, ArcType edge_type,
          error("[empinterp] ERROR line %u: '*' not allowed in label\n", interp->linenr);
          return Error_EMPIncorrectSyntax;
       case IdentLoopIterator:
-      case IdentSet:
+      case IdentGdxSet:
       case IdentLocalSet:
          error("[empinterp] ERROR line %u: %s '%.*s' not allowed in label\n",
                interp->linenr, identtype_str(idxident->type), idxident->lexeme.len,
@@ -1898,6 +1916,29 @@ NONNULL static int ensure_valfn_kwd(Interpreter *interp, unsigned *p)
    return OK;
 }
 
+/**
+ * @brief Consume any ".valfn" after the current position
+ *
+ * @param  interp the interpreter
+ * @param  p      the pointer
+ *
+ * @return        the error code
+ */
+NONNULL static int consume_valfn_kwd(Interpreter *interp, unsigned *p)
+{
+   TokenType toktype;
+   unsigned p2 = *p;
+   S_CHECK(peek(interp, &p2, &toktype));
+
+   if (toktype == TOK_DOT) {
+      S_CHECK(peek(interp, &p2, &toktype));
+      S_CHECK(parser_expect_peek(interp, "valfn keyword expected after '.'", TOK_VALFN));
+   }
+
+   *p = p2;
+   return OK;
+}
+
 static int parse_edgeVF_sum(MathPrgm * restrict mp, Interpreter * restrict interp,
                       unsigned * restrict p)
 {
@@ -1929,7 +1970,7 @@ static int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
    TokenType toktype;
 
    S_CHECK(RESOLVE_IDENTAS(interp, &ident, "a scalar value is expected",
-                   IdentScalar, IdentLocalScalar, IdentVector, IdentLocalScalar));
+                           IdentScalar, IdentLocalScalar, IdentVector, IdentLocalScalar));
 
    const char *identstr = tok_dupident(&interp->cur);
 
@@ -1983,16 +2024,15 @@ static int parse_ovfparamvec(Interpreter * interp, unsigned * restrict p,
                                 OvfArgType *type, OvfParamPayload *payload)
 
 {
-   
    DblScratch * restrict scratch = &interp->cur.dscratch;
 
    unsigned size_vector = interp->ops->ovf_param_getvecsize(interp, ovfdef, pdef);
 
-   S_CHECK(scratchdbl_ensure(scratch, size_vector));
+   S_CHECK(scratchdbl_ensure(scratch, size_vector < UINT_MAX ? size_vector : SCRATCHDBL_DEFAULT));
    double *dat = scratch->data;
 
    TokenType toktype;
-   unsigned idx = 0;
+   unsigned idx = 0, idx_max = scratch->size;
 
    do {
 
@@ -2011,7 +2051,7 @@ static int parse_ovfparamvec(Interpreter * interp, unsigned * restrict p,
       }
 
       S_CHECK(advance(interp, p, &toktype));
-   } while (toktype == TOK_COMMA);
+   } while (toktype == TOK_COMMA && idx < idx_max);
 
    S_CHECK(parser_expect(interp, "Comma ',' or closing ')' expected", TOK_RPAREN));
 
@@ -2174,8 +2214,8 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
    unsigned idx1 = interp->label2edge.len;
    unsigned idx2 = interp->labels2edges.len;
 
-   /* XXX do not require '.valfn' for now */
-   //S_CHECK(ensure_valfn_kwd(interp, p));
+   /* we do not require '.valfn' for now, but consnume it */
+   S_CHECK(consume_valfn_kwd(interp, p));
 
    S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_edge, vm_add_VFobjSimple_edge))
 
@@ -2193,8 +2233,7 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
       }
    }
 
-   TokenType dummy;
-   return advance(interp, p, &dummy); 
+   return OK; 
 }
 
 NONNULL_AT(2, 3) static
@@ -2289,23 +2328,34 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       PARSER_EXPECTS(interp, "expected MP argument to be a variable or node label",
                      TOK_GMS_VAR, TOK_IDENT);
    }
-      
+
    switch (toktype) {
    case TOK_IDENT:
       if (has_lparent) {
          while (toktype == TOK_IDENT) {
             S_CHECK(parse_MPargs_labels(interp, p, ovfdef));
-            //S_CHECK(advance(interp, p, &toktype));
 
-            toktype = emptok_gettype(&interp->cur);
-            if (toktype != TOK_COMMA) { break; }
+  /* ----------------------------------------------------------------------
+   * Items can be comma or space separated
+   * ---------------------------------------------------------------------- */
 
             S_CHECK(advance(interp, p, &toktype));
+
+            if (toktype == TOK_COMMA) {
+               S_CHECK(advance(interp, p, &toktype));
+            }
+
+            if (toktype != TOK_IDENT && toktype != TOK_GMS_VAR) {
+               break;
+            }
+
          }
-         S_CHECK(parser_expect(interp, "Closing ')'", TOK_RPAREN));
+
+         S_CHECK(parser_expect(interp, "Closing ')' missing for MP arguments", TOK_RPAREN));
          S_CHECK(advance(interp, p, &toktype));
       } else {
          S_CHECK(parse_MPargs_labels(interp, p, ovfdef));
+         S_CHECK(advance(interp, p, &toktype));
       }
       break;
    case TOK_GMS_VAR: {
@@ -2502,7 +2552,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
    S_CHECK(advance(interp, p, &toktype))
 
    if (toktype >= TOKRANGE_PROBTYPE_START && toktype <= TOKRANGE_PROBTYPE_START) {
-      S_CHECK(interp->ops->mp_setprobtype(interp, mp, tok2probtype(toktype)));
+      S_CHECK(interp->ops->mp_setprobtype(interp, mp, toktype2probtype(toktype)));
       S_CHECK(advance(interp, p, &toktype));
    }
 
@@ -2937,8 +2987,6 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
    TokenType toktype = parser_getcurtoktype(interp);
    DblScratch *scratch = &interp->cur.dscratch;
    const char *identstr  = NULL;
-
-   enum { SCRATCHDBL_DEFAULT = 100 };
 
    unsigned param_gidx = UINT_MAX;
    unsigned size_vector = interp->ops->ovf_param_getvecsize(interp, ovfdef, pdef);
@@ -3610,7 +3658,7 @@ int parse_load(Interpreter* restrict interp, unsigned * restrict p)
 
             int symidx = gdxreader->cursym.idx;
             S_CHECK_EXIT(multisets_add(&interp->globals.multisets,
-                                       (MultiSet){.dim = symdim, .idx = symidx, .gdxreader = gdxreader},
+                                       (GdxMultiSet){.dim = symdim, .idx = symidx, .gdxreader = gdxreader},
                                        symname));
          }
 
@@ -3781,7 +3829,7 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
     * If we are past this point, we are in the immediate mode
     * --------------------------------------------------------------------- */
 
-   if (interp->ops->type != ParserOpsImm) {
+   if (interp->ops->type != ParserOpsImm && interp->ops->type != ParserOpsEmb) {
       error("[empinterp] line %u: runtime error: no GAMS set to iterate over, "
             "but the interpreter is in VM mode. Review the model to make sure "
             "that any loop involves Please report this as a bug.\n",
@@ -3803,35 +3851,6 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
    S_CHECK(labdeldef_parse_statement(interp, p));
 
    return OK;
-}
-
-static inline void inc_linenr(Interpreter *interp, unsigned p)
-{
-   interp->linenr++;
-   interp->linestart = &interp->buf[p];
-}
-
-int skip_spaces_commented_lines(Interpreter *interp, unsigned *p)
-{
-
-   unsigned _p = (*p);
-   const char * restrict buf = interp->buf;
-
-  /* ----------------------------------------------------------------------
-   * We want to skip over spaces and commented lines at the top
-   * ---------------------------------------------------------------------- */
-
-   while(isspace(buf[_p])) { if (buf[_p] == '\n') { inc_linenr(interp, _p+1); } _p++; }
-
-   while (buf[_p] == '*') {
-      while (buf[_p] != '\0' && buf[_p] != EOF && buf[_p] != '\n') _p++;
-
-      while(isspace(buf[_p])) { if (buf[_p] == '\n') { inc_linenr(interp, _p+1); } _p++; }
-   }
-
-   *p = _p;
-
-   return (buf[_p] == '\0' || buf[_p] == EOF);
 }
 
 NONNULL static int create_base_mp(Interpreter *interp, const char *mp_name,

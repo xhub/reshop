@@ -192,12 +192,12 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       break;
    case SIGNATURE_REGENTRY: {
       DagRegisterEntry *regentry = AS_REGENTRY(val_);
-      trace_empinterp("%*s: %.*s\n", pad, "RegEntry", regentry->basename_len, regentry->basename);
+      trace_empinterp("%*s: %.*s\n", pad, "RegEntry", regentry->nodename_len, regentry->nodename);
       break;
    }
    case SIGNATURE_ARCOBJ: {
       DagLabels *arcobj = AS_ARCOBJ(val_);
-      trace_empinterp("%*s: %.*s\n", pad, "ArcObj", arcobj->basename_len, arcobj->basename);
+      trace_empinterp("%*s: %.*s\n", pad, "ArcObj", arcobj->nodename_len, arcobj->nodename);
       break;
    }
    case SIGNATURE_GMSSYMITER: {
@@ -284,12 +284,12 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
       break;
    case SIGNATURE_REGENTRY: {
       DagRegisterEntry *regentry = AS_REGENTRY(v);
-      printout(mode, "%20.*s", regentry->basename_len, regentry->basename);
+      printout(mode, "%20.*s", regentry->nodename_len, regentry->nodename);
       break;
    }
    case SIGNATURE_ARCOBJ: {
       DagLabels *arcobj = AS_ARCOBJ(v);
-      printout(mode, "%20.*s", arcobj->basename_len, arcobj->basename);
+      printout(mode, "%20.*s", arcobj->nodename_len, arcobj->nodename);
       break;
    }
    case SIGNATURE_GMSSYMITER: {
@@ -372,6 +372,8 @@ static unsigned getlinenr(struct empvm *vm)
    return vm->code.line[offset];
 }
 
+// See below, 2024.05.13
+#if 0
 static void _print_uels(dctHandle_t dct, unsigned mode, int *uels, unsigned nuels)
 {
    char uel_label[GMS_SSSIZE];
@@ -384,27 +386,38 @@ static void _print_uels(dctHandle_t dct, unsigned mode, int *uels, unsigned nuel
       printout(mode, "[%5d]\t%s%s%s", uels[i], quote, uel_label, quote);
    }
 }
+#endif
 
 static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
 {
    IdentType type = symiter->symbol.type;
    assert(identisequvar(type));
 
-   DctResolveData data;
+   GmsResolveData data;
 
    data.type = GmsSymIteratorTypeVm;
    data.symiter.vm = symiter;
 
+   dctHandle_t dct = vmdata->dct;
+
    switch (type) {
    case IdentVar:
       data.payload.v = &vmdata->v;
-      data.scratch = &vmdata->v_data;
+      data.iscratch = &vmdata->v_data;
       vmdata->v_current = &vmdata->v;
       break;
    case IdentEqu:
       data.payload.e = &vmdata->e;
-      data.scratch = &vmdata->e_data;
+      data.iscratch = &vmdata->e_data;
       vmdata->e_current = &vmdata->e;
+      break;
+   case IdentGdxSet:
+      data.iscratch = &vmdata->iscratch;
+      break;
+   case IdentScalar:
+   case IdentVector:
+   case IdentParam:
+      data.dscratch = &vmdata->dscratch;
       break;
    default:
       error("%s :: unsupported token '%s'", __func__, identtype_str(type));
@@ -412,10 +425,26 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
    }
 
 
-   dctHandle_t dct = vmdata->dct;
+   int status;
 
-   int status = dct_resolve(dct, &data);
+   switch (type) {
+   case IdentVar:
+   case IdentEqu:
+      status = dct_resolve(dct, &data);
+      break;
+   case IdentGdxSet:
+   case IdentScalar:
+   case IdentVector:
+   case IdentParam:
+      status = gmd_resolve(vmdata->gmd, &data);
+      break;
+   default:
+      error("%s :: unsupported token '%s'", __func__, identtype_str(type));
+      return Error_EMPRuntimeError;
+   }
 
+   // TODO: this looks off in the log. 2024.05.13
+#if 0
    if (status != OK) {
       int idx = (int)symiter->symbol.idx;
       int nuels = dctSymDim(dct, idx);
@@ -426,7 +455,7 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
          _print_uels(dct, PO_ERROR, symiter->uels, symiter->symbol.dim);
       }
    }
-
+#endif
    return status;
 }
 
@@ -494,11 +523,11 @@ static int gms_membership_test(UNUSED VmData *vmdata, VmGmsSymIterator *symiter,
    IdentType type = symiter->symbol.type;
 
    switch (type) {
-   case IdentMultiSet:
+   case IdentGdxMultiSet:
       assert(symiter->symbol.ptr);
       return gdx_reader_boolean_test(symiter->symbol.ptr, symiter, res);
    case IdentLocalSet:
-   case IdentSet: {
+   case IdentGdxSet: {
       IntArray *obj = symiter->symbol.ptr;
       assert(obj && valid_set(*obj));
       int uel = symiter->uels[0];
@@ -538,6 +567,8 @@ struct empvm* empvm_new(Interpreter *interp)
    avar_setblock(&vm->data.v_extend, 3);
    scratchint_init(&vm->data.e_data);
    scratchint_init(&vm->data.v_data);
+   scratchint_init(&vm->data.iscratch);
+   scratchint_ensure(&vm->data.iscratch, 10);
    scratchdbl_init(&vm->data.dscratch);
    scratchdbl_ensure(&vm->data.dscratch, 10);
    vm->data.e_current = NULL;
@@ -557,12 +588,15 @@ struct empvm* empvm_new(Interpreter *interp)
    vmvals_add(&vm->globals, INT_VAL(0));
 
    vm->data.dct = interp->dct;
+   vm->data.gmd = interp->gmd;
 
+   /* genlabelname needs interpreter for the ops */
+   vm->data.interp = interp;
 
    return vm;
 }
 
-void empvm_free(struct empvm* vm)
+void empvm_free(EmpVm *vm)
 {
    if (!vm) return;
 
@@ -588,6 +622,7 @@ void empvm_free(struct empvm* vm)
    avar_empty(&vm->data.v_extend);
    scratchint_empty(&vm->data.e_data);
    scratchint_empty(&vm->data.v_data);
+   scratchint_empty(&vm->data.iscratch);
    scratchdbl_empty(&vm->data.dscratch);
 }
 
@@ -595,7 +630,8 @@ int empvm_run(struct empvm *vm)
 {
    S_CHECK(empvm_dissassemble(vm, PO_TRACE_EMPINTERP));
 
-   int status = OK;
+   int status = OK, poffset;
+   unsigned linenr;
    vm->instr_start = vm->code.ip;
    vm->stack_top = vm->stack;
 
@@ -616,10 +652,9 @@ int empvm_run(struct empvm *vm)
 
 
          if (vm->stack_top > vm->stack) {
-            int offset;
-            trace_empinterp("stack%n", &offset);
-            for (VmValue *val = vm->stack; val < vm->stack_top; val++, offset = 0) {
-               trace_empinterp("%*s", 50-offset, "");
+            trace_empinterp("stack%n", &poffset);
+            for (VmValue *val = vm->stack; val < vm->stack_top; val++, poffset = 0) {
+               trace_empinterp("%*s", 50-poffset, "");
                print_vmval_full(*val, vm);
             }
          }
@@ -670,7 +705,7 @@ int empvm_run(struct empvm *vm)
             DEBUGVMRUN("'%s' <- %n", vm->data.globals->localsets.names[gidx], &offset1);
             break;
          }
-         case IdentSet: {
+         case IdentGdxSet: {
             assert(gidx < vm->data.globals->sets.len);
             set = namedints_at(&vm->data.globals->sets, gidx);
             DEBUGVMRUN("'%s' <- %n", vm->data.globals->sets.names[gidx], &offset1);
@@ -686,7 +721,7 @@ int empvm_run(struct empvm *vm)
          vm->locals[lidx_loopvar] = LOOPVAR_VAL(set.arr[idx]);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, (set.arr[idx]), PO_TRACE_EMPINTERP, &offset2);});
          DEBUGVMRUN("%*s%s#%u[lvar%u = %u]\n", getpadding(offset0 + offset1 + offset2), "",
-                    type == IdentSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
+                    type == IdentGdxSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
          break;
       }
       case OP_LOCAL_COPYFROM_GIDX: {
@@ -716,7 +751,8 @@ int empvm_run(struct empvm *vm)
             DEBUGVMRUN("objname is %s of type localvector\n", vm->data.globals->localvectors.names[gidx]);
             break;
          }
-         case IdentSet: {
+         case IdentGmdSet:
+         case IdentGdxSet: {
             IntArray obj = namedints_at(&vm->data.globals->sets, gidx);
             assert(valid_set(obj));
             len = obj.len;
@@ -780,7 +816,7 @@ int empvm_run(struct empvm *vm)
          dagl->data[idx] = uel;
 
          DBGUSED int offset1, offset2;
-         DEBUGVMRUN("%.*s[%u] <- %n", dagl->basename_len, dagl->basename, idx, &offset1);
+         DEBUGVMRUN("%.*s[%u] <- %n", dagl->nodename_len, dagl->nodename, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
@@ -801,8 +837,8 @@ int empvm_run(struct empvm *vm)
          regentry->uels[idx] = uel;
 
          DBGUSED int offset1, offset2; 
-         DEBUGVMRUN("%.*s[%u] <- %n", regentry->basename_len,
-                    regentry->basename, idx, &offset1);
+         DEBUGVMRUN("%.*s[%u] <- %n", regentry->nodename_len,
+                    regentry->nodename, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
@@ -1105,7 +1141,7 @@ int empvm_run(struct empvm *vm)
          DagLabels *dagl_src = AS_ARCOBJ(vm->globals.arr[gidx]);
          DagLabel *dagl_cpy;
          A_CHECK(dagl_cpy, dag_labels_dupaslabel(dagl_src));
-         dagl_cpy->daguid = vm->data.uid_parent;
+         dagl_cpy->daguid_parent = vm->data.uid_parent;
 
          S_CHECK(daglabel2edge_add(vm->data.label2edge, dagl_cpy));
 
@@ -1119,7 +1155,7 @@ int empvm_run(struct empvm *vm)
          DagLabels *dagl_src = AS_ARCOBJ(vm->globals.arr[gidx]);
          DagLabels *dagl_cpy;
          A_CHECK(dagl_cpy, dag_labels_dup(dagl_src));
-         dagl_cpy->daguid = vm->data.uid_parent;
+         dagl_cpy->daguid_parent = vm->data.uid_parent;
 
          S_CHECK(daglabels2edges_add(vm->data.labels2edges, dagl_cpy));
 
@@ -1172,7 +1208,7 @@ int empvm_run(struct empvm *vm)
             errormsg("[empvm_run] ERROR: dagregister is empty. Please report this\n");
             return Error_EMPRuntimeError;
          }
-         vm->data.uid_parent = dagregister->list[reglen-1]->daguid;
+         vm->data.uid_parent = dagregister->list[reglen-1]->daguid_parent;
          assert(valid_uid(vm->data.uid_parent));
          break;
       }
@@ -1194,6 +1230,25 @@ int empvm_run(struct empvm *vm)
 
 _exit:
 
-   error("[empvm_run] Error occurred on line %u\n", getlinenr(vm));
+   linenr = getlinenr(vm);
+   error("[empvm_run] %nError occurred on line %u:\n", &poffset, linenr);
+
+   const char * restrict start = vm->data.interp->buf, * restrict end;
+   linenr--;
+   unsigned linenr_max = linenr;
+   do {
+      end = strpbrk(start, "\n");
+      if (!end) {
+         end = &start[strlen(start)];
+         break;  //just in case
+      }
+      if (linenr >= 1) { start = end+1; }
+      linenr--;
+   } while (linenr < linenr_max);
+
+   error("%*s%.*s\n", poffset, "", (int)(end-start), start);
+
+   vm->data.interp->err_shown = true;
+
    return status;
 }

@@ -90,7 +90,7 @@ struct emptok {
    unsigned linenr;
    unsigned len;
    const char* start;
-   struct gms_dct gms_dct;
+   GamsSymData symdat;
    IntScratch iscratch;
    DblScratch dscratch;
    union {
@@ -160,15 +160,15 @@ typedef struct NamedVecArray {
 typedef struct NamedMultiSets {
    unsigned len;
    unsigned max;
-   struct multiset *list;
+   struct gdx_multiset *list;
    const char **names;
 } NamedMultiSets;
 
 #define RHP_LOCAL_SCOPE
 #define RHP_LIST_PREFIX multisets
 #define RHP_LIST_TYPE NamedMultiSets
-#define RHP_ELT_TYPE struct multiset
-#define RHP_ELT_INVALID ((struct multiset) {.dim = 0, .idx = 0, .gdxreader = NULL})
+#define RHP_ELT_TYPE struct gdx_multiset
+#define RHP_ELT_INVALID ((struct gdx_multiset) {.dim = 0, .idx = 0, .gdxreader = NULL})
 #include "namedlist_generic.inc"
 
 typedef struct gdxalias {
@@ -272,11 +272,11 @@ typedef struct dag_labels {
    uint8_t dim;
    uint8_t num_var;
    ArcType arc_type;
-   uint16_t basename_len;
+   uint16_t nodename_len;  /**< node name length */
    unsigned num_children;
    unsigned max_children;  /**< Max number of children  */
-   daguid_t daguid;        /**< daguid ot the parent */
-   const char *basename;
+   daguid_t daguid_parent; /**< daguid ot the parent */
+   const char *nodename;   /**< Basename of the parent */
    int *uels_var; /* uel_var[num_var] */
    int data[]; /* Layout: uels[dim] + pos[num_vars]*/
 } DagLabels;
@@ -285,10 +285,10 @@ typedef struct dag_labels {
 typedef struct dag_label {
    uint8_t dim;
    ArcType arc_type;
-   uint16_t basename_len;
-   daguid_t daguid; 
-   const char *basename;
-   int uels[]  __counted_by(dim);
+   uint16_t nodename_len;
+   daguid_t daguid_parent; 
+   const char *nodename;
+   int uels[] __counted_by(dim);
 } DagLabel;
 
 
@@ -357,6 +357,7 @@ typedef struct {
 typedef struct interpreter {
    enum parser_health health;
    bool peekisactive;
+   bool err_shown;               /**< Error message already shown */
    unsigned linenr;
    size_t read;
    const char *linestart;
@@ -367,7 +368,10 @@ typedef struct interpreter {
    unsigned tmpstrlen;
 
    Model *mdl;
+   void *gmdout;
+
    void *dct;
+   void *gmd;
 
    /* Tokens */
    struct emptok cur;
@@ -403,13 +407,14 @@ typedef struct interpreter {
    /* Immediate mode data*/
    daguid_t uid_parent;                    /**< UID of the EMPDAG parent node */
    daguid_t uid_grandparent;               /**< UID of the EMPDAG parent node */
-   UIntArray edgevfovjs;                 /**< UID of CCFLIB to be added */
+   UIntArray edgevfovjs;                   /**< UID of CCFLIB to be added */
 } Interpreter;
 
 
 typedef enum {
    ParserOpsImm,
    ParserOpsCompiler,
+   ParserOpsEmb,
 } ParserOptType;
 
 typedef struct parser_ops {
@@ -419,6 +424,8 @@ typedef struct parser_ops {
    int (*ctr_markequasflipped)(Interpreter* restrict interp);
    int (*gms_parse)(Interpreter* restrict interp, unsigned *p); 
    int (*gms_add_uel)(Interpreter* restrict interp, const struct emptok *tok, unsigned i); 
+   int (*gms_get_uelidx)(Interpreter *interp, const char *uelstr, int *uelidx);
+   int (*gms_get_uelstr)(Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr);
    int (*label_getidentstr)(Interpreter* restrict interp, const struct emptok *tok, char **ident, unsigned *ident_len);
    int (*mp_addcons)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_addvars)(Interpreter* restrict interp, MathPrgm *mp);
@@ -450,6 +457,7 @@ typedef struct parser_ops {
                           double *val);
    int (*read_param)(Interpreter *interp, unsigned *p, IdentData *data,
                       const char *ident_str, unsigned *param_gidx);
+   int (*resolve_lexeme_as_gmssymb)(Interpreter *interp, Token *tok);
 } ParserOps;
 
 extern const struct parser_ops parser_ops_imm;
@@ -506,7 +514,6 @@ rhp_idx parser_getequvaridx(const struct interpreter *interp) {
    assert(interp->cur.type == TOK_GMS_VAR || interp->cur.type == TOK_GMS_EQU);
    return interp->cur.payload.idx;
 }
-
 
 
 #endif /* EMPPARSER_H */

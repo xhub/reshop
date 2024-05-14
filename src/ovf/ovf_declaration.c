@@ -116,8 +116,7 @@ unsigned ovf_findbytoken(const char *start, unsigned len)
  *
  *  @return              the error code
  */
-int ovf_addbyname(EmpInfo *empinfo, const char *name,
-                  OvfDef **ovfdef)
+int ovf_addbyname(EmpInfo *empinfo, const char *name, OvfDef **ovfdef)
 {
    unsigned ovf_idx = ovf_findbyname(name);
 
@@ -295,8 +294,8 @@ int ovf_check(OvfDef *ovf_def)
       OvfParam* p = &ovf_def->params.p[i];
       if (p->type == ARG_TYPE_UNSET) {
          if (p->def->mandatory && !p->def->default_val) {
-            error("[ovf/check] in the definition of OVF variable #%d of type %s"
-                  ", the required parameter %s is unset\n", ovf_def->ovf_vidx,
+            error("[ovf/check] in a definition of OVF/CCF of type %s"
+                  ", the required parameter %s is unset\n", 
                   ovf_getname(ovf_def), p->def->name);
          return Error_EMPIncorrectInput;
          }
@@ -596,7 +595,12 @@ static int preprocess_ccflibargs(Model *mdl, OvfDef *ovf_def, MathPrgm *mp)
 
 int ccflib_finalize(Model *mdl, OvfDef *ovf_def, MathPrgm* mp)
 {
-   S_CHECK(ovf_check(ovf_def));
+   int rc = ovf_check(ovf_def);
+   if (rc != OK) {
+      error("[MP] ERROR in MP(%s): the underlying CCF is not well defined\n",
+            empdag_getmpname(&mdl->empinfo.empdag, mp->id));
+      return rc;
+   }
 
    if (ovf_def->status & OvfFinalized) { return OK; }
 

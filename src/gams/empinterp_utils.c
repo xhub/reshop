@@ -15,8 +15,17 @@ static inline TokenType ident2toktype(IdentType type)
       return TOK_GMS_VAR;
    case IdentEqu:
       return TOK_GMS_EQU;
+   case IdentAlias:
+      return TOK_GMS_ALIAS;
+   case IdentGmdSet:
+   case IdentGmdMultiSet:
+      return TOK_GMS_SET;
+   case IdentGmdScalar:
+   case IdentGmdVector:
+   case IdentGmdParam:
+      return TOK_GMS_PARAM;
    default:
-      return TOK_UNSET;
+      return TOK_ERROR;
    }
 }
 
@@ -24,13 +33,15 @@ static inline TokenType ident2toktype(IdentType type)
 UNUSED static inline IdentType toktype2ident(TokenType toktype, unsigned dim)
 {
    switch(toktype) {
+   case TOK_GMS_ALIAS:
+      return IdentAlias;
    case TOK_GMS_SET:
-      if (dim == 1) return IdentSet;
-      return IdentMultiSet;
+      if (dim == 1) return IdentGmdSet;
+      return IdentGmdMultiSet;
    case TOK_GMS_PARAM:
-      if (dim == 0) return IdentScalar;
-      if (dim == 1) return IdentVector;
-      return IdentParam;
+      if (dim == 0) return IdentGmdScalar;
+      if (dim == 1) return IdentGmdVector;
+      return IdentGmdParam;
    case TOK_GMS_VAR:
       return IdentVar;
    case TOK_GMS_EQU:
@@ -40,33 +51,35 @@ UNUSED static inline IdentType toktype2ident(TokenType toktype, unsigned dim)
    }
 }
 
-
-int dct_resolve(dctHandle_t dct, DctResolveData * restrict data)
+int dct_resolve(dctHandle_t dct, GmsResolveData * restrict data)
 {
    int symidx, *uels;
    unsigned dim;
    TokenType toktype;
    bool compact;
+   char buf[GMS_SSSIZE];
+
    if (data->type == GmsSymIteratorTypeImm) {
       symidx = data->symiter.imm.symidx;
       dim = data->symiter.imm.symiter->indices.nargs;
       toktype = data->symiter.imm.toktype;
       uels =  data->symiter.imm.symiter->uels;
       compact = data->symiter.imm.symiter->compact;
-   } else {
+   } else if (data->type == GmsSymIteratorTypeVm) {
       assert(data->type == GmsSymIteratorTypeVm);
       symidx = (int)data->symiter.vm->symbol.idx;
       dim = data->symiter.vm->symbol.dim;
       toktype = ident2toktype(data->symiter.vm->symbol.type);
+      assert(toktype != TOK_ERROR);
       uels =  data->symiter.vm->uels;
       compact = data->symiter.vm->compact;
-
+   } else {
+      TO_IMPLEMENT("unknown iterator type");
    }
 
    assert(dim < GMS_MAX_INDEX_DIM);
 
    if (O_Output & PO_TRACE_EMPPARSER) {
-      char buf[GMS_SSSIZE];
       char quote = ' ';
       if (dctSymName(dct, symidx, buf, sizeof(buf))) {
          strcpy(buf, "ERROR resolving symbol");
@@ -98,7 +111,22 @@ int dct_resolve(dctHandle_t dct, DctResolveData * restrict data)
       int idx;
       void *fh = dctFindFirstRowCol(dct, symidx, uels, &idx);
       if (idx < 0) {
-         error("[empinterp] ERROR: could not find symbol #%d in the DCT.\n", symidx);
+         dctSymName(dct, symidx, buf, sizeof(buf));
+         error("[empinterp] ERROR: in the DCT, could not find record for symbol %s", buf);
+         if (dim > 1 || (dim == 1 && uels[0] > 0)) {
+            errormsg("(");
+            for (unsigned i = 0; i < dim; ++i) {
+               char quote = '\'';
+               int uel = uels[i];
+               if (uel > 0) { dctUelLabel(dct, uels[i], &quote, buf, sizeof(buf));
+               } else { strcpy(buf, "'*'"); }
+               if (i > 0) { errormsg(","); }
+               error("%c%s%c", quote, buf, quote);
+            }
+            errormsg(")");
+         }
+         errormsg("\n");
+
          return Error_SymbolNotInTheGamsRim;
       }
 
@@ -119,9 +147,9 @@ int dct_resolve(dctHandle_t dct, DctResolveData * restrict data)
          }
       } else {
          rhp_idx i = 0;
-         S_CHECK(scratchint_ensure(data->scratch, size));
+         S_CHECK(scratchint_ensure(data->iscratch, size));
 
-         rhp_idx *idxs = data->scratch->data;
+         rhp_idx *idxs = data->iscratch->data;
 
          while (idx >= 0) {
             idxs[i++] = idx;
@@ -174,6 +202,168 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
    }
 }
 
+int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
+{
+   int symidx, *uels;
+   unsigned dim;
+   TokenType toktype;
+   bool compact;
+   char buf[GMS_SSSIZE];
+
+   if (data->type == GmsSymIteratorTypeImm) {
+      symidx = data->symiter.imm.symidx;
+      dim = data->symiter.imm.symiter->indices.nargs;
+      toktype = data->symiter.imm.toktype;
+      uels =  data->symiter.imm.symiter->uels;
+      compact = data->symiter.imm.symiter->compact;
+   } else if (data->type == GmsSymIteratorTypeVm) {
+      assert(data->type == GmsSymIteratorTypeVm);
+      symidx = (int)data->symiter.vm->symbol.idx;
+      dim = data->symiter.vm->symbol.dim;
+      toktype = ident2toktype(data->symiter.vm->symbol.type);
+      uels =  data->symiter.vm->uels;
+      compact = data->symiter.vm->compact;
+   } else {
+      TO_IMPLEMENT("unknown iterator type");
+   }
+
+   assert(dim < GMS_MAX_INDEX_DIM);
+
+  /* ----------------------------------------------------------------------
+   * WARNING: this relies on symidx being GMD_NUMBER
+   * ---------------------------------------------------------------------- */
+   void *symptr;
+   GMD_CHK(gmdGetSymbolByNumber, gmd, symidx, &symptr);
+
+   if (O_Output & PO_TRACE_EMPPARSER) {
+      char quote = '\'';
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, buf);
+      trace_empparser("[empinterp] resolving GAMS symbol '%s' of type %s and dim %u.\n",
+                      buf, toktype2str(toktype), dim);
+      if (dim > 1 || (dim == 1 && uels[0] > 0)) {
+         trace_empparsermsg("[empinterp] UELs values are:\n");
+         for (unsigned i = 0; i < dim; ++i) {
+            int uel = uels[i];
+            if (uel > 0) { GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf);
+            } else { strcpy(buf, "'*'"); }
+            trace_empparser("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
+         }
+      }
+   }
+
+   switch (toktype) {
+   case TOK_GMS_VAR:
+      TO_IMPLEMENT("gmd_resolve for variables");
+   case TOK_GMS_EQU:
+      TO_IMPLEMENT("gms_resolve for params in immediate mode");
+   case TOK_GMS_SET:
+   case TOK_GMS_PARAM:
+   {
+
+      /* ------------------------------------------------------------------
+       * Return first row/column in the symbol referenced by symindex that
+       * is indexed by the UELs in uelindices (uelindices[k]=0 is wildcard).
+       * Since the routine can fail you should first check rcindex and then
+       * the returned handle.
+       * ------------------------------------------------------------------ */
+
+      void *symiterptr;
+      bool single_record = true;
+      data->allrecs = true;
+      char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
+      const char *uels_strp[GLOBAL_MAX_INDEX_DIM];
+
+      if (!compact) {
+         /* initialize UELs */
+         for (unsigned i = 0; i < dim; ++i) {
+            uels_strp[i] = uels_str[i];
+            GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
+            if (uels[i] == 0) { single_record = false; }
+            if (uels[i] != 0) { data->allrecs = false; }
+         }
+      } else {
+         single_record = false;
+      }
+
+      if (single_record) {
+         GMD_FIND_CHK(gmdFindRecord, gmd, symptr, uels_strp, &symiterptr);
+
+         double vals[GMS_VAL_MAX];
+         GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
+         if (toktype == TOK_GMS_SET) {
+            double val = vals[GMS_VAL_LEVEL];
+            S_CHECK(chk_dbl2int(val, __func__));
+            data->itmp = (int)val;
+         } else {
+            data->dtmp = vals[GMS_VAL_LEVEL];
+         }
+
+      } else { /* Not a single record */
+
+         if (compact) {
+            GMD_FIND_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
+         } else {
+            GMD_FIND_CHK(gmdFindFirstRecordSlice, gmd, symptr, uels_strp, &symiterptr);
+         }
+
+         /* ------------------------------------------------------------------
+          * Returns the number of records stored for a given symbol.
+          * ------------------------------------------------------------------ */
+
+         int size;
+         GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &size, NULL, NULL);
+         assert(size >= 0);
+
+         S_CHECK(scratchint_ensure(data->iscratch, size));
+
+         rhp_idx i = 0;
+         bool has_next;
+
+         if (toktype == TOK_GMS_SET) {
+
+            S_CHECK(scratchint_ensure(data->iscratch, size));
+            rhp_idx *idxs = data->iscratch->data;
+
+            do {
+               double vals[GMS_VAL_MAX];
+               GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
+               double val = vals[GMS_VAL_LEVEL];
+               S_CHECK(chk_dbl2int(val, __func__));
+               idxs[i++] = (int)val;
+               has_next = gmdRecordHasNext(gmd, symiterptr);
+               if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
+            } while (has_next);
+
+
+         } else {
+
+            S_CHECK(scratchdbl_ensure(data->dscratch, size));
+            double *dbls = data->dscratch->data;
+
+            do {
+               double vals[GMS_VAL_MAX];
+               GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
+               dbls[i++] = vals[GMS_VAL_LEVEL];
+               has_next = gmdRecordHasNext(gmd, symiterptr);
+               if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
+            } while (has_next);
+
+         }
+
+         data->nrecs = i;
+         gmdFreeSymbolIterator(gmd, symiterptr);
+
+      }
+      break;
+   }
+   default:
+      error("[empinterp] Unexpected token type '%s'\n",
+            toktype2str(toktype));
+      return Error_RuntimeError;
+   }
+   return OK;
+}
+
 /**
  * @brief Generate the full label from entry (basename and UELs)
  *
@@ -185,27 +375,25 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
  *
  * @return                the error code
  */
-int genlabelname(DagRegisterEntry * restrict entry, dctHandle_t dcth,
+int genlabelname(DagRegisterEntry * restrict entry, Interpreter *interp,
                  char **labelname)
 {
-   assert(dcth);
-   assert(entry->basename && (entry->basename_len > 0));
+   assert(entry->nodename && (entry->nodename_len > 0));
 
    /* No UEL, just copy basename into labelname */
    if (entry->dim == 0) {
-      *labelname = strndup(entry->basename, entry->basename_len);
+      *labelname = strndup(entry->nodename, entry->nodename_len);
       return OK;
    }
 
    gdxStrIndex_t uels;
    unsigned uels_len[GMS_MAX_INDEX_DIM];
 
-   size_t strsize = entry->basename_len;
+   size_t strsize = entry->nodename_len;
    size_t size = strsize;
 
    for (unsigned i = 0, len = entry->dim; i < len; ++i) {
-      char dummyquote = ' ';
-      dct_call_rc(dctUelLabel, dcth, entry->uels[i], &dummyquote, uels[i], sizeof(uels[i]));
+      interp->ops->gms_get_uelstr(interp, entry->uels[i], sizeof(uels[i]), uels[i]);
       uels_len[i] = strlen(uels[i]);
       strsize += uels_len[i];
    }
@@ -214,7 +402,7 @@ int genlabelname(DagRegisterEntry * restrict entry, dctHandle_t dcth,
    char *lname;
    MALLOC_(lname, char, strsize);
 
-   memcpy(lname, entry->basename, size);
+   memcpy(lname, entry->nodename, size);
    lname[size++] = '(';
 
    unsigned uel_len = uels_len[0];
@@ -244,14 +432,14 @@ DagRegisterEntry* regentry_new(const char *basename, unsigned basename_len,
    DagRegisterEntry *regentry;
    MALLOCBYTES_NULL(regentry, DagRegisterEntry, sizeof(DagRegisterEntry) + dim*sizeof(int));
 
-   regentry->basename = basename;
+   regentry->nodename = basename;
    if (basename_len >= UINT16_MAX) {
       error("[empinterp] EMPDAG label '%s' must be smaller than %u\n", basename, UINT16_MAX);
       FREE(regentry);
       return NULL;
    }
 
-   regentry->basename_len = basename_len;
+   regentry->nodename_len = basename_len;
    regentry->dim = dim;
 
    return regentry;

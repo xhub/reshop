@@ -54,10 +54,11 @@ typedef enum emptok_type {
    TOK_INTEGER, /* not parsable for now, useful for VM */
    TOK_REAL,
    /* GAMS-specific data */
+   TOK_GMS_ALIAS,
    TOK_GMS_EQU,
+   TOK_GMS_MULTISET,
    TOK_GMS_PARAM,
    TOK_GMS_SET,
-   TOK_GMS_SYMBOL,
    TOK_GMS_UEL,
    TOK_GMS_VAR,
    /* Operators */
@@ -130,7 +131,7 @@ int tok_expects(const struct emptok *tok, const char *msg, unsigned argc, ...) N
 int tok_err(const struct emptok *tok, TokenType type_expected, const char *msg) NONNULL;
 bool tokisgms(TokenType toktype);
 void tok_payloadprint(const struct emptok *tok, unsigned mode,
-                       const Model *mdl) NONNULL;
+                       const Model *mdl) NONNULL_AT(1);
 void tok_free(Token *tok);
 bool tok_untilwsorchar(Token *tok, const char * restrict buf, char c,
                        unsigned * restrict pos) NONNULL;
