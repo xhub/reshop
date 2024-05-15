@@ -310,14 +310,16 @@ endif (WITH_HDF5)
 # Management of GAMS C API files
 #################################################
 
-if(NOT GAMSSYSDIR)
+find_program(GAMS_EXE_HOST gams)
+
+if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
 
    set (SCRDIR "${CMAKE_BINARY_DIR}/gams")
    file(REMOVE_RECURSE "${SCRDIR}")
    file(MAKE_DIRECTORY "${SCRDIR}")
 
    # Get GAMS sys on HOST first
-   execute_process (COMMAND gams "${CMAKE_SOURCE_DIR}/cmake/gams_sysdir.gms" "lo=3" "scrdir=${SCRDIR}"
+   execute_process (COMMAND ${GAMS_EXE_HOST} "${CMAKE_SOURCE_DIR}/cmake/gams_sysdir.gms" "lo=3" "scrdir=${SCRDIR}"
                     RESULT_VARIABLE GAMS_RC
                     ERROR_VARIABLE GAMS_STDERR)
 
