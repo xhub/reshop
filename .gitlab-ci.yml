@@ -34,12 +34,11 @@ build:
     - apt-get install -y python3-numpy python3-scipy swig python3-pytest python3-setuptools python-wheel-common python3-venv python3-dev
     - 'which ssh-agent || apt-get install openssh-client -y'
     - eval $(ssh-agent -s)
-    - wget -nv http://perso.crans.org/~huber/gams-c-api.tar.bz2 && tar xjf gams-c-api.tar.bz2
     - wget https://ftp.cs.wisc.edu/math-prog/solvers/path/pathlib/lib_lnx/{libpath50.so,liblusol.so}
   script:
     - mkdir build && cd build
     - cp ../libpath50.so ../liblusol.so .
-    - CC=gcc-13 CXX=g++-13 cmake -DCMAKE_BUILD_TYPE=Release -DGCC_ANALYZER=ON -DGAMSSYSDIR="$(pwd)/.." -DGAMS_VERSION=$GAMS_MAJVER
+    - CC=gcc-13 CXX=g++-13 cmake -DCMAKE_BUILD_TYPE=Release -DGCC_ANALYZER=ON -DGAMS_VERSION=$GAMS_MAJVER
         -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DBUILD_GAMS_DRIVER=ON -DBUILD_DOCUMENTATION=1 -DGIT_HASH=$CI_COMMIT_SHORT_SHA
         -DBUILD_INSTALLER=1 -DINSTALL_COMMON_MAKESELF=1 -DBUILD_PYTHON=python3 ..
     - make -j$N_PROCS 2>&1 install makeself | tee gcc.log

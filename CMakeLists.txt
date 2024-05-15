@@ -401,9 +401,7 @@ if (GAMSSYSDIR)
 endif(GAMSSYSDIR)
 
 if(NOT GAMSDIR)
-   MESSAGE(FATAL_ERROR "No valid GAMS installation OR GAMS C apifiles found. Possible fix include:
-  - Fix your GAMS install: the gams executable must be in the PATH
-  - Specify a gams directory with the C apifiles via the GAMSSYSDIR cmake variable")
+   SET (GAMSDIR "${CMAKE_SOURCE_DIR}/external/gamsapi/")
 endif (NOT GAMSDIR)
 
 
