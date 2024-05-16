@@ -123,7 +123,7 @@ sanitizer:
 
   script:
     - mkdir $COMPILER-$SANITIZER && cd $COMPILER-$SANITIZER && cp ../libpath50.so ../liblusol.so .
-    - CC=${COMPILER/_*/} CXX=${COMPILER/*_/} cmake -DCMAKE_BUILD_TYPE=$SANITIZER -DGAMSSYSDIR="$(pwd)/.." -DWITH_BACKTRACE=0 -DWITH_BACKWARD=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA ../
+    - CC=${COMPILER/_*/} CXX=${COMPILER/*_/} cmake -DCMAKE_BUILD_TYPE=$SANITIZER -DWITH_BACKTRACE=0 -DWITH_BACKWARD=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA ../
     - make -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2)
     - export LD_LIBRARY_PATH=$(pwd); ctest -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) || ctest --rerun-failed --output-on-failure
   parallel:
