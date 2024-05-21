@@ -18,6 +18,7 @@ stages:
 
 variables:
   GAMS_MAJVER: "45"
+  GCC_MVER: "14"
   TERM: "xterm-256color"
   COLORTERM: "truecolor"
 
@@ -38,7 +39,7 @@ build:
   script:
     - mkdir build && cd build
     - cp ../libpath50.so ../liblusol.so .
-    - CC=gcc-13 CXX=g++-13 cmake -DCMAKE_BUILD_TYPE=Release -DGCC_ANALYZER=ON -DGAMS_VERSION=$GAMS_MAJVER
+    - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=Release -DGCC_ANALYZER=ON -DGAMS_VERSION=$GAMS_MAJVER
         -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DBUILD_GAMS_DRIVER=ON -DBUILD_DOCUMENTATION=1 -DGIT_HASH=$CI_COMMIT_SHORT_SHA
         -DBUILD_INSTALLER=1 -DINSTALL_COMMON_MAKESELF=1 -DBUILD_PYTHON=python3 ..
     - make -j$N_PROCS 2>&1 install makeself | tee gcc.log
@@ -126,7 +127,7 @@ sanitizer:
     - export LD_LIBRARY_PATH=$(pwd); ctest -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) || ctest --rerun-failed --output-on-failure
   parallel:
     matrix:
-      - COMPILER: ["gcc-13_g++-13", "clang-17_clang++-17"]
+      - COMPILER: ["gcc-14_g++-14", "clang-18_clang++-18"]
         SANITIZER: [Asan, UBsan]
 
 
