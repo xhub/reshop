@@ -1,4 +1,5 @@
 #include "asprintf.h"
+#include "rhp_dot_exports.h"
 
 #include <stdio.h>
 
@@ -47,7 +48,13 @@ typedef struct {
 static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
                                const Model *mdl, EdgeVFStrings *strs)
 {
-   rhp_idx ei = edgeVF->basic_dat.ei;
+   if (edgeVF->type != ArcVFBasic) {
+      strs->equname = arcVFType2str(edgeVF->type);
+      return OK;
+   }
+
+   const EdgeVFBasicData *dat = &edgeVF->basic_dat;
+   rhp_idx ei = dat->ei;
    if (valid_ei(ei)) {
       rhp_idx objequ = mp_getobjequ(mp);
       strs->labelcolor = ei == objequ ? "blue" : "magenta";
@@ -62,11 +69,13 @@ static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
             empdag_getmpname(empdag, edgeVF->child_id));
       strs->equname = "ERROR invalid equation index";
       strs->labelcolor = "red";
+      strs->weight = NULL;
       return OK;
    }
 
    double cst = edgeVF->basic_dat.cst;
    rhp_idx vi = edgeVF->basic_dat.vi;
+   strs->weight = NULL;
    strs->do_free_weight = true;
    if (cst != 1.) {
       if (valid_vi(vi)) {
@@ -86,7 +95,7 @@ static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
    return OK;
 }
 
-static int _print_edges_mps(const EmpDag* empdag, FILE* f)
+static int print_mp_edges(const EmpDag* empdag, FILE* f)
 {
    const struct mp_namedarray* mps = &empdag->mps;
 
@@ -101,7 +110,7 @@ static int _print_edges_mps(const EmpDag* empdag, FILE* f)
          unsigned uid = Carcs->arr[j];
          bool isMP = uidisMP(uid);
          unsigned id = uid2id(uid);
-       
+ 
 
          IO_CALL(fprintf(f, " MP%u -> %s%u [%s];\n", mp_id,
                          isMP ? "MP" : "MPE", id, arcstyle_CTRL));
@@ -130,8 +139,14 @@ static int _print_edges_mps(const EmpDag* empdag, FILE* f)
             VFstrings.equname = "unsupported edgeVF type";
          }
 
-         IO_CALL(fprintf(f, " MP%u -> MP%u [label=\"(%s)\", labelfontcolor=%s, %s];\n",
-                         mp_id, mpchild_id, VFstrings.equname, //VFstrings.weight,
+         IO_CALL(fprintf(f, " MP%u -> MP%u [label=<%s",
+                         mp_id, mpchild_id, VFstrings.equname)); //VFstrings.weight,
+ 
+         if (VFstrings.weight) {
+            IO_CALL(fprintf(f, "<BR/>%s", VFstrings.weight));
+         }
+
+         IO_CALL(fprintf(f, ">, labelfontcolor=%s, %s];\n",
                          VFstrings.labelcolor, arcstyle_VF));
 
          if (VFstrings.do_free_weight) { FREE(VFstrings.weight); }
@@ -143,7 +158,7 @@ static int _print_edges_mps(const EmpDag* empdag, FILE* f)
    return OK;
 }
 
-static int _print_edges_mpes(const struct mpe_namedarray* mpes, FILE* f)
+static int print_nash_edges(const struct nash_namedarray* mpes, FILE* f)
 {
    for (unsigned i = 0, len = mpes->len; i < len; ++i) {
       if (mpes->arcs[i].len == 0) continue;
@@ -169,7 +184,7 @@ static int _print_edges_mpes(const struct mpe_namedarray* mpes, FILE* f)
    return OK;
 }
 
-static int _print_mp_graph(const struct mp_namedarray* mps, FILE* f, const Container *ctr)
+static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Container *ctr)
 {
    for (unsigned i = 0, len = mps->len; i < len; ++i) {
       if (!mps->arr[i]) continue;
@@ -233,12 +248,12 @@ static int _print_mp_graph(const struct mp_namedarray* mps, FILE* f, const Conta
    return OK;
 }
 
-static int _print_mpe_graph(const struct mpe_namedarray* mpes, FILE* f, const Container *ctr)
+static int print_nash_nodes(const struct nash_namedarray* mpes, FILE* f, const Container *ctr)
 {
    for (unsigned i = 0, len = mpes->len; i < len; ++i) {
       if (!mpes->arr[i]) continue;
 
-      const Mpe *mpe = mpes->arr[i];
+      const Nash *mpe = mpes->arr[i];
       const char *name = mpes->names[i];
       if (!name) {
          char *lname;
@@ -252,16 +267,16 @@ static int _print_mpe_graph(const struct mpe_namedarray* mpes, FILE* f, const Co
    return OK;
 }
 
-static int empdag2dot(const  EmpDag * empdag, FILE *f)
+static int empdag2dot(const EmpDag *empdag, FILE *f)
 {
    IO_CALL(fputs("digraph structs {\n node [shape=record];\n", f));
    IO_CALL(fprintf(f, " label=\"EMPDAG for model '%s'\"\n", mdl_getname(empdag->mdl)));
 
-   S_CHECK(_print_mp_graph(&empdag->mps, f, &empdag->mdl->ctr));
-   S_CHECK(_print_mpe_graph(&empdag->mpes, f, &empdag->mdl->ctr));
+   S_CHECK(print_mp_nodes(&empdag->mps, f, &empdag->mdl->ctr));
+   S_CHECK(print_nash_nodes(&empdag->nashs, f, &empdag->mdl->ctr));
 
-   S_CHECK(_print_edges_mps(empdag, f));
-   S_CHECK(_print_edges_mpes(&empdag->mpes, f));
+   S_CHECK(print_mp_edges(empdag, f));
+   S_CHECK(print_nash_edges(&empdag->nashs, f));
 
    IO_CALL(fputs("\n}\n", f));
    SYS_CALL(fflush(f));
@@ -286,44 +301,13 @@ int empdag2dotfile(const EmpDag * empdag, const char* fname)
 
    SYS_CALL(fclose(f));
 
-   char *cmd;
-   IO_CALL(asprintf(&cmd, "dot -Tpng -O %s", fname));
-   int rc = system(cmd); /* YOLO */
-   if (rc) {
-      error("[empdag] executing '%s' yielded return code %d\n", cmd, rc);
-      FREE(cmd);
-   }
-   FREE(cmd);
+   S_CHECK(dot2png(fname));
 
    if (!optvalb(empdag->mdl, Options_Display_EmpDag)) { return OK; }
 
-   const char *png_viewer = optvals(empdag->mdl, Options_Png_Viewer);
-   bool free_png_viewer = false;
+   return view_png(fname, empdag->mdl);
 
-  if (!png_viewer || png_viewer[0] == '\0') {
-#ifdef __apple__
-      png_viewer = "open -f "
-#elif defined(__linux__)
-      png_viewer = "feh - &";
-#endif
-   } else {
-      free_png_viewer = true;
-   }
-
-   if (png_viewer) {
-      IO_CALL(asprintf(&cmd, "cat %s.png | %s", fname, png_viewer));
-      rc = system(cmd); /* YOLO */
-      if (rc) {
-         error("[empdag] ERROR: executing '%s' yielded return code %d\n", cmd, rc);
-      }
-      FREE(cmd);
-   }
-
-   if (free_png_viewer) { FREE(png_viewer); }
-
-   return OK;
-
-_exit:
+_exit: /* this is reached only when we error */
    SYS_CALL(fclose(f));
    return status;
 }

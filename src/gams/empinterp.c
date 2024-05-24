@@ -101,7 +101,6 @@ void interp_init(Interpreter *interp, Model *mdl, const char *fname)
 
    interp->uid_parent = EMPDAG_UID_NONE;
    interp->uid_grandparent = EMPDAG_UID_NONE;
-   rhp_uint_init(&interp->edgevfovjs);
 }
 
 NONNULL void interp_free(Interpreter *interp)
@@ -137,7 +136,6 @@ NONNULL void interp_free(Interpreter *interp)
                "wasn't consumed. Please report this bug.\n");
    }
 
-   rhp_uint_empty(&interp->edgevfovjs);
 }
 
 int interp_create_buf(Interpreter *interp)
@@ -337,10 +335,12 @@ _exit:
       }
 
       if (status == OK) {
-         status = empdag_fini(empdag);
+         status = empdag_exportasdot(interp.mdl);
       }
 
-      S_CHECK(empdag_exportasdot(interp.mdl));
+      if (status == OK) {
+         status = empdag_fini(empdag);
+      }
 
    }
 

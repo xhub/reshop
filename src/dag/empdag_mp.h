@@ -39,7 +39,7 @@ static int _edgeVFs_copy(VarcArray * restrict dat,
 }
 
 
-static inline void _mp_namedarray_init(DagMpArray *dat)
+static inline void dagmp_array_init(DagMpArray *dat)
 {
    assert(dat);
    dat->len = 0;
@@ -52,7 +52,7 @@ static inline void _mp_namedarray_init(DagMpArray *dat)
    dat->rarcs = NULL;
 }
 
-static inline int _mp_namedarray_resize(DagMpArray *dat, unsigned size)
+static inline int dagmp_array_resize(DagMpArray *dat, unsigned size)
 {
    CALLOC_(dat->arr, MathPrgm*, size);
    CALLOC_(dat->names, const char*, size);
@@ -63,7 +63,7 @@ static inline int _mp_namedarray_resize(DagMpArray *dat, unsigned size)
    return OK;
 }
 
-static inline int _mp_namedarray_reserve(DagMpArray *dat, unsigned reserve)
+static inline int dagmp_array_reserve(DagMpArray *dat, unsigned reserve)
 {
    unsigned max_lb = reserve + dat->len;
    if (max_lb > dat->max) {
@@ -88,7 +88,7 @@ static inline int _mp_namedarray_reserve(DagMpArray *dat, unsigned reserve)
 }
 
 static inline OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
-int _mp_namedarray_add(DagMpArray *dat, MathPrgm* elt, const char *name)
+int dagmp_array_add(DagMpArray *dat, MathPrgm* elt, const char *name)
 {
 
    if (dat->len >= dat->max) {
@@ -115,13 +115,13 @@ int _mp_namedarray_add(DagMpArray *dat, MathPrgm* elt, const char *name)
    return OK;
 }
 
-static inline int _mp_namedarray_copy(DagMpArray * restrict dat,
+static inline int dagmp_array_copy(DagMpArray * restrict dat,
                                 const DagMpArray * restrict dat_src,
                                 Model *mdl)
 {
    unsigned size = dat_src->len;
    if (size == 0) {
-      _mp_namedarray_init(dat);
+      dagmp_array_init(dat);
       return OK;
    }
 
@@ -159,7 +159,7 @@ static inline int _mp_namedarray_copy(DagMpArray * restrict dat,
    return OK;
 }
 
-static inline void _mp_namedarray_free(DagMpArray *dat)
+static inline void dagmp_array_free(DagMpArray *dat)
 {
    unsigned len = dat->len;
    if (len > 0) {
@@ -178,3 +178,24 @@ static inline void _mp_namedarray_free(DagMpArray *dat)
       FREE(dat->rarcs);
    }
 }
+
+static inline int dagmp_array_trimmem(DagMpArray * restrict dat)
+{
+   unsigned size = dat->len;
+   if (size == 0) {
+      dagmp_array_free(dat);
+      return OK;
+   }
+
+   dat->max = size;
+
+   REALLOC_(dat->arr, MathPrgm*, size);
+   REALLOC_(dat->names, const char*, size);
+   REALLOC_(dat->Carcs, UIntArray, size);
+   REALLOC_(dat->Varcs, VarcArray, size);
+   REALLOC_(dat->rarcs, UIntArray, size);
+
+   return OK;
+}
+
+

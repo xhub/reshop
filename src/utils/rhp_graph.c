@@ -201,7 +201,7 @@ int ovfgraph_dot(const struct ovfinfo *ovf_info, struct rhp_graph_gen **nodes,
    }
    FREE(cmd);
 
-   if (!optvalb(mdl, Options_Display_EmpDag)) { return OK; }
+   if (!optvalb(mdl, Options_Display_OvfDag)) { return OK; }
 
    const char *png_viewer = optvals(mdl, Options_Png_Viewer);
    bool free_png_viewer = false;

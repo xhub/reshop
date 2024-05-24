@@ -307,29 +307,6 @@ static int imm_mp_finalize(UNUSED Interpreter *interp, MathPrgm *mp)
 
    S_CHECK(mp_finalize(mp));
 
-   /* This needs to be executed after mp_finalize() */
-   if (interp->edgevfovjs.len > 0) {
-
-      rhp_idx objequ = mp_getobjequ(mp);
-      assert(valid_ei(objequ)); // TODO support the case where there is no objequ
- 
-      EmpDag *empdag = &interp->mdl->empinfo.empdag;
-
-      ArcVFData edgevf;
-      arcVFb_init(&edgevf, objequ);
-      mpid_t mp_id = mp->id;
-
-      for (unsigned i = 0, len = interp->edgevfovjs.len; i < len; ++i) {
-
-         edgevf.child_id = rhp_uint_at(&interp->edgevfovjs, i);
-
-         S_CHECK(empdag_mpVFmpbyid(empdag, mp_id, &edgevf));
-
-      }
-
-      interp->edgevfovjs.len = 0;
-   }
-
    return OK;
 }
 
@@ -360,7 +337,7 @@ static int imm_mp_settype(UNUSED Interpreter *interp, MathPrgm *mp, unsigned typ
    return mp_settype(mp, type);
 }
 
-static int imm_mpe_new(Interpreter *interp, Mpe **mpe)
+static int imm_mpe_new(Interpreter *interp, Nash **mpe)
 {
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
@@ -375,23 +352,23 @@ static int imm_mpe_new(Interpreter *interp, Mpe **mpe)
       interp->regentry = NULL;
    }
 
-   A_CHECK(*mpe, empdag_newmpenamed(empdag, labelname));
+   A_CHECK(*mpe, empdag_newnashnamed(empdag, labelname));
 
-   S_CHECK(imm_common_nodeinit(interp, mpeid2uid((*mpe)->id), regentry));
+   S_CHECK(imm_common_nodeinit(interp, nashid2uid((*mpe)->id), regentry));
 
    trace_empinterp("[empinterp] line %u: new MPE(%s) #%u\n", interp->linenr,
-                   empdag_getmpename(empdag, (*mpe)->id), (*mpe)->id);
+                   empdag_getnashname(empdag, (*mpe)->id), (*mpe)->id);
 
    return OK;
 }
 
 static int imm_mpe_addmp(UNUSED Interpreter *interp, unsigned mpe_id, MathPrgm *mp)
 {
-   return empdag_mpeaddmpbyid(&interp->mdl->empinfo.empdag, mpe_id, mp->id);
+   return empdag_nashaddmpbyid(&interp->mdl->empinfo.empdag, mpe_id, mp->id);
 
 }
 
-static int imm_mpe_finalize(UNUSED Interpreter *interp, Mpe *mpe)
+static int imm_mpe_finalize(UNUSED Interpreter *interp, Nash *mpe)
 {
    return imm_common_nodefini(interp);
 }
@@ -539,7 +516,8 @@ static int imm_mp_ccflib_finalize(Interpreter* restrict interp, MathPrgm *mp)
    /* TODO: what are we doing thing here? */
    S_CHECK(imm_common_nodefini(interp));
 
-   return rhp_uint_add(&interp->edgevfovjs, mp->id);
+//   return rhp_uint_add(&interp->edgevfovjs, mp->id);
+   return OK;
 }
 
 static unsigned imm_ovf_param_getvecsize(UNUSED Interpreter* restrict interp,

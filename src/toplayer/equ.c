@@ -740,7 +740,9 @@ int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
    if (esrc->tree && esrc->tree->root) {
 
       /*  Get the first empty child */
-      S_CHECK(nlnode_next_child(tree, &addr));
+      if (*addr) {
+         S_CHECK(nlnode_next_child(tree, &addr));
+      }
 
       /* Add coeff * ( ... )  */
       /* TODO(xhub) we may end up in a ADD->ADD situation, be careful here */

@@ -25,10 +25,10 @@
 #include "toplayer_utils.h"
 
 
-/* TODO: On 2024.02.29, removed these from header. Could be converted to
+/* FIXME: On 2024.02.29, removed these from header. Could be converted to
  * static function if the need for theses does not appear soon
  */
-int empdag_rootsaddmpe(EmpDag *empdag, mpeid_t mpeid) NONNULL;
+int empdag_rootsaddnash(EmpDag *empdag, nashid_t nashid) NONNULL;
 int empdag_rootsaddmp(EmpDag *empdag, mpid_t mpid) NONNULL;
 int empdag_rootsadd(EmpDag *empdag, daguid_t uid) NONNULL;
 
@@ -50,17 +50,15 @@ static int chk_mpid(const EmpDag *empdag, unsigned mp_id)
    return OK;
 }
 
-static int chk_mpeid(const EmpDag *empdag, mpeid_t mpe_id)
+static int chk_nashid(const EmpDag *empdag, nashid_t nashid)
 {
-   if (mpe_id >= empdag->mpes.len) {
-      if (!valid_idx(mpe_id)) {
-         error("%s :: %s\n", __func__, badidx_str(mpe_id));
+   if (nashid >= empdag->nashs.len) {
+      if (!valid_idx(nashid)) {
+         error("%s :: %s\n", __func__, badidx_str(nashid));
       } else {
-         unsigned mdl_id = empdag->mdl ? empdag->mdl->id : UINT_MAX;
-         const char *mdl_name  = mdl_getname(empdag->mdl);
-         error("%s :: no MPE with index %d, the number of MPEs is %d "
-                  "in model %d ``%s''\n", __func__, mpe_id, empdag->mpes.len,
-                  mdl_id, mdl_name);
+         error("%s :: no Nash with index %d, the number of Nash nodes is %u "
+                  "in %s model '%.*s' #%u\n", __func__, nashid, empdag->nashs.len,
+                  mdl_fmtargs(empdag->mdl));
       }
       return Error_NotFound;
    }
@@ -100,7 +98,7 @@ const char *empdag_typename(enum empdag_type type)
    }
 }
 
-static const char* edgeVFType2str(ArcVFType type)
+const char* arcVFType2str(ArcVFType type)
 {
    switch(type) {
    case ArcVFUnset:
@@ -133,8 +131,8 @@ void empdag_init(EmpDag *empdag, Model *mdl)
 
    mpidarray_init(&empdag->roots);
    mpidarray_init(&empdag->mps2reformulate);
-   _mp_namedarray_init(&empdag->mps);
-   _mpe_namedlist_init(&empdag->mpes);
+   dagmp_array_init(&empdag->mps);
+   dagnash_array_init(&empdag->nashs);
 
    empdag->uid_root = EMPDAG_UID_NONE;
 
@@ -331,10 +329,10 @@ int empdag_fini(EmpDag *empdag)
    printuint(&l, "VI MPs", n_vi);
    printuint(&l, "CCFLIB MPs", n_ccflib);
    l.ident -= 2;
-   printuint(&l, "Nash nodes", empdag->mpes.len);
+   printuint(&l, "Nash nodes", empdag->nashs.len);
    printuint(&l, "VF edges", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
    printuint(&l, "CTRL edges", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
-   printuint(&l, "Children of Nash nodes", empdag->mpes.arcs ? empdag->mpes.arcs->len : 0);
+   printuint(&l, "Children of Nash nodes", empdag->nashs.arcs ? empdag->nashs.arcs->len : 0);
 
    unsigned n_roots = empdag->roots.len;
 
@@ -369,11 +367,11 @@ void empdag_rel(EmpDag *empdag)
    rhp_uint_empty(&empdag->mps2reformulate);
 
    /****************************************************************************
-   * Free MP and MPE data structures
+   * Free MP and Nash data structures
    ****************************************************************************/
 
-   _mp_namedarray_free(&empdag->mps);
-   _mpe_namedlist_free(&empdag->mpes);
+   dagmp_array_free(&empdag->mps);
+   dagnash_array_free(&empdag->nashs);
 
    if (empdag->empdag_next) {
       empdag_rel(empdag->empdag_next);
@@ -523,9 +521,16 @@ int empdag_initfrommodel(EmpDag * restrict empdag, const Model *mdl_up)
    return OK;
 }
 
-int empdag_initfromDAG(EmpDag * restrict empdag,
-                       const EmpDag * restrict empdag_up,
-                       Model *mdl)
+/**
+ * @brief Duplicate an EMPDAG
+ *
+ * @param empdag     the new EMPDAG
+ * @param empdag_up  the original EMPDAG
+ * @param mdl        the new model
+ *
+ * @return           the error code
+ */
+int empdag_dup(EmpDag * restrict empdag, const EmpDag * restrict empdag_up, Model *mdl)
 {
    if (empdag_up->type == EmpDag_Unset) {
       errormsg("[emdpag] ERROR: initializing from an unset EMPDAG\n");
@@ -559,8 +564,8 @@ int empdag_initfromDAG(EmpDag * restrict empdag,
    /* TODO(xhub) should this be done elsewhere? */
    S_CHECK(mdl_settype(mdl, MdlType_emp));
 
-   S_CHECK(_mp_namedarray_copy(&empdag->mps, &empdag_up->mps, empdag->mdl));
-   S_CHECK(_mpe_namedlist_copy(&empdag->mpes, &empdag_up->mpes, empdag->mdl));
+   S_CHECK(dagmp_array_copy(&empdag->mps, &empdag_up->mps, empdag->mdl));
+   S_CHECK(dagnash_array_copy(&empdag->nashs, &empdag_up->nashs, empdag->mdl));
 
    S_CHECK(daguidarray_copy(&empdag->roots, &empdag_up->roots));
 
@@ -572,7 +577,7 @@ int empdag_addmp(EmpDag *empdag, RhpSense sense, unsigned *id)
    MathPrgm *mp;
    A_CHECK(mp, mp_new(empdag->mps.len, sense, empdag->mdl));
 
-   S_CHECK(_mp_namedarray_add(&empdag->mps, mp, NULL));
+   S_CHECK(dagmp_array_add(&empdag->mps, mp, NULL));
 
    *id = mp->id;
 
@@ -594,7 +599,7 @@ int empdag_addmpnamed(EmpDag *empdag, RhpSense sense,
 
    *id = mp->id;
 
-   return _mp_namedarray_add(&empdag->mps, mp, name);
+   return dagmp_array_add(&empdag->mps, mp, name);
 }
 
 MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense,
@@ -605,59 +610,59 @@ MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense,
    return empdag->mps.arr[mp_id];
 }
 
-int empdag_addmpe(EmpDag *empdag, unsigned *id)
+int empdag_addnash(EmpDag *empdag, unsigned *id)
 {
-   Mpe *mpe;
-   A_CHECK(mpe, mpe_new(empdag->mpes.len, empdag->mdl));
+   Nash *nash;
+   A_CHECK(nash, nash_new(empdag->nashs.len, empdag->mdl));
 
-   S_CHECK(_mpe_namedlist_add(&empdag->mpes, mpe, NULL));
+   S_CHECK(dagnash_array_add(&empdag->nashs, nash, NULL));
 
-   *id = mpe->id;
+   *id = nash->id;
 
    empdag->finalized = false;
 
    return OK;
 }
 
-int empdag_addmpenamed(EmpDag *empdag, const char *name, unsigned *id)
+int empdag_addnashnamed(EmpDag *empdag, const char *name, unsigned *id)
 {
-   Mpe *mpe;
-   A_CHECK(mpe, mpe_new(empdag->mpes.len, empdag->mdl));
+   Nash *nash;
+   A_CHECK(nash, nash_new(empdag->nashs.len, empdag->mdl));
 
-   *id = mpe->id;
+   *id = nash->id;
 
    empdag->finalized = false;
 
-   return _mpe_namedlist_add(&empdag->mpes, mpe, name);
+   return dagnash_array_add(&empdag->nashs, nash, name);
 }
 
-Mpe* empdag_newmpe(EmpDag *empdag)
+Nash* empdag_newnash(EmpDag *empdag)
 {
-   mpeid_t mpe_id;
-   SN_CHECK(empdag_addmpe(empdag, &mpe_id));
+   nashid_t nash_id;
+   SN_CHECK(empdag_addnash(empdag, &nash_id));
 
    empdag->finalized = false;
 
-   return empdag->mpes.arr[mpe_id];
+   return empdag->nashs.arr[nash_id];
 }
 
-Mpe* empdag_newmpenamed(EmpDag *empdag, char* name)
+Nash* empdag_newnashnamed(EmpDag *empdag, char* name)
 {
-   mpeid_t mpe_id;
-   SN_CHECK(empdag_addmpenamed(empdag, name, &mpe_id));
+   nashid_t nashid;
+   SN_CHECK(empdag_addnashnamed(empdag, name, &nashid));
 
    empdag->finalized = false;
 
-   return empdag->mpes.arr[mpe_id];
+   return empdag->nashs.arr[nashid];
 }
 
-int empdag_rootsaddmpe(EmpDag *empdag, mpeid_t mpeid)
+int empdag_rootsaddnash(EmpDag *empdag, nashid_t nashid)
 {
-   S_CHECK(chk_mpeid(empdag, mpeid));
+   S_CHECK(chk_nashid(empdag, nashid));
 
    empdag->finalized = false;
 
-   return rhp_uint_addsorted(&empdag->roots, mpeid2uid(mpeid));
+   return rhp_uint_addsorted(&empdag->roots, nashid2uid(nashid));
 }
 
 int empdag_rootsaddmp(EmpDag *empdag, mpid_t mpid)
@@ -675,7 +680,7 @@ int empdag_rootsadd(EmpDag *empdag, daguid_t uid)
       return empdag_rootsaddmp(empdag, uid2id(uid));
    }
 
-   return empdag_rootsaddmpe(empdag, uid2id(uid));
+   return empdag_rootsaddnash(empdag, uid2id(uid));
 }
 
 int empdag_setroot(EmpDag *empdag, daguid_t uid)
@@ -698,35 +703,35 @@ int empdag_getmpparents(const EmpDag *empdag, const MathPrgm *mp,
    return OK;
 }
 
-int empdag_getmpeparents(const EmpDag *empdag, const Mpe *mpe,
+int empdag_getnashparents(const EmpDag *empdag, const Nash *nash,
                          const UIntArray **parents_uid)
 {
-   mpeid_t mpe_id = mpe->id;
-   S_CHECK(chk_mpid(empdag, mpe_id));
+   nashid_t nashid = nash->id;
+   S_CHECK(chk_mpid(empdag, nashid));
 
-   *parents_uid = &empdag->mpes.rarcs[mpe_id];
+   *parents_uid = &empdag->nashs.rarcs[nashid];
 
    return OK;
 }
 
-int empdag_mpeaddmpbyid(EmpDag *empdag, mpeid_t mpe_id, mpid_t mp_id)
+int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
 {
-   S_CHECK(chk_mpeid(empdag, mpe_id));
-   S_CHECK(chk_mpid(empdag, mp_id));
+   S_CHECK(chk_nashid(empdag, nashid));
+   S_CHECK(chk_mpid(empdag, mpid));
 
-   MathPrgm *mp = empdag->mps.arr[mp_id];
+   MathPrgm *mp = empdag->mps.arr[mpid];
    if (mp->type == MpTypeUndef) {
       error("[empdag] ERROR: the MP(%s) has an undefined type",
-            empdag_getmpname(empdag, mp_id));
+            empdag_getmpname(empdag, mpid));
       return Error_RuntimeError;
    }
 
-   S_CHECK(rhp_uint_adduniq(&empdag->mpes.arcs[mpe_id], mpid2uid(mp_id)));
-   S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mp_id], mpeid2uid(mpe_id)));
+   S_CHECK(rhp_uint_adduniq(&empdag->nashs.arcs[nashid], mpid2uid(mpid)));
+   S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mpid], nashid2uid(nashid)));
 
-   trace_empdag("[empdag] adding an edge of type %s from MPE(%s) to MP(%s)\n",
-                arctype_str(ArcNash), empdag_getmpename(empdag, mpe_id),
-                empdag_getmpname(empdag, mp_id));
+   trace_empdag("[empdag] adding an edge of type %s from Nash(%s) to MP(%s)\n",
+                arctype_str(ArcNash), empdag_getnashname(empdag, nashid),
+                empdag_getmpname(empdag, mpid));
 
    empdag->finalized = false;
 
@@ -744,7 +749,7 @@ int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const ArcVFData *edgeVF)
    S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[id_child], edgeVFuid(mpid2uid(id_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
-                edgeVFType2str(edgeVF->type), empdag_getmpname(empdag, id_parent),
+                arcVFType2str(edgeVF->type), empdag_getmpname(empdag, id_parent),
                 empdag_getmpname(empdag, id_child));
 
 
@@ -774,36 +779,36 @@ int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t id_parent, mpid_t id_child)
    return OK;
 }
 
-int empdag_mpCTRLmpebyid(EmpDag *empdag, mpid_t mp_id, mpeid_t mpe_id)
+int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mp_id, nashid_t nashid)
 {
    S_CHECK(chk_mpid(empdag, mp_id));
-   S_CHECK(chk_mpeid(empdag, mpe_id));
+   S_CHECK(chk_nashid(empdag, nashid));
 
-   S_CHECK(rhp_uint_adduniq(&empdag->mps.Carcs[mp_id], edgeCTRLuid(mpeid2uid(mpe_id))));
-   S_CHECK(rhp_uint_adduniq(&empdag->mpes.rarcs[mpe_id], edgeCTRLuid(mpid2uid(mp_id))));
+   S_CHECK(rhp_uint_adduniq(&empdag->mps.Carcs[mp_id], edgeCTRLuid(nashid2uid(nashid))));
+   S_CHECK(rhp_uint_adduniq(&empdag->nashs.rarcs[nashid], edgeCTRLuid(mpid2uid(mp_id))));
 
-   trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MPE(%s)\n",
+   trace_empdag("[empdag] adding an edge of type %s from MP(%s) to Nash(%s)\n",
                 arctype_str(ArcCtrl), empdag_getmpname(empdag, mp_id),
-                empdag_getmpename(empdag, mpe_id));
+                empdag_getnashname(empdag, nashid));
 
    empdag->finalized = false;
 
    return OK;
 }
 
-int empdag_mpeaddmpsbyid(EmpDag *empdag, mpeid_t mpe_id,
+int empdag_nashaddmpsbyid(EmpDag *empdag, nashid_t nashid,
                          const MpIdArray *arr)
 {
 
-   S_CHECK(chk_mpeid(empdag, mpe_id));
+   S_CHECK(chk_nashid(empdag, nashid));
 
    for (unsigned i = 0, len = arr->len; i < len; ++i) {
       unsigned mp_id = arr->arr[i];
       S_CHECK(chk_mpid(empdag, mp_id));
-      S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mp_id], mpe_id));
+      S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mp_id], nashid));
    }
 
-   S_CHECK(rhp_uint_addset(&empdag->mpes.arcs[mpe_id], arr));
+   S_CHECK(rhp_uint_addset(&empdag->nashs.arcs[nashid], arr));
 
    empdag->finalized = false;
 
@@ -834,19 +839,19 @@ int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
       }
 
       assert(arc->type == ArcCtrl);
-      return empdag_mpCTRLmpebyid(empdag, id_parent, id_child);
+      return empdag_mpCTRLnashbyid(empdag, id_parent, id_child);
    }
 
    /* ---------------------------------------------------------------------
     * 
     * --------------------------------------------------------------------- */
    if (!uidisMP(uid_child)) {
-      errormsg("[empdag] ERROR while processing edge: a MPE parent node can "
+      errormsg("[empdag] ERROR while processing edge: a Nash parent node can "
                "only a child of type MP.\n");
       return Error_RuntimeError;
    }
 
-   return empdag_mpeaddmpbyid(empdag, id_parent, id_child);
+   return empdag_nashaddmpbyid(empdag, id_parent, id_child);
 }
 
 int empdag_getmpbyname(const EmpDag *empdag, const char * const name,
@@ -904,29 +909,29 @@ unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp)
    return mp->id;
 }
 
-int empdag_getmpebyname(const EmpDag *empdag, const char * const name,
-                        Mpe **mpe)
+int empdag_getnashbyname(const EmpDag *empdag, const char * const name,
+                        Nash **nash)
 {
-   unsigned idx = _findnamecase(empdag->mpes.names, empdag->mpes.len, name);
+   unsigned idx = _findnamecase(empdag->nashs.names, empdag->nashs.len, name);
    if (idx == UINT_MAX) {
-      error("%s :: Could not find EMPDAG MPE named %s\n", __func__,
+      error("%s :: Could not find Nash node named %s\n", __func__,
                name);
-      *mpe = NULL;
+      *nash = NULL;
       return Error_NotFound;
    }
 
-   *mpe = empdag->mpes.arr[idx];
+   *nash = empdag->nashs.arr[idx];
 
    return OK;
 }
 
-int empdag_getmpeidbyname(const EmpDag *empdag, const char * const name,
+int empdag_getnashidbyname(const EmpDag *empdag, const char * const name,
                           unsigned *id)
 {
-   unsigned idx = _findnamecase(empdag->mpes.names, empdag->mpes.len, name);
+   unsigned idx = _findnamecase(empdag->nashs.names, empdag->nashs.len, name);
    *id = idx;
    if (idx == UINT_MAX) {
-      error("%s :: Could not find EMPDAG MPE named %s\n", __func__,
+      error("%s :: Could not find Nash node named %s\n", __func__,
                name);
       return Error_NotFound;
    }
@@ -934,11 +939,11 @@ int empdag_getmpeidbyname(const EmpDag *empdag, const char * const name,
    return OK;
 }
 
-int empdag_getmpebyid(const EmpDag *empdag, unsigned id, Mpe **mpe)
+int empdag_getnashbyid(const EmpDag *empdag, unsigned id, Nash **nash)
 {
-   S_CHECK(chk_mpeid(empdag, id));
+   S_CHECK(chk_nashid(empdag, id));
 
-   *mpe = empdag->mpes.arr[id];
+   *nash = empdag->nashs.arr[id];
 
    return OK;
 }
@@ -952,13 +957,13 @@ int empdag_mpCTRLmpbyname(EmpDag *empdag, const char *parent, const char *child)
    return empdag_mpCTRLmpbyid(empdag, id_parent, id_child);
 }
 
-int empdag_mpCTRLmpebyname(EmpDag *empdag, const char *parent, const char *child)
+int empdag_mpCTRLnashbyname(EmpDag *empdag, const char *parent, const char *child)
 {
    unsigned id_parent, id_child;
    S_CHECK(empdag_getmpidbyname(empdag, parent, &id_parent));
-   S_CHECK(empdag_getmpeidbyname(empdag, child, &id_child));
+   S_CHECK(empdag_getnashidbyname(empdag, child, &id_child));
 
-   return empdag_mpCTRLmpebyid(empdag, id_parent, id_child);
+   return empdag_mpCTRLnashbyid(empdag, id_parent, id_child);
 }
 
 int empdag_check(EmpDag *empdag)
@@ -967,10 +972,10 @@ int empdag_check(EmpDag *empdag)
 
    const DagUidArray *roots = &empdag->roots;
    const DagMpArray *mps = &empdag->mps;
-   const DagMpeArray *mpes = &empdag->mpes;
+   const DagNashArray *nashs = &empdag->nashs;
 
-   unsigned mp_len = empdag_getmplen(empdag);
-   unsigned mpe_len = empdag_getmpelen(empdag);
+   unsigned mp_len = empdag_num_mp(empdag);
+   unsigned nash_len = empdag_num_nash(empdag);
    unsigned roots_len = empdag->roots.len;
 
    if (roots_len == 0) {
@@ -1012,16 +1017,16 @@ int empdag_check(EmpDag *empdag)
       }
    }
 
-   /* Check if all MPE node have parents or are roots */
-   for (unsigned i = 0; i < mpe_len; ++i) {
-      const Mpe *mpe = mpes->arr[i];
-      if (!mpe) continue;
+   /* Check if all Nash node have parents or are roots */
+   for (unsigned i = 0; i < nash_len; ++i) {
+      const Nash *nash = nashs->arr[i];
+      if (!nash) continue;
 
       /* If we have no parent and are not in the root set, we error */
-      if ((mpes->rarcs[i].len == 0) &&
-         (rhp_uint_findsorted(roots, mpeid2uid(i)) == UINT_MAX)) {
-         error("[empdag:check]  MPE(%s) is not in the EMPDAG\n",
-                 empdag_getmpename(empdag, mpe->id));
+      if ((nashs->rarcs[i].len == 0) &&
+         (rhp_uint_findsorted(roots, nashid2uid(i)) == UINT_MAX)) {
+         error("[empdag:check]  Nash(%s) is not in the EMPDAG\n",
+                 empdag_getnashname(empdag, nash->id));
          status = status_update(status, Error_EMPRuntimeError);
       }
    }
@@ -1086,12 +1091,12 @@ int empdag_setmpname(EmpDag *empdag, mpid_t mpid, const char *const name)
    return OK;
 }
 
-int empdag_mpe_getchildren(const EmpDag *empdag, mpeid_t mpeid,
+int empdag_nash_getchildren(const EmpDag *empdag, nashid_t nashid,
                            DagUidArray *mps)
 {
-   S_CHECK(chk_mpeid(empdag, mpeid));
+   S_CHECK(chk_nashid(empdag, nashid));
 
-   memcpy(mps, &empdag->mpes.arcs[mpeid], sizeof(DagUidArray));
+   memcpy(mps, &empdag->nashs.arcs[nashid], sizeof(DagUidArray));
 
    return OK;
 }
@@ -1103,7 +1108,7 @@ const char* empdag_printid(const EmpDag *empdag)
 
 int empdag_reserve_mp(EmpDag *empdag, unsigned reserve)
 {
-   return _mp_namedarray_reserve(&empdag->mps, reserve);
+   return dagmp_array_reserve(&empdag->mps, reserve);
 }
 
 static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
@@ -1137,33 +1142,33 @@ static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
    return OK;
 }
 
-static int empdag_mpedelete(EmpDag *empdag, mpeid_t mpeid)
+static int empdag_delnash(EmpDag *empdag, nashid_t nashid)
 {
-   if (chk_mpeid(empdag, mpeid) != OK) {
-      error("[empdag] ERROR: seeking to delete MPE ID #%u, which does not exists",
-            mpeid);
+   if (chk_nashid(empdag, nashid) != OK) {
+      error("[empdag] ERROR: seeking to delete Nash ID #%u, which does not exists",
+            nashid);
       return Error_RuntimeError;
    }
 
-   if (mpeid != empdag->mpes.len-1) {
-      error("[empdag] ERROR: seeking to delete MP ID #%u, but it is not the "
-            "last one\n", mpeid);
+   if (nashid != empdag->nashs.len-1) {
+      error("[empdag] ERROR: seeking to delete Nash ID #%u, but it is not the "
+            "last one\n", nashid);
       return Error_RuntimeError;
    }
 
-   unsigned n_parents = empdag->mpes.rarcs[mpeid].len;
+   unsigned n_parents = empdag->nashs.rarcs[nashid].len;
    if (n_parents > 0) {
-      error("[empdag] ERROR: seeking to delete MP ID #%u, but it has %u parents.\n",
-            mpeid, n_parents);
+      error("[empdag] ERROR: seeking to delete Nash ID #%u, but it has %u parents.\n",
+            nashid, n_parents);
    }
 
-   unsigned n_children = empdag->mpes.arcs[mpeid].len;
+   unsigned n_children = empdag->nashs.arcs[nashid].len;
    if (n_children > 0) {
-      error("[empdag] ERROR: seeking to delete MP ID #%u, but it has %u children.\n",
-            mpeid, n_children);
+      error("[empdag] ERROR: seeking to delete Nash ID #%u, but it has %u children.\n",
+            nashid, n_children);
    }
 
-   empdag->mpes.len--;
+   empdag->nashs.len--;
 
    return OK;
 }
@@ -1175,7 +1180,7 @@ int empdag_delete(EmpDag *empdag, daguid_t uid)
       return empdag_mpdelete(empdag, uid2id(uid));
    }
 
-   return empdag_mpedelete(empdag, uid2id(uid));
+   return empdag_delnash(empdag, uid2id(uid));
 }
 
 int empdag_simple_init(EmpDag *empdag)
@@ -1239,11 +1244,11 @@ int empdag_single_MP_to_Nash(EmpDag* empdag)
    
    MathPrgm *mp = empdag->mps.arr[0];
    char *name;
-   mpeid_t mpe_id;
+   nashid_t nashid;
    A_CHECK(name, strdup("equilibrium"));
-   S_CHECK(empdag_addmpenamed(empdag, name, &mpe_id));
-   S_CHECK(empdag_mpeaddmpbyid(empdag, mpe_id, mp->id));
-   S_CHECK(empdag_setroot(empdag, mpeid2uid(mpe_id)));
+   S_CHECK(empdag_addnashnamed(empdag, name, &nashid));
+   S_CHECK(empdag_nashaddmpbyid(empdag, nashid, mp->id));
+   S_CHECK(empdag_setroot(empdag, nashid2uid(nashid)));
 
    return OK;
 }
@@ -1265,10 +1270,10 @@ static int dfs_mplist(const EmpDag *empdag, daguid_t uid, UIntArray *mplist)
 
    } else {
 
-      mpeid_t id = uid2id(uid);
-      UIntArray *mpe_children = &empdag->mpes.arcs[id];
-      children = mpe_children->arr;
-      num_children = mpe_children->len;
+      nashid_t id = uid2id(uid);
+      UIntArray *nash_children = &empdag->nashs.arcs[id];
+      children = nash_children->arr;
+      num_children = nash_children->len;
 
       assert(num_children > 0);
 
@@ -1325,13 +1330,34 @@ int empdag_collectroots(EmpDag *empdag, UIntArray *roots)
       }
    }
 
-   Mpe **mpes =  empdag->mpes.arr;
-   rarcs = empdag->mpes.rarcs;
-   for (unsigned i = 0, n_mpes = empdag->mpes.len; i < n_mpes; ++i) {
+   Nash **nashs = empdag->nashs.arr;
+   rarcs = empdag->nashs.rarcs;
+   for (unsigned i = 0, num_nash = empdag->nashs.len; i < num_nash; ++i) {
       if (rarcs[i].len == 0) {
-         S_CHECK(rhp_uint_add(roots, mpeid2uid(mpes[i]->id)));
+         S_CHECK(rhp_uint_add(roots, nashid2uid(nashs[i]->id)));
       }
    }
 
    return OK;
 }
+
+unsigned arcVFb_getnumcons(ArcVFData *arc, Model *mdl)
+{
+   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+
+   rhp_idx ei = arc->basic_dat.ei;
+   assert(chk_ei(mdl, ei, __func__) == OK);
+
+   return mdl->ctr.equmeta[ei].role == EquConstraint ? 1 : 0;
+}
+
+bool arcVFb_has_objequ(ArcVFData *arc, Model *mdl)
+{
+   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+
+   rhp_idx ei = arc->basic_dat.ei;
+   assert(chk_ei(mdl, ei, __func__) == OK);
+
+   return mdl->ctr.equmeta[ei].role == EquObjective;
+}
+

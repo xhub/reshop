@@ -407,7 +407,6 @@ typedef struct interpreter {
    /* Immediate mode data*/
    daguid_t uid_parent;                    /**< UID of the EMPDAG parent node */
    daguid_t uid_grandparent;               /**< UID of the EMPDAG parent node */
-   UIntArray edgevfovjs;                   /**< UID of CCFLIB to be added */
 } Interpreter;
 
 
@@ -437,8 +436,8 @@ typedef struct parser_ops {
    int (*mp_setprobtype)(Interpreter* restrict interp, MathPrgm *mp, unsigned type);
    int (*mp_settype)(Interpreter* restrict interp, MathPrgm *mp, unsigned type);
    int (*mpe_addmp)(Interpreter* restrict interp, unsigned equil_id, MathPrgm *mp);
-   int (*mpe_finalize)(Interpreter* restrict interp, Mpe *mpe);
-   int (*mpe_new)(Interpreter* restrict interp, Mpe **mpe);
+   int (*mpe_finalize)(Interpreter* restrict interp, Nash *mpe);
+   int (*mpe_new)(Interpreter* restrict interp, Nash **mpe);
    int (*identaslabels)(Interpreter * interp, unsigned * p, ArcType edge_type);
    int (*ovf_addbyname)(Interpreter* restrict interp, EmpInfo *empinfo, const char *name, void ** ovfdef_data);
 //   int (*ovf_args_init)(Parser* restrict parser, void *ovfdef_data);

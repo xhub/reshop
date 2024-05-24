@@ -8,7 +8,7 @@
 
 
 
-static inline void _mpe_namedlist_init(DagMpeArray *dat)
+static inline void dagnash_array_init(DagNashArray *dat)
 {
    assert(dat);
    dat->len = 0;
@@ -20,9 +20,9 @@ static inline void _mpe_namedlist_init(DagMpeArray *dat)
    dat->rarcs = NULL;
 }
 
-static inline int _mpe_namedlist_resize(DagMpeArray *dat, unsigned size)
+static inline int dagnash_array_resize(DagNashArray *dat, unsigned size)
 {
-   CALLOC_(dat->arr, Mpe*, size);
+   CALLOC_(dat->arr, Nash*, size);
    CALLOC_(dat->names, const char*, size);
    CALLOC_(dat->arcs, UIntArray, size);
    CALLOC_(dat->rarcs, UIntArray, size);
@@ -30,7 +30,7 @@ static inline int _mpe_namedlist_resize(DagMpeArray *dat, unsigned size)
    return OK;
 }
 
-static inline int _mpe_namedlist_reserve(DagMpeArray *dat, unsigned reserve)
+static inline int dagnash_array_reserve(DagNashArray *dat, unsigned reserve)
 {
    unsigned max_lb = reserve + dat->len;
    if (max_lb > dat->max) {
@@ -38,7 +38,7 @@ static inline int _mpe_namedlist_reserve(DagMpeArray *dat, unsigned reserve)
       unsigned new_elts = max_lb - old_max;
       dat->max = max_lb;
 
-      REALLOC_(dat->arr, Mpe*, max_lb);
+      REALLOC_(dat->arr, Nash*, max_lb);
       REALLOC_(dat->names, const char*, max_lb);
       REALLOC_(dat->arcs, UIntArray, max_lb);
       REALLOC_(dat->rarcs, UIntArray, max_lb);
@@ -53,7 +53,7 @@ static inline int _mpe_namedlist_reserve(DagMpeArray *dat, unsigned reserve)
 }
 
 static inline OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
-int _mpe_namedlist_add(DagMpeArray *dat, Mpe* elt, const char *name)
+int dagnash_array_add(DagNashArray *dat, Nash* elt, const char *name)
 {
 
    if (dat->len >= dat->max) {
@@ -61,7 +61,7 @@ int _mpe_namedlist_add(DagMpeArray *dat, Mpe* elt, const char *name)
       unsigned max = dat->max = MAX(2*dat->max, dat->len+1);
       unsigned new_elts = max - old_max;
 
-      REALLOC_(dat->arr, Mpe*, max);
+      REALLOC_(dat->arr, Nash*, max);
       REALLOC_(dat->names, const char*, max);
       REALLOC_(dat->arcs, UIntArray, max);
       REALLOC_(dat->rarcs, UIntArray, max);
@@ -78,40 +78,39 @@ int _mpe_namedlist_add(DagMpeArray *dat, Mpe* elt, const char *name)
    return OK;
 }
 
-static inline int _mpe_namedlist_copy(DagMpeArray * restrict dat,
-                                const DagMpeArray * restrict dat_src,
-                                Model *mdl)
+static inline int dagnash_array_copy(DagNashArray * restrict dat_dst,
+                                     const DagNashArray * restrict dat_src,
+                                     Model *mdl)
 {
    unsigned size = dat_src->len;
    if (size == 0) {
-      _mpe_namedlist_init(dat);
+      dagnash_array_init(dat_dst);
       return OK;
    }
 
-   dat->len = size;
-   dat->max = size;
+   dat_dst->len = size;
+   dat_dst->max = size;
 
-   MALLOC_(dat->arr, Mpe*, size);
-   MALLOC_(dat->names, const char*, size);
-   MALLOC_(dat->arcs, UIntArray, size);
-   MALLOC_(dat->rarcs, UIntArray, size);
+   MALLOC_(dat_dst->arr, Nash*, size);
+   MALLOC_(dat_dst->names, const char*, size);
+   MALLOC_(dat_dst->arcs, UIntArray, size);
+   MALLOC_(dat_dst->rarcs, UIntArray, size);
 
    for (unsigned i = 0; i < size; i++) {
       if (dat_src->arr[i]) {
-         A_CHECK(dat->arr[i], mpe_dup(dat_src->arr[i], mdl));
-         
+         A_CHECK(dat_dst->arr[i], nash_dup(dat_src->arr[i], mdl));
+ 
          if (dat_src->names[i]) {
-              A_CHECK(dat->names[i], strdup(dat_src->names[i]));
-              
+            A_CHECK(dat_dst->names[i], strdup(dat_src->names[i]));
          } else {
-            dat->names[i] = NULL;
+            dat_dst->names[i] = NULL;
          }
 
-         S_CHECK(rhp_uint_copy(&dat->arcs[i], &dat_src->arcs[i]));
-         S_CHECK(rhp_uint_copy(&dat->rarcs[i], &dat_src->rarcs[i]));
+         S_CHECK(rhp_uint_copy(&dat_dst->arcs[i], &dat_src->arcs[i]));
+         S_CHECK(rhp_uint_copy(&dat_dst->rarcs[i], &dat_src->rarcs[i]));
       } else {
-         dat->arr[i] = NULL;
-         dat->names[i] = NULL;
+         dat_dst->arr[i] = NULL;
+         dat_dst->names[i] = NULL;
       }
 
    }
@@ -119,12 +118,12 @@ static inline int _mpe_namedlist_copy(DagMpeArray * restrict dat,
    return OK;
 }
 
-static inline void _mpe_namedlist_free(DagMpeArray *dat)
+static inline void dagnash_array_free(DagNashArray *dat)
 {
    unsigned len = dat->len;
    if (len > 0) {
       for (unsigned i = 0; i < len; ++i) {
-         mpe_free(dat->arr[i]);
+         nash_free(dat->arr[i]);
          FREE(dat->names[i]);
          rhp_uint_empty(&dat->arcs[i]);
          rhp_uint_empty(&dat->rarcs[i]);

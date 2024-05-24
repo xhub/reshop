@@ -234,14 +234,14 @@ const char* nidx_getname(nidx_t nidx, const EmpDagDfsData *dfsdata)
 {
    if (nidx >= dfsdata->num_nodes) { return nidx_badidxstr(); }
    return nidx < dfsdata->num_mps ? empdag_getmpname(dfsdata->empdag, nidx) :
-      empdag_getmpename(dfsdata->empdag, nidx-dfsdata->num_mps);
+      empdag_getnashname(dfsdata->empdag, nidx-dfsdata->num_mps);
 }
 
 NONNULL static inline
 daguid_t nidx2uid(nidx_t nidx, const EmpDagDfsData *dfsdata)
 {
    if (nidx >= dfsdata->num_nodes) { return EMPDAG_UID_NONE; }
-   return nidx < dfsdata->num_mps ? mpid2uid(nidx) : mpeid2uid(nidx-dfsdata->num_mps);
+   return nidx < dfsdata->num_mps ? mpid2uid(nidx) : nashid2uid(nidx-dfsdata->num_mps);
 
 }
 
@@ -293,7 +293,7 @@ nidx_t nidx_parent(const EmpDagDfsData *dfsdata, nidx_t node_idx)
    if (node_idx < dfsdata->num_mps) {
       parents = &dfsdata->empdag->mps.rarcs[node_idx];
    } else {
-      parents = &dfsdata->empdag->mpes.rarcs[node_idx-dfsdata->num_mps];
+      parents = &dfsdata->empdag->nashs.rarcs[node_idx-dfsdata->num_mps];
    }
    unsigned num_parents = parents->len;
 
@@ -349,8 +349,8 @@ void report_error_nolca(const EmpDag *empdag, rhp_idx vi, rhp_idx ei,
    error("[empdag] ERROR: in equation '%s', which belongs to MP(%s), "
          "the external variable '%s' belongs to MP(%s). No common ancestor between"
          " the two MP could be found\n", ctr_printequname(&empdag->mdl->ctr, ei),
-         empdag_getname(empdag, mp_id), ctr_printvarname(&empdag->mdl->ctr, vi),
-         empdag_getname2(empdag, mp_vi));
+         empdag_getmpname(empdag, mp_id), ctr_printvarname(&empdag->mdl->ctr, vi),
+         empdag_getmpname2(empdag, mp_vi));
 }
 
 NONNULL static 
@@ -360,8 +360,8 @@ void report_error_badlca(const EmpDag *empdag, rhp_idx vi, rhp_idx ei,
    int offset;
    error("[empdag] ERROR: %nin equation '%s', which belongs to MP(%s), "
          "the external variable '%s' belongs to MP(%s).\n", &offset,
-         ctr_printequname(&empdag->mdl->ctr, ei), empdag_getname(empdag, mp_id),
-         ctr_printvarname(&empdag->mdl->ctr, vi), empdag_getname2(empdag, mp_vi));
+         ctr_printequname(&empdag->mdl->ctr, ei), empdag_getmpname(empdag, mp_id),
+         ctr_printvarname(&empdag->mdl->ctr, vi), empdag_getmpname2(empdag, mp_vi));
    error("%*sThe common ancestor %s(%s) between the two MP is not a Nash node, "
          "as it should be.\n", offset, "", daguid_type2str(uid_lca),
          empdag_getname(empdag, uid_lca));
@@ -380,8 +380,8 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    dfsdata->timestamp = 0;
    dfsdata->num_visited = 0;
    dfsdata->num_mps = empdag->mps.len;
-   dfsdata->num_mpes = empdag->mpes.len;
-   dfsdata->num_nodes = empdag->mps.len + empdag->mpes.len;
+   dfsdata->num_mpes = empdag->nashs.len;
+   dfsdata->num_nodes = empdag->mps.len + empdag->nashs.len;
    dfsdata->max_depth = 0;
 
    unsigned num_nodes = dfsdata->num_nodes;
@@ -489,7 +489,7 @@ typedef struct {
 
 static int dfs_mpC(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
 static int dfs_mpV(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
-static int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
+static int dfs_mpe(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
 
 DBGUSED static inline 
 bool pathtype_is_VF(DagPathType pathtype) {
@@ -813,16 +813,16 @@ int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathd
 }
 
 NONNULL static
-int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
+int dfs_mpe(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
    unsigned node_idx = id_parent + dfsdata->num_mps;
 
-   UIntArray *arcs = &empdag->mpes.arcs[id_parent];
+   UIntArray *arcs = &empdag->nashs.arcs[id_parent];
    DfsPathDataFwd pathdata_child = pathdata;
    pathdata_child.depth++;
 
-   DfsState state = process_node_state(dfsdata, mpeid2uid(id_parent), node_idx);
+   DfsState state = process_node_state(dfsdata, nashid2uid(id_parent), node_idx);
    switch (state) {
    case InProgress:
       break;
@@ -838,7 +838,7 @@ int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 
    /* We are at a leaf node */
    if (arcs->len == 0) {
-      error("[empdag] ERROR: MPE(%s) has no child.\n", empdag_getmpename(empdag, id_parent));
+      error("[empdag] ERROR: MPE(%s) has no child.\n", empdag_getnashname(empdag, id_parent));
       return -DagErrMpeNoChild;
    }
 
@@ -854,7 +854,7 @@ int dfs_mpe(mpeid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
       if (rc == 0) continue;
       if (rc > 0) { return rc; }
       if (rc == -DagErrDagCycle) {
-         error("MPE(%s)\n", empdag_getmpename(empdag, id_parent));
+         error("MPE(%s)\n", empdag_getnashname(empdag, id_parent));
           DfsState stat = get_state(dfsdata, node_idx);
          if (stat == CycleStart) { return -DagErrGeneric; }
          return rc;
@@ -898,7 +898,7 @@ int tree_get_path_backward(EmpDagDfsData *dfsdata, mpid_t mp_parent, mpid_t mp_c
    assert(mp_parent < dfsdata->num_mps && mp_child < dfsdata->num_mps);
 
    const DagMpArray *mps = &dfsdata->empdag->mps;
-   const DagMpeArray *mpes = &dfsdata->empdag->mpes;
+   const DagNashArray *mpes = &dfsdata->empdag->nashs;
 
    /* ---------------------------------------------------------------------
     * To get the path between 2 nodes, the easiest is to go up from the
@@ -917,7 +917,7 @@ int tree_get_path_backward(EmpDagDfsData *dfsdata, mpid_t mp_parent, mpid_t mp_c
       if (uidisMP(uid)) {
          rarcs = &mps->rarcs[uid2id(uid)];
       } else {
-         assert(uidisMPE(uid));
+         assert(uidisNash(uid));
          rarcs = &mpes->rarcs[uid2id(uid)];
       }
 
@@ -1378,7 +1378,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
             report_error_nolca(dfsdata->empdag, vi, ei, mp_var, mp_id);
          }
          daguid_t nidx_uid = nidx2uid(nidx_lca, dfsdata);
-         if (!uidisMPE(nidx_uid)) {
+         if (!uidisNash(nidx_uid)) {
             report_error_badlca(dfsdata->empdag, vi, ei, mp_var, mp_id, nidx_uid);
             num_err++;
          } else {
@@ -1407,7 +1407,7 @@ NONNULL static
 int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
 {
    EmpDag *empdag = dfsdata->empdag;
-   const DagMpeArray *mpes = &empdag->mpes;
+   const DagNashArray *mpes = &empdag->nashs;
    DagMpePpty * restrict mpe_ppty = &dfsdata->mpe_ppty[mpe_id];
    unsigned num_err = 0;
 
@@ -1479,7 +1479,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
 
    if (num_err > 0) {
       error("[empdag] %u errors found while checking MP(%s)\n", num_err,
-            empdag_getmpename(dfsdata->empdag, mpe_id));
+            empdag_getnashname(dfsdata->empdag, mpe_id));
    }
 
    return OK;

@@ -275,15 +275,15 @@ int rhpmat_row(const SpMat* m, unsigned i, unsigned* restrict single_idx,
  * @param i                 the index of the row to get
  * @param[in]  single_idx   memory space for the index (no matrix data case)
  * @param[in]  single_val   memory space for the value (no matrix data case)
- * @param[out] col_idx_len  the length of the row vector
+ * @param[out] len  the length of the row vector
  * @param[out] col_idx      the column indices for the row vector
  * @param[out] vals         the entries for the row vector
  *
  * @return                  the error code
  */
 int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
-               double* restrict single_val, unsigned* restrict col_idx_len,
-               unsigned** restrict col_idx, double** restrict vals)
+               double* restrict single_val, unsigned* restrict len,
+               unsigned**col_idx, double** restrict vals)
 {
    if (m->ppty) {
       bool csc_or_csr = m->ppty & (EMPMAT_CSR | EMPMAT_CSC);
@@ -309,7 +309,7 @@ int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
 
          SparseMatrix * restrict csc = m->csc;
          RHP_INT row_start = csc->p[i];
-         *col_idx_len = csc->p[i+1] - row_start;
+         *len = csc->p[i+1] - row_start;
          *col_idx = &csc->i[row_start];
          *vals = &csc->x[row_start];
 
@@ -323,7 +323,7 @@ int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
 eye_mat:
    *col_idx = single_idx;
    *single_idx = i;
-   *col_idx_len = 1;
+   *len = 1;
    *vals = single_val;
    *single_val = 1.;
 

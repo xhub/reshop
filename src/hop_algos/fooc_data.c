@@ -54,9 +54,9 @@ int fooc_data_empdag(FoocData *fooc_dat, EmpDag *empdag, daguid_t uid_root, Fops
    dagid_t id = uid2id(uid_root);
    MpIdArray *mplist = &fooc_dat->mps;
 
-   if (uidisMPE(uid_root)) {
-      assert(id < empdag->mpes.len);
-      DagUidArray *mps = &empdag->mpes.arcs[id];
+   if (uidisNash(uid_root)) {
+      assert(id < empdag->nashs.len);
+      DagUidArray *mps = &empdag->nashs.arcs[id];
       S_CHECK(mpidarray_reserve(&fooc_dat->mps, mps->len));
       for (unsigned i = 0, len = mps->len; i < len; ++i) {
          S_CHECK(mpidarray_addsorted(mplist, uid2id(mps->arr[i])));

@@ -415,7 +415,7 @@ static int emb_mp_settype(UNUSED Interpreter *interp, MathPrgm *mp, unsigned typ
    return OK;
 }
 
-static int emb_mpe_new(Interpreter *interp, Mpe **mpe)
+static int emb_mpe_new(Interpreter *interp, Nash **mpe)
 {
    /* ---------------------------------------------------------------------
     * If we had a label, then use it!
@@ -441,7 +441,7 @@ static int emb_mpe_addmp(UNUSED Interpreter *interp, UNUSED unsigned mpe_id,
    return OK;
 }
 
-static int emb_mpe_finalize(UNUSED Interpreter *interp, UNUSED Mpe *mpe)
+static int emb_mpe_finalize(UNUSED Interpreter *interp, UNUSED Nash *mpe)
 {
    return OK;
 }

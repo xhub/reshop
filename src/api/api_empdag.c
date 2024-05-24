@@ -81,7 +81,7 @@ int rhp_empdag_rootsetmp(Model *mdl, MathPrgm *mp)
  *
  * @return     the error code
  */
-int rhp_empdag_rootsetmpe(Model *mdl, Mpe *mpe)
+int rhp_empdag_rootsetmpe(Model *mdl, Nash *mpe)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
@@ -96,7 +96,7 @@ int rhp_empdag_rootsetmpe(Model *mdl, Mpe *mpe)
       mdl_settype(mdl, MdlType_emp);
    }
 
-   return empdag_setroot(&mdl->empinfo.empdag, mpeid2uid(mpe->id));
+   return empdag_setroot(&mdl->empinfo.empdag, nashid2uid(mpe->id));
 }
 /**
  * @brief Allocate an mathprgm object
@@ -128,7 +128,7 @@ MathPrgm *rhp_empdag_newmp(Model *mdl, unsigned sense)
 
  * @return the equilibrium object
  */
-Mpe* rhp_empdag_newmpe(Model *mdl)
+Nash* rhp_empdag_newmpe(Model *mdl)
 {
   if (!mdl) {
       error("%s :: The model object is NULL\n", __func__);
@@ -137,7 +137,7 @@ Mpe* rhp_empdag_newmpe(Model *mdl)
 
    SN_CHECK(ensure_EMP_mdl_type(mdl));
 
-  return empdag_newmpe(&mdl->empinfo.empdag);
+  return empdag_newnash(&mdl->empinfo.empdag);
 }
 
 /** 
@@ -148,7 +148,7 @@ Mpe* rhp_empdag_newmpe(Model *mdl)
  *
  *  @return     the error code
  */
-int rhp_empdag_mpeaddmp(Model *mdl, Mpe* mpe, MathPrgm *mp)
+int rhp_empdag_mpeaddmp(Model *mdl, Nash* mpe, MathPrgm *mp)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
@@ -163,7 +163,7 @@ int rhp_empdag_mpeaddmp(Model *mdl, Mpe* mpe, MathPrgm *mp)
    }
 
   EmpDag *empdag = &mdl->empinfo.empdag;
-  return empdag_mpeaddmpbyid(empdag, mpe->id, mp->id);
+  return empdag_nashaddmpbyid(empdag, mpe->id, mp->id);
 }
 
 /** 

@@ -1,7 +1,5 @@
-#include "container.h"
 #include "empdag.h"
 #include "empinfo.h"
-#include "nltree.h"
 #include "macros.h"
 #include "mdl.h"
 #include "ovfinfo.h"
@@ -10,30 +8,6 @@
 #include "reshop.h"
 
 //#define DEBUG_GAMS_OUTPUT
-
-#ifndef NDEBUG
-UNUSED static void _debug_output(Model *mdl)
-{
-   const char* dot_print = mygetenv("RHP_EQU2DOT");
-   char dotname[256];
-
-   Container *ctr = &mdl->ctr;
-
-   if (dot_print) {
-      for (unsigned i = 0; i < (unsigned)ctr->m; ++i) {
-         if (!ctr->equs[i].tree) {
-            continue;
-         }
-         (void)snprintf(dotname, 255, "equ%d.dot", i);
-         nltree_print_dot(ctr->equs[i].tree, dotname, ctr);
-         printf("Equation %i\n", i);
-      }
-   }
-   myfreeenvval(dot_print);
-}
-#else
-#define _debug_output(X,Y) 
-#endif
 
 int empinfo_alloc(EmpInfo *empinfo, Model *mdl)
 {
@@ -101,7 +75,7 @@ int empinfo_initfromupstream(Model *mdl)
       assert(empdag_isempty(&empinfo_up->empdag));
       S_CHECK(empdag_initfrommodel(&empinfo->empdag, mdl_up));
    } else {
-      S_CHECK(empdag_initfromDAG(&empinfo->empdag, &empinfo_up->empdag, mdl));
+      S_CHECK(empdag_dup(&empinfo->empdag, &empinfo_up->empdag, mdl));
    }
 
    return empdag_fini(&empinfo->empdag);

@@ -1,61 +1,54 @@
 #include "empdag.h"
-#include "empinfo.h"
 #include "macros.h"
-#include "mathprgm.h"
 #include "mp_equil.h"
 #include "printout.h"
-#include "reshop.h"
 #include "status.h"
 
 /** @file mp_equil.c */
 
-Mpe *mpe_new(unsigned id, Model *mdl)
+Nash *nash_new(unsigned id, Model *mdl)
 {
   assert(mdl);
 
-  Mpe *mpe;
-  MALLOC_NULL(mpe, Mpe, 1);
+  Nash *nash;
+  MALLOC_NULL(nash, Nash, 1);
 
-  mpe->id = id;
-  mpe->mdl = mdl;
+  nash->id = id;
+  nash->mdl = mdl;
 
-  return mpe;
+  return nash;
 }
 
-void mpe_free(Mpe *mpe)
+void nash_free(Nash *nash)
 {
-  if (!mpe) return;
+  if (!nash) return;
 
-  FREE(mpe);
+  FREE(nash);
 
 }
 
-unsigned mpe_getid(const Mpe *mpe) { return mpe->id; }
+unsigned nash_getid(const Nash *nash) { return nash->id; }
 
 
-Mpe *mpe_dup(const Mpe *mpe_src, Model *mdl)
+Nash *nash_dup(const Nash *nash_src, Model *mdl)
 {
-   return mpe_new(mpe_src->id, mdl);
+   return nash_new(nash_src->id, mdl);
 }
 
-int mpe_ve_full(Mpe* mpe)
+int nash_ve_full(Nash* nash)
 {
-   assert(mpe);
-
-   mpe->ve.compute_ve = true;
-   mpe->ve.full_ve = true;
+   nash->ve.compute_ve = true;
+   nash->ve.full_ve = true;
 
    return OK;
 }
 
-int mpe_ve_partial(Mpe* mpe, Aequ *aeqn)
+int nash_ve_partial(Nash* nash, Aequ *aeqn)
 {
-   assert(mpe);
-
-   mpe->ve.compute_ve = true;
-   mpe->ve.full_ve = false;
+   nash->ve.compute_ve = true;
+   nash->ve.full_ve = false;
   // FIXME: copy? clarify ownership!
-   mpe->ve.common_mult = aeqn;
+   nash->ve.common_mult = aeqn;
 
    return OK;
 }

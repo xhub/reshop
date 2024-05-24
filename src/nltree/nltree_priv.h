@@ -205,12 +205,14 @@ static inline int nlnode_next_child(NlTree *tree, NlNode*** node)
 {
    assert(node && *node && **node);
    unsigned offset = 0; /* init just for compiler warnings */
+
    if ((**node)->op != NLNODE_ADD && (**node)->op != NLNODE_SUB
-         && (**node)->op != NLNODE_MUL && (**node)->op != NLNODE_DIV) {
+    && (**node)->op != NLNODE_MUL && (**node)->op != NLNODE_DIV) {
       error("%s :: unsupported node of type %d", __func__,
                (**node)->op);
       return Error_Inconsistency;
    }
+
    S_CHECK(nlnode_child_getoffset(tree, **node, &offset));
    (*node) = &(**node)->children[offset];
 

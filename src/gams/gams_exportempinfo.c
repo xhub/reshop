@@ -463,12 +463,12 @@ static int export_dualvars_(struct empinfo_dat *file, Model *mdl,
 }
 
 static int export_equilibrium_(struct empinfo_dat *file,
-                               const EmpDag *empdag, Mpe *mpe,
+                               const EmpDag *empdag, Nash *mpe,
                                Model *mdl) {
   IO_CALL(fprintf(file->empinfo_file, "equilibrium"));
 
   UIntArray mps;
-  S_CHECK(empdag_mpe_getchildren(empdag, mpe->id, &mps));
+  S_CHECK(empdag_nash_getchildren(empdag, mpe->id, &mps));
   for (size_t i = 0, len = mps.len; i < len; ++i) {
     MathPrgm *mp;
     S_CHECK(empdag_getmpbyuid(empdag, rhp_uint_at(&mps, i), &mp));
@@ -523,7 +523,7 @@ int gms_exportempinfo(Model *mdl_gms)
     }
 
     unsigned root_uid = empdag_getrootuidfast(empdag, 0);
-    if (uidisMPE(root_uid)) {
+    if (uidisNash(root_uid)) {
 
     /* ----------------------------------------------------------------
      * Do all the prepration work: create new directory, new file, ...
@@ -535,10 +535,10 @@ int gms_exportempinfo(Model *mdl_gms)
      * Perform the export
      * ---------------------------------------------------------------- */
 
-    Mpe *mpe;
+    Nash *mpe;
     unsigned mpe_id = uid2id(root_uid);
 
-    S_CHECK(empdag_getmpebyid(empdag, mpe_id, &mpe));
+    S_CHECK(empdag_getnashbyid(empdag, mpe_id, &mpe));
 
     S_CHECK(export_equilibrium_(&file, empdag, mpe, mdl_gms));
 

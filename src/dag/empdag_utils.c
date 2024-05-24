@@ -38,12 +38,12 @@ bool valid_uid_(const EmpDag *empdag, daguid_t uid, const char *fn)
       return true;
    }
 
-   assert(uidisMPE(uid));
+   assert(uidisNash(uid));
 
-   mpeid_t mpeid = uid2id(uid);
-   if (mpeid >= empdag->mpes.len) {
+   nashid_t mpeid = uid2id(uid);
+   if (mpeid >= empdag->nashs.len) {
       error("[empdag] ERROR in function %s: MPE id %u is outside of [0, %u)",
-            fn, mpeid, empdag->mpes.len);
+            fn, mpeid, empdag->nashs.len);
       return  false;
    }
 
@@ -106,17 +106,17 @@ _exit:
    return "RUNTIME ERROR";
 }
 
-const char* empdag_getmpename(const EmpDag *empdag, unsigned id)
+const char* empdag_getnashname(const EmpDag *empdag, unsigned id)
 {
    UNUSED int status;
 
-   if (id >= empdag->mpes.len) {
+   if (id >= empdag->nashs.len) {
       IO_CALL_EXIT(snprintf(msg, sizeof msg, "ERROR: MPE index %u is out of bound",
                             id));
       return msg;
    }
 
-   const char *mpe_name = empdag->mpes.names[id];
+   const char *mpe_name = empdag->nashs.names[id];
    if (mpe_name) { return mpe_name; }
    IO_CALL_EXIT(snprintf(bufMPE, sizeof bufMPE, "ID %u", id));
 
@@ -130,13 +130,13 @@ const char* empdag_getmpename2(const EmpDag *empdag, unsigned id)
 {
    UNUSED int status;
 
-   if (id >= empdag->mpes.len) {
+   if (id >= empdag->nashs.len) {
       IO_CALL_EXIT(snprintf(msg2, sizeof msg2, "ERROR: MPE index %u is out of bound",
                             id));
       return msg;
    }
 
-   const char *mpe_name = empdag->mpes.names[id];
+   const char *mpe_name = empdag->nashs.names[id];
    if (mpe_name) { return mpe_name; }
    IO_CALL_EXIT(snprintf(bufMPE2, sizeof bufMPE2, "ID %u", id));
 
@@ -173,8 +173,8 @@ const char *empdag_getname(const EmpDag *empdag, unsigned uid)
       return empdag_getmpname(empdag, id);
    } 
 
-   assert(uidisMPE(uid));
-   return empdag_getmpename(empdag, id);
+   assert(uidisNash(uid));
+   return empdag_getnashname(empdag, id);
 }
 
 /**
@@ -206,7 +206,7 @@ const char *empdag_getname2(const EmpDag *empdag, unsigned uid)
       return empdag_getmpname2(empdag, id);
    } 
 
-   assert(uidisMPE(uid));
+   assert(uidisNash(uid));
    return empdag_getmpename2(empdag, id);
 }
 

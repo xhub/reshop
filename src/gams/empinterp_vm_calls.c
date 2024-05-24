@@ -160,10 +160,10 @@ static void* mpe_newobj(VmData *data, unsigned argc, const VmValue *values)
       return NULL;
    }
 
-   Mpe *mpe;
-   AA_CHECK(mpe, empdag_newmpenamed(empdag, label));
+   Nash *mpe;
+   AA_CHECK(mpe, empdag_newnashnamed(empdag, label));
 
-   SN_CHECK(vm_common_nodeinit(data, mpeid2uid(mpe->id), regentry));
+   SN_CHECK(vm_common_nodeinit(data, nashid2uid(mpe->id), regentry));
 
    return mpe;
 }
@@ -404,7 +404,7 @@ static int vm_mpe_addmpbyid(UNUSED VmData *data, unsigned argc, const VmValue *v
    assert(IS_UINT(values[1]));
    unsigned equil_id = AS_UINT(values[1]);
 
-   return empdag_mpeaddmpbyid(&data->mdl->empinfo.empdag, equil_id, mp->id);
+   return empdag_nashaddmpbyid(&data->mdl->empinfo.empdag, equil_id, mp->id);
 }
 
 static int vm_mpe_finalize(UNUSED VmData *data, unsigned argc, const VmValue *values)
@@ -626,7 +626,7 @@ static VmValue as_mpe(void *obj) { return MPEOBJ_VAL(obj); }
 static VmValue as_ovf(void *obj) { return OVFOBJ_VAL(obj); }
 
 static unsigned mp_getuid(void *o) { return mpid2uid(((MathPrgm*)o)->id); }
-static unsigned mpe_getuid(void *o) { return mpeid2uid(((Mpe*)o)->id); }
+static unsigned mpe_getuid(void *o) { return nashid2uid(((Nash*)o)->id); }
 
 const EmpNewObjCall empnewobjs[] = {
    [FN_CCFLIB_NEW]  = { .fn = ccflib_newobj, .obj2vmval = as_mp,  .argc = 2, .get_uid = mp_getuid},

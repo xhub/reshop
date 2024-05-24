@@ -34,14 +34,14 @@ typedef struct mp_namedarray {
   DagUidArray *rarcs;                 /**< Parents (reverse arcs) indices       */
 } DagMpArray;
 
-typedef struct mpe_namedarray {
+typedef struct nash_namedarray {
   unsigned len;
   unsigned max;
   const char **names;
-  Mpe **arr;
+  Nash **arr;
   DagUidArray *arcs;       /**< Children indices                     */
   DagUidArray *rarcs;      /**< EMPDAG Parents (reverse arcs) indices       */
-} DagMpeArray;
+} DagNashArray;
 
 /** @brief Variational Equilibrium details */
 struct vi_equil {
@@ -58,7 +58,7 @@ typedef struct rhp_equilibrium {
   struct vi_equil ve;        /**< Variational Equilibrium details */
    Model *mdl;
   /* TODO: variational equilibrium with EPEC? */
-} Mpe;
+} Nash;
 
 /** Types of EMPDAG */
 typedef enum empdag_type {
@@ -132,7 +132,7 @@ typedef struct empdag {
    bool finalized;
 
    DagMpArray mps;
-   DagMpeArray mpes;
+   DagNashArray nashs;
    DagUidArray roots;
 
    daguid_t uid_root;
@@ -160,19 +160,19 @@ void empdag_rel(EmpDag *empdag) NONNULL;
 int empdag_next(EmpDag *empdag) NONNULL;
 int empdag_fini(EmpDag *empdag) NONNULL;
 
-void mpe_free(Mpe *mpe);
-Mpe *mpe_new(unsigned id, Model *mdl) MALLOC_ATTR(mpe_free, 1) NONNULL;
-unsigned mpe_getid(const Mpe *mpe) NONNULL;
+void nash_free(Nash *nash);
+Nash *nash_new(unsigned id, Model *mdl) MALLOC_ATTR(nash_free, 1) NONNULL;
+unsigned nash_getid(const Nash *nash) NONNULL;
 
 void empdag_reset_type(EmpDag *empdag) NONNULL;
-int empdag_initfromDAG(EmpDag *empdag, const EmpDag *empdag_up,
+int empdag_dup(EmpDag *empdag, const EmpDag *empdag_up,
                        Model *mdl) NONNULL;
 int empdag_initfrommodel(EmpDag * restrict empdag, const Model *mdl_up) NONNULL;
 int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no) NONNULL;
 
 int empdag_finalize(Model *mdl) NONNULL;
 /* --------------------------------------------------------------------------
- * Node (MP, MPE) creation functions
+ * Node (MP, Nash) creation functions
  * -------------------------------------------------------------------------- */
 
 NONNULL ACCESS_ATTR(write_only, 3)
@@ -188,28 +188,28 @@ NONNULL_AT(1) OWNERSHIP_TAKES(3)
 MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense, const char *name);
 
 NONNULL ACCESS_ATTR(write_only, 2)
-int empdag_addmpe(EmpDag *empdag, unsigned *id);
+int empdag_addnash(EmpDag *empdag, unsigned *id);
 
 ACCESS_ATTR(write_only, 3) OWNERSHIP_TAKES(2) NONNULL_AT(1,3)
-int empdag_addmpenamed(EmpDag *empdag, const char *name, unsigned *id);
+int empdag_addnashnamed(EmpDag *empdag, const char *name, unsigned *id);
 
-Mpe *empdag_newmpe(EmpDag *empdag) NONNULL;
+Nash *empdag_newnash(EmpDag *empdag) NONNULL;
 NONNULL_AT(1) OWNERSHIP_TAKES(2) 
-Mpe *empdag_newmpenamed(EmpDag *empdag, char* name);
+Nash *empdag_newnashnamed(EmpDag *empdag, char* name);
 
 int empdag_reserve_mp(EmpDag *empdag, unsigned reserve) NONNULL;
 
 /* --------------------------------------------------------------------------
- * Node (MP, MPE) setting functions
+ * Node (MP, Nash) setting functions
  * -------------------------------------------------------------------------- */
 
 int empdag_setmpname(EmpDag *empdag, mpid_t mpid,
                      const char *name) NONNULL;
-int empdag_setmpename(EmpDag *empdag, mpeid_t mpeid,
+int empdag_setnashname(EmpDag *empdag, nashid_t nashid,
                       const char *name) NONNULL;
 
 /* --------------------------------------------------------------------------
- * Node (MP, MPE) getter functions
+ * Node (MP, Nash) getter functions
  * -------------------------------------------------------------------------- */
 
 int empdag_getmpbyname(const EmpDag *empdag, const char *name,
@@ -219,11 +219,11 @@ int empdag_getmpbyid(const EmpDag *empdag, unsigned id,
 int empdag_getmpidbyname(const EmpDag *empdag, const char *name,
                          unsigned *id) ACCESS_ATTR(write_only, 3) NONNULL;
 
-int empdag_getmpebyname(const EmpDag *empdag, const char *name,
-                        Mpe **mpe) ACCESS_ATTR(write_only, 3) NONNULL;
-int empdag_getmpebyid(const EmpDag *empdag, unsigned id, Mpe **mpe)
+int empdag_getnashbyname(const EmpDag *empdag, const char *name,
+                        Nash **nash) ACCESS_ATTR(write_only, 3) NONNULL;
+int empdag_getnashbyid(const EmpDag *empdag, unsigned id, Nash **nash)
                       ACCESS_ATTR(write_only, 3) NONNULL;
-int empdag_getmpeidbyname(const EmpDag *empdag, const char *name,
+int empdag_getnashidbyname(const EmpDag *empdag, const char *name,
                           unsigned *id) ACCESS_ATTR(write_only, 3);
 
 /* --------------------------------------------------------------------------
@@ -234,22 +234,22 @@ int empdag_mpVFmpbyid(EmpDag *empdag, unsigned id_parent,
                       const struct rhp_empdag_arcVF *edgeVF) NONNULL;
 int empdag_mpCTRLmpbyid(EmpDag *empdag, unsigned id_parent, unsigned id_child)
                         NONNULL;
-int empdag_mpCTRLmpebyid(EmpDag *empdag, mpid_t mpid, mpeid_t mpeid)
+int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mpid, nashid_t nashid)
                         NONNULL;
-int empdag_mpeaddmpbyid(EmpDag *empdag, mpeid_t mpeid, mpid_t mpid)
+int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
                         NONNULL;
-int empdag_mpeaddmpsbyid(EmpDag *empdag, mpeid_t mpeid,
+int empdag_nashaddmpsbyid(EmpDag *empdag, nashid_t nashid,
                          const UIntArray *mps) NONNULL;
 
 int empdag_mpVFmpbyname(EmpDag *empdag, const char *mp1_name,
                         const struct rhp_empdag_arcVF *vf_info) NONNULL;
 int empdag_mpCTRLmpbyname(EmpDag *empdag, const char *mp1_name,
                           const char *mp2_name) NONNULL;
-int empdag_mpCTRLmpebyname(EmpDag *empdag, const char *mp_name,
-                           const char *mpe_name) NONNULL;
-int empdag_mpeaddmpbyname(EmpDag *empdag, const char *mpe_name,
+int empdag_mpCTRLnashbyname(EmpDag *empdag, const char *mp_name,
+                           const char *nash_name) NONNULL;
+int empdag_nashaddmpbyname(EmpDag *empdag, const char *nash_name,
                           const char *mp_name) NONNULL;
-int empdag_mpeaddmpsbyname(EmpDag *empdag, const char *mpe_name,
+int empdag_nashaddmpsbyname(EmpDag *empdag, const char *nash_name,
                            const char *mp_names, unsigned mps_len) NONNULL;
 
 int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
@@ -263,7 +263,7 @@ int empdag_collectroots(EmpDag *empdag, UIntArray *roots) NONNULL;
 
 int empdag_getmpparents(const EmpDag *empdag, const MathPrgm *mp,
                         const UIntArray **parents_uid) NONNULL;
-int empdag_getmpeparents(const EmpDag *empdag, const Mpe *mpe,
+int empdag_getnashparents(const EmpDag *empdag, const Nash *nash,
                          const UIntArray **parents_uid) NONNULL;
 
 /* --------------------------------------------------------------------------
@@ -282,14 +282,14 @@ int empdag_delete(EmpDag *empdag, daguid_t uid) NONNULL;
  * Getters
  * -------------------------------------------------------------------------- */
 
-int empdag_mpe_getchildren(const EmpDag *empdag, mpeid_t mpeid,
+int empdag_nash_getchildren(const EmpDag *empdag, nashid_t nashid,
                            DagUidArray *mps) WRITE_ONLY(3) NONNULL;
 
 bool empdag_mphasname(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getmpname(const EmpDag *empdag, mpid_t mpid);
 const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid);
-const char *empdag_getmpename(const EmpDag *empdag, mpeid_t mpeid);
-const char *empdag_getmpename2(const EmpDag *empdag, mpeid_t mpeid);
+const char *empdag_getnashname(const EmpDag *empdag, nashid_t nashid);
+const char *empdag_getmpename2(const EmpDag *empdag, nashid_t nashid);
 unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp) NONNULL;
 const struct rhp_empdag_arcVF* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
                                             mpid_t mpid_child) NONNULL;
@@ -321,7 +321,7 @@ static inline bool empdag_mphaschild(const EmpDag *empdag, mpid_t mpid) {
 
 NONNULL static inline bool empdag_rootismpe(const EmpDag *empdag) {
    assert(valid_uid(empdag->uid_root));
-   return uidisMPE(empdag->uid_root);
+   return uidisNash(empdag->uid_root);
 }
 
  NONNULL static inline bool empdag_rootismp(const EmpDag *empdag) {
@@ -344,7 +344,7 @@ const char* empdag_printid(const EmpDag *empdag) NONNULL;
 const char* empdag_getname(const EmpDag *empdag, unsigned uid) NONNULL;
 const char* empdag_getname2(const EmpDag *empdag, unsigned uid) NONNULL;
 const char* empdag_printmpid(const EmpDag *empdag, mpid_t mpid) NONNULL;
-const char* empdag_printmpeid(const EmpDag *empdag, mpeid_t mpeid) NONNULL;
+const char* empdag_printnashid(const EmpDag *empdag, nashid_t nashid) NONNULL;
 const char* empdag_typename(EmpDagType type);
 
 
@@ -362,20 +362,20 @@ static inline MathPrgm* empdag_getmpfast(const EmpDag *empdag, mpid_t mpid)
    return empdag->mps.arr[mpid];
 }
 
-static inline unsigned empdag_getmplen(const EmpDag *empdag)
+static inline unsigned empdag_num_mp(const EmpDag *empdag)
 {
    return empdag->mps.len;
 }
 
-static inline Mpe* empdag_getmpefast(const EmpDag *empdag, mpeid_t mpeid)
+static inline Nash* empdag_getmpefast(const EmpDag *empdag, nashid_t nashid)
 {
-   assert(mpeid < empdag->mpes.len);
-   return empdag->mpes.arr[mpeid];
+   assert(nashid < empdag->nashs.len);
+   return empdag->nashs.arr[nashid];
 }
 
-static inline unsigned empdag_getmpelen(const EmpDag *empdag)
+static inline unsigned empdag_num_nash(const EmpDag *empdag)
 {
-   return empdag->mpes.len;
+   return empdag->nashs.len;
 }
 
 static inline bool empdag_isroot(const EmpDag *empdag, unsigned uid)
@@ -448,9 +448,9 @@ static inline int empdag_getmpbyuid(const EmpDag *empdag, unsigned uid,
 
 ACCESS_ATTR(write_only, 3) NONNULL
 static inline int empdag_getmpebyuid(const EmpDag *empdag, unsigned uid,
-                                     Mpe **mpe) {
-   assert(uidisMPE(uid));
-   return empdag_getmpebyid(empdag, uid2id(uid), mpe);
+                                     Nash **nash) {
+   assert(uidisNash(uid));
+   return empdag_getnashbyid(empdag, uid2id(uid), nash);
 }
 
 static inline bool empdag_has_adversarial_mps(const EmpDag *empdag) {

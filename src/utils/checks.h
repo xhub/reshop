@@ -15,7 +15,7 @@ int chk_gmdl(const Model *mdl, const char *fn) NONNULL_AT(2);
 int chk_rmdl(const Model *mdl, const char *fn) NONNULL_AT(2);
 int chk_rmdldag(const Model *mdl, const char *fn) NONNULL_AT(2);
 int chk_mp(const MathPrgm *mp, const char *fn) NONNULL_AT(2);
-int chk_mpe(const Mpe *mpe, const char *fn) NONNULL_AT(2);
+int chk_nash(const Nash *nash, const char *fn) NONNULL_AT(2);
 int chk_var_isnotconic(const Var *v, const Container *ctr,
                        const char *fn) NONNULL;
 int chk_uint2int(unsigned v, const char *fn) NONNULL;

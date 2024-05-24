@@ -691,15 +691,15 @@ static void print_node_graph(const NlNode* node, FILE* f, const Container *ctr)
    }
 }
 
-void nltree_print_dot(const NlTree* tree, const char* filename, const Container *ctr)
+void nltree_print_dot(const NlTree* tree, const char* fname, const Container *ctr)
 {
    UNUSED int status = OK;
    if (!tree || !tree->root) return;
 
-   FILE* f = fopen(filename, "w");
+   FILE* f = fopen(fname, "w");
 
    if (!f) {
-      error("%s :: Could not create file named '%s'\n", __func__, filename);
+      error("%s :: Could not create file named '%s'\n", __func__, fname);
       return;
    }
 
@@ -709,6 +709,9 @@ void nltree_print_dot(const NlTree* tree, const char* filename, const Container 
 
    print_edges(tree->root, f);
 
+   IO_CALL_EXIT(fputs("label=\"NlTree for equation ", f));
+   IO_CALL_EXIT(fputs(ctr_printequname(ctr, tree->idx), f));
+   IO_CALL_EXIT(fputs("\"\n", f));
 
    IO_CALL_EXIT(fputs("}", f));
 

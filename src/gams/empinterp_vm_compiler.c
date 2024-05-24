@@ -2891,7 +2891,7 @@ static int c_mp_settype(UNUSED Interpreter *interp, UNUSED MathPrgm *mp, unsigne
    return OK;
 }
 
-static int c_mpe_new(Interpreter *interp, UNUSED Mpe **mpe)
+static int c_mpe_new(Interpreter *interp, UNUSED Nash **mpe)
 {
    Compiler *c = interp->compiler;
    EmpVm * restrict vm = c->vm;
@@ -2917,7 +2917,7 @@ static int c_mpe_addmp(Interpreter *interp, unsigned mpe_id, UNUSED MathPrgm *mp
    return OK;
 }
 
-static int c_mpe_finalize(UNUSED Interpreter *interp, UNUSED Mpe *mpe)
+static int c_mpe_finalize(UNUSED Interpreter *interp, UNUSED Nash *mpe)
 {
    Compiler *c = interp->compiler;
    EmpVm * restrict vm = c->vm;

@@ -167,14 +167,14 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       break;
    }
    case SIGNATURE_MPEOBJ: {
-      const Mpe *mpe = AS_PTR(val_);
+      const Nash *mpe = AS_PTR(val_);
       if (!mpe) {
          trace_empinterpmsg("  MPE: NULL!\n");
          break;
       } 
-      unsigned mpe_id = mpe_getid(mpe);
+      unsigned mpe_id = nash_getid(mpe);
       trace_empinterp("%*s: '%s'\n", pad, "MPE",
-                      empdag_getmpename(&vm->data.mdl->empinfo.empdag, mpe_id));
+                      empdag_getnashname(&vm->data.mdl->empinfo.empdag, mpe_id));
       break;
    }
    case SIGNATURE_OVFOBJ: {
@@ -261,13 +261,13 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
       break;
    }
    case SIGNATURE_MPEOBJ: {
-      const Mpe *mpe = AS_PTR(v);
+      const Nash *mpe = AS_PTR(v);
       if (!mpe) {
          printstr(mode, " MPE: NULL!\n");
          break;
       } 
-      unsigned mpe_id = mpe_getid(mpe);
-      printout(mode, " MPE('%s') ", empdag_getmpename(&vm->data.mdl->empinfo.empdag, mpe_id));
+      unsigned mpe_id = nash_getid(mpe);
+      printout(mode, " MPE('%s') ", empdag_getnashname(&vm->data.mdl->empinfo.empdag, mpe_id));
       break;
    }
    case SIGNATURE_OVFOBJ: {

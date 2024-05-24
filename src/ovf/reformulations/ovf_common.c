@@ -150,7 +150,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
    EmpDag *empdag = &empinfo->empdag;
 
    MathPrgm *lmp_ovf, *mp = NULL; /* init just to silence compiler */
-   Mpe *mpe;
+   Nash *mpe;
 
    const UIntArray *mp_parents = NULL;
 
@@ -167,7 +167,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
       if (!mp) {
          error("%s :: no mp found for variable %s (%d), and there "
                   "are %d MP", __func__, ctr_printvarname(ctr, vi_ovf),
-                  vi_ovf, empdag_getmplen(empdag));
+                  vi_ovf, empdag_num_mp(empdag));
          return Error_NullPointer;
       }
 
@@ -203,11 +203,11 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
 
       char *mpe_ovf_name;
       IO_CALL(asprintf(&mpe_ovf_name, "%s", ovf_data->name));
-      A_CHECK(mpe, empdag_newmpenamed(empdag, mpe_ovf_name));
+      A_CHECK(mpe, empdag_newnashnamed(empdag, mpe_ovf_name));
 
-      S_CHECK(empdag_mpeaddmpbyid(empdag, mpe->id, mp->id));
+      S_CHECK(empdag_nashaddmpbyid(empdag, mpe->id, mp->id));
 
-      S_CHECK(empdag_setroot(empdag, mpeid2uid(mpe->id)));
+      S_CHECK(empdag_setroot(empdag, nashid2uid(mpe->id)));
 
       /* --------------------------------------------------------------------
        * The objective variable of the original problem won't have the correct
@@ -232,15 +232,15 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
    } else {
 
       unsigned parent_uid = mp_parents->arr[0];
-      if (!uidisMPE(parent_uid)) {
+      if (!uidisNash(parent_uid)) {
          TO_IMPLEMENT("The MP has an MP parent; only MPE parent are currently supported.");
       }
 
-      empdag_getmpebyid(empdag, uid2id(parent_uid), &mpe);
+      empdag_getnashbyid(empdag, uid2id(parent_uid), &mpe);
 
       assert(mp && mpe); /* Just to silence a warning */
 
-      S_CHECK(rhp_ensure_mp(mdl, empdag_getmplen(empdag) + 1));
+      S_CHECK(rhp_ensure_mp(mdl, empdag_num_mp(empdag) + 1));
 
    } 
 
@@ -260,7 +260,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
    A_CHECK(lmp_ovf, empdag_newmpnamed(empdag, ovf_data->sense, strdup(ovf_data->name)));
 
    S_CHECK(mp_settype(lmp_ovf, MpTypeOpt));
-   S_CHECK(empdag_mpeaddmpbyid(empdag, mpe->id, lmp_ovf->id));
+   S_CHECK(empdag_nashaddmpbyid(empdag, mpe->id, lmp_ovf->id));
 
    *mp_ovf = lmp_ovf;
 

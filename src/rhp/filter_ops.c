@@ -717,8 +717,8 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
 
    } else {
 
-      mpeid_t id = uid2id(uid);
-      UIntArray *mpe_children = &empdag->mpes.arcs[id];
+      nashid_t id = uid2id(uid);
+      UIntArray *mpe_children = &empdag->nashs.arcs[id];
       children = mpe_children->arr;
       num_children = mpe_children->len;
 
@@ -765,8 +765,8 @@ static int dfs_equ(EmpDag *empdag, daguid_t uid, struct aequ_list *equs)
 
    } else {
 
-      mpeid_t id = uid2id(uid);
-      UIntArray *mpe_children = &empdag->mpes.arcs[id];
+      nashid_t id = uid2id(uid);
+      UIntArray *mpe_children = &empdag->nashs.arcs[id];
       children = mpe_children->arr;
       num_children = mpe_children->len;
 

@@ -41,7 +41,7 @@ typedef struct {
    RhpSense path_sense;
    mpid_t mpid_primal;           /* mpid of the active primal node */
    mpid_t mpid_dual;             /* mpid of the active dual node */
-   mpeid_t mpeid;                /* ID of the MPE node, now at the root */
+   nashid_t mpeid;                /* ID of the MPE node, now at the root */
    rhp_idx vi_dual;
    ArcVFData edgeVFprimal;
    ArcVFData edgeVFdual;
@@ -62,6 +62,13 @@ static int ccflib_equil_dfs_dual(dagid_t mpid, DfsData *dfsdat, DagMpArray *mps,
 static int ccflib_equil_dfs_primal(dagid_t mpid, DfsData *dfsdat, DagMpArray *mps,
                                    const DagMpArray *mps_old);
 
+
+
+#include "rhp_dot_exports.h"
+#define DEBUG_DISPLAY_OBJEQU(mdl, mp) { \
+   rhp_idx eiobj = mp_getobjequ(mp); assert(valid_ei(eiobj)); \
+   view_equ_as_png(mdl, eiobj); \
+}
 
 #ifdef UNUSED_AS_OF_20240320
 static void ws_init(DfsWorkspace *ws)
@@ -130,7 +137,7 @@ static int mp_ccflib_instantiate(EmpDag *empdag, unsigned mpid, DfsData *dfsdat,
       dfsdat->edgeVFdual.child_id = mp_ovf->id;
       S_CHECK(empdag_mpVFmpbyid(empdag, dfsdat->mpid_dual, &dfsdat->edgeVFdual));
    } else {
-      S_CHECK(empdag_mpeaddmpbyid(empdag, dfsdat->mpeid, mp_ovf->id));
+      S_CHECK(empdag_nashaddmpbyid(empdag, dfsdat->mpeid, mp_ovf->id));
    }
 
   /* ----------------------------------------------------------------------
@@ -151,7 +158,7 @@ static int mp_ccflib_instantiate(EmpDag *empdag, unsigned mpid, DfsData *dfsdat,
    /* TODO(xhub) improve naming */
    char *ovf_objequ;
    Equ *eobj;
-   IO_CALL(asprintf(&ovf_objequ, "ccflib_objequ(%u)", mpid));
+   IO_CALL(asprintf(&ovf_objequ, "ccfObj(%u)", mpid));
    S_CHECK(cdat_equname_start(cdat, ovf_objequ));
    S_CHECK(rctr_add_equ_empty(&mdl->ctr, &objequ, &eobj, ConeInclusion, CONE_0));
    S_CHECK(cdat_equname_end(cdat));
@@ -176,7 +183,6 @@ static int mp_ccflib_instantiate(EmpDag *empdag, unsigned mpid, DfsData *dfsdat,
 
    /* Last, add the (non-box) constraints on u */
    if (A.ppty) {
-
       S_CHECK(ovf_add_polycons(mdl, ovfd, &y, ops, &A, s, mp_ovf, "ccflib"));
    }
 
@@ -356,7 +362,6 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, SpMat *B,
 
       S_CHECK(rhpmat_col(B, i, &si, &sv, &len, &idxs, &vals));
 
-
       NlNode **addr = &add_node->children[j];
 
       /* ------------------------------------------------------------------
@@ -404,7 +409,7 @@ static int copy_objequ_as_nlnode(DualObjEquData *dualobjequdat, Model *mdl,
                "supported\n", ctr_printequname(&mdl->ctr, objequ->idx));
          return Error_NotImplemented;
    }
-   
+
    // TODO: to support for primal -> primal node path, an idea is to ensure 
    // an ADD node so that the objequ of grand-children can be copied here as well
    S_CHECK(rctr_nltree_copy_map(&mdl->ctr, dualobjequdat->tree, dualobjequdat->node,
@@ -424,6 +429,8 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpAr
 
    MathPrgm *mp = mps->arr[mpid_primal];
    EmpDag *empdag = dfsdat->empdag;
+
+   DEBUG_DISPLAY_OBJEQU(dfsdat->mdl, mp)
 
    /* ---------------------------------------------------------------------
     * If we have an active dual node, we add the objective function expression.
@@ -534,6 +541,8 @@ static int ccflib_equil_dfs_primal(dagid_t mpid_primal, DfsData *dfsdat, DagMpAr
        * --------------------------------------------------------------------- */
 
 
+   DEBUG_DISPLAY_OBJEQU(dfsdat->mdl, mp)
+
    return OK;
 }
 
@@ -541,6 +550,7 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
                                  const DagMpArray *mps_old)
 {
    int status = OK;
+   rhp_idx *workY = NULL;
 
    /* ---------------------------------------------------------------------
     * We have a dual MP. We perform the following action:
@@ -572,10 +582,11 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
    double *b = NULL;
    S_CHECK(dualdat.ops->get_lin_transformation(dualdat.ovfd, &B, &b));
 
+   /* EMPDAG: reset VF children of dual node */
    unsigned n_arcs = mps_old->Varcs[mpid_dual].len;
    const ArcVFData *edgeVFs_old = mps_old->Varcs[mpid_dual].arr;
-   struct VFedges *children = &mps->Varcs[mpid_dual];
-   children->len = 0;
+   struct VFedges *VFchildren = &mps->Varcs[mpid_dual];
+   VFchildren->len = 0;
 
    RhpSense path_sense = dfsdat->path_sense;
 
@@ -585,11 +596,16 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
    rhp_idx objei_dual = dfsdat->dual_objequ_dat.tree->idx;
    assert(valid_ei(objei_dual));
 
+   /* workspace similar to y */
+   MALLOC_(workY, rhp_idx, dualdat.y.size);
+
    UIntArray *rarcs = mps->rarcs;
 
-   /* save the current edgeVFprimal */
+   /* save our dual information */
    ArcVFData edgeVFprimal2dual = dfsdat->edgeVFprimal;
    mpid_t mpid_primal_bck = dfsdat->mpid_primal;
+
+   DualObjEquData dual_objequ_dat_bck = dfsdat->dual_objequ_dat;
 
    for (unsigned i = 0; i < n_arcs; ++i) {
       const ArcVFData *edgeVF_old = &edgeVFs_old[i];
@@ -599,26 +615,34 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
       RhpSense child_sense = mp_getsense(mp_child);
       assert(child_sense == RhpMin || child_sense == RhpMax);
 
-      unsigned si, len;
-      double sv;
-      unsigned *idxs;
-      double *vals;
+      /* TODO: add restrict keyword */
+      unsigned si, len, *idxs;
+      double sv, *vals;
+
 
       /* Get i-th row of B^T, that is the i-th column of B */
       S_CHECK_EXIT(rhpmat_col(&B, i, &si, &sv, &len, &idxs, &vals));
+      assert(len < dualdat.y.size);
+
+      /* Update idxs to the variable space */
+      for (unsigned j = 0; j < len; ++j) {
+         workY[j] = avar_fget(&dualdat.y, idxs[j]);
+      }
 
       /* ---------------------------------------------------------------------
        * We reset the edge to the current child 
        * --------------------------------------------------------------------- */
 
       arcVFb_init(&dfsdat->edgeVFdual, objei_dual);
-      arcVF_mul_lequ(&dfsdat->edgeVFdual, len, idxs, vals);
-      
+      arcVF_mul_lequ(&dfsdat->edgeVFdual, len, workY, vals);
+ 
       /* ---------------------------------------------------------------------
+      * Since we use DFS, we need to restore the our dual information every time
        * Update/restore the dual MPID
        * --------------------------------------------------------------------- */
       dfsdat->mpid_dual = mpid_dual;
       dfsdat->mpid_primal = mpid_primal_bck;
+      dfsdat->dual_objequ_dat = dual_objequ_dat_bck;
 
       if (child_sense == path_sense) {
 
@@ -638,7 +662,7 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
          ArcVFData edge_primal_parent2child;
          S_CHECK_EXIT(arcVF_copy(&edge_primal_parent2child, &edgeVFprimal2dual));
          edge_primal_parent2child.child_id = child_id;
-         S_CHECK_EXIT(arcVF_mul_lequ(&edge_primal_parent2child, len, idxs, vals));
+         S_CHECK_EXIT(arcVF_mul_lequ(&edge_primal_parent2child, len, workY, vals));
 
          S_CHECK_EXIT(empdag_mpVFmpbyid(dfsdat->empdag, dfsdat->mpid_primal, &edge_primal_parent2child));
 
@@ -651,7 +675,7 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
           * We have another dual problem:
           * - 
           * S_CHECK_EXIT(edgeVF_mul_edgeVF(&dfsdat->edgeVFprimal, edgeVF_old));
-          * S_CHECK_EXIT(edgeVF_mul_lequ(&dfsdat->edgeVFprimal, len, idxs, vals));
+          * S_CHECK_EXIT(edgeVF_mul_lequ(&dfsdat->edgeVFprimal, len, workY, vals));
           * S_CHECK_EXIT(ccflib_equil_dfs_dual(child_id, dfsdat, mps, mps_old));
           * --------------------------------------------------------------------- */
          TO_IMPLEMENT("DUAL after DUAL");
@@ -674,7 +698,13 @@ static int ccflib_equil_dfs_dual(dagid_t mpid_dual, DfsData *dfsdat, DagMpArray 
       S_CHECK_EXIT(dual_objequ_add_by(mp_dual, b, y));
    }
 
+
 _exit:
+
+
+   FREE(workY);
+
+   DEBUG_DISPLAY_OBJEQU(dfsdat->mdl, mp_dual)
 
    return status;
 }
@@ -685,6 +715,10 @@ int ccflib_equil(Model *mdl)
    EmpDag *empdag = &mdl->empinfo.empdag;
    const EmpDag *empdag_up = empdag->empdag_up;
    mpid_t *saddle_path_start_mps = empdag_up->saddle_path_starts.arr;
+
+  /* ----------------------------------------------------------------------
+   * Iterate over the saddle paths and reformulate
+   * ---------------------------------------------------------------------- */
 
    for (unsigned i = 0, len = empdag_up->saddle_path_starts.len; i < len; ++i) {
 
@@ -704,15 +738,19 @@ int ccflib_equil(Model *mdl)
       UIntArray *primal_parents = &empdag_up->mps.rarcs[mpid];
 
       if (primal_parents->len > 1) { /* TODO: TEST */
-         error("[CCFLIB/equilibrium]: ERROR MP(%s) has %u parents, we can only "
+         error("[CCFLIB:equilibrium]: ERROR MP(%s) has %u parents, we can only "
                "deal with at most 1\n", empdag_getmpname(empdag, mpid),
                primal_parents->len);
          return Error_EMPRuntimeError;
       }
 
+      /* ----------------------------------------------------------------------
+       * If we have no parent, then the root node is the Nash
+       * ---------------------------------------------------------------------- */
+
      if (primal_parents->len == 0) {
-         Mpe *equil;
-         A_CHECK(equil, empdag_newmpenamed(empdag, strdup("CCF equilibrium reformulation")));
+         Nash *equil;
+         A_CHECK(equil, empdag_newnashnamed(empdag, strdup("CCF equilibrium reformulation")));
 
          /* ----------------------------------------------------------------------
           * If MP was a root, then put the MPE as root at its place.
@@ -723,39 +761,39 @@ int ccflib_equil(Model *mdl)
          unsigned root_idx = rhp_uint_find(&empdag->roots, mpid_uid);
 
          if (root_idx < UINT_MAX) {
-            empdag->roots.arr[root_idx] = mpeid2uid(equil->id);
+            empdag->roots.arr[root_idx] = nashid2uid(equil->id);
          }
 
          if (empdag->uid_root == mpid_uid) {
             assert(root_idx < UINT_MAX);
-            empdag->uid_root = mpeid2uid(equil->id);
+            empdag->uid_root = nashid2uid(equil->id);
          }
 
-         S_CHECK(empdag_mpeaddmpbyid(empdag, equil->id, mpid));
+         S_CHECK(empdag_nashaddmpbyid(empdag, equil->id, mpid));
          dfsdat.mpeid = equil->id;
  
-      } else if (uidisMPE(primal_parents->arr[0])) {
+      } else if (uidisNash(primal_parents->arr[0])) {
          dfsdat.mpeid = uid2id(primal_parents->arr[0]);
 
-      } else  {
+      } else {
 
          /* ----------------------------------------------------------------------
           * We have one parent, but not a Nash node. Hence, we create a Nash node,
           * add the MP as its child, and replace the latter in its parent Carcs. 
           * ---------------------------------------------------------------------- */
 
-         Mpe *equil;
-         A_CHECK(equil, empdag_newmpenamed(empdag, strdup("CCF equilibrium reformulation")));
+         Nash *equil;
+         A_CHECK(equil, empdag_newnashnamed(empdag, strdup("CCF equilibrium reformulation")));
 
-         S_CHECK(empdag_mpeaddmpbyid(empdag, equil->id, mpid));
+         S_CHECK(empdag_nashaddmpbyid(empdag, equil->id, mpid));
          dfsdat.mpeid = equil->id;
 
          daguid_t uid = primal_parents->arr[0];
 
-         if (uidisMPE(uid)) {
-            error("[CCFLIB/equilibrium]: ERROR MP(%s) has MPE(%s) as parent. "
+         if (uidisNash(uid)) {
+            error("[CCFLIB:equilibrium]: ERROR MP(%s) has Nash(%s) as parent. "
                   "This is not supported!\n", empdag_getmpname(empdag, mpid),
-                  empdag_getmpename(empdag, uid2id(uid)));
+                  empdag_getnashname(empdag, uid2id(uid)));
             return Error_EMPRuntimeError;
          }
 
@@ -766,22 +804,23 @@ int ccflib_equil(Model *mdl)
 
          if (idx == UINT_MAX) {
             int offset;
-            error("[CCFLIB/equilibrium]: %nERROR MP(%s) has MP(%s) as parent, "
+            error("[CCFLIB:equilibrium]: %nERROR MP(%s) has MP(%s) as parent, "
                   "but cannot find the CTRL edge between the 2.\n", &offset,
                   empdag_getmpname(empdag, mpid), empdag_getname(empdag, uid));
 
             const ArcVFData *edge = empdag_find_edgeVF(empdag, mpid_parent, mpid);
 
             if (edge) {
-               error("%*sFound a VF edge between the 2. Please file a bug report",
+               error("%*sFound a VF edge between the 2. Please file a bug report\n",
                      offset, "");
+            } else {
+               error("%*sInconsistent EMPDAG. Please file a bug report\n", offset, "");
             }
-
+ 
                return Error_RuntimeError;
             }
 
-
-            Carcs_parent->arr[idx] = mpeid2uid(equil->id);
+            Carcs_parent->arr[idx] = nashid2uid(equil->id);
 
          }
 

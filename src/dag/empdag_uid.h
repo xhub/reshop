@@ -24,7 +24,7 @@
 /** @brief EMPDAG uid special values */
 typedef enum {
   EmpNodeMP    = 0,    /**< Index is for a MP node              */
-  EmpNodeMPE   = 2,    /**< Index is for a MP equilibrium node  */
+  EmpNodeNash  = 2,    /**< Index is for a Nash node            */
 } EmpNodeType;
 
 typedef enum {
@@ -42,11 +42,11 @@ static inline bool valid_uid(unsigned uid) { return uid != EMPDAG_UID_NONE; }
 
 const char *daguid_type2str(unsigned uid);
 
-static inline unsigned mpeid2uid(unsigned id)
+static inline unsigned nashid2uid(unsigned id)
 {
   assert(id <= EMPDAG_IDMAX);
 
-  unsigned uid = id << 2 | EmpNodeMPE;
+  unsigned uid = id << 2 | EmpNodeNash;
   return uid;
 }
 
@@ -78,9 +78,9 @@ static inline bool uidisMP(unsigned uid)
   return (uid & EmpNodeMask) == EmpNodeMP;
 }
 
-static inline bool uidisMPE(unsigned uid)
+static inline bool uidisNash(unsigned uid)
 {
-  return (uid & EmpNodeMask) == EmpNodeMPE;
+  return (uid & EmpNodeMask) == EmpNodeNash;
 }
 
 static inline bool rarcTypeVF(unsigned uid)

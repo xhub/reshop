@@ -64,22 +64,22 @@ UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl)
    }
 
    MathPrgm *mp = NULL;
-   Mpe *mpe = NULL;
+   Nash *mpe = NULL;
    dagid_t id = uid2id(root);
 
    if (uidisMP(root)) {
       S_CHECK(empdag_getmpbyid(empdag, id, &mp));
    } else {
-      S_CHECK(empdag_getmpebyid(empdag, id, &mpe));
+      S_CHECK(empdag_getnashbyid(empdag, id, &mpe));
    }
 
    if (mpe) {
       UIntArray mps;
-      S_CHECK(empdag_mpe_getchildren(empdag, mpe->id, &mps));
+      S_CHECK(empdag_nash_getchildren(empdag, mpe->id, &mps));
       unsigned nb_mp = mps.len;
       if (nb_mp == 0) {
          error("%s ERROR: empty equilibrium '%s'\n", __func__,
-               empdag_getmpename(empdag, mpe->id));
+               empdag_getnashname(empdag, mpe->id));
          return Error_EMPRuntimeError;
       }
 

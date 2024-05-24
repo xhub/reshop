@@ -69,66 +69,66 @@ _loop:
    return UINT_MAX;
 }
 
-static int addedge(Interpreter *interp, daguid_t daguid, daguid_t child_daguid,
+static int addedge(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
                    ProblemEdge *edge)
 {
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
    trace_empdag("[empinterp] Adding edge of type %s from %s to %s\n",
-                arctype_str(edge->type), empdag_getname(empdag, daguid),
-                empdag_getname(empdag, child_daguid));
+                arctype_str(edge->type), empdag_getname(empdag, uid_parent),
+                empdag_getname(empdag, uid_child));
 
    EmpDagArc empedge = { .type = edge->type };
    if (edge->type == ArcVF) {
 
-      if (!uidisMP(daguid)) {
+      if (!uidisMP(uid_parent)) {
          errormsg("[empinterp] ERROR: a VF edge can only point to an MP node. "
                   "This error happened while processing the label '");
          problem_edge_print(edge, interp->dct, PO_ERROR);
-         error("' with parent '%s'\n", empdag_getname(empdag, daguid));
+         error("' with parent '%s'\n", empdag_getname(empdag, uid_parent));
          return Error_EMPIncorrectSyntax;
       }
 
-      unsigned mpchild_id = uid2id(child_daguid);
+      unsigned child_mpid = uid2id(uid_child);
       MathPrgm *mp_child;
-      S_CHECK(empdag_getmpbyid(empdag, mpchild_id, &mp_child));
+      S_CHECK(empdag_getmpbyid(empdag, child_mpid, &mp_child));
 
       RhpSense sense = mp_getsense(mp_child);
       if (sense != RhpMin && sense != RhpMax) {
          errormsg("[empinterp] ERROR: a VF edge can only point to an OPT MP node. "
                   "This error happened while processing the label '");
          problem_edge_print(edge, interp->dct, PO_ERROR);
-         error("' with parent '%s'\n", empdag_getname(empdag, daguid));
+         error("' with parent '%s'\n", empdag_getname(empdag, uid_parent));
          return Error_EMPIncorrectSyntax;
       }
 
-      mpid_t parent_id = uid2id(daguid);
+      mpid_t parent_mpid = uid2id(uid_parent);
       MathPrgm *mp;
-      S_CHECK(empdag_getmpbyid(empdag, parent_id, &mp));
+      S_CHECK(empdag_getmpbyid(empdag, parent_mpid, &mp));
       rhp_idx objequ = mp_getobjequ(mp);
 
       if (mp_gettype(mp) == MpTypeOpt && !valid_ei(objequ)) {
          error("[empinterp] ERROR: while building a %s edge for the OPT MP "
                "node '%s' has no objective function.\n", arctype_str(edge->type),
-               empdag_getname(empdag, daguid));
+               empdag_getname(empdag, uid_parent));
          return Error_EMPIncorrectSyntax;
       }
       assert(valid_ei(objequ) || (objequ == IdxCcflib && mp_gettype(mp) == MpTypeCcflib));
 
       empedge.Varc.type = ArcVFBasic;
-      empedge.Varc.child_id = mpchild_id;
+      empedge.Varc.child_id = child_mpid;
       empedge.Varc.basic_dat.ei = objequ;
       empedge.Varc.basic_dat.cst = 1.;
       empedge.Varc.basic_dat.vi = IdxNA;
 
    } else if (edge->type == ArcNash) {
 
-      assert(uidisMPE(daguid));
-      if (!uidisMP(child_daguid)) {
+      assert(uidisNash(uid_parent));
+      if (!uidisMP(uid_child)) {
          errormsg("[empinterp] ERROR: a Nash edge can only point to an MP node. "
                   "This error happened while processing the label '");
          problem_edge_print(edge, interp->dct, PO_ERROR);
-         error("' with parent '%s'\n", empdag_getname(empdag, daguid));
+         error("' with parent '%s'\n", empdag_getname(empdag, uid_parent));
          return Error_EMPIncorrectSyntax;
       }
 
@@ -139,7 +139,7 @@ static int addedge(Interpreter *interp, daguid_t daguid, daguid_t child_daguid,
    }
 
 
-   return empdag_addarc(empdag, daguid, child_daguid, &empedge);
+   return empdag_addarc(empdag, uid_parent, uid_child, &empedge);
 }
 
 static int dag_resolve_labels(Interpreter *interp)
@@ -259,6 +259,8 @@ static int dag_resolve_label(Interpreter *interp)
    int status = OK;
    unsigned dagreg_len = dagregister->len;
 
+   // TODO: DELETE?
+
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
       DagLabel *dagl = label2resolve->list[i];
 
@@ -333,7 +335,7 @@ int empinterp_set_empdag_root(Interpreter *interp)
    }
 
    /* TODO CHECK that this makes sense */
-   unsigned n_mps = empdag->mps.len, n_mpes = empdag->mpes.len;
+   unsigned n_mps = empdag->mps.len, n_mpes = empdag->nashs.len;
    if (n_mps == 0) { return OK; }
 
    UIntArray roots;

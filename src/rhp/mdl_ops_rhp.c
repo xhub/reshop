@@ -1099,7 +1099,7 @@ int rmdl_prepare_ctrexport_rhp(Model *mdl, Model *mdl_dst)
          rmdl_setobjvar(mdl, IdxNA);
       }
    } else {
-      unsigned mp_len = empdag_getmplen(empdag);
+      unsigned mp_len = empdag_num_mp(empdag);
       assert(mp_len > 0);
       for (unsigned i = 0; i < mp_len; ++i) {
          MathPrgm *mp = empdag_getmpfast(empdag, i);

@@ -91,7 +91,7 @@ int mdl_copystatsfromsolver(Model *mdl, const Model *mdl_solver) NONNULL;
 int mdl_copyprobtype(Model *mdl, const Model *mdl_src) NONNULL;
 
 int mdl_export(Model *mdl, Model *mdl_dst) NONNULL;
-int mdl_copyassolvable(Model *mdl, Model *mdl_dst) NONNULL;
+int mdl_copyassolvable(Model *mdl, Model *mdl_src) NONNULL;
 int mdl_reportvalues(Model *mdl, Model *mdl_src) NONNULL;
 
 int mdl_gettype(const Model *mdl, ModelType *probtype);

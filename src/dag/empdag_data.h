@@ -10,7 +10,7 @@
 typedef unsigned daguid_t;
 typedef unsigned dagid_t;
 typedef unsigned mpid_t;
-typedef unsigned mpeid_t;
+typedef unsigned nashid_t;
 
 typedef UIntArray DagUidArray;
 typedef UIntArray MpIdArray;

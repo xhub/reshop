@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <math.h>
 
+#include "checks.h"
 #include "compat.h"
 #include "empdag_data.h"
 #include "equ.h"
@@ -90,6 +91,9 @@ typedef struct empdag_edge {
       ArcVFData Varc;
    };
 } EmpDagArc;
+
+const char* arcVFType2str(ArcVFType type);
+
 
 NONNULL static inline bool valid_arcVF(const ArcVFData *arc)
 {
@@ -242,7 +246,7 @@ int arcVF_mul_arcVF(ArcVFData *arcVF1, const ArcVFData *arcVF2)
  * @return       the error code
  */
 NONNULL static inline
-int arcVFb_mul_lequ(ArcVFData *arcVF, unsigned len, unsigned *idxs, double * restrict vals)
+int arcVFb_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double * restrict vals)
 {
    if (valid_vi(arcVF->basic_dat.vi)) {
       error("%s :: polynomial arcVF are not yet supported", __func__);
@@ -288,7 +292,7 @@ int arcVFb_mul_lequ(ArcVFData *arcVF, unsigned len, unsigned *idxs, double * res
  * @return       the error code
  */
 NONNULL static inline
-int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, unsigned *idxs, double *vals)
+int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double *vals)
 {
    assert(valid_arcVF(arcVF));
 
@@ -303,4 +307,37 @@ int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, unsigned *idxs, double *vals)
 
 const char *arctype_str(ArcType type);
 
+unsigned arcVFb_getnumcons(ArcVFData *arc, Model *mdl);
+
+NONNULL static inline
+unsigned arcVF_getnumcons(ArcVFData *arc, Model *mdl)
+{
+   assert(valid_arcVF(arc));
+
+   switch (arc->type) {
+   case ArcVFBasic:
+      return arcVFb_getnumcons(arc, mdl);
+   default:
+      error("%s :: Unsupported arcVF type %u", __func__, arc->type);
+      return Error_NotImplemented;
+   }
+
+}
+
+bool arcVFb_has_objequ(ArcVFData *arc, Model *mdl);
+
+NONNULL static inline
+unsigned arcVF_has_objequ(ArcVFData *arc, Model *mdl)
+{
+   assert(valid_arcVF(arc));
+
+   switch (arc->type) {
+   case ArcVFBasic:
+      return arcVFb_has_objequ(arc, mdl);
+   default:
+      error("%s :: Unsupported arcVF type %u", __func__, arc->type);
+      return Error_NotImplemented;
+   }
+
+}
 #endif /* EMPDAG_COMMON_H */

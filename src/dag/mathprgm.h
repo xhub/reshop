@@ -27,7 +27,7 @@ struct mp_mps {
 struct mpes {
   unsigned size;
   unsigned max;
-  Mpe **list;
+  Nash **list;
 };
 
 /**

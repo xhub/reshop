@@ -109,24 +109,24 @@ static const char * const tok_str[] = {
    "AND",
    "NOT",
    "OR",
-   "LANGLE",
-   "RANGLE",
-   "LPAREN",
-   "RPAREN",
-   "LBRACK",
-   "RBRACK",
-   "EQUAL",
-   "COMMA",
-   "PLUS",
-   "MINUS",
-   "STAR",
-   "SLASH",
-   "COLON",
-   "DOT",
-   "CONDITION",
-   "SINGLE_QUOTE",
-   "DOUBLE_QUOTE",
-   "PERCENT (%)",
+   "'<'",
+   "'>'",
+   "'('",
+   "')'",
+   "'{'",
+   "'}'",
+   "'='",
+   "','",
+   "'+'",
+   "'-'",
+   "'*'",
+   "'/'",
+   "','",
+   "'.'",
+   "CONDITION '$'",
+   "SINGLE_QUOTE (')",
+   "DOUBLE_QUOTE (\")",
+   "'%'",
    "ERROR",
    "EOF",
    "UNSET",
@@ -2431,7 +2431,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       S_CHECK(advance(interp, p, &toktype));
    }
 
-   S_CHECK(parser_expect(interp, "expecting closing ')'", TOK_RPAREN));
+   S_CHECK(parser_expect(interp, "expecting closing ')' for the MP", TOK_RPAREN));
 
    /* We need a custom ccflib_finalize as in CompilerMode, the parameter list needs
     * to be copied into the mp->ccflib.ovfdef and then mp_finalize can be called
@@ -2473,7 +2473,7 @@ int parse_Nash(Interpreter *interp, unsigned *p)
    S_CHECK(advance(interp, p, &toktype));
    S_CHECK(parser_expect(interp, "'(' after Nash keyword)", TOK_LPAREN));
 
-   Mpe *mpe;
+   Nash *mpe;
    S_CHECK(interp->ops->mpe_new(interp, &mpe));
 
    do {
@@ -2885,8 +2885,8 @@ int parse_equilibrium(Interpreter *interp)
    unsigned equil_id;
    char *name;
    A_CHECK(name, strdup("equilibrium"));
-   S_CHECK(empdag_addmpenamed(empdag, name, &equil_id));
-   S_CHECK(empdag_setroot(empdag, mpeid2uid(equil_id)));
+   S_CHECK(empdag_addnashnamed(empdag, name, &equil_id));
+   S_CHECK(empdag_setroot(empdag, nashid2uid(equil_id)));
 
    trace_empinterp("[empinterp] line %u: Found 'equilibrium' keyword. Adding MPE root node\n",
                    interp->linenr);
@@ -3953,7 +3953,7 @@ int parse_bilevel(Interpreter *interp, unsigned *p)
    PARSER_EXPECTS_EXIT(interp, "optimization or VI problem",
                        TOK_MIN, TOK_MAX, TOK_VI);
 
-   mpeid_t nash_lower = MpeId_NA;
+   nashid_t nash_lower = MpeId_NA;
 
    mpid_t mpid_upper = mp_upper->id;
    bool toktype_is_dagnode_kw = toktype_dagnode_kw(toktype);
@@ -3985,15 +3985,15 @@ int parse_bilevel(Interpreter *interp, unsigned *p)
 
          if (toktype_is_dagnode_kw || toktype == TOK_DUALEQU) {
 
-            S_CHECK(empdag_addmpenamed(empdag, strdup("lower level Nash"), &nash_lower));
-            S_CHECK(empdag_mpCTRLmpebyid(empdag, mpid_upper, nash_lower))
-            S_CHECK(empdag_mpeaddmpbyid(empdag, nash_lower, mpid_last));
+            S_CHECK(empdag_addnashnamed(empdag, strdup("lower level Nash"), &nash_lower));
+            S_CHECK(empdag_mpCTRLnashbyid(empdag, mpid_upper, nash_lower))
+            S_CHECK(empdag_nashaddmpbyid(empdag, nash_lower, mpid_last));
 
          } else {
             S_CHECK(empdag_mpCTRLmpbyid(empdag, mpid_upper, mpid_last))
          }
       } else {
-         S_CHECK(empdag_mpeaddmpbyid(empdag, nash_lower, mpid_last));
+         S_CHECK(empdag_nashaddmpbyid(empdag, nash_lower, mpid_last));
       }
    }
 
@@ -4173,7 +4173,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
    * EMPDAG root node.
    * ---------------------------------------------------------------------- */
 
-   mpeid_t root;
+   nashid_t root;
    if (empdag->roots.len == 1) {
       daguid_t r = empdag->roots.arr[0];
       if (uidisMP(r)) {
@@ -4185,11 +4185,11 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
       root = r;
 
    } else {
-      S_CHECK(empdag_addmpenamed(empdag, strdup("Equilibrium"), &root));
+      S_CHECK(empdag_addnashnamed(empdag, strdup("Equilibrium"), &root));
 
       MathPrgm *mp;
       S_CHECK(create_base_mp(interp, "OPT MP", &mp));
-      S_CHECK(empdag_mpeaddmpbyid(empdag, root, mp->id));
+      S_CHECK(empdag_nashaddmpbyid(empdag, root, mp->id));
 
       /* This MP owns all remaining variables and equation */
       S_CHECK(chk_wildcard_vars_allowed(interp));
@@ -4201,7 +4201,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
    S_CHECK(parse_dualequ_equvar(interp, p));
 
    mpid_t mp_dualequ = empdag->mps.len-1;
-   S_CHECK(empdag_mpeaddmpbyid(empdag, root, mp_dualequ));
+   S_CHECK(empdag_nashaddmpbyid(empdag, root, mp_dualequ));
 
    parsed_dualequ(interp);
 

@@ -144,10 +144,10 @@ int chk_mp(const MathPrgm *mp, const char *fn)
    return OK;
 }
 
-int chk_mpe(const Mpe *mpe, const char *fn)
+int chk_nash(const Nash *nash, const char *fn)
 {
-   if (!mpe) {
-      error("%s ERROR: the Equilibrium object is NULL!\n", fn);
+   if (!nash) {
+      error("%s ERROR: the Nash node is NULL!\n", fn);
       return Error_NullPointer;
    }
 
