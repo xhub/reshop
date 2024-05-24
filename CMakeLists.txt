@@ -120,6 +120,8 @@ option(BUILD_INSTALLER
 option(INSTALL_COMMON_MAKESELF
    "Advanced: Install the library files in a common makeself target" OFF)
 
+option(EXTRA_DEBUG_OUTPUT
+   "Advanced: Compile additional output statements for debug" OFF)
 
 #################################################
 # TODO: cleanup the following
@@ -165,6 +167,17 @@ endif ()
 # Maybe disable that for CC (esp. windows)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT HAS_IPO)
+
+# In dev mode, we want to have more output
+if(DEV_MODE)
+   add_compile_definitions (RHP_OUTPUT_BACKTRACE)
+endif()
+
+if(EXTRA_DEBUG_OUTPUT)
+   add_compile_definitions (RHP_EXTRA_DEBUG_OUTPUT)
+endif()
+
+
 
 #################################################
 # Platform-specific part

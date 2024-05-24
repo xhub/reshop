@@ -113,23 +113,25 @@ static inline void *myrealloc(void *ptr, size_t size)
       if (RHP_LIKELY(ptr)) { free((void*)(ptr)); (ptr) = NULL; }   \
    } while(0)
 
+
+/* ----------------------------------------------------------------------
+ * Compile time control over devel and debug output
+ * ---------------------------------------------------------------------- */
+
 void backtrace_(const char *expr, int status);
 
-#if defined(NDEBUG) || defined(NO_PRINT)
-#define BACKTRACE(EXPR, status)
-#define DPRINTF(X)
-#define DPRINT(STR, ...)
-#else
-
+#if defined(RHP_OUTPUT_BACKTRACE)
 #define BACKTRACE(EXPR, status) backtrace_(XMACRO_STR(EXPR), status)
+#else
+#define BACKTRACE(EXPR, status)
+#endif
 
-#ifdef RHP_VERBOSE
+#ifdef RHP_EXTRA_DEBUG_OUTPUT
 #define DPRINT(STR, ...) printout(PO_INFO, STR, __VA_ARGS__)
 #define DPRINTF(X) X
 #else
 #define DPRINTF(X)
 #define DPRINT(STR, ...)
-#endif
 #endif
 
 
