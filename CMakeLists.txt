@@ -172,6 +172,7 @@ check_ipo_supported(RESULT HAS_IPO)
 # In dev mode, we want to have more output
 if(DEV_MODE)
    add_compile_definitions (RHP_OUTPUT_BACKTRACE)
+   add_compile_definitions (RHP_DEBUGGER_STOP)
 endif()
 
 if(EXTRA_DEBUG_OUTPUT)

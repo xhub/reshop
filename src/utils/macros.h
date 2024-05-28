@@ -202,6 +202,8 @@ void backtrace_(const char *expr, int status);
 
 
 
+#ifdef RHP_DEBUGGER_STOP
+
 #ifdef __linux__
 #include <sys/prctl.h>
 #define RHP_TRACE_ME() prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
@@ -211,8 +213,6 @@ void backtrace_(const char *expr, int status);
 #define RHP_TRACE_ME() 
 
 #endif
-
-
 
 
 #ifndef _UNISTD_H 
@@ -231,6 +231,12 @@ RHP_TRACE_ME(); __maybe_unused int c42 = getchar(); //NOLINT(bugprone-unused-ret
 #define GDB_STOP() \
   fprintf(stderr, "PID: %d in %s", getpid(), __func__); /*NOLINT(bugprone-unused-return-value,cert-err33-c)*/ \
   RHP_TRACE_ME(); __maybe_unused int c42 = getchar(); //NOLINT(bugprone-unused-return-value,cert-err33-c)
+
+#endif
+
+#else
+
+#define GDB_STOP()
 
 #endif
 
