@@ -16,7 +16,7 @@ build-leg:
   artifacts:
     name: reshop-leg
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.so,build/test]
+    paths: [warnings.xml,build/*.so,build/test,build/gams]
     reports:
       junit: warnings.xml
 
@@ -37,7 +37,7 @@ build-debug-leg:
   artifacts:
     name: reshop-debug-leg
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.so,build/test]
+    paths: [warnings.xml,build/*.so,build/test,build/gams]
     reports:
       junit: warnings.xml
 
@@ -70,7 +70,7 @@ build-dac:
   needs: [fetch-ci-scripts,install-gamsdist-dac]
   artifacts:
     name: reshop-dac
-    paths: [warnings.xml,build/*.dylib,build/test]
+    paths: [warnings.xml,build/*.dylib,build/test,build/gams]
     expire_in: 2 hours
     reports:
       junit: warnings.xml
@@ -92,6 +92,6 @@ build-wei:
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.dll,build/*.lib,build/test]
+    paths: [warnings.xml,build/*.dll,build/*.lib,build/test,build/gams]
     reports:
       junit: warnings.xml
