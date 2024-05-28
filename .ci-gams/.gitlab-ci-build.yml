@@ -6,9 +6,10 @@ build-leg:
     entrypoint: [""]
   before_script:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
+    - pip3 install cmake
   script:
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release CMakeLists.txt
-    - cmake -v --build build 2>&1 | tee build_log.txt
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
+    - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
   needs: [fetch-ci-scripts,install-gamsdist-leg]
   artifacts:
@@ -26,9 +27,10 @@ build-debug-leg:
     entrypoint: [""]
   before_script:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
+    - pip3 install cmake
   script:
-    - cmake -DCMAKE_BUILD_TYPE=Debug CMakeLists.txt
-    - cmake -v --build build 2>&1
+    - cmake -B build -DCMAKE_BUILD_TYPE=Debug -S .
+    - cmake --build build -v 2>&1
   needs: [fetch-ci-scripts,install-gamsdist-leg]
   artifacts:
     name: reshop-debug-leg
@@ -41,10 +43,10 @@ build-deg:
   stage: build
   tags: [macos]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
+    - export PATH="/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
   script:
-    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc CMakeLists.txt
-    - cmake -v --build build 2>&1 | tee build_log.txt
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -S .
+    - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
   needs: [fetch-ci-scripts,install-gamsdist-deg]
   artifacts:
@@ -58,10 +60,10 @@ build-dac:
   stage: build
   tags: [macos-arm64]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
+    - export PATH="/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
   script:
-    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang CMakeLists.txt
-    - cmake -v --build build 2>&1 | tee build_log.txt
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -S .
+    - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py clang build_log.txt warnings.xml
   needs: [fetch-ci-scripts,install-gamsdist-dac]
   artifacts:
@@ -81,8 +83,8 @@ build-wei:
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
   script:
-    - cmake -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl CMakeLists.txt
-    - cmake -v --build build | Tee-Object -FilePath 'build_log.txt'
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -S .
+    - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - python ci/report_for_log.py icl build_log.txt warnings.xml
   needs: [fetch-ci-scripts,install-gamsdist-wei]
   artifacts:
