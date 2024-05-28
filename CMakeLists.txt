@@ -400,7 +400,9 @@ if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
       set(GAMS_IS_INSTALLED 1)
    endif()
 
-   string(REGEX REPLACE "\\\\" "\\\\\\\\" GAMSDIR_TARGET ${GAMSDIR_TARGET})
+   if (NEED_WINE)
+      string(REGEX REPLACE "\\\\" "\\\\\\\\" GAMSDIR_TARGET ${GAMSDIR_TARGET})
+   endif(NEED_WINE)
 
    # Generate a GAMS control file for the TARGET
    execute_process (COMMAND ${GAMS_EXE_TARGET} "${CMAKE_SOURCE_DIR}/cmake/gams_gen_gamscntr.gms" "lo=4" "scrdir=${SCRDIR}")
