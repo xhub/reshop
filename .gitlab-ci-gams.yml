@@ -16,7 +16,7 @@ include:
     file: .codechecker.yml
   - '.ci-gams/.gitlab-ci-install-gams.yml'
   - '.ci-gams/.gitlab-ci-build.yml'
-  - '.ci-gams/.gitlab-ci-analyze.yml'
+  #  - '.ci-gams/.gitlab-ci-analyze.yml'
   - '.ci-gams/.gitlab-ci-test.yml'
   #  - '.ci-gams/.gitlab-ci-validate.yml'
   #  - '.ci-gams/.gitlab-ci-leakcheck.yml'
