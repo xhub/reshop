@@ -17,7 +17,6 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
 
    const char *export_dir = mdl->commondata.exports_dir;
 
-
    if (!ctr->equs[ei].tree) {
       goto _exit;
    }
@@ -27,7 +26,6 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
    nltree_print_dot(ctr->equs[ei].tree, fname, ctr);
 
 _exit:
-   myfreeenvval(dot_print);
    return OK;
 }
 
