@@ -1,0 +1,96 @@
+validate-trnsport-leg:
+  stage: validate
+  tags: [linux]
+  image:
+    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    entrypoint: [""]
+  needs: [fetch-ci-scripts,install-gamsdist-leg,build-leg]
+  script:
+    - GAMS_PATH=/cache/gams-installs/`cat gams_folder_leg.txt`
+    - cp $GAMS_PATH/optgams.def .
+    - FAIL_ON_MISMATCH=1 PATH=$GAMS_PATH:$PATH GAMS_SYSDIR=$GAMS_PATH python3 validate/gamslibvalidate.py gamslib 1 1
+  artifacts:
+    name: validation_leg
+    expire_in: 1 hour
+    paths: [results]
+    reports:
+      junit: results/gamslib_results_leg.xml
+
+validate-leg:
+  stage: validate
+  tags: [linux]
+  image:
+    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    entrypoint: [""]
+  needs: [fetch-ci-scripts,install-gamsdist-leg,build-leg,validate-trnsport-leg]
+  script:
+    - GAMS_PATH=/cache/gams-installs/`cat gams_folder_leg.txt`
+    - cp $GAMS_PATH/optgams.def .
+    - mkdir -p results
+    - PATH=$GAMS_PATH:$PATH GAMS_SYSDIR=$GAMS_PATH python3 validate/gamslibvalidate.py all_quick > results/log.txt 2>&1 || cat results/log.txt
+  except:
+    variables:
+      - $CI_COMMIT_MESSAGE =~ /fast-ci/
+  artifacts:
+    name: validation_leg
+    expire_in: 1 hour
+    paths: [results]
+    reports:
+      junit: batch_results_leg.xml
+
+validate-deg:
+  stage: validate
+  tags: [macos]
+  needs: [fetch-ci-scripts,install-gamsdist-deg,build-deg]
+  script:
+    - GAMS_PATH=$HOME/cache/gams-installs/`cat gams_folder_deg.txt`
+    - cp $GAMS_PATH/optgams.def .
+    - mkdir -p results
+    - PATH=$GAMS_PATH:$PATH GAMS_SYSDIR=$GAMS_PATH python3 validate/gamslibvalidate.py gamslib 1 inf > results/log.txt 2>&1 || cat results/log.txt
+  artifacts:
+    name: validation_deg
+    expire_in: 1 hour
+    paths: [results]
+    reports:
+      junit: results/gamslib_results_deg.xml
+
+validate-dac:
+  stage: validate
+  tags: [macos-arm64]
+  needs: [fetch-ci-scripts,install-gamsdist-dac,build-dac]
+  script:
+    - GAMS_PATH=$HOME/cache/gams-installs/`cat gams_folder_dac.txt`
+    - cp $GAMS_PATH/optgams.def .
+    - mkdir -p results
+    - PATH=$GAMS_PATH:$PATH GAMS_SYSDIR=$GAMS_PATH python3 validate/gamslibvalidate.py gamslib 1 inf > results/log.txt 2>&1 || cat results/log.txt
+  artifacts:
+    name: validation_dac
+    expire_in: 1 hour
+    paths: [results]
+    reports:
+      junit: results/gamslib_results_dac.xml
+
+validate-wei:
+  stage: validate
+  tags: [windows]
+  image:
+    name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
+  needs: [fetch-ci-scripts,install-gamsdist-wei,build-wei]
+  script:
+    - $gmsdirname = Get-Content mygmsdir.tmp -Raw
+    - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
+    - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
+    - $env:GAMSDIR = "$GAMS_PATH;$GAMS_PATH\gbin"
+    - findthisgams -q
+    - gams
+    - $env:GAMS_SYSDIR = "$GAMS_PATH"
+    - $env:GMSPYTHONLIB = "$GAMS_PATH\GMSPython\python38.dll"
+    - Copy-Item "$GAMS_PATH\optgams.def" -Destination "Release\optgams.def"
+    - If (!(Test-Path "results")) { New-Item -Path "results" -ItemType Directory }
+    - python validate/gamslibvalidate.py gamslib 1 inf > results/log.txt 2>&1
+  artifacts:
+    name: validation_wei
+    expire_in: 1 hour
+    paths: [results]
+    reports:
+      junit: results/gamslib_results_wei.xml

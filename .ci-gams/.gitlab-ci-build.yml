@@ -1,0 +1,93 @@
+build-leg:
+  stage: build
+  tags: [linux]
+  image:
+    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    entrypoint: [""]
+  before_script:
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+  script:
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release CMakeLists.txt
+    - cmake -v --build build 2>&1 | tee build_log.txt
+    - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
+  needs: [fetch-ci-scripts,install-gamsdist-leg]
+  artifacts:
+    name: reshop-leg
+    expire_in: 2 hours
+    paths: [warnings.xml]
+    reports:
+      junit: warnings.xml
+
+build-debug-leg:
+  stage: build
+  tags: [linux]
+  image:
+    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    entrypoint: [""]
+  before_script:
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+  script:
+    - cmake -DCMAKE_BUILD_TYPE=Debug CMakeLists.txt
+    - cmake -v --build build 2>&1
+  needs: [fetch-ci-scripts,install-gamsdist-leg]
+  artifacts:
+    name: reshop-debug-leg
+    expire_in: 2 hours
+    paths: [warnings.xml]
+    reports:
+      junit: warnings.xml
+
+build-deg:
+  stage: build
+  tags: [macos]
+  before_script:
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+  script:
+    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc CMakeLists.txt
+    - cmake -v --build build 2>&1 | tee build_log.txt
+    - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
+  needs: [fetch-ci-scripts,install-gamsdist-deg]
+  artifacts:
+    name: reshop-deg
+    expire_in: 2 hours
+    paths: [warnings.xml]
+    reports:
+      junit: warnings.xml
+
+build-dac:
+  stage: build
+  tags: [macos-arm64]
+  before_script:
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+  script:
+    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang CMakeLists.txt
+    - cmake -v --build build 2>&1 | tee build_log.txt
+    - python3 ci/report_for_log.py clang build_log.txt warnings.xml
+  needs: [fetch-ci-scripts,install-gamsdist-dac]
+  artifacts:
+    name: reshop-dac
+    paths: [warnings.xml]
+    expire_in: 2 hours
+    reports:
+      junit: warnings.xml
+
+build-wei:
+  stage: build
+  tags: [windows]
+  image:
+    name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
+  before_script:
+    - $gmsdirname = Get-Content mygmsdir.tmp -Raw
+    - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
+    - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
+  script:
+    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=icx-cl CMakeLists.txt
+    - cmake -v --build build --config Release -- -m | Tee-Object -FilePath 'build_log.txt'
+    - python ci/report_for_log.py icl build_log.txt warnings.xml
+  needs: [fetch-ci-scripts,install-gamsdist-wei]
+  artifacts:
+    name: reshop-wei
+    expire_in: 2 hours
+    paths: [warnings.xml]
+    reports:
+      junit: warnings.xml

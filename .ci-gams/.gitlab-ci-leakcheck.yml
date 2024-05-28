@@ -1,0 +1,25 @@
+leakcheck-leg:
+  stage: leakcheck
+  tags: [linux]
+  image:
+    name: registry.gams.com/devel/ciscripts/leg/builder-valgrind-codequality:latest
+    entrypoint: [""]
+  needs: [fetch-ci-scripts,install-gamsdist-leg,build-debug-leg]
+  script:
+    - GAMS_PATH=/cache/gams-installs/`cat gams_folder_leg.txt`
+    - $GAMS_PATH/gamslib trnsport
+    - mkdir -p 225a
+    - printf 'Input=trnsport.gms\nScrDir=225a\n' > 225a/gmsprmUN.dat
+    - printf "SysDir=${GAMS_PATH}\nScriptNext=225a/gamsnext.sh\n" >> 225a/gmsprmUN.dat
+    - printf 'Keep=1\nAction=C\nsave=workfile1\nsys14=1' >> 225a/gmsprmUN.dat
+    - cp $GAMS_PATH/optgams.def .
+    - PATH=$GAMS_PATH:$PATH LD_LIBRARY_PATH=$GAMS_PATH GMSPYTHONLIB="$GAMS_PATH/GMSPython/lib/libpython3.12.so" valgrind --leak-check=yes  ./CPPMEXTest_dbg
+    - LD_LIBRARY_PATH=$GAMS_PATH GMSPYTHONLIB=$GAMS_PATH/GMSPython/lib/libpython3.12.so valgrind --leak-check=yes ./CPPMEX_dbg 225a/gmsprmUN.dat
+    - LD_LIBRARY_PATH=$GAMS_PATH GMSPYTHONLIB=$GAMS_PATH/GMSPython/lib/libpython3.12.so valgrind --leak-check=yes --xml=yes --xml-file=valgrind_out.xml ./CPPMEX_dbg 225a/gmsprmUN.dat
+    - PYTHONPATH=$PYTHONPATH:valgrind-codequality python3 -m valgrind_codequality --input-file valgrind_out.xml --output-file valgrind.json
+  artifacts:
+    name: leak-check-results-leg
+    expire_in: 2 hours
+    reports:
+      codequality: valgrind.json
+    paths: [valgrind_out.*]

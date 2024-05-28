@@ -1,0 +1,5 @@
+codechecker-leg:
+  extends: .codechecker-leg
+  needs: [fetch-ci-scripts]
+  script:
+    - !reference [.default-codecheck-script, script]

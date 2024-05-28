@@ -1,0 +1,52 @@
+test-leg:
+  stage: test
+  tags: [linux]
+  image:
+    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    entrypoint: [""]
+  needs: [fetch-ci-scripts,build-leg]
+  script:
+    - ctest --test-dir build --output-junit doctest_results_linux.xml
+  artifacts:
+    name: unittest-results-linux
+    paths: [doctest_results_linux.xml]
+    reports:
+      junit: doctest_results_linux.xml
+
+test-deg:
+  stage: test
+  tags: [macos]
+  needs: [fetch-ci-scripts,build-deg]
+  script:
+    - ctest --test-dir build --output-junit doctest_results_deg.xml
+  artifacts:
+    name: unittest-results-deg
+    paths: [doctest_results_deg.xml]
+    reports:
+      junit: doctest_results_deg.xml
+
+test-dac:
+  stage: test
+  tags: [macos-arm64]
+  needs: [fetch-ci-scripts,build-dac]
+  script:
+    - ctest --test-dir build --output-junit doctest_results_dac.xml
+  artifacts:
+    name: unittest-results-dac
+    paths: [doctest_results_dac.xml]
+    reports:
+      junit: doctest_results_dac.xml
+
+test-wei:
+  stage: test
+  tags: [windows]
+  image:
+    name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
+  needs: [fetch-ci-scripts,build-wei]
+  script:
+    - ctest --test-dir build --output-junit doctest_results_windows.xml
+  artifacts:
+    name: unittest-results-windows
+    paths: [doctest_results_windows.xml]
+    reports:
+      junit: doctest_results_windows.xml

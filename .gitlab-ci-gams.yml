@@ -1,0 +1,29 @@
+stages:
+  - fetch-scripts
+  - install-gams # from builds.gams.com or web, all platforms
+  - build
+  - analyze
+  - test
+  - validate
+  - leakcheck
+
+include:
+  - project: 'devel/ciscripts'
+    file: .install-jobs.yml
+  - project: 'devel/ciscripts'
+    file: .shared-vars.yml
+  - project: 'devel/ciscripts'
+    file: .codechecker.yml
+  - '.ci-gams/.gitlab-ci-install-gams.yml'
+  - '.ci-gams/.gitlab-ci-build.yml'
+  - '.ci-gams/.gitlab-ci-analyze.yml'
+  - '.ci-gams/.gitlab-ci-test.yml'
+  #  - '.ci-gams/.gitlab-ci-validate.yml'
+  #  - '.ci-gams/.gitlab-ci-leakcheck.yml'
+
+variables:
+  extends: .shared-variables
+  GIT_SUBMODULE_STRATEGY: recursive
+  MACHINES_CONTAINER_REG:
+    value: registry.gams.com/devel/machines
+    description: "URL to the container registry of the machines repository"
