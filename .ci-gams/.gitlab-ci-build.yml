@@ -5,7 +5,7 @@ build-leg:
     name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
     entrypoint: [""]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
   script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release CMakeLists.txt
     - cmake -v --build build 2>&1 | tee build_log.txt
@@ -25,7 +25,7 @@ build-debug-leg:
     name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
     entrypoint: [""]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
   script:
     - cmake -DCMAKE_BUILD_TYPE=Debug CMakeLists.txt
     - cmake -v --build build 2>&1
@@ -41,7 +41,7 @@ build-deg:
   stage: build
   tags: [macos]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
   script:
     - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc CMakeLists.txt
     - cmake -v --build build 2>&1 | tee build_log.txt
@@ -58,7 +58,7 @@ build-dac:
   stage: build
   tags: [macos-arm64]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
   script:
     - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang CMakeLists.txt
     - cmake -v --build build 2>&1 | tee build_log.txt
@@ -81,8 +81,8 @@ build-wei:
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
   script:
-    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=icx-cl CMakeLists.txt
-    - cmake -v --build build --config Release -- -m | Tee-Object -FilePath 'build_log.txt'
+    - cmake -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl CMakeLists.txt
+    - cmake -v --build build | Tee-Object -FilePath 'build_log.txt'
     - python ci/report_for_log.py icl build_log.txt warnings.xml
   needs: [fetch-ci-scripts,install-gamsdist-wei]
   artifacts:
