@@ -45,7 +45,7 @@ build-deg:
   stage: build
   tags: [macos]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
+    - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
   script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
@@ -62,7 +62,7 @@ build-dac:
   stage: build
   tags: [macos-arm64]
   before_script:
-    - export PATH="/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
+    - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
   script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
