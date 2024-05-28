@@ -6,6 +6,7 @@ build-leg:
     entrypoint: [""]
   before_script:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
+    - pip3 install scikit-build-core
     - pip3 install cmake
   script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
@@ -15,7 +16,7 @@ build-leg:
   artifacts:
     name: reshop-leg
     expire_in: 2 hours
-    paths: [warnings.xml]
+    paths: [warnings.xml,build/*.so,build/test]
     reports:
       junit: warnings.xml
 
@@ -27,6 +28,7 @@ build-debug-leg:
     entrypoint: [""]
   before_script:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
+    - pip3 install scikit-build-core
     - pip3 install cmake
   script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Debug -S .
@@ -35,7 +37,7 @@ build-debug-leg:
   artifacts:
     name: reshop-debug-leg
     expire_in: 2 hours
-    paths: [warnings.xml]
+    paths: [warnings.xml,build/*.so,build/test]
     reports:
       junit: warnings.xml
 
@@ -52,7 +54,7 @@ build-deg:
   artifacts:
     name: reshop-deg
     expire_in: 2 hours
-    paths: [warnings.xml]
+    paths: [warnings.xml,build/*.dylib,build/test]
     reports:
       junit: warnings.xml
 
@@ -68,7 +70,7 @@ build-dac:
   needs: [fetch-ci-scripts,install-gamsdist-dac]
   artifacts:
     name: reshop-dac
-    paths: [warnings.xml]
+    paths: [warnings.xml,build/*.dylib,build/test]
     expire_in: 2 hours
     reports:
       junit: warnings.xml
@@ -90,6 +92,6 @@ build-wei:
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
-    paths: [warnings.xml]
+    paths: [warnings.xml,build/*.dll,build/*.lib,build/test]
     reports:
       junit: warnings.xml
