@@ -9,9 +9,9 @@ test-leg:
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
   artifacts:
     name: unittest-results-linux
-    paths: [test/doctest_results_linux.xml]
+    paths: [build/test/doctest_results_linux.xml]
     reports:
-      junit: test/doctest_results_linux.xml
+      junit: build/test/doctest_results_linux.xml
 
 test-deg:
   stage: test
@@ -21,9 +21,9 @@ test-deg:
     - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
   artifacts:
     name: unittest-results-deg
-    paths: [test/doctest_results_deg.xml]
+    paths: [build/test/doctest_results_deg.xml]
     reports:
-      junit: test/doctest_results_deg.xml
+      junit: build/test/doctest_results_deg.xml
 
 test-dac:
   stage: test
@@ -33,9 +33,9 @@ test-dac:
     - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
   artifacts:
     name: unittest-results-dac
-    paths: [test/doctest_results_dac.xml]
+    paths: [build/test/doctest_results_dac.xml]
     reports:
-      junit: test/doctest_results_dac.xml
+      junit: build/test/doctest_results_dac.xml
 
 test-wei:
   stage: test
@@ -47,6 +47,6 @@ test-wei:
     - ctest --test-dir build/test --output-junit doctest_results_windows.xml --rerun-failed --output-on-failure
   artifacts:
     name: unittest-results-windows
-    paths: [test/doctest_results_windows.xml]
+    paths: [build/test/doctest_results_windows.xml]
     reports:
-      junit: test/doctest_results_windows.xml
+      junit: build/test/doctest_results_windows.xml
