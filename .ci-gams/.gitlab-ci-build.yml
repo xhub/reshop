@@ -6,7 +6,8 @@ build-leg:
     entrypoint: [""]
   before_script:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
-    - pip3 install cmake==3.27.9
+    - pip3 install --user pip
+    - pip3 install --user cmake==3.27.9
   script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
@@ -27,7 +28,8 @@ build-debug-leg:
     entrypoint: [""]
   before_script:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$PATH"
-    - pip3 install cmake==3.27.9
+    - pip3 install --user pip
+    - pip3 install --user cmake==3.27.9
   script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Debug -S .
     - cmake --build build -v 2>&1
