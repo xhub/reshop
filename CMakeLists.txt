@@ -32,6 +32,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
    # Can't use MSVC as the compiler may try not to emulate cl.exe
    if (NOT CYGWIN AND NOT MINGW)
       add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+      add_compile_definitions(_CRT_NONSTDC_NO_WARNINGS)
    endif()
 else()
    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
