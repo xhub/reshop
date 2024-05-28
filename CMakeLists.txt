@@ -403,6 +403,8 @@ if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
 
    if (NEED_WINE)
       string(REGEX REPLACE "\\\\" "\\\\\\\\" GAMSDIR_TARGET ${GAMSDIR_TARGET})
+   else()
+      string(REGEX REPLACE "\\\\" "/" GAMSDIR_TARGET ${GAMSDIR_TARGET})
    endif(NEED_WINE)
 
    # Generate a GAMS control file for the TARGET
