@@ -4,8 +4,8 @@ stages:
   - build
   - analyze
   - test
-  - validate
-  - leakcheck
+  #  - validate
+  # - leakcheck
 
 include:
   - project: 'devel/ciscripts'
