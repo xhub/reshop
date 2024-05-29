@@ -13,9 +13,14 @@ cppcheck \
 -iapifiles \
 -iexternal/ppl_lcdd.cpp \
 --check-level=exhaustive \
+-DGAMS_UNUSED= \
+-UDO_POISON \
+-URHP_OUTPUT_BACKTRACE \
+-URHP_EXTRA_DEBUG_OUTPUT \
+-URHP_DEBUGGER_STOP \
 -UWITH_BACKWARD \
 -UWITH_FMEM \
--DGAMS_UNUSED=
+
 
 mkdir cppcheck
 
