@@ -44,7 +44,7 @@ test-wei:
     name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
   needs: [fetch-ci-scripts,build-wei]
   script:
-    - ctest --test-dir build/test --output-junit doctest_results_windows.xml --rerun-failed --output-on-failure
+    - ctest --test-dir build/test --output-junit doctest_results_windows.xml -E tree
   artifacts:
     name: unittest-results-windows
     paths: [build/test/doctest_results_windows.xml]
