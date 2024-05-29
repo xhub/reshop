@@ -43,11 +43,16 @@ bool gams_skip_solver(const char *slv, const char * testname)
       }
    }
 
-#ifdef USES_DARLING
+#if defined(__APPLE__) && defined(__x86_64__)
 #include <strings.h>
    const char *skipped_slvs[] = {
+#ifdef USES_DARLING
       "cplex", // Uses MKL
       "mosek", // segfaults
+#else
+      "knitro", // segfaults
+      "cbc",    // segfaults
+#endif
       "pathnlp", // segfaults
    };
 
