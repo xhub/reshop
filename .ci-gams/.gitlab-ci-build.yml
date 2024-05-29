@@ -12,11 +12,12 @@ build-leg:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
+    - cp -ra $HOME/.local build/local
   needs: [fetch-ci-scripts,install-gamsdist-leg]
   artifacts:
     name: reshop-leg
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.so,build/test,build/gams,$HOME/.local]
+    paths: [warnings.xml,build/*.so,build/test,build/gams,build/local]
     reports:
       junit: warnings.xml
 
@@ -34,11 +35,12 @@ build-debug-leg:
     - cmake -B build -DCMAKE_BUILD_TYPE=Debug -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
+    - cp -ra $HOME/.local build/local
   needs: [fetch-ci-scripts,install-gamsdist-leg]
   artifacts:
     name: reshop-debug-leg
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.so,build/test,build/gams,$HOME/.local]
+    paths: [warnings.xml,build/*.so,build/test,build/gams,build/local]
     reports:
       junit: warnings.xml
 
