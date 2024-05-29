@@ -93,11 +93,11 @@ option(DEV_MODE
 
 CMAKE_DEPENDENT_OPTION (WITH_BACKTRACE 
   "Build with backtracing facilities" ON
-  "NOT WINDOWS;NOT DISTRIB;NOT DEV_MODE" OFF)
+  "NOT WINDOWS;NOT DISTRIB;DEV_MODE" OFF)
 
 CMAKE_DEPENDENT_OPTION (WITH_BACKWARD
   "Build with the backward backtracing library" ON
-  "NOT WINDOWS;NOT APPLE;NOT DISTRIB;NOT DEV_MODE" OFF)
+  "NOT WINDOWS;NOT APPLE;NOT DISTRIB;DEV_MODE" OFF)
 
 #################################################
 # Less common options
