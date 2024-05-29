@@ -34,4 +34,4 @@ function (add_benchmark c_file)
 endfunction ()
 
 
-add_benchmark(ovf/linear_quantile_regression.c ${CMAKE_SOURCE_DIR}/test/test_ovf.c ${CMAKE_SOURCE_DIR}/test/test_common.c)
+add_benchmark(ovf/linear_quantile_regression.c ${CMAKE_SOURCE_DIR}/test/test_ovf.c ${CMAKE_SOURCE_DIR}/test/test_common.c ${CMAKE_SOURCE_DIR}/test/utils/test_gams_utils.c)

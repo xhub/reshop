@@ -83,8 +83,14 @@ int main(UNUSED int argc, char **argv)
 		}
 	} ARG_END;
 
-   struct rhp_mdl *mdl = bench_init(1e-6);
+  /* ----------------------------------------------------------------------
+   * If mdl_solver is NULL, we could just be skipping a solver
+   * ---------------------------------------------------------------------- */
+
    struct rhp_mdl *mdl_solver = bench_getgamssolver(solvername);
+   if (!mdl_solver) { return 0; }
+
+   struct rhp_mdl *mdl = bench_init(1e-6);
 
    double xsols_dummy[] = {NAN, NAN, NAN};
 

@@ -55,7 +55,9 @@ bool gams_skip_solver(const char *slv, const char * testname)
       if (!strcasecmp(slv, skipped_slvs[i])) { return true; }
    }
 #endif
-#ifdef USES_WINE
+
+
+#ifdef _WIN32
    const char *skipped_slvs[] = {
       "minos", // forrtl: severe (47): write to READONLY file, unit 14, file XXX
    };
