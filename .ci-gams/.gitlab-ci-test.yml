@@ -1,6 +1,6 @@
 test-leg:
   stage: test
-  tags: [linux]
+  tags: [puma]
   image:
     name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
     entrypoint: [""]
@@ -19,7 +19,7 @@ test-leg:
 
 test-debug-leg:
   stage: test
-  tags: [linux]
+  tags: [puma]
   image:
     name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
     entrypoint: [""]
