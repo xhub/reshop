@@ -173,6 +173,7 @@ check_ipo_supported(RESULT HAS_IPO)
 if(DEV_MODE)
    add_compile_definitions (RHP_OUTPUT_BACKTRACE)
    add_compile_definitions (RHP_DEBUGGER_STOP)
+   add_compile_definitions (RHP_DEV_MODE)
 endif()
 
 if(EXTRA_DEBUG_OUTPUT)

@@ -64,11 +64,17 @@ static int ccflib_equil_dfs_primal(dagid_t mpid, DfsData *dfsdat, DagMpArray *mp
 
 
 
+#ifdef RHP_DEV_MODE
 #include "rhp_dot_exports.h"
 #define DEBUG_DISPLAY_OBJEQU(mdl, mp) { \
    rhp_idx eiobj = mp_getobjequ(mp); assert(valid_ei(eiobj)); \
    view_equ_as_png(mdl, eiobj); \
 }
+#else
+
+#define DEBUG_DISPLAY_OBJEQU(mdl, mp) 
+
+#endif
 
 #ifdef UNUSED_AS_OF_20240320
 static void ws_init(DfsWorkspace *ws)
