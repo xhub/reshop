@@ -6,7 +6,9 @@ test-leg:
     entrypoint: [""]
   needs: [fetch-ci-scripts,build-leg]
   before_script:
-    - export PATH="build/local/bin:$PATH"
+    - pip3 install --user -U pip
+    - pip3 install --user cmake
+    - export PATH="$HOME/.local/bin:$PATH"
   script:
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
   artifacts:
@@ -23,7 +25,9 @@ test-debug-leg:
     entrypoint: [""]
   needs: [fetch-ci-scripts,build-debug-leg]
   before_script:
-    - export PATH="build/local/bin:$PATH"
+    - pip3 install --user -U pip
+    - pip3 install --user cmake
+    - export PATH="$HOME/.local/bin:$PATH"
   script:
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
   artifacts:
