@@ -54,7 +54,7 @@ build-deg:
   artifacts:
     name: reshop-deg
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.dylib,build/test]
+    paths: [warnings.xml,build/*.dylib,build/test,build/gams]
     reports:
       junit: warnings.xml
 
