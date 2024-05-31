@@ -149,10 +149,13 @@ typedef struct NamedVecArray {
    const char **names;
 } NamedVecArray;
 
+#include "lequ.h" /* for lequ_dealloc */
 #define RHP_LOCAL_SCOPE
 #define RHP_LIST_PREFIX namedvec
 #define RHP_LIST_TYPE NamedVecArray
 #define RHP_ELT_TYPE Lequ
+#define RHP_ELT_FREE lequ_empty
+#define RHP_ELT_FREE_TAKE_ADDRESS
 #define RHP_ELT_INVALID ((Lequ) {.len = 0, .max = 0, .coeffs = NULL, .vis = NULL})
 #include "namedlist_generic.inc"
 #define valid_vector(obj)  (((obj).coeffs != NULL) && ((obj).vis != NULL))
@@ -304,9 +307,11 @@ typedef struct DagLabel2Edge {
    DagLabel **list;
 } DagLabel2Edge;
 
+#include "empinterp_edgebuilder.h" /* For dag_labels_free */
 #define RHP_LOCAL_SCOPE
 #define RHP_LIST_PREFIX daglabels2edges
 #define RHP_LIST_TYPE DagLabels2Edges
+#define RHP_ELT_FREE dag_labels_free
 #define RHP_ELT_TYPE DagLabels*
 #define RHP_ELT_INVALID NULL
 #include "list_generic.inc"
@@ -314,6 +319,7 @@ typedef struct DagLabel2Edge {
 #define RHP_LOCAL_SCOPE
 #define RHP_LIST_PREFIX daglabel2edge
 #define RHP_LIST_TYPE DagLabel2Edge
+#define RHP_ELT_FREE FREE
 #define RHP_ELT_TYPE DagLabel*
 #define RHP_ELT_INVALID NULL
 #include "list_generic.inc"
@@ -336,6 +342,7 @@ typedef struct DagRegister {
 #define RHP_LIST_PREFIX dagregister
 #define RHP_LIST_TYPE DagRegister
 #define RHP_ELT_TYPE DagRegisterEntry*
+#define RHP_ELT_FREE FREE
 #define RHP_ELT_INVALID NULL
 #include "list_generic.inc"
 #define valid_registry_entry(obj)  ((obj) && (obj).dagid < UINT_MAX)

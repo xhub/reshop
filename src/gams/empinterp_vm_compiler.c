@@ -1377,6 +1377,7 @@ void compiler_free(Compiler* c)
    if (!c) return;
 
    empvm_free(c->vm);
+   FREE(c);
 }
 
 

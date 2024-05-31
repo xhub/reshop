@@ -9,6 +9,8 @@
 #define RHP_LIST_PREFIX gdxreaders
 #define RHP_LIST_TYPE gdx_readers
 #define RHP_ELT_TYPE GdxReader
+#define RHP_ELT_FREE gdx_reader_free
+#define RHP_ELT_FREE_TAKE_ADDRESS
 #define RHP_ELT_INVALID ((GdxReader) {.fname = NULL, .gdxh = NULL})
 #include "list_generic.inc"
 

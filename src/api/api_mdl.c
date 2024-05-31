@@ -9,7 +9,7 @@ int rhp_mdl_setname(Model *mdl, const char *name)
 {
    S_CHECK(chk_mdl(mdl, __func__));
    S_CHECK(chk_arg_nonnull(name, 2, __func__));
-      
+ 
    return mdl_setname(mdl, name);
 }
 

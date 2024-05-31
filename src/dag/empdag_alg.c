@@ -720,6 +720,8 @@ int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 
    /* ---------------------------------------------------------------------
     * Children on VF arc: we need to determine whether we have a saddle path
+    * Also, we can mark that there exists a VFpath that would need to be
+    * collapsed
     * --------------------------------------------------------------------- */
 
    if (Vlen > 0 ) {

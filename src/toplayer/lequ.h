@@ -15,6 +15,8 @@
 void lequ_dealloc(Lequ *lequ);
 Lequ *lequ_alloc(int maxlen) MALLOC_ATTR(lequ_dealloc,1);
 
+void lequ_empty(Lequ *lequ);
+
 int lequ_add(Lequ *lequ, rhp_idx vi, double value ) NONNULL;
 int lequ_add_unique(Lequ *lequ, int index, double value ) NONNULL;
 int lequ_adds(Lequ *lequ, Avar *v, const double *values) NONNULL;

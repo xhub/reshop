@@ -15,6 +15,7 @@
 #include "reshop.h"
 #include "rhp_fwd.h"
 #include "rhp_options_data.h"
+#include "rmdl_empdag.h"
 #include "var.h"
 
 /**
@@ -25,14 +26,14 @@
  *
  * @return         the error code
  */
-UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl) 
+UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc) 
 {
    int status = OK;
 
-   const EmpInfo *empinfo_src = &mdl->mdl_up->empinfo;
-   const EmpDag *empdag = &empinfo_src->empdag;
-
-   assert(empinfo_hasempdag(empinfo_src));
+   const EmpInfo *empinfo = &mdl->empinfo;
+   assert(empinfo_hasempdag(empinfo));
+   const EmpDag *empdag = &empinfo->empdag;
+   Model *mdl4fooc = NULL;
 
    const DagUidArray *roots = &empdag->roots;
    unsigned roots_len = roots->len;
@@ -46,13 +47,13 @@ UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl)
    * ---------------------------------------------------------------------- */
 
    if (empdag->features.hasVFpath) {
-      Model *mdl_up = mdl->mdl_up;
       char *mdlname;
-      IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_up)));
+      IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl)));
 
-      TO_IMPLEMENT("rmdl_contract_along_Vpaths() needs to be finished");
-      //Model *mdl4fooc = rhp_mdl_new(RHP_BACKEND_RHP);
-//      S_CHECK(rmdl_contract_along_Vpaths(mdl4fooc, mdl_up));
+      mdl4fooc = rhp_mdl_new(RHP_BACKEND_RHP);
+      S_CHECK(mdl_setname(mdl4fooc, mdlname));
+      FREE(mdlname);
+      S_CHECK(rmdl_contract_along_Vpaths(mdl4fooc, mdl));
 
    }
 
@@ -99,7 +100,18 @@ UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl)
       if (!childless_mp(empdag, mp->id)) { status = Error_OperationNotAllowed; }
    }
 
-   return status;
+   if (status != OK) {
+      return status;
+   }
+
+   if (mdl4fooc) {
+      mdl_linkmodels(mdl, mdl4fooc);
+      mdl_linkmodels(mdl4fooc, mdl_fooc);
+   } else {
+      mdl_linkmodels(mdl, mdl_fooc);
+   }
+
+   return OK;
 }
 
 static int mdl_prepare_fooc(Model *mdl, Model *mdl_mcp)
@@ -157,8 +169,8 @@ static int mdl_create_fooc(Model *mdl, Model *mdl_mcp)
     return Error_InvalidValue;
   }
 
-   mdl_linkmodels(mdl, mdl_mcp);
-   
+   S_CHECK(mdl_analyze_emp_for_fooc(mdl, mdl_mcp));
+ 
    S_CHECK(mdl_prepare_fooc(mdl, mdl_mcp));
 
    return fooc_create_mcp(mdl_mcp);

@@ -80,7 +80,7 @@ int dagnash_array_add(DagNashArray *dat, Nash* elt, const char *name)
 
 static inline int dagnash_array_copy(DagNashArray * restrict dat_dst,
                                      const DagNashArray * restrict dat_src,
-                                     Model *mdl)
+                                     Model *mdl_dst)
 {
    unsigned size = dat_src->len;
    if (size == 0) {
@@ -98,7 +98,7 @@ static inline int dagnash_array_copy(DagNashArray * restrict dat_dst,
 
    for (unsigned i = 0; i < size; i++) {
       if (dat_src->arr[i]) {
-         A_CHECK(dat_dst->arr[i], nash_dup(dat_src->arr[i], mdl));
+         A_CHECK(dat_dst->arr[i], nash_dup(dat_src->arr[i], mdl_dst));
  
          if (dat_src->names[i]) {
             A_CHECK(dat_dst->names[i], strdup(dat_src->names[i]));

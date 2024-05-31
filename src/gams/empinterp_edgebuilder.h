@@ -4,7 +4,9 @@
 #include <stdint.h>
 
 #include "compat.h"
-#include "empinterp.h"
+
+typedef struct dag_labels DagLabels;
+typedef struct dag_label DagLabel;
 
 void dag_labels_free(DagLabels *dagl);
 DagLabels * dag_labels_new(const char *basename, unsigned basename_len,

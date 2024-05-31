@@ -225,15 +225,15 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
       memcpy(&daguids.arr[daguids.len], c->arr, c->len * sizeof(daguid_t));
       daguids.len += c->len;
 
-      VarcArray *varcs = &mps_src->Varcs[mpid];
+      VarcArray *varcs_src = &mps_src->Varcs[mpid];
       bool start_has_objequ = false;
 
-      for (unsigned j = 0, len = varcs->len; j < len; ++j) {
+      for (unsigned j = 0, len = varcs_src->len; j < len; ++j) {
          if (!start_has_objequ) { 
-            start_has_objequ = arcVF_has_objequ(&varcs->arr[j], mdl);
+            start_has_objequ = arcVF_has_objequ(&varcs_src->arr[j], mdl_src);
          }
 
-         mpidarray_add(&VFdag_mpids, varcs->arr[j].child_id);
+         mpidarray_add(&VFdag_mpids, varcs_src->arr[j].child_id);
       }
 
       if (VFdag_mpids.len == 0) { continue; }
@@ -253,7 +253,6 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
       for (unsigned j = 0; j < VFdag_mpids.len; ++j) {
          mpid_t mpid_ = VFdag_mpids.arr[j];
          assert(mpid_ < mps_src->len);
-
 
          if (mps_src->Carcs[mpid_].len > 0) {
             c = &mps_src->Carcs[mpid_];
@@ -298,12 +297,12 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
          }
 
          /* Need to get the type of arc*/
-         varcs = &mps_src->Varcs[mpid_];
+         varcs_src = &mps_src->Varcs[mpid_];
 
-         for (unsigned k = 0, len = varcs->len; k < len; ++k) {
-            ArcVFData *arc = &varcs->arr[k];
+         for (unsigned k = 0, len = varcs_src->len; k < len; ++k) {
+            ArcVFData *arc = &varcs_src->arr[k];
 
-            unsigned num_cons = arcVF_getnumcons(arc, mdl);
+            unsigned num_cons = arcVF_getnumcons(arc, mdl_src);
 
             if (num_cons == UINT_MAX) {
                error("[empdag/contract] ERROR while procesing arcVF %u of MP(%s). "
@@ -375,12 +374,12 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
          }
 
          /* Need to get the type of arc*/
-         VarcArray *varcs = &mps_src->Varcs[mpid];
+         VarcArray *varcs_src = &mps_src->Varcs[mpid];
 
-         for (unsigned k = 0, lenv = varcs->len; k < lenv; ++k) {
-            ArcVFData *arc = &varcs->arr[k];
+         for (unsigned k = 0, lenv = varcs_src->len; k < lenv; ++k) {
+            ArcVFData *arc = &varcs_src->arr[k];
 
-            unsigned num_cons = arcVF_getnumcons(arc, mdl);
+            unsigned num_cons = arcVF_getnumcons(arc, mdl_src);
 
             if (num_cons == UINT_MAX) {
                error("[empdag/contract] ERROR while procesing arcVF %u of MP(%s). "

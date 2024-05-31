@@ -13,7 +13,6 @@
 #include "equvar_metadata.h"
 #include "gams_exportempinfo.h"
 #include "gams_macros.h"
-#include "gams_option.h"
 #include "gams_rosetta.h"
 #include "gams_solve.h"
 #include "gams_utils.h"
@@ -26,7 +25,6 @@
 #include "mdl_transform.h"
 #include "reshop_error_handling.h"
 #include "rhp_options.h"
-#include "rmdl_gams.h"
 #include "rmdl_options.h"
 #include "timings.h"
 #include "toplayer_utils.h"
@@ -171,6 +169,7 @@ static void gams_deallocdata(Model *mdl)
    if (!gms || !gms->initialized) {
       FREE(gms);
       mdl->ctr.data = NULL;
+      FREE(mdl->data);
       return;
    }
 

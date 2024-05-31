@@ -79,6 +79,8 @@ void gdx_reader_free(GdxReader *reader)
       gdxFree(&gdxh);
       reader->gdxh = NULL;
    }
+
+   FREE(reader->vector); /* Lequ content is owned by a namedlist */
 }
 
 int gdx_reader_init(GdxReader *reader, Model *mdl, const char *fname)

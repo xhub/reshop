@@ -24,6 +24,7 @@ tlsvar struct option rhp_options[] = {
    [Options_EMPInfoFile]           = { "EMPInfoFile",         "EMPinfo file to use",                       OptString,  { .s = "empinfo.dat" } },
    [Options_Output]                = { "output",              "Output level",                              OptInteger, { .i = PO_INFO } },
    [Options_Output_Subsolver_Log]  = { "output_subsolver_log","whether to output subsolver logs",          OptBoolean, { .b = false } },
+   [Options_Pathlib_Name]          = { "pathlib_name",        "path of the PATH library",                  OptString,  { .s = "" } },
    [Options_Png_Viewer]            = { "png_viewer",          "Executable to display png",                 OptString,  { .s = "" } },
    [Options_SolveSingleOptAs]      = { "solve_single_opt_as", "How to solve an empdag with a single MP",   OptChoice,  { .i = Opt_SolveSingleOptAsOpt} },
    [Options_Subsolveropt]          = { "subsolveropt",        "Subsolver option file number",              OptInteger, { .i = 0     } },

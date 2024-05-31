@@ -351,10 +351,8 @@ static inline int vmcode_add(VmCode *code, uint8_t instr, unsigned linenr)
 
 static inline void vmcode_free(VmCode *code)
 {
-   if (code->len > 0) {
-      FREE(code->ip);
-      FREE(code->line);
-   }
+   FREE(code->ip);
+   FREE(code->line);
 }
 
 #endif // !EMPPARSER_VM_H

@@ -307,10 +307,10 @@ int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double *vals)
 
 const char *arctype_str(ArcType type);
 
-unsigned arcVFb_getnumcons(ArcVFData *arc, Model *mdl);
+unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl);
 
 NONNULL static inline
-unsigned arcVF_getnumcons(ArcVFData *arc, Model *mdl)
+unsigned arcVF_getnumcons(ArcVFData *arc, const Model *mdl)
 {
    assert(valid_arcVF(arc));
 
@@ -324,10 +324,10 @@ unsigned arcVF_getnumcons(ArcVFData *arc, Model *mdl)
 
 }
 
-bool arcVFb_has_objequ(ArcVFData *arc, Model *mdl);
+bool arcVFb_has_objequ(ArcVFData *arc, const Model *mdl);
 
 NONNULL static inline
-unsigned arcVF_has_objequ(ArcVFData *arc, Model *mdl)
+unsigned arcVF_has_objequ(ArcVFData *arc, const Model *mdl)
 {
    assert(valid_arcVF(arc));
 

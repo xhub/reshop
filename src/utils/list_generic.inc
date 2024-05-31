@@ -123,10 +123,26 @@ FN_SCOPE int RHP_MAKE_STR(set)(struct RHP_LIST_TYPE *dat, RHP_ELT_TYPE* elts, ID
 
 FN_SCOPE void RHP_MAKE_STR(free)(struct RHP_LIST_TYPE *dat)
 {
-   if (dat->len > 0) {
+   if (dat->max > 0) {
       FREE(dat->list);
    }
 }
+
+#ifdef RHP_ELT_FREE
+FN_SCOPE void RHP_MAKE_STR(freeall)(struct RHP_LIST_TYPE *dat)
+{
+   RHP_ELT_TYPE *list = dat->list;
+   assert(list || dat->len == 0);
+   for (unsigned i = 0, len = dat->len; i < len; ++i) {
+#ifdef RHP_ELT_FREE_TAKE_ADDRESS
+      RHP_ELT_FREE(&list[i]);
+#else
+      RHP_ELT_FREE(list[i]);
+#endif
+   }
+   FREE(list);
+}
+#endif
 
 #ifdef RHP_ELT_SORT
 FN_SCOPE int RHP_MAKE_STR(find)(struct RHP_LIST_TYPE *dat, unsigned val)
@@ -162,6 +178,8 @@ _exit:
 #undef RHP_LIST_TYPE
 #undef RHP_ELT_TYPE
 #undef RHP_ELT_INVALID
+#undef RHP_ELT_FREE
+#undef RHP_ELT_FREE_TAKE_ADDRESS
 #undef IDX_TYPE
 #undef RHP_CONCAT
 #undef _RHP_MAKE_STR

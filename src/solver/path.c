@@ -24,15 +24,18 @@
 
 
 tlsvar void* libpath_handle = NULL;
-tlsvar char* libpath_fname = NULL;
+tlsvar const char* libpath_fname = NULL;
 
 #undef IMPORT_FUNC
 #define IMPORT_FUNC(RTYPE, FN_NAME, ...) tlsvar RTYPE (*FN_NAME)(__VA_ARGS__) = NULL;
 #include "path_func.h"
 
 
-#define DLLPATH47 DLL_FROM_NAME("path47")
-#define DLLPATH50 DLL_FROM_NAME("path50")
+static const char *path_libnames[] = {
+   DLL_FROM_NAME("path47"),
+   DLL_FROM_NAME("path50"),
+   DLL_FROM_NAME("path51")
+};
 
 #if defined(_WIN32) && defined(_MSC_VER)
 #define WIN32_LEAN_AND_MEAN
@@ -63,34 +66,44 @@ tlsvar char* libpath_fname = NULL;
   }
 #endif
 
-static int load_pathlib(void)
+static int load_pathlib(Model *mdl)
 {
    if (!libpath_handle) {
-      char* libname;
+      const char* libname, *opt_libpath_fname = NULL;
+
+      if (!libpath_fname) {
+         opt_libpath_fname = optvals(mdl, Options_Pathlib_Name);
+
+         if (opt_libpath_fname && strlen(opt_libpath_fname) > 0) {
+            libpath_fname = opt_libpath_fname;
+         }
+      }
+
       if (libpath_fname) {
          libpath_handle = open_library(libpath_fname, 0);
          if (libpath_handle) {
            libname = libpath_fname;
-           goto _import;
          }
       }
 
-      libpath_handle = open_library(DLLPATH50, 0);
+      myfreeenvval(opt_libpath_fname);
 
-      if (!libpath_handle) {
-         libpath_handle = open_library(DLLPATH47, 0);
-         libname = DLLPATH47;
-      } else {
-         libname = DLLPATH50;
+      unsigned ii = ARRAY_SIZE(path_libnames);
+      while (!libpath_handle && ii <= ARRAY_SIZE(path_libnames) && ii > 0) {
+         ii--;
+         libname = path_libnames[ii];
+         libpath_handle = open_library(libname, 0);
       }
 
       if (!libpath_handle) {
-         error("%s :: Could not find "DLLPATH50" or "DLLPATH47".\n"
-                  "Some functionalities may not be available\n"
-                  "Rerun in debug mode for more information,\n", __func__);
+         errormsg("[PATH] ERROR: Could not find the PATH solver. The following names where tried: ");
+         for (unsigned i = 0, len = ARRAY_SIZE(path_libnames); i < len; ++i) {
+            errormsg(path_libnames[i]); errormsg(" ");
+         }
+         errormsg("[PATH] Use the option 'pathlib_name' to set the path to the PATH library\n");
          return Error_SystemError;
       }
-_import:
+
 #define PLUGIN_HANDLE libpath_handle
 #define LIBNAME libname
 
@@ -573,7 +586,7 @@ int solver_path(Model * restrict mdl, struct jacdata * restrict jac)
     * Try to load a PATH library and define the suitable function calls
     * ---------------------------------------------------------------------- */
 
-   S_CHECK_EXIT(load_pathlib());
+   S_CHECK_EXIT(load_pathlib(mdl));
 #undef IMPORT_FUNC
 #define IMPORT_FUNC(RTYPE, FN_NAME, ...) assert(FN_NAME);
 #include "path_func.h"

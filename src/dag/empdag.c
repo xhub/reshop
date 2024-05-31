@@ -129,8 +129,9 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    memset(&empdag->node_stats, 0, sizeof (empdag->node_stats));
    memset(&empdag->edge_stats, 0, sizeof (empdag->edge_stats));
 
-   mpidarray_init(&empdag->roots);
+   daguidarray_init(&empdag->roots);
    mpidarray_init(&empdag->mps2reformulate);
+   mpidarray_empty(&empdag->saddle_path_starts);
    dagmp_array_init(&empdag->mps);
    dagnash_array_init(&empdag->nashs);
 
@@ -363,8 +364,9 @@ int empdag_fini(EmpDag *empdag)
 void empdag_rel(EmpDag *empdag)
 {
 
-   rhp_uint_empty(&empdag->roots);
-   rhp_uint_empty(&empdag->mps2reformulate);
+   daguidarray_empty(&empdag->roots);
+   mpidarray_empty(&empdag->mps2reformulate);
+   mpidarray_empty(&empdag->saddle_path_starts);
 
    /****************************************************************************
    * Free MP and Nash data structures
@@ -1341,7 +1343,7 @@ int empdag_collectroots(EmpDag *empdag, UIntArray *roots)
    return OK;
 }
 
-unsigned arcVFb_getnumcons(ArcVFData *arc, Model *mdl)
+unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl)
 {
    assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
 
@@ -1351,7 +1353,7 @@ unsigned arcVFb_getnumcons(ArcVFData *arc, Model *mdl)
    return mdl->ctr.equmeta[ei].role == EquConstraint ? 1 : 0;
 }
 
-bool arcVFb_has_objequ(ArcVFData *arc, Model *mdl)
+bool arcVFb_has_objequ(ArcVFData *arc, const Model *mdl)
 {
    assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
 

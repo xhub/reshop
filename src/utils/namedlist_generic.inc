@@ -208,18 +208,42 @@ FN_SCOPE unsigned RHP_MAKE_STR(findbyname_nocase)(const struct RHP_LIST_TYPE *da
 
 FN_SCOPE void RHP_MAKE_STR(free)(struct RHP_LIST_TYPE *dat)
 {
-   if (dat->len > 0) {
-      FREE(dat->list);
-      FREE(dat->names);
+   FREE(dat->list);
+
+   const char **names = dat->names;
+   for (unsigned i = 0, len = dat->len; i < len; ++i) {
+      FREE(names[i]);
    }
+   FREE(names);
 }
 
+#ifdef RHP_ELT_FREE
+FN_SCOPE void RHP_MAKE_STR(freeall)(struct RHP_LIST_TYPE *dat)
+{
+   RHP_ELT_TYPE *list = dat->list;
+   assert(list || dat->len == 0);
+   const char **names = dat->names;
+   for (unsigned i = 0, len = dat->len; i < len; ++i) {
+#ifdef RHP_ELT_FREE_TAKE_ADDRESS
+      RHP_ELT_FREE(&list[i]);
+#else
+      RHP_ELT_FREE(list[i]);
+#endif
+      FREE(names[i]);
+   }
+   FREE(list);
+   FREE(dat->names);
+}
+#endif
 #endif /* RHP_ONLY_DEF */
 
 #undef RHP_LIST_PREFIX
 #undef RHP_LIST_TYPE
 #undef RHP_ELT_TYPE
 #undef RHP_ELT_SORT
+#undef RHP_ELT_INVALID
+#undef RHP_ELT_FREE
+#undef RHP_ELT_FREE_TAKE_ADDRESS
 #undef IDX_TYPE
 #undef RHP_CONCAT
 #undef _RHP_MAKE_STR
@@ -228,4 +252,3 @@ FN_SCOPE void RHP_MAKE_STR(free)(struct RHP_LIST_TYPE *dat)
 #undef RHP_LOCAL_SCOPE
 #undef RHP_DEFINE_STRUCT
 #undef RHP_ONLY_DEF
-#undef RHP_ELT_INVALID

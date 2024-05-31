@@ -52,7 +52,7 @@ int gams_chk_ctr(const Container *ctr, const char *fn)
    return gams_chk_ctrdata(ctr, fn);
 }
 
-static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
+static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
 {
    char buffer[GMS_SSSIZE];
 
@@ -60,21 +60,21 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
     * Fail if gamsdir has not already being given
     * --------------------------------------------------------------------- */
 
-   if (!strlen(mdldat->gamsdir)) {
+   if (!strlen(gmdldat->gamsdir)) {
       errormsg("[GAMS] ERROR: no GAMS sysdir was given, unable to continue!\n"
                "Use gams_setgamsdir to set the GAMS sysdir\n");
       return Error_RuntimeError;
    }
 
    /* Load all the libs */
-   S_CHECK(gams_load_libs(mdldat->gamsdir));
+   S_CHECK(gams_load_libs(gmdldat->gamsdir));
 
    /* ---------------------------------------------------------------------
     * Initialize GMO and GEV libraries.
     * --------------------------------------------------------------------- */
 
-   if (!gmoCreateDD(&gms->gmo, mdldat->gamsdir, buffer, sizeof(buffer))
-       || !gevCreateDD(&gms->gev, mdldat->gamsdir, buffer, sizeof(buffer))) {
+   if (!gmoCreateDD(&gms->gmo, gmdldat->gamsdir, buffer, sizeof(buffer))
+       || !gevCreateDD(&gms->gev, gmdldat->gamsdir, buffer, sizeof(buffer))) {
       error("[GAMS] ERROR: loading GMO or GEV failed with message '%s'\n", 
             buffer);
       return Error_RuntimeError;
@@ -86,14 +86,14 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
     *  gevCompleteEnvironment(ctr_rmdl->gev, NULL, NULL, NULL, NULL);
     * --------------------------------------------------------------------- */
 
-   if (!strlen(mdldat->gamscntr)) {
+   if (!strlen(gmdldat->gamscntr)) {
       errormsg("[GAMS] ERROR: the control file is empty\n");
       return Error_GamsIncompleteSetupInfo;
    }
 
-   if (gevInitEnvironmentLegacy(gms->gev, mdldat->gamscntr)) {
+   if (gevInitEnvironmentLegacy(gms->gev, gmdldat->gamscntr)) {
       error("[GAMS] ERROR: loading control file '%s' failed\n",
-               mdldat->gamscntr);
+               gmdldat->gamscntr);
       return Error_GamsCallFailed;
    }
 
@@ -111,7 +111,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
     * Create a configuration object.
     * --------------------------------------------------------------------- */
 
-   if (!cfgCreateD(&gms->cfg, mdldat->gamsdir, buffer, sizeof(buffer))) {
+   if (!cfgCreateD(&gms->cfg, gmdldat->gamsdir, buffer, sizeof(buffer))) {
       error("[GAMS] ERROR: creating cfg object failed with message '%s'\n",
             buffer);
       return Error_GamsCallFailed;
@@ -123,7 +123,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
 
    /* TODO: this could not work with gamsconfig.yaml */
 
-   size_t len = strlen(mdldat->gamsdir);
+   size_t len = strlen(gmdldat->gamsdir);
    size_t dirsep_len = strlen(DIRSEP);
    bool has_dirsep = true;
 
@@ -132,7 +132,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
       len -= 1;
       dirsep_len -= 1;
       for (size_t i = 0; i <= dirsep_len; ++i) {
-         if (mdldat->gamsdir[len-i] != DIRSEP[dirsep_len-i]) {
+         if (gmdldat->gamsdir[len-i] != DIRSEP[dirsep_len-i]) {
             has_dirsep = false;
             break;
          }
@@ -144,11 +144,11 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
    size_t slen = len + dirsep_len + strlen(GMS_CONFIG_FILE);
    if (slen > sizeof(buffer)-1) {
       error("[GAMS] ERROR: filename '%s%s%s' has size %zu, max is %zu",
-            mdldat->gamsdir, DIRSEP, GMS_CONFIG_FILE, slen, sizeof(buffer)-1);
+            gmdldat->gamsdir, DIRSEP, GMS_CONFIG_FILE, slen, sizeof(buffer)-1);
       return Error_NameTooLongForGams;
    }
 
-   strcpy(buffer, mdldat->gamsdir);
+   strcpy(buffer, gmdldat->gamsdir);
    if (!has_dirsep) {
       strcat(buffer, DIRSEP);
    }
@@ -173,48 +173,47 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict md
  *
  * @return          the error code
  */
-int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
+int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
 {
    char buffer[GMS_SSSIZE];
 
-   S_CHECK(gcdat_new(gms, mdldat));
+   S_CHECK(gcdat_new(gms, gmdldat));
 
    GAMS_CHECK1(dctCreate, &gms->dct, buffer);
    gms->owndct = true;
 
 
    trace_stack("[GAMS] Successful initialization GAMS model with "
-               "gamsdir='%s'; gamscntr='%s'\n", mdldat->gamsdir, mdldat->gamscntr);
+               "gamsdir='%s'; gamscntr='%s'\n", gmdldat->gamsdir, gmdldat->gamscntr);
 
    return OK;
 }
 
-int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict mdldat)
+int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
 {
-   char gmoname[GMS_SSSIZE];
+   char buf[GMS_SSSIZE];
 
-   S_CHECK(gcdat_new(gms, mdldat));
+   S_CHECK(gcdat_new(gms, gmdldat));
 
-   if (gmoLoadDataLegacy(gms->gmo, gmoname)) {
-      error("[GAMS] ERROR: Loading model data failed with message '%s'\n",
-            gmoname);
+   if (gmoLoadDataLegacy(gms->gmo, buf)) {
+      error("[GAMS] ERROR: Loading model data failed with message '%s'\n", buf);
       return Error_GamsCallFailed;
    }
 
-   gmoNameModel(gms->gmo, gmoname);
+   gmoNameModel(gms->gmo, buf);
    gms->dct = gmoDict(gms->gmo);
 
    if (!gms->dct) {
        error("[GAMS] ERROR: GAMS/GMO model named '%s' has no dictionary. "
-             "Check the solver configuration\n", gmoname);
+             "Check the solver configuration\n", buf);
       return Error_GamsIncompleteSetupInfo;
    }
 
-   gevGetStrOpt(gms->gev, gevNameScrDir, mdldat->scrdir);
+   gevGetStrOpt(gms->gev, gevNameScrDir, gmdldat->scrdir);
 
    trace_process("[GAMS] Loaded GMO model named '%s' with %u vars and %u equs "
-                 "from %s\n", gmoname, gmoN(gms->gmo), gmoM(gms->gmo),
-                 mdldat->gamscntr);
+                 "from %s\n", buf, gmoN(gms->gmo), gmoM(gms->gmo),
+                 gmdldat->gamscntr);
 
    return OK;
 }

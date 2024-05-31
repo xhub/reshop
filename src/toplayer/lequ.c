@@ -78,6 +78,14 @@ void lequ_dealloc(Lequ *lequ)
    FREE(lequ);
 }
 
+void lequ_empty(Lequ *lequ)
+{
+   if (!lequ) return;
+
+   FREE(lequ->vis);
+   FREE(lequ->coeffs);
+}
+
 int lequ_add(Lequ *lequ, rhp_idx vi, double value)
 {
    assert(lequ_debug_idx(lequ, vi) && isfinite(value));

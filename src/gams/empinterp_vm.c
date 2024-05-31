@@ -613,6 +613,9 @@ void empvm_free(EmpVm *vm)
    }
 
    vmvals_free(&vm->globals);
+   vmcode_free(&vm->code);
+   vmobjs_free(&vm->newobjs);
+   vmobjs_free(&vm->objs);
    rhp_uint_empty(&vm->uints);
    rhp_int_empty(&vm->ints);
 
@@ -624,6 +627,8 @@ void empvm_free(EmpVm *vm)
    scratchint_empty(&vm->data.v_data);
    scratchint_empty(&vm->data.iscratch);
    scratchdbl_empty(&vm->data.dscratch);
+
+   FREE(vm);
 }
 
 int empvm_run(struct empvm *vm)

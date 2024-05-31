@@ -15,6 +15,7 @@ enum rhp_options_enum {
    Options_EMPInfoFile,
    Options_Output,
    Options_Output_Subsolver_Log,
+   Options_Pathlib_Name,
    Options_Png_Viewer,
    Options_SolveSingleOptAs,
    Options_Subsolveropt,

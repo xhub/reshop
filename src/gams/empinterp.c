@@ -4,6 +4,7 @@
 #include "ctrdat_gams.h"
 #include "empinfo.h"
 #include "empinterp.h"
+#include "empinterp_edgebuilder.h"
 #include "empinterp_edgeresolver.h"
 #include "empinterp_priv.h"
 #include "empinterp_vm_compiler.h"
@@ -126,15 +127,23 @@ NONNULL void interp_free(Interpreter *interp)
    aliases_free(&interp->globals.aliases);
    namedints_free(&interp->globals.sets);
    multisets_free(&interp->globals.multisets);
-   namedvec_free(&interp->globals.vectors);
+
    namedscalar_free(&interp->globals.scalars);
    namedints_free(&interp->globals.localsets);
-   namedvec_free(&interp->globals.localvectors);
+   namedvec_freeall(&interp->globals.vectors);
+   namedvec_freeall(&interp->globals.localvectors);
+
+   dagregister_freeall(&interp->dagregister);
 
    if (interp->regentry) {
       errormsg("[empinterp] ERROR: while freeing the interpreter, a label entry "
                "wasn't consumed. Please report this bug.\n");
    }
+
+   FREE(interp->regentry);
+
+   daglabel2edge_freeall(&interp->label2edge);
+   daglabels2edges_freeall(&interp->labels2edges);
 
 }
 

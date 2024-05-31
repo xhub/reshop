@@ -8,8 +8,6 @@
 
 Nash *nash_new(unsigned id, Model *mdl)
 {
-  assert(mdl);
-
   Nash *nash;
   MALLOC_NULL(nash, Nash, 1);
 

@@ -224,9 +224,8 @@ Model *mdl_borrow(Model *mdl)
    }
 
    mdl->refcnt++;
-   printout(PO_TRACE_REFCNT, "[refcnt] model %.*s #%u: %1u -> %1u\n",
-            mdl_getnamelen(mdl), mdl_getname(mdl), mdl->id, mdl->refcnt-1,
-            mdl->refcnt);
+   printout(PO_TRACE_REFCNT, "[refcnt] %s model '%.*s' #%u: %1u -> %1u\n",
+            mdl_fmtargs(mdl), mdl->refcnt-1, mdl->refcnt);
 
    return mdl;
 }
@@ -236,9 +235,8 @@ void mdl_release(Model *mdl)
    if (mdl && (mdl)->refcnt > 0) {
       (mdl)->refcnt--;
 
-      printout(PO_TRACE_REFCNT, "[refcnt] model %.*s #%u: %1u -> %1u",
-               mdl_getnamelen(mdl), mdl_getname(mdl),
-               mdl->id, mdl->refcnt+1, mdl->refcnt);
+      printout(PO_TRACE_REFCNT, "[refcnt] %s model %.*s #%u: %1u -> %1u",
+               mdl_fmtargs(mdl), mdl->refcnt+1, mdl->refcnt);
 
       if (mdl->refcnt == 0) {
          printstr(PO_TRACE_REFCNT, ", FREEING.\n");
@@ -248,8 +246,7 @@ void mdl_release(Model *mdl)
       }
 
    } else if (mdl) {
-      error("[ERROR] model %*.s #%u: refcnt is 0.\n",
-                mdl_getnamelen(mdl), mdl_getname(mdl), mdl->id);
+      error("[ERROR] %s model '%*.s' #%u: refcnt is 0.\n", mdl_fmtargs(mdl));
   }
 }
 

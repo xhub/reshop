@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include "empdag_uid.h"
+#include "empinterp.h"
 #include "macros.h"
 #include "printout.h"
 
