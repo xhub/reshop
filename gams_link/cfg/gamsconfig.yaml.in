@@ -8,7 +8,7 @@ solverConfig:
       executableName: @GAMS_EXENAME@
       defName: |CFG_DIR|optreshop.def
       library:
-        libName: |BIN_DIR|$<TARGET_FILE_NAME:@RESHOP_GAMS_INTERFACE@>
+        libName: |BIN_DIR|$<TARGET_FILE_NAME:@RESHOP_GAMSLINK_LIB@>
         auditCode: rhp
         solverInterfaceType: 1
         threadSafeIndic: True
