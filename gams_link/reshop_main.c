@@ -211,8 +211,8 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
          gevLogStat(jh->eh, msg);
       }
       gevLogStat(jh->eh, "*** ReSHOP ERROR while checking GAMS distribution version");
-      gmoSolveStatSet(gh, gmoSolveStat_License);
-      gmoModelStatSet(gh, gmoModelStat_LicenseError);
+      gmoSolveStatSet(gh, gmoSolveStat_SetupErr);
+      gmoModelStatSet(gh, gmoModelStat_NoSolutionReturned);
       rc = 1; goto _exit;
    }
 #endif
