@@ -497,17 +497,17 @@ static int rctr_getcoljacinfo(const Container *ctr, int colidx,
                               void **jacptr, double *jacval, int *rowidx,
                               int *nlflag)
 {
-   const struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
+   const struct ctrdata_rhp *cdat = (struct ctrdata_rhp *) ctr->data;
 
    struct ctr_mat_elt *e = (struct ctr_mat_elt*)*jacptr;
    assert(!e || (valid_vi(e->vi) && e->vi == colidx &&
          "In rmdl_getcoljacinfo :: unconsistency between jacptr and colidx"));
-   if (!valid_vi(colidx) || model->total_n < (unsigned)colidx) {
+   if (!valid_vi(colidx) || cdat->total_n < (unsigned)colidx) {
       return Error_IndexOutOfRange;
    }
 
    if (!e) {
-      e = model->vars[colidx];
+      e = cdat->vars[colidx];
       if (!e) {
         error("%s :: variable %d (%s) is not in the model\n",
                  __func__, colidx, ctr_printvarname(ctr, colidx));

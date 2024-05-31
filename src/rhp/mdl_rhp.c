@@ -132,9 +132,11 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
    S_CHECK(mdl_copysolveoptions(mdl, mdl_up));
 
    /* ----------------------------------------------------------------------
-    * Get the name of the model right
+    * Get the name of the model right. This could already be set
     * ---------------------------------------------------------------------- */
-   A_CHECK(mdl->commondata.name, get_mdlname_new(mdl_up));
+   if (!mdl->commondata.name) {
+      A_CHECK(mdl->commondata.name, get_mdlname_new(mdl_up));
+   }
 
    /* \TODO(xhub) implement proper model type detection. */
    S_CHECK(mdl_copyprobtype(mdl, mdl_up));

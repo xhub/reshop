@@ -456,14 +456,14 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
    aequ_empty(&cdat->equname_inherited.e_src);
    aequ_empty(&cdat->equname_inherited.e);
    avar_empty(&cdat->var_inherited.v_src);
-   
-   for (size_t i = 0; i < cdat->total_m; ++i) {
-      CMatElt* equ_elt = cdat->equs[i];
+ 
+   for (size_t i = 0, len = cdat->total_m; i < len; ++i) {
+      CMatElt* me = cdat->equs[i];
 
-      while(equ_elt) {
-         CMatElt* tmp = equ_elt->next_var;
-         FREE(equ_elt);
-         equ_elt = tmp;
+      while(me) {
+         CMatElt* tmp = me->next_var;
+         FREE(me);
+         me = tmp;
       }
       cdat->equs[i] = NULL;
 
@@ -471,6 +471,7 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
          equ_free(&ctr->equs[i]);
       }
    }
+
 
    /* ----------------------------------------------------------------------
     * Delete the nltree for equations coming from the GAMS model

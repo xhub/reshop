@@ -21,6 +21,7 @@
 #include "mdl.h"
 #include "mdl_gams.h"
 #include "mdl_ops.h"
+#include "mdl_priv.h"
 #include "mdl_rhp.h"
 #include "mdl_transform.h"
 #include "reshop_error_handling.h"
@@ -774,6 +775,7 @@ static int gams_export(Model *mdl, Model *mdl_dst)
    assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
    BackendType backend = mdl_dst->backend;
 
+   mdl_linkmodels(mdl, mdl_dst);
    assert(!(mdl_dst->status & MdlContainerInstantiable));
 
    switch (backend) {

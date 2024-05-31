@@ -234,6 +234,7 @@ int rctr_delete_var(Container *ctr, rhp_idx vi)
       S_CHECK(equ_rm_var(ctr, e, vi));
    }
 
+   FREE(cdat->vars[vi]);
    cdat->vars[vi] = NULL;
 
    ctr->vars[vi].is_deleted = true;

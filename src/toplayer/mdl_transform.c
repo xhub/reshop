@@ -188,11 +188,13 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
 {
    /* TODO: this should not be necessary */
    Model *mdl_rhp_for_fooc;
+   bool release_mdl_rhp_for_fooc = false;
    if (mdl->backend == RHP_BACKEND_GAMS_GMO) {
       A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RHP_BACKEND_RHP));
       S_CHECK(mdl_setname(mdl_rhp_for_fooc, "RHP mdl for FOOC"));
 
       S_CHECK(rmdl_initfromfullmdl(mdl_rhp_for_fooc, mdl));
+      release_mdl_rhp_for_fooc = true;
 
    } else if (mdl_is_rhp(mdl)) {
       mdl_rhp_for_fooc = mdl;
@@ -210,7 +212,9 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
 
    *mdl_target = mdl_mcp;
 
-   mdl_release(mdl_rhp_for_fooc);
+   if (release_mdl_rhp_for_fooc) {
+      mdl_release(mdl_rhp_for_fooc);
+   }
 
    return OK;
 }
@@ -273,7 +277,7 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
   /* ----------------------------------------------------------------------
    * We prepare the model, including fops for the lower level part
    * ---------------------------------------------------------------------- */
-   
+ 
    mdl_linkmodels(mdl_rhp_for_fooc, mdl_mpec);
    S_CHECK(mdl_prepare_fooc(mdl_rhp_for_fooc, mdl_mpec));
 

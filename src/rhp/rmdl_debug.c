@@ -15,15 +15,15 @@ void rmdl_debug_active_vars(Container *ctr)
 {
 
    assert(ctr_is_rhp(ctr));
-   struct ctrdata_rhp *model = (struct ctrdata_rhp *)ctr->data;
-   size_t total_n = model->total_n;
+   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)ctr->data;
+   size_t total_n = cdat->total_n;
 
    error("%s :: there are:\n%zu total variables\n%zu actives ones\n",
             __func__, total_n, (size_t)ctr->n);
    errormsg("\nList of active variables:\n");
 
    for (size_t i = 0; i < total_n; ++i) {
-      if (model->vars[i]) {
+      if (cdat->vars[i]) {
          error("[%5zu] %s\n", i, ctr_printvarname(ctr, i));
       }
    }
@@ -31,7 +31,7 @@ void rmdl_debug_active_vars(Container *ctr)
    errormsg("\nList of inactive variables:\n");
 
    for (size_t i = 0; i < total_n; ++i) {
-      if (!model->vars[i]) {
+      if (!cdat->vars[i]) {
          error("[%5zu] %s\n", i, ctr_printvarname(ctr, i));
       }
    }

@@ -224,50 +224,62 @@ int gams_load_libs(const char *sysdir)
 
    if (!gmoLibraryLoaded() && !gmoGetReadyD(sysdir, msg, sizeof(msg))) {
       error("%s\n", msg);
-      return 1;
+      return Error_GamsIncompleteSetupInfo;
    }
    CHK_CORRECT_LIBVER(gmo, GMO, msg);
 
    if (!gevLibraryLoaded() && !gevGetReadyD(sysdir, msg, sizeof(msg))) {
       error("%s\n", msg);
-      return 1;
+      return Error_GamsIncompleteSetupInfo;
    }
    CHK_CORRECT_LIBVER(gev, GEV, msg);
 
    if (!dctLibraryLoaded() && !dctGetReadyD(sysdir, msg, sizeof(msg))) {
       error("%s\n", msg);
-      return 1;
+      return Error_GamsIncompleteSetupInfo;
    }
    CHK_CORRECT_LIBVER(dct, DCT, msg);
 
    if (!cfgLibraryLoaded() && !cfgGetReadyD(sysdir, msg, sizeof(msg))) {
       error("%s\n", msg);
-      return 1;
+      return Error_GamsIncompleteSetupInfo;
    }
    CHK_CORRECT_LIBVER(cfg, CFG, msg);
 
    if (!optLibraryLoaded() && !optGetReadyD(sysdir, msg, sizeof(msg))) {
       error("%s\n", msg);
-      return 1;
+      return Error_GamsIncompleteSetupInfo;
    }
    CHK_CORRECT_LIBVER(opt, OPT, msg);
 
    if (!gdxLibraryLoaded() && !gdxGetReadyD(sysdir, msg, sizeof(msg))) {
       error("%s\n", msg);
-      return 1;
+      return Error_GamsIncompleteSetupInfo;
    }
    CHK_CORRECT_LIBVER(gdx, GDX, msg);
 
    if (!gmdLibraryLoaded() && !gmdGetReadyD(sysdir, msg, sizeof(msg))) {
       error("%s\n", msg);
-      return 1;
+      return Error_GamsIncompleteSetupInfo;
    }
    CHK_CORRECT_LIBVER(gmd, GMD, msg);
+
    return OK;
 }
 
+#if defined(__has_feature)
+#   if __has_feature(address_sanitizer) // for clang
+#       define __SANITIZE_ADDRESS__ // GCC already sets this
+#   endif
+#endif
+
+#if defined(__SANITIZE_ADDRESS__)
+    // ASAN is enabled . . .
+#endif
+
 void gams_unload_libs(void)
 {
+#ifndef __SANITIZE_ADDRESS__
    if (cfgLibraryLoaded()) cfgLibraryUnload();
    if (dctLibraryLoaded()) dctLibraryUnload();
    if (gdxLibraryLoaded()) gdxLibraryUnload();
@@ -275,6 +287,7 @@ void gams_unload_libs(void)
    if (gmdLibraryLoaded()) gmdLibraryUnload();
    if (gmoLibraryLoaded()) gmoLibraryUnload();
    if (optLibraryLoaded()) optLibraryUnload();
+#endif
 }
 
 void gcdat_rel(GmsContainerData *gms)

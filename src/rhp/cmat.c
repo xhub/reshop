@@ -157,7 +157,6 @@ static CMatElt* cmat_elt_new(Container *ctr, rhp_idx ei, rhp_idx vi, bool isNL,
       assert(cdat->vars[vi]->placeholder);
       me->prev_equ = NULL;
 
-      FREE(cdat->vars[vi]);
       cdat->vars[vi] = me;
 
    } else {
@@ -945,6 +944,8 @@ int cmat_rm_equ(Container *ctr, rhp_idx ei)
       } else { /* We are deleting the first equation where the variable appears */
          /* set model->vars  */
          rhp_idx vi = me->vi;
+
+         assert(!cdat->vars[vi] || !cdat->vars[vi]->placeholder);
          cdat->vars[vi] = me->next_equ;
 
          /*  If this is true, the variable disappear from the container */

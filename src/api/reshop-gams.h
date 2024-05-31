@@ -54,6 +54,14 @@ RHP_PUBLIB
 int rhp_gms_loadlibs(const char* sysdir);
 RHP_PUBLIB
 int rhp_gms_fillmdl(struct rhp_mdl *mdl);
+RHP_PUBLIB
+int rhp_gms_set_gamsprintops(struct rhp_mdl *mdl);
+RHP_PUBLIB
+void* rhp_gms_getgmo(struct rhp_mdl *mdl);
+RHP_PUBLIB
+void* rhp_gms_getgev(struct rhp_mdl *mdl);
+RHP_PUBLIB
+const char* rhp_gms_getsysdir(struct rhp_mdl *mdl);
 
 RHP_PUBLIB
 int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir, unsigned char codelen, const char *code, unsigned char argslen, const char *args);

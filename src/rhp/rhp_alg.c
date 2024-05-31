@@ -575,6 +575,9 @@ int rmdl_presolve(Model *mdl, unsigned backend)
          FREE(ctr->rosetta_vars);
          FREE(ctr->rosetta_equs);
 
+         /* mdl_export links mdl and mdl_solver */
+         mdl_release(mdl);
+         mdl_solver->mdl_up = NULL;
       }
    }
 

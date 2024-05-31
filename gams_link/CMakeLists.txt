@@ -34,7 +34,8 @@ add_library(${RESHOP_GAMSLINK_LIB} SHARED ${RESHOP_GAMSLINK_LIB_C_FILES})
 
 # This adds gmsrhp_ux.out
 set(RESHOP_GAMSLINK_EXE "gmsrhp_ux.out")
-add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c")
+add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgmomcc.c;"
+                                      "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgevmcc.c")
 
 list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE} ${RESHOP_GAMSLINK_LIB})
 
@@ -56,7 +57,8 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
       LINKER:--warn-common LINKER:--allow-shlib-undefined -nostartfiles LINKER:-Bsymbolic
       LINKER:--no-undefined LINKER:-z,defs LINKER:-z,now LINKER:-z,relro)
    target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE
-   LINKER:--warn-common LINKER:--no-undefined LINKER:-z,defs LINKER:-z,now LINKER:-z,relro)
+   LINKER:--warn-common LINKER:--no-undefined LINKER:-z,defs LINKER:-z,now LINKER:-z,relro
+   LINKER:--disable-new-dtags)
 elseif(APPLE)
    target_link_options (${RESHOP_GAMSLINK_LIB} PRIVATE "-Wl,-rpath,@loader_path/")
    target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE "-Wl,-rpath,@loader_path/")

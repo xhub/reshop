@@ -16,6 +16,7 @@
 #include "mdl_ops.h"
 #include "ctrdat_rhp.h"
 #include "ctrdat_rhp_priv.h"
+#include "mdl_priv.h"
 #include "mdl_rhp.h"
 #include "nltree.h"
 #include "pool.h"
@@ -168,6 +169,7 @@ static int rmdl_checkmdl(Model *mdl)
 
 static int rmdl_copyassolvable(Model *mdl, Model *mdl_src)
 {
+   mdl_linkmodels(mdl_src, mdl);
    return rmdl_export(mdl_src, mdl);
 }
 
@@ -667,6 +669,8 @@ int rmdl_setobjvar(Model *mdl, rhp_idx objvar)
 
    if (!cdat->vars[objvar]) {
       cdat->vars[objvar] = cmat_objvar(objvar);
+      cdat_add2free(cdat, cdat->vars[objvar]);
+
       if (mdl->ctr.varmeta && (mdl->ctr.varmeta[objvar].ppty & VarIsDeleted)) {
         mdl->ctr.varmeta[objvar].ppty &= ~VarIsDeleted;
       }

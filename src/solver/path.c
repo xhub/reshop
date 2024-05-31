@@ -70,23 +70,25 @@ static int load_pathlib(Model *mdl)
 {
    if (!libpath_handle) {
       const char* libname, *opt_libpath_fname = NULL;
+      bool copy_libpath_fname = false;
 
       if (!libpath_fname) {
          opt_libpath_fname = optvals(mdl, Options_Pathlib_Name);
 
          if (opt_libpath_fname && strlen(opt_libpath_fname) > 0) {
             libpath_fname = opt_libpath_fname;
+            copy_libpath_fname = true;
          }
       }
 
       if (libpath_fname) {
          libpath_handle = open_library(libpath_fname, 0);
          if (libpath_handle) {
-           libname = libpath_fname;
+           libname = copy_libpath_fname ? strdup(libpath_fname) : libpath_fname;
          }
       }
 
-      myfreeenvval(opt_libpath_fname);
+      FREE(opt_libpath_fname);
 
       unsigned ii = ARRAY_SIZE(path_libnames);
       while (!libpath_handle && ii <= ARRAY_SIZE(path_libnames) && ii > 0) {

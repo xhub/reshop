@@ -606,8 +606,6 @@ int mdl_copyassolvable(Model *mdl, Model *mdl_src)
    S_CHECK(mdl_check(mdl_src));
    S_CHECK(mdl_checkmetadata(mdl_src));
 
-   mdl_linkmodels(mdl_src, mdl);
-
    S_CHECK(mdl->ops->copyassolvable(mdl, mdl_src));
 
    /* TODO: hopefully we can remove this */

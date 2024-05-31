@@ -205,9 +205,14 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
    trim_newline(buffer, len);
 
    SN_CHECK_EXIT(rhp_gms_setgamsdir(mdl, buffer));
+
+   SN_CHECK_EXIT(rhp_gms_loadlibs(buffer));
+
    SN_CHECK_EXIT(rhp_gms_setgamscntr(mdl, cntrfile));
 
    SN_CHECK_EXIT(gcdat_loadmdl(mdl->ctr.data, mdl->data));
+
+   rhp_gms_set_gamsprintops(mdl);
 
    SN_CHECK_EXIT(rhp_gms_fillmdl(mdl));
 
@@ -215,7 +220,6 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
 
    SN_CHECK_EXIT(mdl_check(mdl));
 
-    
    return mdl;
 
 _exit:
@@ -265,7 +269,7 @@ int rhp_gms_fillmdl(Model *mdl)
     * --------------------------------------------------------------------- */
 
    gmoNameModel(gmo, buffer);
-   A_CHECK(mdl->commondata.name, strdup(buffer));
+   S_CHECK(mdl_setname(mdl, buffer));
 
    const GmsModelData *mdldat = mdl->data;
    assert(mdldat->scrdir);
@@ -514,4 +518,89 @@ int rhp_gms_writesol2gdx(Model *mdl, const char *gdxname)
    S_CHECK(gams_chk_str(gdxname, __func__));
 
    return gmdl_writesol2gdx(mdl, gdxname);
+}
+
+#define LOGMASK         0x1
+#define STATUSMASK      0x2
+#define ALLMASK         (LOGMASK | STATUSMASK)
+
+/** @brief Print out log or status message to the screen.
+ *         It strips off one new line if it exists.
+ *
+ *  @param  env          ReSHOP GAMS record as an opaque object
+ *  @param  reshop_mode  mode indicating log, status, or both.
+ *  @param  str          the actual string
+ */
+static void gamsprint(void* env, UNUSED unsigned reshop_mode, const char *str)
+{
+   gevHandle_t gev = (gevHandle_t)env;
+   /* TODO(Xhub) support status and all ...  */
+   int mode = LOGMASK;
+
+   switch (mode & ALLMASK) {
+   case LOGMASK:
+      gevLogPChar(gev, str);
+      break;
+   case STATUSMASK:
+      gevStatPChar(gev, str);
+      break;
+   case ALLMASK:
+      gevLogStatPChar(gev, str);
+      break;
+   }
+
+}
+
+/**
+ * @brief Flush the output streams
+ *
+ * @param env  ReSHOP GAMS record as an opaque object
+ */
+static void gamsflush(void* env)
+{
+   gevHandle_t gev = (gevHandle_t)env;
+   gevLogStatFlush(gev);
+
+}
+
+int rhp_gms_set_gamsprintops(Model *mdl)
+{
+   S_CHECK(gams_chk_mdlfull(mdl, __func__));
+
+   GmsContainerData *gms = mdl->ctr.data;
+
+   if (!gms->gev) {
+      error("%s ERROR: GEV object is NULL!", __func__);
+      return Error_GamsIncompleteSetupInfo;
+   }
+
+   rhp_set_printops(gms->gev, gamsprint, gamsflush, false);
+
+   return OK;
+}
+
+void* rhp_gms_getgmo(struct rhp_mdl *mdl)
+{
+   SN_CHECK(gams_chk_mdlfull(mdl, __func__));
+
+   GmsContainerData *gms = mdl->ctr.data;
+
+   return gms->gmo;
+}
+
+void* rhp_gms_getgev(struct rhp_mdl *mdl)
+{
+   SN_CHECK(gams_chk_mdlfull(mdl, __func__));
+
+   GmsContainerData *gms = mdl->ctr.data;
+
+   return gms->gev;
+}
+
+const char* rhp_gms_getsysdir(struct rhp_mdl *mdl)
+{
+   SN_CHECK(gams_chk_mdlfull(mdl, __func__));
+   GmsModelData *gmdldat = mdl->data;
+
+   return gmdldat->gamsdir;
 }
