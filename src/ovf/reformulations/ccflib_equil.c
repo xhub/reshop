@@ -64,7 +64,7 @@ static int ccflib_equil_dfs_primal(dagid_t mpid, DfsData *dfsdat, DagMpArray *mp
 
 
 
-#ifdef RHP_DEV_MODE
+#if defined(RHP_DEV_MODE) && false
 #include "rhp_dot_exports.h"
 #define DEBUG_DISPLAY_OBJEQU(mdl, mp) { \
    rhp_idx eiobj = mp_getobjequ(mp); assert(valid_ei(eiobj)); \
