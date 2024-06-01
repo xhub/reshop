@@ -72,7 +72,7 @@ validate-dac:
 
 validate-wei:
   stage: validate
-  tags: [windows]
+  tags: [pond]
   image:
     name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
   needs: [fetch-ci-scripts,install-gamsdist-wei,build-wei]

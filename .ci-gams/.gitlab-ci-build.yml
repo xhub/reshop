@@ -78,7 +78,7 @@ build-dac:
 
 build-wei:
   stage: build
-  tags: [windows]
+  tags: [pond]
   image:
     name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
   before_script:
