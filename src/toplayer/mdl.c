@@ -262,14 +262,16 @@ int mdl_setname(Model *mdl, const char *name)
    return OK;
 }
 
+const static char default_mdlname[] = "noname";
+
 const char* mdl_getname(const Model *mdl)
 {
-  return !mdl ? "ERROR NULL mdl" : (mdl->commondata.name ? mdl->commondata.name : "noname");
+  return !mdl ? "ERROR NULL mdl" : (mdl->commondata.name ? mdl->commondata.name : (mdl->mdl_up ? mdl_getname(mdl->mdl_up) : default_mdlname));
 }
 
 int mdl_getnamelen(const Model *mdl)
 {
-  return !mdl->commondata.name ? 0 : (int)strlen(mdl->commondata.name);
+  return mdl->commondata.name ? (int)strlen(mdl->commondata.name) : (mdl->mdl_up ? mdl_getnamelen(mdl->mdl_up) : (int)strlen(default_mdlname));
 }
 
 rhp_idx mdl_getcurrentvi(const Model * const mdl, rhp_idx vi)

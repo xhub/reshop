@@ -249,6 +249,11 @@ int rhp_gms_fillmdl(Model *mdl)
       return Error_NullPointer;
    }
 
+   if (gmoIndexBase(gmo) != 0) {
+      error("[GAMS/GMO] ERROR: GMO index base should be 0, got %d\n", gmoIndexBase(gmo));
+      return Error_GamsIncompleteSetupInfo;
+   }
+
    /* ---------------------------------------------------------------------
     * Set array index base to 0.
     * --------------------------------------------------------------------- */

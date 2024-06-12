@@ -207,6 +207,8 @@ int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
    gms->owning_handles = false;
    gms->owndct = false;
 
+   gmoIndexBaseSet(gms->gmo, 0);
+
    gms->initialized = true;
 
    MALLOC_(gms->rhsdelta, double, gmoM(gmsh->gh)+1);

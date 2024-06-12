@@ -65,22 +65,13 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
    gmoHandle_t gmodst = gmsdst->gmo;
    gmoHandle_t gmosrc = gmssrc->gmo;
 
-   gmoPinfSet(gmodst, gmoPinf(gmosrc));
-   gmoMinfSet(gmodst, gmoMinf(gmosrc));
-
-   gmoNameModelSet(gmodst, gmoNameModel(gmosrc, buffer));
-
   /* ----------------------------------------------------------------------
-   * We cannot trust the model type from the source GMO. In case we had an
-   * empty EMP file, it would still be EMP, but the model has actually
-   * another type
+   * We copy the container content without translation
    * ---------------------------------------------------------------------- */
 
-   ModelType mdltype;
-   S_CHECK(mdl_gettype(mdl, &mdltype));
-   
-   assert(gmoModelType(gmosrc) == mdltype_to_gams(mdltype) || gmoModelType(gmosrc) == gmoProc_emp);
-   gmoModelTypeSet(gmodst, mdltype_to_gams(mdltype));
+   gmoPinfSet(gmodst, gmoPinf(gmosrc));
+   gmoMinfSet(gmodst, gmoMinf(gmosrc));
+   gmoIndexBaseSet(gmodst, gmoIndexBase(gmosrc));
 
    int nvars = gmoN(gmosrc);
    int nequs = gmoM(gmosrc);
@@ -135,6 +126,9 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
     * Add equations
     * --------------------------------------------------------------------- */
 
+   int offset_match = 1 - gmoIndexBase(gmosrc);
+   assert(offset_match >= 0 && offset_match <= 1); 
+
    for (int idx = 0; idx < nequs; ++idx) {
 
       /* ------------------------------------------------------------------
@@ -143,11 +137,12 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
 
       int nnz, nnzNL;
       GMSCHK(gmoGetRowSparse(gmosrc, idx, colidxs, jacvals, nlflags, &nnz, &nnzNL));
+      int match = gmoGetEquMatchOne(gmosrc, idx) + offset_match;
 
       GMSCHK(gmoAddRow(
                 gmodst,
                 gmoGetEquTypeOne(gmosrc, idx),    /* type of equation       */
-                gmoGetEquMatchOne(gmosrc, idx),   /* index of matching var  */
+                match,                            /* index of matching var  */
                 gmoGetEquSlackOne(gmosrc, idx),   /* slack value            */
                 gmoGetEquScaleOne(gmosrc, idx),   /* scale of equation      */
                 gmoGetRhsOne(gmosrc, idx),        /* right-hand side value  */
@@ -215,6 +210,7 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
                mdl_fmtargs(mdl), objstyle);
          return Error_RuntimeError;
       }
+      gmoObjReformSet(gmodst, gmoObjReform(gmosrc));
    }
 
   /* ----------------------------------------------------------------------
@@ -225,8 +221,11 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
    gmoDictSet(gmodst, dctsrc);
 
    gmoPriorOptSet(gmodst, gmoPriorOpt(gmosrc));
-   gmoScaleOptSet(gmodst, 0);
+   gmoScaleOptSet(gmodst, gmoScaleOpt(gmosrc));
    gmoHaveBasisSet(gmodst, gmoHaveBasis(gmosrc));
+   gmoIsMPSGESet(gmodst, gmoIsMPSGE(gmosrc));
+
+
    GMSCHK(gmoCompleteData(gmodst, buffer));
 
    return OK;

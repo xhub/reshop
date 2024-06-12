@@ -308,12 +308,13 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
       const GmsModelData *mdldat_up = mdl_gms_up->data;
       Container *ctr_up = &mdl_gms_up->ctr;
       const GmsContainerData *gms = ctr_up->data;
+      gevHandle_t gev = gms->gev;
 
       /* -------------------------------------------------------------------
        * Get a new scratch dir
        * ------------------------------------------------------------------- */
 
-      gevGetStrOpt(gms->gev, gevNameScrDir, scrdir);
+      gevGetStrOpt(gev, gevNameScrDir, scrdir);
       if(!dir_exists(scrdir)) {
          error("[gams] ERROR: cannot access scrdir '%s' of %s model '%.*s' #%u\n",
                scrdir, mdl_fmtargs(mdl_gms_up));
@@ -330,7 +331,7 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
                      mdldat_up->gamsdir, mdl_fmtargs(mdl_gms_up));
          STRNCPY_FIXED(mdldat_gms->gamsdir, mdldat_up->gamsdir);
       } else {
-         gevGetStrOpt(gms->gev, gevNameSysDir, mdldat_gms->gamsdir);
+         gevGetStrOpt(gev, gevNameSysDir, mdldat_gms->gamsdir);
          trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' set from GEV\n",
                      mdl_fmtargs(mdl_gms), mdldat_gms->gamsdir);
       }
@@ -359,7 +360,7 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
       strncat(logfile_new, "gamslog.dat", strlen(logfile_new)-1);
 
 
-      if (gevDuplicateScratchDir(gms->gev, scrdir, logfile_new, gamsctrl_new)) {
+      if (gevDuplicateScratchDir(gev, scrdir, logfile_new, gamsctrl_new)) {
          errormsg("[GAMS] ERROR: call to gevDuplicateScratchDir failed\n");
          return Error_SystemError;
       }

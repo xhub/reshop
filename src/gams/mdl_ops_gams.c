@@ -286,17 +286,21 @@ static int gams_solve(Model *mdl)
       optname[len_scrdir] = '\0';
 
       size_t mdlname_len = mdl_getnamelen(mdl);
+      assert(mdlname_len > 0);
+
       struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-      A_CHECK(working_mem.ptr, ctr_getmem(ctr, mdlname_len * sizeof(char)));
+      A_CHECK(working_mem.ptr, ctr_getmem(ctr, (1+mdlname_len) * sizeof(char)));
       char *mdlname = working_mem.ptr;
+      memcpy(mdlname, mdl_getname(mdl), mdlname_len);
+      mdlname[mdlname_len] = '\0';
 
-
-      char *name = mdlname;
+      char * restrict name = mdlname;
       while (*name != '\0') {
-         if (!(*name >= 'a' && *name <= 'z') &&
-            !(*name >= 'A' && *name <= 'Z') &&
-            !(*name >= '0' && *name <= '9') &&
-            !(*name == '_')) {
+         char c = *name;
+         if (!(c >= 'a' && c <= 'z') &&
+             !(c >= 'A' && c <= 'Z') &&
+             !(c >= '0' && c <= '9') &&
+             !(c == '_')) {
 
             *name = '_';
          }
@@ -330,8 +334,8 @@ static int gams_solve(Model *mdl)
       ret = system(cmd);
       FREE(cmd);
 
-      ret = asprintf(&cmd, "sed -f '%s" DIRSEP "%s-%u.sed' > '%s" DIRSEP "%s-%u-named.gms",
-                     optname, mdlname, mdl->id, optname, mdlname, mdl->id);
+      ret = asprintf(&cmd, "sed -f '%1$s" DIRSEP "%2$s-%3$u.sed' '%1$s" DIRSEP "%2$s-%3$u.gms' > '%1$s" DIRSEP "%2$s-%3$u-named.gms'",
+                     optname, mdlname, mdl->id);
 
       if (ret == -1) { goto skip; }
       ret = system(cmd);
@@ -737,17 +741,19 @@ static int gams_export2gmo(Model *mdl, Model *mdl_dst)
    case MdlType_vi:
    case MdlType_emp: {
 
-      
       error("[gams] ERROR in %s model '%.*s' #%u: type %s not exportable to GMO\n",
             mdl_fmtargs(mdl), mdltype_name(mdltype));
       return Error_RuntimeError;
    }
+
    case MdlType_cns:        /**< CNS   Constrained Nonlinear System */
       error("%s :: CNS is not yet supported\n", __func__);
       return Error_NotImplemented;
+
    case MdlType_dnlp:       /**< DNLP  Nondifferentiable NLP  */
       error("%s :: nonsmooth NLP are not yet supported\n", __func__);
       return Error_NotImplemented;
+
    default:
       error("%s :: no solve procedure for a model of type %s\n", __func__,
             mdltype_name(mdltype));
@@ -1205,7 +1211,7 @@ static int gams_setobjsense(Model *mdl, RhpSense objsense)
 
 static int gams_setobjvar(Model *mdl, rhp_idx objvar)
 {
-   S_CHECK(valid_vi_(objvar, ctr_nvars(&mdl->ctr), __func__));
+   S_CHECK(vi_inbounds(objvar, ctr_nvars(&mdl->ctr), __func__));
 
    gmoObjVarSet(((GmsContainerData *) mdl->ctr.data)->gmo, objvar);
    return OK;
