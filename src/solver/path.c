@@ -69,7 +69,7 @@ static const char *path_libnames[] = {
 static int load_pathlib(Model *mdl)
 {
    if (!libpath_handle) {
-      const char* libname, *opt_libpath_fname = NULL;
+      const char* libname = NULL, *opt_libpath_fname = NULL;
       bool copy_libpath_fname = false;
 
       if (!libpath_fname) {
@@ -97,7 +97,7 @@ static int load_pathlib(Model *mdl)
          libpath_handle = open_library(libname, 0);
       }
 
-      if (!libpath_handle) {
+      if (!libpath_handle || !libname) {
          errormsg("[PATH] ERROR: Could not find the PATH solver. The following names where tried: ");
          for (unsigned i = 0, len = ARRAY_SIZE(path_libnames); i < len; ++i) {
             errormsg(path_libnames[i]); errormsg(" ");

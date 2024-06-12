@@ -262,7 +262,7 @@ int mdl_setname(Model *mdl, const char *name)
    return OK;
 }
 
-const static char default_mdlname[] = "noname";
+static const char default_mdlname[] = "noname";
 
 const char* mdl_getname(const Model *mdl)
 {

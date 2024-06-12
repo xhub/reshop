@@ -324,8 +324,14 @@ static int gams_solve(Model *mdl)
 
       S_CHECK(gams_solve(mdl));
 
-#ifdef __unix__
-      char *cmd;
+#if defined(__linux__) || defined(__APPLE__)
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat"
+#endif
+
+     char *cmd;
       int ret = asprintf(&cmd, "sed -n -e 'y/(),-/____/' -e 's:^ *\\([exbi][0-9][0-9]*\\) \\(.*\\):s/\\1/\\2/g:gp' "
                          "'%s" DIRSEP "dict-%s-%u.txt' | sed -n '1!G;h;$p' > '%s" DIRSEP "%s-%u.sed'",
                          optname, mdlname, mdl->id, optname, mdlname, mdl->id);
@@ -340,6 +346,9 @@ static int gams_solve(Model *mdl)
       if (ret == -1) { goto skip; }
       ret = system(cmd);
       FREE(cmd);
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 skip:
 #endif
       /* ------------------------------------------------------------------
