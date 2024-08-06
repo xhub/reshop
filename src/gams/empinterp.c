@@ -204,7 +204,7 @@ static int interp_loadgmdsets(Interpreter *interp)
    for (int i = 0; i < nsymbols; ++i) {
       void *symptr;
       int symtype, symdim, nrecs;
-      GMD_CHK(gmdGetSymbolByIndex, gmd, i, &symptr);
+      GMD_CHK(gmdGetSymbolByIndex, gmd, i + 1, &symptr);
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_TYPE, &symtype, NULL, NULL);
 
       if (symtype != GMS_DT_SET) { continue; }

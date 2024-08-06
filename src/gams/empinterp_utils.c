@@ -233,7 +233,7 @@ int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
    * WARNING: this relies on symidx being GMD_NUMBER
    * ---------------------------------------------------------------------- */
    void *symptr;
-   GMD_CHK(gmdGetSymbolByNumber, gmd, symidx, &symptr);
+   GMD_CHK(gmdGetSymbolByNumber, gmd, symidx + 1, &symptr);
 
    if (O_Output & PO_TRACE_EMPPARSER) {
       char quote = '\'';
