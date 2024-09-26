@@ -127,7 +127,7 @@ sanitizer:
     - export LD_LIBRARY_PATH=$(pwd); ctest -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) || ctest --rerun-failed --output-on-failure
   parallel:
     matrix:
-      - COMPILER: ["gcc-14_g++-14", "clang-18_clang++-18"]
+      - COMPILER: ["gcc-14_g++-14", "clang-19_clang++-19"]
         SANITIZER: [Asan, UBsan]
 
 
