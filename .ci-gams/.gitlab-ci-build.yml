@@ -4,9 +4,6 @@ build-leg:
   image:
     name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
     entrypoint: [""]
-  before_script:
-    - pip3 install --user -U pip
-    - pip3 install --user cmake
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
@@ -28,9 +25,6 @@ build-debug-leg:
   image:
     name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
     entrypoint: [""]
-  before_script:
-    - pip3 install --user -U pip
-    - pip3 install --user cmake
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
@@ -49,7 +43,6 @@ build-debug-leg:
 build-deg:
   stage: build
   tags: [macos]
-  before_script:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-deg]
@@ -68,7 +61,6 @@ build-deg:
 build-dac:
   stage: build
   tags: [macos-arm64]
-  before_script:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-dac]
@@ -89,7 +81,6 @@ build-wei:
   tags: [pond]
   image:
     name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
-  before_script:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-wei]
