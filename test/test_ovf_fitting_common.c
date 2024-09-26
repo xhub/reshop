@@ -32,7 +32,7 @@ double sigma_y[] = {61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 
 
 
 #define ADD_V_EQUIL(MP, FN) { \
-  struct rhp_ovf_def *ovfdef; \
+  struct rhp_ovfdef *ovfdef; \
   RESHOP_CHECK(FN(mdl, MP, loss_fn, &ovfdef)); \
   if (reformulation) { \
     RESHOP_CHECK(rhp_ovf_setreformulation(ovfdef, reformulation)); \
@@ -48,19 +48,19 @@ double sigma_y[] = {61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 
 #define TOL_EPS 1e-10
 #define TOL_EPSLAX 1e-4
 
-typedef int (*param_fn)(struct rhp_ovf_def *ovf_def);
+typedef int (*param_fn)(struct rhp_ovfdef *ovf_def);
 
-static int param_kappa(struct rhp_ovf_def *ovf_def)
+static int param_kappa(struct rhp_ovfdef *ovf_def)
 {
   return rhp_ovf_param_add_scalar(ovf_def, "kappa", 0.67);
 }
 
-static int param_epsilon(struct rhp_ovf_def *ovf_def)
+static int param_epsilon(struct rhp_ovfdef *ovf_def)
 {
   return rhp_ovf_param_add_scalar(ovf_def, "epsilon", 0.77);
 }
 
-static int param_lambda(struct rhp_ovf_def *ovf_def)
+static int param_lambda(struct rhp_ovfdef *ovf_def)
 {
   return rhp_ovf_param_add_scalar(ovf_def, "lambda", 0.999);
 }
@@ -107,7 +107,7 @@ static size_t loss_fn_idx(const char * loss_fn_str)
   return SIZE_MAX;
 }
 
-static int loss_fn_params(struct rhp_ovf_def *ovf_def, const char *loss_fn)
+static int loss_fn_params(struct rhp_ovfdef *ovf_def, const char *loss_fn)
 {
   int status = 0;
 
@@ -254,7 +254,7 @@ int fitting_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const char *re
       RESHOP_CHECK(rhp_mdl_setequrhs(mdl, ei, -y[i]/sigma_y[i]));
    }
 
-  struct rhp_ovf_def *ovf_def;
+  struct rhp_ovfdef *ovf_def;
   RESHOP_CHECK(rhp_ovf_add(mdl, loss_fn, ovf_idx, v_arg_ovf, &ovf_def));
 
   RESHOP_CHECK(loss_fn_params(ovf_def, loss_fn));
@@ -277,7 +277,7 @@ _exit:
   return status == RHP_OK ? 0 : 1;
 }
 
-static int add_v1(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovf_def **ovf)
+static int add_v1(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovfdef **ovf)
 {
 
   int status = RHP_OK;
@@ -347,7 +347,7 @@ _exit:
 }
 
 
-static int add_v2(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovf_def **ovf)
+static int add_v2(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovfdef **ovf)
 {
 
   int status = RHP_OK;
@@ -456,7 +456,7 @@ _exit:
   return status;
 }
 
-static int add_v3(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovf_def **ovf)
+static int add_v3(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovfdef **ovf)
 {
 
   int status = RHP_OK;
@@ -524,7 +524,7 @@ _exit:
   return status;
 }
 
-static int add_v4(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovf_def **ovf)
+static int add_v4(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovfdef **ovf)
 {
 
   int status = RHP_OK;
@@ -635,7 +635,7 @@ _exit:
   return status;
 }
 
-static int add_v5(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovf_def **ovf)
+static int add_v5(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss_fn, struct rhp_ovfdef **ovf)
 {
 
   int status = RHP_OK;
@@ -722,7 +722,7 @@ int fitting_v_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const char *
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, 3+nb_equ, nb_equ+1));
 
-  struct rhp_ovf_def *ovfdef;
+  struct rhp_ovfdef *ovfdef;
   switch (ver) {
   case 1:
     RESHOP_CHECK(add_v1(mdl, NULL, loss_fn, &ovfdef));
@@ -782,7 +782,7 @@ int fitting_equil_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const ch
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, 3+nb_equ, nb_equ+1));
 
-  struct rhp_equilibrium *mpe = rhp_empdag_newmpe(mdl);
+  struct rhp_nash_equilibrium *mpe = rhp_empdag_newmpe(mdl);
   RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
 
   struct rhp_mathprgm *mp_v1 = rhp_empdag_newmp(mdl, RHP_MIN);

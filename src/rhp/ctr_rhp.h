@@ -131,6 +131,7 @@ int rctr_equ_add_equ_coeff(Container *ctr, Equ *dst, Equ *src, double coeff) NON
 int rctr_equ_add_equ_x(Container *ctr, Equ * restrict dst, Equ * restrict src,
                        double coeff, const rhp_idx* restrict rosetta)
 NONNULL_AT(1,2,3);
+int rctr_equ_addmulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, double coeff) NONNULL;
 int rctr_equ_submulv_equ(Container *ctr, Equ *dst, Equ *src, rhp_idx vi) NONNULL;
 int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, double coeff) NONNULL;
 

@@ -1,3 +1,4 @@
+#include "ovf_fenchel.h"
 #include "reshop_config.h"
 
 #include <math.h>
@@ -29,8 +30,9 @@
 DEFSTR(MpTypeUndef, "UNDEF") \
 DEFSTR(MpTypeOpt, "OPT") \
 DEFSTR(MpTypeVi, "VI") \
-DEFSTR(MpTypeCcflib, "CCFLIB")
-
+DEFSTR(MpTypeCcflib, "CCFLIB") \
+DEFSTR(MpTypeDual, "DUAL") \
+DEFSTR(MpTypeFooc, "FOOC")
 
 /* See GITLAB #83 */
 /* DEFSTR(MpTypeMcp, "MCP") \
@@ -68,18 +70,20 @@ DEFINE_STR()
 static_assert(sizeof(mptypesnames_offsets)/sizeof(mptypesnames_offsets[0]) == MpTypeLast+1,
               "Incompatible sizes!");
 
-const char* mptype_str(unsigned type)
+const char* mptype2str(unsigned type)
 {
    if (type >= MpTypeLast) return "ERROR unknown MP type";
 
    return mptypesnames.dummystr + mptypesnames_offsets[type];
 }
 
-static inline int mp_addvarchk(MathPrgm *mp, rhp_idx vi) {
+static inline int mp_addvarchk(MathPrgm *mp, rhp_idx vi)
+{
    assert(mp->mdl->ctr.varmeta);
    int rc = OK;
 
    S_CHECK(vi_inbounds(vi, ctr_nvars_total(&mp->mdl->ctr), __func__));
+
    unsigned mp2_id = mp->mdl->ctr.varmeta[vi].mp_id;
    if (mp2_id != MpId_NA) {
       EmpDag *empdag = &mp->mdl->empinfo.empdag;
@@ -97,11 +101,12 @@ static inline int mp_addvarchk(MathPrgm *mp, rhp_idx vi) {
       }
       return Error_Inconsistency;
    }
+
    mp->mdl->ctr.varmeta[vi].mp_id = mp->id;
    MP_DEBUG("MP(%s) owns var '%s'\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id),
             ctr_printvarname(&mp->mdl->ctr, vi));
 
-   rc = rhp_int_addsorted(&mp->vars, vi);
+   rc = rhp_idx_addsorted(&mp->vars, vi);
    if (rc == Error_DuplicateValue) {
       error("%s :: variable %s is already assigned to MP %d\n",
             __func__, ctr_printvarname(&mp->mdl->ctr, vi), mp->id);
@@ -154,7 +159,7 @@ static inline int _setequrolechk(MathPrgm *mp, rhp_idx ei, EquRole role) {
 
 static int err_noobj(MathPrgm *mp) {
    error("[empdag] ERROR: MP is of type %s (#%u) which does not have"
-         " an objective function\n", mptype_str(mp->type), mp->type);
+         " an objective function\n", mptype2str(mp->type), mp->type);
    if (MpTypeUndef == mp->type) {
       errormsg("\tMP has undefined type\n");
    }
@@ -246,13 +251,12 @@ MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl)
    AA_CHECK(mp, mp_alloc(mdl));
 
    if (id > MpId_MaxRegular) {
-      error("[MP] ERROR: cannot create MP with ID %u, the max one is %u",
+      error("[MP] ERROR: cannot create MP with ID %u, the max one is %u\n",
             id, MpId_MaxRegular);
       return NULL;
    }
 
    mp->id = id;
-   mp->next_id = MpId_NA;
    mp->sense = sense;
 
    switch (sense) {
@@ -262,7 +266,11 @@ MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl)
    case RhpMin: case RhpMax:
       mpopt_init(&mp->opt);
       mp->type = MpTypeOpt; break;
-    default:
+   case RhpDualSense:
+      mpopt_init(&mp->opt);
+      mp->type = MpTypeDual;
+      break;
+   default:
       mp->type = MpTypeUndef;
    }
 
@@ -273,17 +281,41 @@ MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl)
 
 MathPrgm *mp_new_fake(void)
 {
-   return mp_alloc(NULL);
+   MathPrgm *mp;
+   AA_CHECK(mp, mp_alloc(NULL));
+
+   mp->sense = RhpNoSense;
+   return mp;
 }
 
-MathPrgm *mp_dup(const MathPrgm *mp_src,
-                              Model *mdl) {
+MathPrgm *mp_dup(const MathPrgm *mp_src, Model *mdl)
+{
    MathPrgm *mp;
    AA_CHECK(mp, mp_new(mp_src->id, mp_src->sense, mdl));
 
    mp->type = mp_src->type;
    mp->probtype = mp_src->probtype;
    mp->status = mp_src->status;
+
+   switch (mp->type) {
+   case MpTypeOpt:
+      memcpy(&mp->opt, &mp_src->opt, sizeof(mp->opt));
+      mp->opt.objvarval2objequval = false;
+      break;
+   case MpTypeVi:
+      memcpy(&mp->vi, &mp_src->vi, sizeof(mp->vi));
+      break;
+   case MpTypeDual:
+      mp->dual = mp_src->dual;
+      break;
+   case MpTypeCcflib:
+      mp->ccflib.ccf = ovfdef_borrow(mp_src->ccflib.ccf);
+      break;
+   default:
+      error("[MP] ERROR while duplicating MP(%s): type %s is not implemented\n",
+            mp_getname(mp_src), mptype2str(mp->type));
+      return NULL;
+   }
 
    if (mp_isobj(mp)) {
       memcpy(&mp->opt, &mp_src->opt, sizeof(mp->opt));
@@ -298,13 +330,14 @@ MathPrgm *mp_dup(const MathPrgm *mp_src,
    return mp;
 }
 
-void mp_free(MathPrgm *mp) {
+void mp_free(MathPrgm *mp)
+{
    if (!mp) {
       return;
    }
 
    if (mp->type == MpTypeCcflib) {
-      ovf_def_free(mp->ccflib.ccf);
+      ovfdef_free(mp->ccflib.ccf);
    }
    rhp_idx_empty(&mp->equs);
    rhp_idx_empty(&mp->vars);
@@ -323,7 +356,7 @@ void mp_free(MathPrgm *mp) {
 int mp_from_ccflib(MathPrgm *mp, unsigned ccflib_idx) {
    assert(mp->sense == RhpNoSense && mp->type == MpTypeUndef);
 
-   A_CHECK(mp->ccflib.ccf, ovf_def_new(ccflib_idx));
+   A_CHECK(mp->ccflib.ccf, ovfdef_new(ccflib_idx));
 
    mp->sense = mp->ccflib.ccf->sense;
    mp_settype(mp, MpTypeCcflib);
@@ -344,7 +377,7 @@ int mp_settype(MathPrgm *mp, unsigned type) {
    || ((sense == RhpFeasibility) && (type != MpTypeVi))) {
          error("%s :: MP %.*s #%u: type '%s' incompatible with sense '%s'.\n",
                __func__, mp_getnamelen(mp), mp_getname(mp), mp->id,
-               mptype_str(type), sense2str(mp->sense));
+               mptype2str(type), sense2str(mp->sense));
    }
 
    mp->type = type;
@@ -427,6 +460,12 @@ int mp_setobjequ_internal(MathPrgm *mp, rhp_idx objequ)
       return err_noobj(mp);
    }
 
+   rhp_idx objequ_old = mp->opt.objequ;
+
+   if (valid_ei(objequ_old)) {
+      S_CHECK(rhp_idx_rmsortednofail(&mp->equs, objequ_old));
+   }
+
    mp->opt.objequ = objequ;
    _setequrole(mp, objequ, EquObjective);
 
@@ -439,10 +478,29 @@ int mp_setobjequ_internal(MathPrgm *mp, rhp_idx objequ)
 }
 
 /* TODO: merge the 2 functions? */
-int mp_setobjvar(MathPrgm *mp, rhp_idx vi) {
+int mp_setobjvar(MathPrgm *mp, rhp_idx vi)
+{
+   assert(mp_isvalid(mp));
+
    if (!valid_vi(vi)) {
       if (vi == IdxNA && mp_isobj(mp)) {
+         rhp_idx objvar_old = mp->opt.objvar;
          mp->opt.objvar = IdxNA;
+
+         if (valid_vi(objvar_old)) {
+            S_CHECK(rhp_idx_rmsorted(&mp->vars, objvar_old));
+
+            /* TODO: rethink that design */
+            VarMeta *vmeta = &mp->mdl->ctr.varmeta[objvar_old];
+            if (vmeta->type != VarObjective) {
+               error("[MP] ERROR: in MP(%s), old objective variable was not "
+                     "marked as such.\n", mp_getname(mp));
+               return Error_RuntimeError;
+            }
+            vmeta->type = VarPrimal;
+            vmeta->ppty = VarPptyNone;
+         }
+
          return OK;
       }
 
@@ -558,7 +616,7 @@ int mp_addconstraints(MathPrgm *mp, Aequ *e) {
       if (valid_ei(dual)) {
          TO_IMPLEMENT("This code needs to be checked");
          //            if (_getvartype(mp, dual) == Varmeta_Dual) {
-         //               S_CHECK(rhp_int_addsorted(&mp->vars, dual));
+         //               S_CHECK(rhp_idx_addsorted(&mp->vars, dual));
          //            }
       }
    }
@@ -578,7 +636,8 @@ int mp_addvar(MathPrgm *mp, rhp_idx vidx) {
    return OK;
 }
 
-int mp_addvars(MathPrgm *mp, Avar *v) {
+int mp_addvars(MathPrgm *mp, Avar *v)
+{
    for (size_t i = 0; i < v->size; ++i) {
       rhp_idx vi = avar_fget(v, i);
       S_CHECK(mp_addvarchk(mp, vi));
@@ -674,8 +733,6 @@ static int mp_ccflib_finalize(MathPrgm *mp)
    OvfDef *ovfdef = mp->ccflib.ccf;
    S_CHECK(ccflib_finalize(mp->mdl, ovfdef, mp));
 
-   mp->status |= MpFinalized;
-
    return OK;
 }
 
@@ -698,7 +755,12 @@ int mp_finalize(MathPrgm *mp)
    MP_DEBUG("Finalizing MP '%s'\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
 
    if (mp->type == MpTypeCcflib) {
-      return mp_ccflib_finalize(mp);
+      S_CHECK(mp_ccflib_finalize(mp));
+      goto _finalize;
+   }
+
+   if (mp->type == MpTypeDual) {
+      goto _finalize;
    }
 
    if (mp->vars.len == 0) {
@@ -713,15 +775,25 @@ int mp_finalize(MathPrgm *mp)
       return Error_EMPRuntimeError;
    }
 
-   mp->status |= MpFinalized;
+   if (!mp_isobj(mp)) { goto _finalize; }
 
-   if (!mp_isobj(mp)) { return OK; }
+  /* ----------------------------------------------------------------------
+   * We can't enforce the exitence of objvar or objequ if we called from
+   * the empinterp and there is a trivial objequ with only objVF contributions
+   * ---------------------------------------------------------------------- */
 
    rhp_idx objvar = mp->opt.objvar;
    if (!valid_ei(mp->opt.objequ)) {
       if (!valid_vi(objvar)) {
-         mp_err_noobjdata(mp);
-         return Error_IncompleteModelMetadata;
+         const EmpDag *empdag = &mp->mdl->empinfo.empdag;
+         if (!empdag->has_resolved_arcs) { return OK; }
+
+         if (!empdag_mp_hasobjVFchildren(empdag, mp->id)) {
+            mp_err_noobjdata(mp);
+            return Error_IncompleteModelMetadata;
+         }
+
+         goto _finalize;
       }
 
       S_CHECK(mp_identify_objequ(mp));
@@ -730,7 +802,8 @@ int mp_finalize(MathPrgm *mp)
    rhp_idx objequ = mp->opt.objequ;
 
    if (valid_vi(objvar)) {
-      return mdl_checkobjequvar(mp->mdl, objvar, objequ);
+      S_CHECK(mdl_checkobjequvar(mp->mdl, objvar, objequ));
+      goto _finalize;
    }
 
    unsigned type, cone;
@@ -743,6 +816,9 @@ int mp_finalize(MathPrgm *mp)
       return Error_EMPRuntimeError;
    }
 
+_finalize:
+   mp->status |= MpFinalized;
+
    return OK;
 }
 
@@ -750,7 +826,7 @@ int mp_finalize(MathPrgm *mp)
  * GETTERS
  * --------------------------------------------------------------------- */
 
-unsigned mp_getid(const MathPrgm *mp) { return mp->id; }
+mpid_t mp_getid(const MathPrgm *mp) { return mp->id; }
 
 double mp_getobjjacval(const MathPrgm *mp) {
    if (mp_isobj(mp)) {
@@ -795,7 +871,7 @@ rhp_idx mp_getobjvar(const MathPrgm *mp)
 void mp_err_noobjdata(const MathPrgm *mp)
 {
    const EmpDag *empdag = &mp->mdl->empinfo.empdag;
-   error("[FOOC] ERROR: the optimization MP(%s) has neither an objective "
+   error("[MP] ERROR: the optimization MP(%s) has neither an objective "
          "variable or an objective function. This is unsupported, the MP must "
          "have have exactly one of these\n", empdag_getmpname(empdag, mp->id));
 }
@@ -806,7 +882,7 @@ inline ModelType mp_getprobtype(const MathPrgm *mp) {
 }
 
 const char *mp_gettypestr(const MathPrgm *mp) {
-   return mptype_str(mp->type);
+   return mptype2str(mp->type);
 }
 
 unsigned mp_getnumzerofunc(const MathPrgm *mp) {
@@ -817,17 +893,43 @@ unsigned mp_getnumzerofunc(const MathPrgm *mp) {
    return UINT_MAX;
 }
 
-unsigned mp_getnumvars(const MathPrgm *mp) {
+unsigned mp_getnumvars(const MathPrgm *mp)
+{
    assert(mp->type != MpTypeVi || mp->vars.len - mp_getnumzerofunc(mp) == mp->equs.len - mp_getnumcons(mp));
    return mp->vars.len;
 }
 
-unsigned mp_getnumcons(const MathPrgm *mp) {
-if (mp->type == MpTypeVi) {
-      return mp->vi.num_cons;
+unsigned mp_getnumoptvars(const MathPrgm *mp)
+{
+   assert(mp->type != MpTypeVi || mp->vars.len - mp_getnumzerofunc(mp) == mp->equs.len - mp_getnumcons(mp));
+
+   unsigned num_vars = mp->vars.len;
+   rhp_idx objvar = mp->opt.objvar;
+   if (!valid_vi(objvar)) {
+      return num_vars;
    }
 
-   return UINT_MAX;
+   rhp_idx vi = mp->opt.objvar;
+   assert(mdl_valid_vi_(mp->mdl, vi, __func__));
+
+   VarMeta *varmeta = mp->mdl->ctr.varmeta;
+   if (varmeta) {
+      return num_vars - (var_is_defined_objvar(&varmeta[vi]) ? 1 : 0);
+   }
+
+   return num_vars;
+}
+
+unsigned mp_getnumcons(const MathPrgm *mp)
+{
+   switch (mp->type) {
+   case MpTypeVi:
+      return mp->vi.num_cons;
+   case MpTypeOpt:
+      return mp->equs.len - (valid_ei(mp->opt.objequ) ? 1 : 0);
+   default:
+      return UINT_MAX;
+   }
 }
 
 void mp_print(MathPrgm *mp, const Model *mdl) {
@@ -907,7 +1009,7 @@ int mp_trim_memory(MathPrgm *mp) {
 }
 
 /**
- * @brief Remove the variable from the MP
+ * @brief Remove a variable from the MP
  *
  * @param mp   the MP
  * @param vi   the variable to remove
@@ -929,7 +1031,113 @@ int mp_rm_var(MathPrgm *mp, rhp_idx vi) {
    }
 
    mp->mdl->ctr.varmeta[vi].mp_id = UINT_MAX;
-   S_CHECK(rhp_int_rmsorted(&mp->vars, vi));
+   S_CHECK(rhp_idx_rmsorted(&mp->vars, vi));
+
+   return OK;
+}
+
+/**
+ * @brief Remove a constraint from the MP
+ *
+ * @param mp   the MP
+ * @param ei   the equation to remove
+ *
+ * @return     the error code
+ */
+int mp_rm_cons(MathPrgm *mp, rhp_idx ei)
+{
+
+   if (!valid_ei(ei)) {
+      error("%s :: invalid index %d\n", __func__, ei);
+      return Error_IndexOutOfRange;
+   }
+
+   EquMeta *equmeta = mp->mdl->ctr.equmeta;
+   unsigned mp2_id = equmeta[ei].mp_id;
+   if (mp2_id != mp->id) {
+      error("%s :: equation '%s' does not belong to MP(%s)\n", __func__,
+            mdl_printequname(mp->mdl, ei),
+            empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
+      return Error_Inconsistency;
+   }
+
+   equmeta[ei].mp_id = UINT_MAX;
+   S_CHECK(rhp_idx_rmsorted(&mp->equs, ei));
+
+   return OK;
+}
+
+int mp_dualize_fenchel(MathPrgm *mp)
+{
+   Model *mdl = mp->mdl;
+   EmpDag *empdag = &mdl->empinfo.empdag;
+
+   if (mp->type != MpTypeDual) {
+      error("[MP] ERROR: calling %s on MP(%s) of type %s, should be %s",
+            __func__, empdag_getmpname(empdag, mp->id),
+            mptype2str(mp->type), mptype2str(MpTypeDual));
+      return Error_RuntimeError;
+   }
+
+   struct mp_dual *dualdat = &mp->dual;
+
+   MathPrgm *mp_primal;
+   S_CHECK(empdag_getmpbyid(empdag, dualdat->mpid, &mp_primal));
+
+   if (mp_primal->type != MpTypeCcflib) {
+      TO_IMPLEMENT("Dualization of a generic MP");
+   }
+
+   trace_process("[MP] Dualizing MP(%s) into MP(%s) using the Fenchel scheme\n",
+                 mp_getname(mp_primal), mp_getname(mp));
+
+   CcflibData ccfdat = {.mp = mp_primal, .mpid_dual = mp->id };
+   OvfOpsData ovfd = { .ccfdat = &ccfdat };
+
+   mp->type = MpTypeOpt;
+
+   mp->sense = mp_primal->sense == RhpMin ? RhpMax : RhpMin;
+
+   mpopt_init(&mp->opt);
+   mp->status = 0;
+
+   S_CHECK(ovf_fenchel(mdl, OvfType_Ccflib_Dual, ovfd));
+
+   return mp_finalize(mp);
+}
+
+int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
+{
+   if (!mp_isvalid(mp)) {
+      errormsg("[MP] ERROR: invalid MP!\n");
+      return Error_RuntimeError;
+   }
+
+   if (!mp_isopt(mp)) {
+      error("[MP] ERROR: MP(%s) is of type %s, should be %s\n", mp_getname(mp),
+            mptype2str(mp->type), mptype2str(MpTypeOpt));
+      return Error_RuntimeError;
+   }
+
+   rhp_idx ei_ = mp->opt.objequ;
+   if (valid_ei(ei_)) {
+      *ei = ei_;
+      return OK;
+   }
+
+   rhp_idx objvar = mp->opt.objvar;
+
+   /* TODO NAMING */
+   Equ *eobj;
+   Container *ctr = &mp->mdl->ctr;
+   S_CHECK(rctr_add_equ_empty(ctr, ei, &eobj, Mapping, CONE_NONE));
+
+   S_CHECK(mp_setobjvar(mp, IdxNA));
+   S_CHECK(mp_setobjequ(mp, eobj->idx));
+
+   if (valid_vi(objvar)) {
+      S_CHECK(rctr_equ_addnewvar(ctr, eobj, objvar, 1.));
+   }
 
    return OK;
 }

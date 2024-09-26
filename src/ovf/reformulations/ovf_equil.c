@@ -20,6 +20,139 @@
 #include "rhp_LA.h"
 #include "timings.h"
 
+int reformulation_equil_compute_inner_product(enum OVF_TYPE type, union ovf_ops_data ovfd, Model *mdl,
+                                              const SpMat *B, const double *b, Equ **e, Avar *uvar,
+                                              const char *ovf_name)
+{
+   rhp_idx *equ_idx = NULL;
+   double *coeffs = NULL;
+
+   const struct ovf_ops *op;
+   switch (type) {
+   case OvfType_Ovf:
+      op = &ovfdef_ops;
+      break;
+   case OvfType_Ccflib:
+      op = &ccflib_ops;
+      break;
+   default:
+      return Error_NotImplemented;
+   }
+
+   S_CHECK(op->get_mappings(ovfd, &equ_idx));
+   S_CHECK(op->get_coeffs(ovfd, &coeffs));
+
+   Avar *args;
+   S_CHECK(op->get_args(ovfd, &args));
+   S_CHECK(ovf_process_indices(mdl, args, equ_idx));
+
+   Equ *eobj = *e;
+   Container *ctr = &mdl->ctr;
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+
+   if (!eobj) {
+      S_CHECK(rctr_reserve_equs(ctr, 1));
+
+      char *ovf_objequ_name;
+      NEWNAME2(ovf_objequ_name, ovf_name, strlen(ovf_name), "_objequ");
+      S_CHECK(cdat_equname_start(cdat, ovf_objequ_name));
+
+      rhp_idx ei_obj;
+      S_CHECK(rctr_add_equ_empty(ctr, &ei_obj, &eobj, Mapping, CONE_NONE));
+      S_CHECK(cdat_equname_end(cdat));
+   }
+
+   unsigned nargs = avar_size(args);
+
+   if (!eobj->tree) {
+      S_CHECK(nltree_bootstrap(eobj, 3*nargs, 2*nargs + 1)); /* TODO(xhub) tune that*/
+      eobj->tree->root->children[nargs] = NULL;
+   }
+
+   /* TODO(Xhub) this should be in a dedicated function  */
+   Aequ aeqn = { .type = EquVar_List, .size = avar_size(args), .list = equ_idx };
+   S_CHECK(rctr_nltree_cpy_dot_prod_var_map(&mdl->ctr, eobj->tree, eobj->tree->root, uvar, B, b,
+                                            coeffs, args, &aeqn));
+
+   *e = eobj;
+
+   return OK;
+
+}
+
+int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, Equ *eobj, rhp_idx vi_ovf,
+                                      Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd,
+                                      Avar *uvar, unsigned n_args)
+{
+   /* ----------------------------------------------------------------------
+    * Creation of the maximization MP
+    *
+    * - set min/max
+    * - add the ovf variable to the objective equation
+    * - set the new equation as objective equation
+    * - set the ovf variable as objective variable
+    * - add u to the MP
+    * ---------------------------------------------------------------------- */
+
+   assert(valid_ei_(eobj->idx, mdl_nequs_total(mdl), __func__));
+   int status = OK;
+
+   const struct ovf_ops *op;
+   switch (type) {
+   case OvfType_Ovf:
+      op = &ovfdef_ops;
+      break;
+   case OvfType_Ccflib:
+      op = &ccflib_ops;
+      break;
+   default:
+      return Error_NotImplemented;
+   }
+
+   /*  Add -k(y) */
+   op->add_k(ovfd, mdl, eobj, uvar, n_args);
+
+   /*  TODO(xhub) URG remove this HACK */
+   mp_ovf->probtype = eobj->tree ? MdlType_nlp : MdlType_lp;
+
+   S_CHECK(mp_settype(mp_ovf, RHP_MP_OPT));
+
+   /* Add objvar to the equation */
+   S_CHECK(equ_add_newlvar(eobj, vi_ovf, -1.));
+
+   Container *ctr = &mdl->ctr;
+   S_CHECK(cmat_sync_lequ(ctr, eobj));
+
+   S_CHECK(mp_setobjvar(mp_ovf, vi_ovf));
+
+   rhp_idx ei_obj = eobj->idx;
+   S_CHECK(mp_setobjequ(mp_ovf, ei_obj));
+
+   S_CHECK(mp_addvars(mp_ovf, uvar));
+
+   /* TODO(xhub) not sure this should be here ...  */
+   S_CHECK(rctr_add_eval_equvar(ctr, ei_obj, vi_ovf));
+
+   SpMat A;
+   rhpmat_null(&A);
+   double *s = NULL;
+
+   S_CHECK_EXIT(op->get_set_nonbox(ovfd, &A, &s, false));
+
+   /* Last, add the (non-box) constraints on u */
+   if (A.ppty) {
+      S_CHECK_EXIT(ovf_add_polycons(mdl, ovfd, uvar, op, &A, s, mp_ovf, "ovf"));
+   }
+
+   S_CHECK_EXIT(mp_finalize(mp_ovf));
+
+_exit:
+
+   rhpmat_free(&A);
+   FREE(s);
+
+   return status;
+}
 
 int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 {
@@ -28,16 +161,15 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    int status = OK;
 
    Container *ctr = &mdl->ctr;
-   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
    S_CHECK(mdl_settype(mdl, MdlType_emp));
 
    const struct ovf_ops *op;
    switch (type) {
-   case OVFTYPE_OVF:
+   case OvfType_Ovf:
       op = &ovfdef_ops;
       break;
-   case OVFTYPE_CCFLIB:
+   case OvfType_Ccflib:
       op = &ccflib_ops;
       break;
    default:
@@ -54,7 +186,7 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    /* ---------------------------------------------------------------------
     * Test compatibility between OVF and problem type
     *
-    * Warning, this has to be before _ovf_equil_init
+    * Warning, this has to be before ovf_equil_init
     * --------------------------------------------------------------------- */
 
    struct ovf_ppty ovf_ppty;
@@ -71,15 +203,10 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    S_CHECK(ovf_equil_init(mdl, &ovf_data, &mp_ovf));
 
 
-
-   SpMat A, B;
-   rhpmat_null(&A);
+   SpMat B;
    rhpmat_null(&B);
 
-   double *s = NULL, *b = NULL, *coeffs = NULL;
-   rhp_idx *equ_idx = NULL;
-
-   S_CHECK(op->get_set_nonbox(ovfd, &A, &s, false));
+   double *b = NULL;
 
    /* ---------------------------------------------------------------------
     * 1. Create/Get equilibirum 
@@ -95,22 +222,21 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 
    unsigned n_u;
    /* Get the indices of F(x)  */
-   Avar *ovf_args;
-   S_CHECK(op->get_args(ovfd, &ovf_args));
-   unsigned n_args = avar_size(ovf_args);
+   unsigned nargs;
+   S_CHECK(op->get_nargs(ovfd, &nargs));
 
    if (B.ppty) {
-      unsigned n_args2;
-      S_CHECK(rhpmat_get_size(&B, &n_args2, &n_u));
+      unsigned nargs2;
+      S_CHECK(rhpmat_get_size(&B, &nargs2, &n_u));
 
-      if (n_args2 != n_args) {
+      if (nargs2 != nargs) {
          error("%s :: incompatible size: the number of arguments (%d) and the "
                "number of columns in B (%d) should be the same\n", __func__,
-               n_args, n_args2);
+               nargs, nargs2);
          return Error_Inconsistency;
       }
    } else {
-      n_u = n_args;
+      n_u = nargs;
    }
 
    assert(n_u > 0);
@@ -131,36 +257,16 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
     *  1.1 get the tree from the parent node
     * ---------------------------------------------------------------------- */
 
-   rhp_idx objequ_new = IdxNA;
-   Equ *eobj;
-   S_CHECK_EXIT(rctr_reserve_equs(ctr, 1));
-
-   char *ovf_objequ_name;
-   NEWNAME(ovf_objequ_name, ovf_name, ovf_namelen, "_objequ");
-   S_CHECK_EXIT(cdat_equname_start(cdat, ovf_objequ_name));
-   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &objequ_new, &eobj, Mapping, CONE_NONE));
-   S_CHECK_EXIT(cdat_equname_end(cdat));
-
-   S_CHECK_EXIT(nltree_bootstrap(eobj, 3*n_args, n_u + 1)); /* TODO(xhub) tune that*/
-
-   /* TODO(Xhub) this should be in a dedicated function  */
-   NlNode *dot_prod_parent;
-   dot_prod_parent = eobj->tree->root;
-   dot_prod_parent->children[n_u] = NULL;
-
+   /* This has to be called AFTER ovf_equil_init, otherwise the "base" model
+    * might be empty */
    /* ----------------------------------------------------------------------
     * Create <y, G(F(x))>
     * ---------------------------------------------------------------------- */
+   Equ *eobj = NULL;
+   S_CHECK_EXIT(reformulation_equil_compute_inner_product(type, ovfd, mdl, &B, b, &eobj, &uvar, ovf_name));
 
-   S_CHECK_EXIT(op->get_mappings(ovfd, &equ_idx));
-   S_CHECK_EXIT(op->get_coeffs(ovfd, &coeffs));
-   /* This has to be called AFTER ovf_equil_init, otherwise the "base" model
-    * might be empty */
-   S_CHECK_EXIT(ovf_process_indices(mdl, ovf_args, equ_idx));
-
-   Aequ aeqn = { .type = EquVar_List, .size = n_args, .list = equ_idx };
-   S_CHECK_EXIT(rctr_nltree_cpy_dot_prod_var_map(ctr, eobj->tree, dot_prod_parent, &uvar,
-                                                &B, b, coeffs, ovf_args, &aeqn));
+   NlNode *dot_prod_parent = eobj->tree->root;
+   assert(dot_prod_parent);
 
    /* Make sure that we have a nice ADD node  */
    /* \TODO(xhub) this should not be here ... */
@@ -181,66 +287,26 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          return Error_NotImplemented;
       }
 
-      S_CHECK_EXIT(ovf_replace_var(mdl, vi_ovf, &iter, &ovfvar_coeff,
-                                   &ei_new, 0));
+      S_CHECK_EXIT(ovf_replace_var(mdl, vi_ovf, &iter, &ovfvar_coeff, &ei_new, 0));
 
       if (!ctr->equs[ei_new].tree) {
          S_CHECK_EXIT(nltree_bootstrap(&ctr->equs[ei_new], n_u, 3*n_u));
       }
 
-      S_CHECK_EXIT(rctr_equ_add_nlexpr(ctr, ei_new, dot_prod_parent,
-                                       ovfvar_coeff));
+      S_CHECK_EXIT(rctr_equ_add_nlexpr(ctr, ei_new, dot_prod_parent, ovfvar_coeff));
 
       counter++;
 
    } while(iter);
 
    /* The first agent is now completed, move to the second one */
-   /*  Add -k(y) */
-   op->add_k(ovfd, mdl, eobj, &uvar, n_args);
-
-   /* ----------------------------------------------------------------------
-    * Next step: create the maximisation MP
-    *
-    * - set min/max
-    * - add the ovf variable to the objective equation
-    * - set the new equation as objective equation
-    * - set the ovf variable as objective variable
-    * - add u to the MP
-    * ---------------------------------------------------------------------- */
-
-   /*  TODO(xhub) URG remove this HACK */
-   mp_ovf->probtype = eobj->tree ? MdlType_nlp : MdlType_lp;
-
-   S_CHECK_EXIT(mp_settype(mp_ovf, RHP_MP_OPT));
-
-   /* Add objvar to the equation */
-   S_CHECK_EXIT(equ_add_newlvar(eobj, vi_ovf, -1.));
-   S_CHECK_EXIT(cmat_sync_lequ(ctr, eobj));
-
-   S_CHECK_EXIT(mp_setobjvar(mp_ovf, vi_ovf));
-   S_CHECK_EXIT(mp_setobjequ(mp_ovf, objequ_new));
-
-   S_CHECK_EXIT(mp_addvars(mp_ovf, &uvar));
-
-   /* TODO(xhub) not sure this should be here ...  */
-   S_CHECK_EXIT(rctr_add_eval_equvar(ctr, objequ_new, vi_ovf));
-
-
-   /* Last, add the (non-box) constraints on u */
-   if (A.ppty) {
-      S_CHECK_EXIT(ovf_add_polycons(mdl, ovfd, &uvar, op, &A, s, mp_ovf, "ovf"));
-   }
-
-   S_CHECK(mp_finalize(mp_ovf));
+   S_CHECK(reformulation_equil_setup_dual_mp(mp_ovf, eobj, vi_ovf, mdl, type, ovfd, &uvar, nargs))
 
 _exit:
    op->trimmem(ovfd);
 
-   rhpmat_free(&A);
    rhpmat_free(&B);
    FREE(b);
-   FREE(s);
 
    simple_timing_add(&mdl->timings->reformulation.CCF.equilibrium, get_thrdtime() - start);
 

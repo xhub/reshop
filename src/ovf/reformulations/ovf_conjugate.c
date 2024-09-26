@@ -204,7 +204,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
    switch (type) {
-   case OVFTYPE_OVF:
+   case OvfType_Ovf:
       op = &ovfdef_ops;
       break;
    default:
@@ -533,7 +533,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          /* If the argument is a variable  */
          if (!valid_ei(eqidx)) {
             CONJ_DEBUG("variable %d in argument #%d\n", vidx, i);
-            assert(lequ_debug_idx(le, vidx));
+            assert(!lequ_debug_hasvar(le, vidx));
             le->coeffs[offset] = 1.;
             le->vis[offset] = vidx;
             le->len++;
@@ -567,7 +567,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
             /* Could use memcpy or BLAS if we know where the argument is */
             for (unsigned l = 0, k = offset; l < lequ->len; ++l) {
                if (lequ->vis[l] == vidx) continue;
-               assert(lequ_debug_idx(le, lequ->vis[l]));
+               assert(!lequ_debug_hasvar(le, lequ->vis[l]));
                le->coeffs[k] = lequ->coeffs[l];
                le->vis[k] = lequ->vis[l];
                k++;
@@ -585,7 +585,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
             for (unsigned l = 0, k = offset, len = lequ->len; l < len; ++l) {
                /*  Do not use the placeholder variable */
                if (lequ->vis[l] == vidx) continue;
-               assert(lequ_debug_idx(le, lequ->vis[l]));
+               assert(!lequ_debug_hasvar(le, lequ->vis[l]));
                le->coeffs[k] = coeffp*lequ->coeffs[l];
                le->vis[k] = lequ->vis[l];
 

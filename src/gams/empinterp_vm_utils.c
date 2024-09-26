@@ -1,5 +1,9 @@
 #include "empinterp_vm_utils.h"
+#include "empinterp_utils.h"
+#include "gamsapi_utils.h"
 #include "printout.h"
+
+#include "gmdcc.h"
 
 VmValue vmvals_getnil(void)
 {
@@ -21,7 +25,7 @@ const char* vmval_typename(VmValue vmval)
    case SIGNATURE_POINTER:   return "generic pointer";
    case SIGNATURE_STRING:   return "packed string";
    case SIGNATURE_MPOBJ:     return "MP object";
-   case SIGNATURE_MPEOBJ:    return "MPE object";
+   case SIGNATURE_NASHOBJ:    return "Nash object";
    case SIGNATURE_OVFOBJ:    return "OVF object";
    case SIGNATURE_GMSSYMITER:    return "GmsSymIterator";
    case SIGNATURE_REGENTRY:    return "Register entry";
@@ -85,6 +89,41 @@ int vmval_is_arcobj(VmValueArray * vmvals, unsigned idx)
       return Error_EMPRuntimeError;
 
    }
+
+   return OK;
+}
+
+int error_ident_origin_dct(const IdentData * restrict ident, const char* fn)
+{
+   const Lexeme *lexeme = &ident->lexeme;
+   error("[empinterp] ERROR line %u: function %s() was called for ident '%.*s' resolved in the DCT."
+         "Please report this bug.\n", lexeme->linenr, fn, lexeme->len, lexeme->start);
+   return Error_EMPRuntimeError;
+}
+
+int vm_store_set_nrecs_gdx(Interpreter * restrict interp, EmpVm * restrict vm,
+                           const IdentData * restrict ident, GIDX_TYPE *gidx)
+{
+   IntArray loopset = namedints_at(&interp->globals.sets, ident->idx);
+   assert(valid_set(loopset));
+
+   S_CHECK(rhp_uint_add(&vm->uints, loopset.len));
+   *gidx = vm->uints.len-1;
+
+   return OK;
+}
+
+int vm_store_set_nrecs_gmd(Interpreter * restrict interp, EmpVm * restrict vm,
+                           const IdentData * restrict ident, GIDX_TYPE *gidx)
+{
+   assert(interp->gmd);
+   int nrecs;
+   GMD_CHK(gmdSymbolInfo, interp->gmd, ident->ptr, GMD_NRRECORDS, &nrecs, NULL, NULL);
+   if (nrecs < 0) {
+      return runtime_error(interp->linenr);
+   }
+   S_CHECK(rhp_uint_add(&vm->uints, (unsigned)nrecs));
+   *gidx = vm->uints.len-1;
 
    return OK;
 }

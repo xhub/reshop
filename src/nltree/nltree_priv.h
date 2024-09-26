@@ -129,8 +129,10 @@ extern const char * const opcode_names[];
 #define CIDX_R(X) assert((X) > 0), _CIDX_R(X)
 
 int nlnode_add_child(NlNode* node, NlNode* c, size_t indx);
-int nlnode_copy(NlNode** new_node, const NlNode* node, NlTree* tree);
-int nlnode_copy_rosetta(NlNode** new_node, const NlNode* node,
+NlNode *nlnode_dup_norecur(const NlNode* restrict node, NlTree* restrict tree)
+NONNULL;
+int nlnode_dup(NlNode** new_node, const NlNode* node, NlTree* tree);
+int nlnode_dup_rosetta(NlNode** new_node, const NlNode* node,
                         NlTree* tree, const rhp_idx* rosetta);
 int nlnode_apply_rosetta(NlNode *node, struct vlist *v_list,
                          const rhp_idx * restrict rosetta) NONNULL;

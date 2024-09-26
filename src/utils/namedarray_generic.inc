@@ -214,6 +214,22 @@ FN_SCOPE void RHP_MAKE_STR(free)(struct RHP_ARRAY_TYPE *dat)
    }
 }
 
+#ifdef RHP_ELT_FREE
+FN_SCOPE void RHP_MAKE_STR(freeall)(struct RHP_ARRAY_TYPE *dat)
+{
+   RHP_ELT_TYPE *arr = dat->arr;
+   assert(arr || dat->len == 0);
+   for (unsigned i = 0, len = dat->len; i < len; ++i) {
+#ifdef RHP_ELT_FREE_TAKE_ADDRESS
+      RHP_ELT_FREE(&arr[i]);
+#else
+      RHP_ELT_FREE(arr[i]);
+#endif
+   }
+   FREE(arr);
+}
+#endif
+
 #endif /* RHP_ONLY_DEF */
 
 #undef RHP_ARRAY_PREFIX

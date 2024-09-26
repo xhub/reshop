@@ -15,11 +15,11 @@ void printstr(unsigned mode, const char *str);
 void logging_syncenv(void);
 
 #define error(format, ...) printout(PO_ERROR, format, __VA_ARGS__)
-#define errormsg(msg) printstr(PO_ERROR, msg)
+#define errormsg(msg)      printstr(PO_ERROR, msg)
 
 static inline int error_runtime(void)
 {
-   errormsg("Unexpected runtime error\n");
+   errormsg("[ReSHOP] Unexpected runtime error\n");
    return Error_RuntimeError;
 }
 

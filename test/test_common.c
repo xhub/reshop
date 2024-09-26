@@ -92,7 +92,7 @@ static int cmp_equ_val(const struct rhp_mdl *mdl, double refval, double val, rhp
   return 0;
 }
 
-static int _cmp_var_bas(const struct rhp_mdl *mdl, double sol, int val, rhp_idx i)
+static int _cmp_var_bas(const struct rhp_mdl *mdl, enum rhp_basis_status sol, int val, rhp_idx i)
 {
   if (sol != RHP_BASIS_UNSET) {
     /* We do not strongly enforce this, too many superbasic issues */
@@ -108,7 +108,7 @@ static int _cmp_var_bas(const struct rhp_mdl *mdl, double sol, int val, rhp_idx 
   return 0;
 }
 
-static int _cmp_equ_bas(const struct rhp_mdl *mdl, double sol, int val, rhp_idx i)
+static int _cmp_equ_bas(const struct rhp_mdl *mdl, enum rhp_basis_status sol, int val, rhp_idx i)
 {
   if (sol != RHP_BASIS_UNSET) {
     bool err = (val != sol && val != RHP_BASIS_SUPERBASIC);

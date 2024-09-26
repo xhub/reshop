@@ -6,26 +6,19 @@
 #include "empparser_utils.h"
 
 static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restrict p,
-                                 GmsIndicesData * restrict idxdata,
+                                 GmsIndicesData * restrict gmsindices,
                                  unsigned idx)
 {
    assert(idx < GMS_MAX_INDEX_DIM);
-   bool has_single_quote = false, has_double_quote = false;
-   IdentData *data = &idxdata->idents[idx];
+   IdentData *ident = &gmsindices->idents[idx];
 
    /* get the next token */
    TokenType toktype;
-   S_CHECK(advance(interp, p, &toktype));
+   S_CHECK(peek(interp, p, &toktype));
 
-   if (toktype == TOK_SINGLE_QUOTE) {
-      has_single_quote = true;
-   } else if (toktype == TOK_DOUBLE_QUOTE) {
-      has_double_quote = true;
-   }
-
-   if (has_single_quote || has_double_quote) {
+   if (toktype == TOK_SINGLE_QUOTE || toktype == TOK_DOUBLE_QUOTE) {
       char quote = toktype == TOK_SINGLE_QUOTE ? '\'' : '"';
-      S_CHECK(parser_asUEL(interp, p, quote, &toktype));
+      S_CHECK(parser_peekasUEL(interp, p, quote, &toktype));
 
       if (toktype == TOK_UNSET) {
          const Token *tok = &interp->cur;
@@ -40,38 +33,29 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
 
    } else {
       //S_CHECK(advance(interp, p, &toktype));
-      PARSER_EXPECTS(interp, "A set or variable is required",
-                     TOK_GMS_SET, TOK_STAR, TOK_IDENT);
-
+      PARSER_EXPECTS_PEEK(interp, "A set or variable is required", TOK_GMS_SET, TOK_IDENT);
    }
 
    switch (toktype) {
    case TOK_GMS_UEL:
-      data->type = IdentUEL;
-      data->idx = interp->cur.symdat.idx; 
-      data->dim = 0;
-
+      tok2ident(&interp->peek, ident);
+      ident->type = IdentUEL;
       goto _finalize;
+
    case TOK_STAR:
-      data->type = IdentUniversalSet;
-      data->idx = 0; 
-      data->dim = 0;
-
+      ident->type = IdentUniversalSet;
+      ident->idx = 0; 
+      ident->dim = 0;
       goto _finalize;
+
    case TOK_IDENT:
       break; /* We deal with this case now */
-   case TOK_GMS_SET: {
-      Token *tok = &interp->cur;
-      data->type = IdentGmdSet;
-      data->idx = tok->symdat.idx;
-      data->dim = 1;
-      data->ptr = tok->symdat.ptr;
-      data->lexeme.start = tok->start;
-      data->lexeme.len = tok->len;
-      data->lexeme.linenr = tok->linenr;
-      idxdata->num_sets++;
+
+   case TOK_GMS_SET: 
+      tok2ident(&interp->peek, ident);
+      gmsindices->num_sets++;
       goto _finalize;
-   }
+
    default:
       error("%s :: unexpected failure.\n", __func__);
       return Error_RuntimeError;
@@ -82,19 +66,19 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
     * --------------------------------------------------------------------- */
    assert(toktype == TOK_IDENT);
 
-   RESOLVE_IDENTAS(interp, data, "GAMS index must fulfill these conditions.",
-                   IdentLoopIterator, IdentLocalSet, IdentGdxSet);
+   RESOLVE_IDENTAS(interp, ident, "GAMS index must fulfill these conditions.",
+                   IdentLoopIterator, IdentLocalSet, IdentSet);
 
-   switch (data->type) {
+   switch (ident->type) {
    case IdentLocalSet:
-      idxdata->num_localsets++;
+      gmsindices->num_localsets++;
       break;
-   case IdentGdxSet: //TODO: this should not be true in Emb mode
+   case IdentSet: //TODO: this should not be true in Emb mode
       assert(!embmode(interp));
-      idxdata->num_sets++;
+      gmsindices->num_sets++;
       break;
    case IdentLoopIterator:
-      idxdata->num_iterators++;
+      gmsindices->num_iterators++;
       break;
    default:
       return runtime_error(interp->linenr);
@@ -116,16 +100,20 @@ _finalize:
  * @return 
  */
 int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
-                     GmsIndicesData * restrict idxdata)
+                     GmsIndicesData * restrict gmsindices)
 {
    TokenType toktype;
-   unsigned nargs = 0;
+   unsigned nargs = 0, p2 = *p;
+
+   assert(!gmsindices_isactive(gmsindices));
 
   /* ----------------------------------------------------------------------
    * We are expecting to be called at gmssymb('a', '1')
    *                                          ^
-   * On exit, we 
+   * Peek mode is used to parse all the gms indices. This allows to show
+   * "gmssymb" in the error message. Likewise in a loop or sum statement
    * ---------------------------------------------------------------------- */
+   interp_peekseqstart(interp);
 
    do {
       if (nargs == GMS_MAX_INDEX_DIM) {
@@ -136,18 +124,22 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
          return Error_EMPIncorrectSyntax;
       }
 
-      S_CHECK(resolve_tokenasgmsidx(interp, p, idxdata, nargs));
+      S_CHECK(resolve_tokenasgmsidx(interp, &p2, gmsindices, nargs));
 
-      S_CHECK(advance(interp, p, &toktype));
+      S_CHECK(peek(interp, &p2, &toktype));
 
       nargs++;
 
    } while (toktype == TOK_COMMA);
 
-   idxdata->nargs = nargs;
+   gmsindices->nargs = nargs;
 
-   return parser_expect(interp, "Closing ')' expected for GAMS indices", TOK_RPAREN);
+   S_CHECK(parser_expect_peek(interp, "Closing ')' expected for GAMS indices", TOK_RPAREN));
 
+   *p = p2;
+   interp_peekseqend(interp);
+
+   return OK;
 }
 
 /**
@@ -156,20 +148,23 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
  * This takes care of parsing the indices of a label definition. Compared to
  * parse_gmsindices, we disallow '*'
  *
- * @param interp 
- * @param p 
- * @param idxdata 
- * @return 
+ * @param  interp      the interpreter
+ * @param  p           the parser pointer
+ * @param  gmsindices  the index structure
+ *
+ * @return             the error code
  */
 int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
-                          GmsIndicesData * restrict idxdata)
+                          GmsIndicesData * restrict gmsindices)
 {
    TokenType toktype;
-   unsigned nargs = 0;
+   unsigned nargs = 0, p2 = *p;
 
   /* ----------------------------------------------------------------------
    * We are parsing n('a',...):
    *                  ^
+   * This is similar to parse_gmsindices(), except that '*' is not valid.
+   * This function also operated in peek mode to provide better error message
    * TODO: we should add UELs that cannot be found in the DCT
    * ---------------------------------------------------------------------- */
 
@@ -182,22 +177,26 @@ int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
          return Error_EMPIncorrectSyntax;
       }
 
-      S_CHECK(resolve_tokenasgmsidx(interp, p, idxdata, nargs));
-      if (idxdata->idents[nargs].type == IdentUniversalSet) {
+      S_CHECK(resolve_tokenasgmsidx(interp, &p2, gmsindices, nargs));
+      if (gmsindices->idents[nargs].type == IdentUniversalSet) {
          errormsg("[empinterp] ERROR: '*' is not a valid index in a label "
                   "definition\n");
          return Error_EMPIncorrectSyntax;
       }
 
-      S_CHECK(advance(interp, p, &toktype));
+      S_CHECK(peek(interp, &p2, &toktype));
 
       nargs++;
 
    } while (toktype == TOK_COMMA);
 
-   idxdata->nargs = nargs;
+   gmsindices->nargs = nargs;
 
-   return parser_expect(interp, "Closing ')' expected for GAMS indices", TOK_RPAREN);
+   S_CHECK(parser_expect_peek(interp, "Closing ')' expected for GAMS indices", TOK_RPAREN));
 
+   *p = p2;
+   interp_peekseqend(interp);
+
+   return OK;
 }
 

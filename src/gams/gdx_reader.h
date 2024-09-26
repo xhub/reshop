@@ -3,6 +3,7 @@
 
 #include "compat.h"
 #include "empinterp_data.h"
+#include "empinterp_fwd.h"
 #include "reshop_data.h"
 #include "rhp_fwd.h"
 
@@ -10,11 +11,20 @@
 
 struct vm_gms_sym_iterator;
 
+typedef struct {
+   int idx;
+   int dim;
+   int type;
+   int alias_idx;                 /**< Alias index     */
+   int alias_gdx_type;            /**< Alias type       */
+   char alias_name[GMS_SSSIZE];   /**< name of the alias */
+} GdxSymData; 
+
 typedef struct gdx_reader {
    const char *fname;
    void*       gdxh;
    void*       dcth;
-   GamsSymData cursym;
+   GdxSymData symdat;
    IntArray    setobj; 
    GdxMultiSet    multiset;
    double      scalar;
@@ -22,6 +32,9 @@ typedef struct gdx_reader {
 } GdxReader;
 
 typedef enum gdxSyType GdxSymType;
+
+GdxReader* gdx_readers_new(Interpreter* restrict interp) NONNULL;
+GdxReader* gdx_reader_last(Interpreter* restrict interp) NONNULL;
 
 void gdx_reader_free(struct gdx_reader *reader);
 NONNULL OWNERSHIP_TAKES(3)

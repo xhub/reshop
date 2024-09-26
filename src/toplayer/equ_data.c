@@ -3,6 +3,7 @@
 const char * const _equ_type_name[] = {
    "unset",
    "mapping",
+   "defined mapping",
    "cone inclusion",
    "boolean",
 };

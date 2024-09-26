@@ -1027,6 +1027,57 @@ int cmat_cpy_equ_flipped(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
  * @param ctr      the container
  * @param ei_src   the equation to copy
  * @param ei_dst   the index for the flipped copy
+ *
+ * @return         the error code
+ */
+int cmat_copy_equ(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
+{
+   RhpContainerData *cdat = ctr->data;
+
+   S_CHECK(ei_inbounds(ei_src, ctr_nequs_total(ctr), __func__));
+   S_CHECK(ei_inbounds(ei_dst, ctr_nequs_total(ctr), __func__));
+
+   const CMatElt * restrict me_src = cdat->equs[ei_src];
+   assert(me_src);
+   CMatElt * restrict prev_e = NULL;
+
+   if (cdat->equs[ei_dst]) {
+      error("[container] ERROR: the equation #%u is not empty, cannot copy '%s' "
+            "into it!\n", ei_dst, ctr_printequname(ctr, ei_src));
+      return Error_RuntimeError;
+   }
+
+   /* Add all the variables from that equation  */
+   while (me_src) {
+
+      CMatElt *me_dst;
+      A_CHECK(me_dst, cmat_elt_new(ctr, ei_dst, me_src->vi, me_src->isNL, me_src->value));
+
+      /* If there is a previous variable */
+      if (prev_e) {
+         prev_e->next_var = me_dst;
+      } else /* if not, the eqn is most likely empty */ {
+         cdat->equs[ei_dst] = me_dst;
+      }
+
+      /* Update for the next variable */
+      prev_e = me_dst;
+
+      /* Go to the next variable in the equation */
+      me_src = me_src->next_var;
+   }
+
+   return OK;
+}
+
+/**
+ * @brief Create a copy of an equation in the container matrix
+ *
+ * If specified, one variable is not copied
+ *
+ * @param ctr      the container
+ * @param ei_src   the equation to copy
+ * @param ei_dst   the index for the flipped copy
  * @param vi_no    if valid, index of the variable not to copy
  *
  * @return         the error code

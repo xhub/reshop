@@ -32,6 +32,7 @@ struct empvm_compiler* compiler_init(Interpreter * restrict interp);
 
 NONNULL
 int parse_loop(struct interpreter * restrict interp, unsigned * restrict p);
+int parse_sum(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
 int parse_defvar(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
 
 int loop_initandstart(Interpreter * restrict interp, Tape * restrict tape,
@@ -45,7 +46,7 @@ int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
 int vm_nash(Interpreter * interp, unsigned * restrict p, const char* argname,
             unsigned argname_len, GmsIndicesData* gmsindices) NONNULL;
 
-int vm_add_VFobjSimple_edge(Interpreter * interp, unsigned * restrict p, const char* argname,
+int vm_add_VFobjSimple_arc(Interpreter * interp, unsigned * restrict p, const char* argname,
             unsigned argname_len, GmsIndicesData* gmsindices) NONNULL;
 
 int vm_add_Ctrl_edge(Interpreter * interp, unsigned * restrict p, const char* argname,

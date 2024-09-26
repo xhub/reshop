@@ -83,6 +83,8 @@ int rctr_nltree_add_bilin(Container *ctr, NlTree* tree,
 int rctr_nltree_add_bilin_vars(Container *ctr, NlTree *tree,
                            NlNode *node, unsigned offset,
                            Avar * restrict v1, Avar * restrict v2);
+int rctr_nltree_mul_cst(Container *ctr, NlTree* tree, NlNode ** restrict *node,
+                        double coeff) NONNULL;
 int nltree_add_cst(Container *ctr, NlTree* tree, NlNode ***node,
                     double cst);
 int nltree_add_nlexpr(NlTree *tree, NlNode *node, NlPool *pool, double cst) NONNULL;
@@ -103,7 +105,7 @@ int nltree_add_var_tree(Container *ctr, NlTree *tree, rhp_idx vi, double val);
 int nltree_mul_cst(NlTree* tree, NlNode ***node,  NlPool *pool, double coeff);
 int nltree_mul_cst_add_node(NlTree* tree, NlNode ***node, NlPool *pool,
                             double coeff, unsigned size, unsigned *idx);
-int nltree_mul_cst_x(NlTree* tree, NlNode ***node, NlPool *pool, double coeff,
+int nltree_mul_cst_x(NlTree* tree, NlNode ** restrict *node, NlPool *pool, double coeff,
                      bool *new_node);
 
 int rctr_nltree_opcall1(Container *ctr, NlTree* tree, NlNode ***node,
@@ -153,8 +155,8 @@ int nltree_find_add_node(NlTree *tree, NlNode ***raddr, NlPool *pool, double *co
 void nltree_print_dot(const NlTree* tree, const char* filename, const Container *ctr);
 int nltree_replacevarbycst(NlTree* tree, rhp_idx vi, unsigned pool_idx) NONNULL;
 int nltree_replacevarbytree(NlTree* tree, rhp_idx vi, const NlTree* subtree) NONNULL;
-int nltree_reserve_add_node(NlTree *tree, NlNode **addr,
-                             unsigned size, unsigned *offset);
+int nltree_ensure_add_node(NlTree *tree, NlNode **node, unsigned size, unsigned *offset) NONNULL;
+int nltree_ensure_add_node_inplace(NlTree *tree, NlNode **node, unsigned size, unsigned *offset) NONNULL;
 
 
 /* -------------------------------------------------------------------------

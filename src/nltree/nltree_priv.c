@@ -53,7 +53,17 @@ int nlnode_add_child(NlNode* node, NlNode* c, size_t indx)
    return OK;
 }
 
-/** @brief duplicate a node
+NlNode *nlnode_dup_norecur(const NlNode* restrict node, NlTree* restrict tree)
+{
+   NlNode* node2;
+   AA_CHECK(node2, nlnode_alloc_fixed_init(tree, node->children_max));
+
+   memcpy(node2, node, sizeof(*node));
+
+   return node2;
+}
+
+/** @brief recursively duplicate a node
  *
  *  @param[out] new_node  the destination node, must be empty
  *  @param      node      the source node
@@ -61,7 +71,7 @@ int nlnode_add_child(NlNode* node, NlNode* c, size_t indx)
  *
  *  @return               the error code
  */
-int nlnode_copy(NlNode** new_node, const NlNode* node, NlTree* tree)
+int nlnode_dup(NlNode** new_node, const NlNode* node, NlTree* tree)
 {
    NlNode* node2;
    A_CHECK(node2, nlnode_alloc_fixed_init(tree, node->children_max));
@@ -125,7 +135,7 @@ _no_add: ;
          }
       }
 
-      S_CHECK(nlnode_copy(&node2->children[i], child, tree));
+      S_CHECK(nlnode_dup(&node2->children[i], child, tree));
    }
 
    (*new_node) = node2;
@@ -142,7 +152,7 @@ _no_add: ;
  *
  *  @return               the error code
  */
-int nlnode_copy_rosetta(NlNode** new_node, const NlNode* node,
+int nlnode_dup_rosetta(NlNode** new_node, const NlNode* node,
                         NlTree* tree, const int* restrict rosetta)
 {
    /*  new_node must be empty */
@@ -196,7 +206,7 @@ int nlnode_copy_rosetta(NlNode** new_node, const NlNode* node,
          }
       }
 
-      S_CHECK(nlnode_copy_rosetta(&node2->children[i], node->children[i], tree, rosetta));
+      S_CHECK(nlnode_dup_rosetta(&node2->children[i], node->children[i], tree, rosetta));
    }
 
    (*new_node) = node2;

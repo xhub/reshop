@@ -2,6 +2,7 @@
 #define EMPINTERP_PRIV_H
 
 #include "empinterp.h"
+#include "empparser.h"
 #include "printout.h"
 
 
@@ -27,7 +28,7 @@ const char * identtype_str(IdentType type);
 int skip_spaces_commented_lines(Interpreter *interp, unsigned *p) NONNULL;
 int interp_create_buf(Interpreter *interp) NONNULL;
 NONNULL_AT(1,3)
-void interp_init(Interpreter *interp, Model *mdl, const char *fname);
+void empinterp_init(Interpreter *interp, Model *mdl, const char *fname);
 NONNULL void interp_free(Interpreter *interp);
 
 
@@ -129,12 +130,41 @@ NONNULL static inline void identdata_init(IdentData *data, unsigned linenr,
    data->dim = UINT8_MAX;
 }
 
-static inline void gms_indicesdata_init(GmsIndicesData *indices)
+static inline void gmsindices_init(GmsIndicesData *indices)
 {
    indices->nargs = 0;
    indices->num_sets = 0;
    indices->num_iterators = 0;
    indices->num_localsets = 0;
+}
+
+static inline bool gmsindices_isactive(GmsIndicesData *indices)
+{
+   return indices->nargs != UINT8_MAX && indices->nargs != 0;
+}
+
+static inline bool gmsindices_isset(GmsIndicesData *indices)
+{
+   return indices->nargs != UINT8_MAX;
+}
+
+static inline uint8_t gmsindices_nargs(GmsIndicesData *indices)
+{
+   return indices->nargs != UINT8_MAX ? indices->nargs : 0;
+}
+
+static inline bool gmsindices_deactivate(GmsIndicesData *indices)
+{
+   if (indices->nargs == UINT8_MAX) { return false; }
+
+   indices->nargs = UINT8_MAX;
+   return true;
+}
+
+static inline bool gmsindices_needcompmode(GmsIndicesData *indices)
+{
+   return indices->nargs > 0 &&
+   (indices->num_sets > 0 || indices->num_localsets > 0 || indices->num_iterators > 0);
 }
 
 static inline bool _has_bilevel(const Interpreter *interp)
@@ -232,6 +262,35 @@ static inline bool _has_no_parent(Interpreter *interp)
 static inline bool embmode(Interpreter *interp)
 {
    return interp->ops && interp->ops->type == ParserOpsEmb;
+}
+
+static inline bool immmode(Interpreter *interp)
+{
+   assert(interp->ops);
+   return interp->ops->type == ParserOpsImm;
+}
+
+static inline bool compmode(Interpreter *interp)
+{
+   assert(interp->ops);
+   return interp->ops->type == ParserOpsCompiler;
+}
+
+typedef int (*interp_ops_generic)(Interpreter * interp, unsigned *p);
+
+static inline int empinterp_ops_dispatch(Interpreter *interp, unsigned *p,
+                                         interp_ops_generic fn_imm,
+                                         interp_ops_generic fn_vm,
+                                         interp_ops_generic fn_emb)
+{
+   switch (interp->ops->type) {
+   case ParserOpsImm: return fn_imm(interp, p);
+   case ParserOpsCompiler: return fn_vm(interp, p);
+   case ParserOpsEmb: return fn_emb(interp, p);
+   default: error("[empinterp] ERROR line %u: dispatch not implemented for ops"
+                  "type %d", interp->linenr, interp->ops->type);
+      return Error_NotImplemented;
+   }
 }
 
 #endif // !EMPINTERP_PRIV_H

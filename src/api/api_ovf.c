@@ -170,7 +170,7 @@ int rhp_ovf_setreformulation(OvfDef *ovf_def, const char *reformulation)
    ovf_def->reformulation = val;
 
    printout(PO_INFO, "Setting OVF reformulation to '%s' for OVF with var index %u\n",
-            reformulation, ovf_def->ovf_vidx);
+            reformulation, ovf_def->vi_ovf);
 
    return OK;
 }

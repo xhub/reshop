@@ -7,7 +7,7 @@
 
 int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir, unsigned char codelen, const char *code, unsigned char argslen, const char *args)
 {
-   trace_empinterp("CALLED with scrdir '%*s', file '%*s' and args '%*s'\n", scrdirlen, scrdir, codelen, code, argslen, args);
+   trace_empinterp("[embcode] scrdir '%.*s', file '%.*s' and args '%.*s'\n", scrdirlen, scrdir, codelen, code, argslen, args);
    int status = OK;
 
    if (argslen > 0) {

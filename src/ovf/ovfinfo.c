@@ -74,7 +74,7 @@ void ovfinfo_dealloc(EmpInfo *empinfo)
       OvfDef *ovfdef = empinfo->ovf->ovf_def;
       while (ovfdef) {
           OvfDef *tmp = ovfdef->next;
-          ovf_def_free(ovfdef);
+          ovfdef_free(ovfdef);
           ovfdef = tmp;
       }
       empinfo->ovf->ovf_def = NULL;
@@ -94,9 +94,9 @@ struct ovfinfo *ovfinfo_borrow(struct ovfinfo *ovfinfo)
    return ovfinfo;
 }
 
-static int ovf_def_fill(OvfDef *ovfdef, unsigned ovf_idx)
+static int ovfdef_fill(OvfDef *ovfdef, unsigned ovf_idx)
 {
-   ovfdef->ovf_vidx = IdxNA;
+   ovfdef->vi_ovf = IdxNA;
 
    S_CHECK(ovf_fill_params(&ovfdef->params, ovf_idx));
 
@@ -112,10 +112,12 @@ static int ovf_def_fill(OvfDef *ovfdef, unsigned ovf_idx)
    ovfdef->name = NULL;
    ovfdef->status = OvfNoStatus;
 
+   ovfdef->refcnt = 1;
+
    return OK;
 }
 
-OvfDef* ovf_def_new_ovfinfo(struct ovfinfo *ovfinfo, unsigned ovf_idx)
+OvfDef* ovfdef_new_ovfinfo(struct ovfinfo *ovfinfo, unsigned ovf_idx)
 {
    OvfDef* ovfdef;
 
@@ -132,18 +134,18 @@ OvfDef* ovf_def_new_ovfinfo(struct ovfinfo *ovfinfo, unsigned ovf_idx)
 
    ovfinfo->num_ovf++;
 
-   SN_CHECK(ovf_def_fill(ovfdef, ovf_idx));
+   SN_CHECK(ovfdef_fill(ovfdef, ovf_idx));
 
    return ovfdef;
 
 }
 
-OvfDef* ovf_def_new(unsigned ovf_idx)
+OvfDef* ovfdef_new(unsigned ovf_idx)
 {
    OvfDef* ovfdef;
    CALLOC_NULL(ovfdef, OvfDef, 1);
 
-   SN_CHECK_EXIT(ovf_def_fill(ovfdef, ovf_idx));
+   SN_CHECK_EXIT(ovfdef_fill(ovfdef, ovf_idx));
 
    return ovfdef;
 
@@ -152,8 +154,23 @@ _exit:
    return NULL;
 }
 
-void ovf_def_free(OvfDef* restrict ovfdef)
+OvfDef* ovfdef_borrow(OvfDef* ovfdef)
 {
+   ovfdef->refcnt++;
+   printout(PO_TRACE_REFCNT, "[refcnt] OVF %s: %u -> %u\n",
+            ovfdef->name, ovfdef->refcnt-1, ovfdef->refcnt);
+
+   return ovfdef;
+}
+
+void ovfdef_free(OvfDef* restrict ovfdef)
+{
+   ovfdef->refcnt--;
+   printout(PO_TRACE_REFCNT, "[refcnt] ovf %s: %u -> %u\n",
+            ovfdef->name, ovfdef->refcnt+1, ovfdef->refcnt);
+
+   if (ovfdef->refcnt > 0) { return; }
+
    for (unsigned i = 0, len = ovfdef->params.size; i < len; ++i) {
       ovf_param_dealloc(&ovfdef->params.p[i]);
    }
@@ -202,9 +219,9 @@ void ovf_def_print(const OvfDef *ovf, unsigned mode,
                    const Model *mdl)
 {
    printout(mode, "[OVF] %5d: function '%s'\n", ovf->idx, ovf_getname(ovf));
-   if (valid_vi(ovf->ovf_vidx)) {
-      printout(mode, " ** OVF var: #[%5u]  %s\n", ovf->ovf_vidx,
-               ctr_printvarname(&mdl->ctr, ovf->ovf_vidx));
+   if (valid_vi(ovf->vi_ovf)) {
+      printout(mode, " ** OVF var: #[%5u]  %s\n", ovf->vi_ovf,
+               ctr_printvarname(&mdl->ctr, ovf->vi_ovf));
    }
 
    unsigned nargs_vars = avar_size(ovf->args);

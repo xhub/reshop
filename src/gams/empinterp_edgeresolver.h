@@ -7,7 +7,7 @@
 struct interpreter;
 
 int empinterp_set_empdag_root(struct interpreter *interp) NONNULL;
-int empinterp_resolve_empdag_edges(struct interpreter *interp) NONNULL;
+int empinterp_resolve_labels(struct interpreter *interp) NONNULL;
 
 
 #endif

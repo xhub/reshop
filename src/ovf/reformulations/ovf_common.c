@@ -64,7 +64,7 @@ int ovf_replace_var(Model *mdl, rhp_idx ovf_vidx, void **jacptr,
    /* Copy if needed */
    if (equinfo.copy_if_modif) {
 
-      S_CHECK(rmdl_dup_equ(mdl, &ei_new, extra_vars, ovf_vidx));
+      S_CHECK(rmdl_dup_equ_except(mdl, &ei_new, extra_vars, ovf_vidx));
       DPRINT("%s :: copy equation %d in %d\n", __func__, eidx, ei_new);
 
       /* -------------------------------------------------------------------
@@ -152,7 +152,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
    MathPrgm *lmp_ovf, *mp = NULL; /* init just to silence compiler */
    Nash *mpe;
 
-   const UIntArray *mp_parents = NULL;
+   const DagUidArray *mp_parents = NULL;
 
    rhp_idx vi_ovf = ovf_data->idx;
    bool mp_rm_vi_ovf = true;
@@ -195,7 +195,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
 
    if (!mp_parents || mp_parents->len == 0) {
       /* -------------------------------------------------------------------
-       * No MPE owns the MP where the OVF is. Then, we create an MPE for the
+       * No Nash owns the MP where the OVF is. Then, we create an Nash for the
        * MP and the auxiliary OVF problem.
        * ------------------------------------------------------------------- */
       assert(!mp_parents || empdag_isroot(empdag, mpid2uid(mp->id)));
@@ -233,7 +233,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
 
       unsigned parent_uid = mp_parents->arr[0];
       if (!uidisNash(parent_uid)) {
-         TO_IMPLEMENT("The MP has an MP parent; only MPE parent are currently supported.");
+         TO_IMPLEMENT("The MP has an MP parent; only Nash parent are currently supported.");
       }
 
       empdag_getnashbyid(empdag, uid2id(parent_uid), &mpe);

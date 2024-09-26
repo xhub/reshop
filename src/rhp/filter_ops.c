@@ -86,6 +86,7 @@ const char *fopstype_name(FopsType type)
 int fops_deactivate_equ(void *data, rhp_idx ei)
 {
    FilterDeactivated *deactivated = &((FilterActive *)data)->deactivated;
+
    return rhp_idx_addsorted(&deactivated->equs, ei);
 }
 
@@ -148,6 +149,7 @@ static bool filter_active_var(void *data, rhp_idx vi)
    FilterActive *dat = (FilterActive *)data;
    RhpContainerData *cdat = dat->ctr->data;
    assert(valid_vi_(vi, cdat->total_n, __func__));
+
    return cdat->vars[vi] && !deactivated_var(&dat->deactivated, vi);
 }
 
@@ -156,6 +158,7 @@ static bool filter_active_equ(void *data, rhp_idx ei)
    FilterActive *dat = (FilterActive *)data;
    RhpContainerData *cdat = dat->ctr->data;
    assert(valid_ei_(ei, cdat->total_m, __func__));
+
    return cdat->equs[ei] && !deactivated_equ(&dat->deactivated, ei);
 }
 
@@ -736,7 +739,7 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
 
    struct rhp_empdag_arcVF *Vlist = Varcs->arr;
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      S_CHECK(dfs_equvar(empdag, mpid2uid(Vlist[i].child_id), vars, equs));
+      S_CHECK(dfs_equvar(empdag, mpid2uid(Vlist[i].mpid_child), vars, equs));
    }
 
    return OK;
@@ -784,7 +787,7 @@ static int dfs_equ(EmpDag *empdag, daguid_t uid, struct aequ_list *equs)
 
    struct rhp_empdag_arcVF *Vlist = Varcs->arr;
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      S_CHECK(dfs_equ(empdag, mpid2uid(Vlist[i].child_id), equs));
+      S_CHECK(dfs_equ(empdag, mpid2uid(Vlist[i].mpid_child), equs));
    }
 
    return OK;

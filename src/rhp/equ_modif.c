@@ -52,7 +52,7 @@ int nltree_addlvars(Container *ctr, rhp_idx ei, double* vals, Avar *v, double co
    NlNode **addr, *node;
    S_CHECK(nltree_find_add_node(tree, &addr, ctr->pool, &lcoeff));
    unsigned offset;
-   S_CHECK(nltree_reserve_add_node(tree, addr, v->size, &offset));
+   S_CHECK(nltree_ensure_add_node(tree, addr, v->size, &offset));
 
    /* TODO(xhub) use this code where is it needed, not here */
 #if 0
@@ -288,8 +288,7 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
       case EMPMAT_CSR:
       case EMPMAT_CSC:
       default:
-         error("%s :: only diagonal and triplet matrices are "
-               "supported\n", __func__);
+         error("%s :: only diagonal and triplet matrices are supported\n", __func__);
          return Error_NotImplemented;
       }
    }
@@ -321,7 +320,7 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
  *  @return               the error code
  */
 int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addnode,
-                                     Avar *uvar, SpMat *B, double *b,
+                                     Avar *uvar, const SpMat *B, const double *b,
                                      double *coeffs, Avar * restrict args, Aequ* eqn)
 {
    assert(addnode->op == NLNODE_ADD);
@@ -687,7 +686,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
                 * Copy the expression tree
                 * ---------------------------------------------------------- */
 
-               S_CHECK(nlnode_copy(laddr, eq->tree->root, tree));
+               S_CHECK(nlnode_dup(laddr, eq->tree->root, tree));
 
             }
          }
@@ -882,7 +881,7 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
 
                /* \TODO(xhub) optimize w.r.t. umin */
                /* Fill in Fnl_i  */
-               S_CHECK(nlnode_copy(addr, e->tree->root, tree));
+               S_CHECK(nlnode_dup(addr, e->tree->root, tree));
             }
 
             /* Do a final sanity check: it may happen that the equation consists
@@ -1032,7 +1031,7 @@ int equ_rm_var(Container *ctr, Equ *e, rhp_idx vi)
 
    S_CHECK(cmat_equ_rm_var(ctr, e->idx, vi));
 
-   assert(e->lequ && lequ_debug_idx(e->lequ, vi));
+   assert(e->lequ && !lequ_debug_hasvar(e->lequ, vi));
 
    return OK;
 }

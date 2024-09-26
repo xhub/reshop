@@ -852,7 +852,7 @@ int gnep_tragedy_common(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   int status = 0;
 
   struct rhp_avar *v = rhp_avar_new();
-  struct rhp_equilibrium *mpe = rhp_empdag_newmpe(mdl);
+  struct rhp_nash_equilibrium *mpe = rhp_empdag_newmpe(mdl);
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, N_PLAYERS, 2*N_PLAYERS));
 
@@ -956,7 +956,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   struct rhp_aequ *p_fn = rhp_aequ_new();
   struct rhp_aequ *y_fn = rhp_aequ_new();
 
-  struct rhp_equilibrium *mpe = rhp_empdag_newmpe(mdl);
+  struct rhp_nash_equilibrium *mpe = rhp_empdag_newmpe(mdl);
   RHP_NONNULL(mpe);
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, 7, 10));

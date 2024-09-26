@@ -44,7 +44,9 @@
 #define COLOR_REFCNT       "\x1b[38;5;241m"
 #define COLOR_EMPPARSER    "\x1b[38;5;82m"
 #define COLOR_SOLREPORT    "\x1b[38;5;59m"
-#define COLOR_PROCESS    "\x1b[38;5;14m"
+//#define COLOR_PROCESS    "\x1b[38;5;14m"
+#define COLOR_EMPDAG       "\x1b[38;5;14m"
+#define COLOR_PROCESS      "\x1b[31;1;48;7m"
 #define COLOR_CONTAINER    "\x1b[38;5;208m"
 
 static inline const char *get_mode_color(unsigned mode)
@@ -55,7 +57,7 @@ static inline const char *get_mode_color(unsigned mode)
    case PO_TRACE_REFCNT:
       return COLOR_REFCNT;
    case PO_TRACE_EMPDAG:
-      return COLOR_PROCESS;
+      return COLOR_EMPDAG;
    case PO_TRACE_EMPINTERP:
       return COLOR_EMPPARSER;
    case PO_TRACE_SOLREPORT:
@@ -303,6 +305,7 @@ CONSTRUCTOR_ATTR_PRIO(1000) void logging_syncenv(void)
    }
    myfreeenvval(no_color);
 
+
    /* See https://superuser.com/questions/413073/windows-console-with-ansi-colors-handling */
 #ifdef _WIN32
    goto _exit; /* TODO: doesn't work on wine*/
@@ -448,6 +451,16 @@ void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
    print_ops.data = data;
    print_ops.flush = flush;
    print_ops.print = print;
+
+   const char *force_colors = mygetenv("RHP_COLORS");
+
+   if (force_colors) {
+      print_ops.use_asciicolors = true;
+      myfreeenvval(force_colors);
+      return;
+   }
+   myfreeenvval(force_colors);
+
    print_ops.use_asciicolors = use_asciicolors;
 }
 

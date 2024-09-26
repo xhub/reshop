@@ -277,7 +277,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          printout(mode, "%30.*s\n", dagl->nodename_len, dagl->nodename);
       } else if (IS_GMSSYMITER(v)) {
          VmGmsSymIterator *symiter = AS_GMSSYMITER(v);
-         IdentData *sym = &symiter->symbol;
+         IdentData *sym = &symiter->ident;
          printout(mode, "%30.*s\n", sym->lexeme.len, sym->lexeme.start);
       } else if (IS_INT(v)) {  printout(mode, "%30d\n", AS_INT(v));
       } else if (IS_UINT(v)) {  printout(mode, "%30u\n", AS_UINT(v));
@@ -433,7 +433,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                VM_CHK(valid_vmidx(val, vm->data.globals->localvectors.len, "local vectors"));
                printstr(mode, vm->data.globals->localvectors.names[val]);
                break;
-            case IdentGdxSet:
+            case IdentSet:
                VM_CHK(valid_vmidx(val, vm->data.globals->sets.len, "global sets"));
                printstr(mode, vm->data.globals->sets.names[val]);
                break;

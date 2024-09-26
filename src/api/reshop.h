@@ -11,8 +11,8 @@ struct rhp_ctr_filter_ops;
 struct rhp_nlnode;
 struct rhp_nltree;
 struct rhp_mathprgm;
-struct rhp_equilibrium;
-struct rhp_ovf_def;
+struct rhp_nash_equilibrium;
+struct rhp_ovfdef;
 struct rhp_spmat;
 struct rhp_empdag_arcVF;
 
@@ -35,11 +35,12 @@ enum rhp_mp_type {
 
 /** @brief Type of optimization problem */
 enum rhp_sense {
-  RHP_MIN       = 0,                               /**< Minimization problem */
-  RHP_MAX       = 1,                               /**< Maximization problem */
-  RHP_FEAS      = 2,                               /**< Feasibility problem  */
-  RHP_NOSENSE   = 3,                               /**< No sense set         */
-  RHP_SENSE_LEN = 4,
+  RHP_MIN        = 0,                               /**< Minimization problem */
+  RHP_MAX        = 1,                               /**< Maximization problem */
+  RHP_FEAS       = 2,                               /**< Feasibility problem  */
+  RHP_DUAL_SENSE = 3,                               /**< Dual Problem         */
+  RHP_NOSENSE    = 4,                               /**< No sense set         */
+  RHP_SENSE_LEN  = 5,
 };
 
 /** @brief Type of constraints  */
@@ -338,7 +339,7 @@ void rhp_print_emp(const struct rhp_mdl *mdl);
 RHP_PUBLIB
 int rhp_empdag_rootsetmp(struct rhp_mdl *mdl, struct rhp_mathprgm *mp);
 RHP_PUBLIB
-int rhp_empdag_rootsetmpe(struct rhp_mdl *mdl, struct rhp_equilibrium *mpe);
+int rhp_empdag_rootsetmpe(struct rhp_mdl *mdl, struct rhp_nash_equilibrium *mpe);
 
 /* -------------------------------------------------------------------------
  * GAMS specific functions
@@ -409,13 +410,13 @@ int rhp_mp_settype(struct rhp_mathprgm *mp, unsigned type);
  * EMPDAG MPE (MP Equilibrium) API
  * ------------------------------------------------------------------------- */
 RHP_PUBLIB
-unsigned rhp_mpe_getid(const struct rhp_equilibrium *mpe);
+unsigned rhp_mpe_getid(const struct rhp_nash_equilibrium *mpe);
 RHP_PUBLIB
-const char* rhp_mpe_getname(const struct rhp_equilibrium *mpe);
+const char* rhp_mpe_getname(const struct rhp_nash_equilibrium *mpe);
 RHP_PUBLIB
-unsigned rhp_mpe_getnumchildren(const struct rhp_equilibrium *mpe);
+unsigned rhp_mpe_getnumchildren(const struct rhp_nash_equilibrium *mpe);
 RHP_PUBLIB
-int rhp_mpe_print(struct rhp_equilibrium *mpe);
+int rhp_mpe_print(struct rhp_nash_equilibrium *mpe);
 
 /* -------------------------------------------------------------------------
  * EMPDAG MP (Mathematical Programming) API
@@ -435,9 +436,9 @@ int rhp_empdag_mpaddmpCTRL(struct rhp_mdl *mdl,  struct rhp_mathprgm *mp,
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-struct rhp_equilibrium* rhp_empdag_newmpe(struct rhp_mdl *mdl);
+struct rhp_nash_equilibrium* rhp_empdag_newmpe(struct rhp_mdl *mdl);
 RHP_PUBLIB
-int rhp_empdag_mpeaddmp(struct rhp_mdl *mdl, struct rhp_equilibrium* mpe, struct rhp_mathprgm *mp);
+int rhp_empdag_mpeaddmp(struct rhp_mdl *mdl, struct rhp_nash_equilibrium* mpe, struct rhp_mathprgm *mp);
 
 /* -------------------------------------------------------------------------
  * EMPDAG edgeVF (value function)
@@ -655,17 +656,17 @@ struct rhp_nltree* rhp_mdl_getnltree(const struct rhp_mdl *mdl, rhp_idx ei);
 
 RHP_PUBLIB
 int rhp_ovf_add(struct rhp_mdl *mdl, const char* name, rhp_idx ovf_vi,
-                struct rhp_avar *v_args, struct rhp_ovf_def **ovf_def);
+                struct rhp_avar *v_args, struct rhp_ovfdef **ovf_def);
 RHP_PUBLIB
-int rhp_ovf_check(struct rhp_mdl *mdl, struct rhp_ovf_def *ovf_def);
+int rhp_ovf_check(struct rhp_mdl *mdl, struct rhp_ovfdef *ovf_def);
 RHP_PUBLIB
-int rhp_ovf_param_add_scalar(struct rhp_ovf_def* ovf_def, const char *param_name,
+int rhp_ovf_param_add_scalar(struct rhp_ovfdef* ovf_def, const char *param_name,
                              double val);
 RHP_PUBLIB
-int rhp_ovf_param_add_vector(struct rhp_ovf_def *ovf_def, const char *param_name,
+int rhp_ovf_param_add_vector(struct rhp_ovfdef *ovf_def, const char *param_name,
                              unsigned n_vals, double *vals);
 RHP_PUBLIB
-int rhp_ovf_setreformulation(struct rhp_ovf_def *ovf_def, const char *reformulation);
+int rhp_ovf_setreformulation(struct rhp_ovfdef *ovf_def, const char *reformulation);
 
 /* -------------------------------------------------------------------------
  * ReSHOP model management

@@ -32,10 +32,20 @@ const char * badidx_str(rhp_idx idx)
       return "Data pointed by index was deleted";
    case IdxOutOfRange:
       return "Index is out of range";
-   case IdxMaxValid:
-      return "Maximum valid index";
+   case IdxError:
+      return "An error occured";
+   case IdxDuplicate:
+      return "Duplicate value found";
+   case IdxNone:
+      return "No value was given";
+   case IdxCcflib:
+      return "CCF lib data";
+   case IdxObjFunc:
+      return "Objective function (generic)";
    case IdxEmpDagChildNotFound:
       return "Child of EMPdag object not found";
+   case IdxMaxValid:
+      return "Maximum valid index";
    default:
       return "Index value not documented";
    }

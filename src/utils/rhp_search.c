@@ -95,6 +95,39 @@ _exit:
  * @return     if the element is found in the array: its index in the array
  *             otherwise: UINT_MAX
  */
+unsigned bin_insert_int(const int * restrict arr, unsigned n, int elt)
+{
+   assert(n >= 1); assert(n < UINT_MAX/2 - 1);
+   unsigned min = 0, max = n - 1, i;
+
+   while (max >= min) {
+      i = (min + max) / 2;
+
+      if (elt <= arr[i]) {
+         if (i == 0) { return 0; }
+         if (elt >= arr[i-1]) { return i; }
+         max = i - 1;
+      } else if (elt >= arr[i]) {
+         min = i + 1;
+      } else {
+         return i;
+      }
+   }
+
+   assert(elt >= arr[n-1]);
+   return n;
+}
+
+/**
+ * @brief Simple binary search
+ *
+ * @param arr  sorted array to the searched
+ * @param n    number of elements in the array
+ * @param elt  the element to be searched
+ *
+ * @return     if the element is found in the array: its index in the array
+ *             otherwise: UINT_MAX
+ */
 unsigned bin_search_uint(const unsigned * restrict arr, unsigned n, unsigned elt)
 {
   unsigned min = 0;

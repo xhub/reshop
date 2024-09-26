@@ -10,8 +10,8 @@
 #define RHP_ARRAY_PREFIX _edgeVFs
 #define RHP_ARRAY_TYPE VFedges
 #define RHP_ELT_TYPE struct rhp_empdag_arcVF
-#define RHP_ELT_SORT child_id
-#define RHP_ELT_INVALID ((struct rhp_empdag_arcVF) {.child_id = UINT_MAX, .type = ArcVFUnset});
+#define RHP_ELT_SORT mpid_child
+#define RHP_ELT_INVALID ((struct rhp_empdag_arcVF) {.mpid_child = UINT_MAX, .type = ArcVFUnset});
 #include "array_generic.inc"
 
 static int _edgeVFs_copy(VarcArray * restrict dat,
@@ -137,10 +137,10 @@ static inline int dagmp_array_copy(DagMpArray * restrict dat,
    for (unsigned i = 0; i < size; i++) {
       if (dat_src->arr[i]) {
          A_CHECK(dat->arr[i], mp_dup(dat_src->arr[i], mdl));
-         
+ 
          if (dat_src->names[i]) {
               A_CHECK(dat->names[i], strdup(dat_src->names[i]));
-              
+
          } else {
             dat->names[i] = NULL;
          }

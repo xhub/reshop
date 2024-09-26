@@ -41,7 +41,8 @@ int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
    S_CHECK(vi_inbounds(objvar, ctr_nvars_total(&mdl->ctr), __func__));
 
    Equ *e = &mdl->ctr.equs[objequ];
-   if (e->object != Mapping) {
+   EquObjectType otype = e->object;
+   if (otype != Mapping && otype != DefinedMapping) {
       error("[model/rhp] ERROR: the objective equation '%s' has type %s it should"
             " be %s\n", mdl_printequname(mdl, objequ), equtype_name(e->object),
             equtype_name(Mapping));
@@ -85,18 +86,8 @@ static char * get_mdlname_new(Model *mdl_up)
    return mdlname;
 }
 
-/**
- * @brief Initialize the data of the model
- *
- * @param mdl      the model to populate
- * @param mdl_up   the upstream model
- *
- * @return         the error code
- */
-int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
+int rmdl_initctrfromfull(Model *mdl, Model *mdl_up)
 {
-   double start = get_thrdtime();
-
    Container *ctr = &mdl->ctr;
    Container *ctr_up = &mdl_up->ctr;
 
@@ -236,6 +227,24 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
       ((RhpModelData*)mdl->data)->solver = ((RhpModelData*)mdl_up->data)->solver;
    }
 
+
+   return OK;
+}
+
+/**
+ * @brief Initialize the data of the model
+ *
+ * @param mdl      the model to populate
+ * @param mdl_up   the upstream model
+ *
+ * @return         the error code
+ */
+int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
+{
+   double start = get_thrdtime();
+
+    S_CHECK(rmdl_initctrfromfull(mdl, mdl_up));
+
    /* ---------------------------------------------------------------------
     *  Copy the empinfo
     * --------------------------------------------------------------------- */
@@ -245,19 +254,28 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
    S_CHECK(mdl_analyze_modeltype(mdl, NULL));
 
   /* ----------------------------------------------------------------------
-   * Final adjustements:
+   * Final adjustements (after EMPDAG is set):
    * - objequ must be a mapping (this is not the case coming from GAMS)
    * ---------------------------------------------------------------------- */
    rhp_idx objequ;
    rmdl_getobjequ(mdl, &objequ);
    if (valid_ei(objequ)) {
-      EquObjectType equtype = mdl->ctr.equs[objequ].object;
+      Equ * restrict eobj = &mdl->ctr.equs[objequ];
+      EquObjectType equtype = eobj->object;
       if (equtype == ConeInclusion) {
          assert(mdl_up->backend == RHP_BACKEND_GAMS_GMO);
-         mdl->ctr.equs[objequ].object = Mapping;
-         mdl->ctr.equs[objequ].cone = CONE_NONE;
+
+         rhp_idx objvar;
+         rmdl_getobjvar(mdl, &objvar);
+         if (valid_vi(objvar)) {
+            eobj->object = DefinedMapping;
+         } else {
+            eobj->object = Mapping;
+         }
+         eobj->cone = CONE_NONE;
       }
-      if (mdl->ctr.equs[objequ].object != Mapping) {
+      EquObjectType otype = mdl->ctr.equs[objequ].object;
+      if (otype != Mapping && otype != DefinedMapping) {
          error("[model] %s model '%.*s' #%u inherited an objective equation from "
                "%s model '%.*s' #%u, but the latter has type %s, expected %s\n",
                mdl_fmtargs(mdl), mdl_fmtargs(mdl_up),
@@ -265,6 +283,9 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
          return Error_InvalidModel;
       }
    }
+
+   RhpModelData *mdldat = mdl->data;
+   mdldat->status = Rmdl_Editable;
 
    mdl_timings_rel(mdl->timings);
    mdl->timings = mdl_timings_borrow(mdl_up->timings);
@@ -585,7 +606,7 @@ int rmdl_remove_fixedvars(Model *mdl)
       }
 
       rhp_idx ei_new = ei;
-      S_CHECK(rmdl_dup_equ(mdl, &ei_new, 0, vi));
+      S_CHECK(rmdl_dup_equ_except(mdl, &ei_new, 0, vi));
       Equ *e_new = &mdl->ctr.equs[ei_new]; 
 
       if (v->value == ub) {

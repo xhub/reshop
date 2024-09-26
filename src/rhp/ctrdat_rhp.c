@@ -96,8 +96,13 @@ int rctr_add_eval_equvar(Container *ctr, rhp_idx ei, rhp_idx vi)
       }
    }
 
+   equvar_evals->var2evals[vi] = true;
+
    pairs[equvar_evals->len].equ = ei;
    pairs[equvar_evals->len].var = vi;
+
+   trace_ctr("[container] variable '%s' marked for evaluation via equation '%s'\n",
+             ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei));
 
    equvar_evals->len++;
 
@@ -215,8 +220,8 @@ int rctr_reserve_vars(Container *ctr, unsigned n_vars)
  *
  * @return               the error code
  */
-int rctr_add_equ_empty(Container *ctr, rhp_idx *ei, Equ **e,
-                        EquObjectType type, enum cone cone)
+int rctr_add_equ_empty(Container *ctr, rhp_idx *ei, Equ **e, EquObjectType type,
+                       enum cone cone)
 {
    RhpContainerData * restrict cdat = (RhpContainerData *)ctr->data;
 

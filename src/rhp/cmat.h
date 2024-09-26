@@ -54,6 +54,7 @@ NONNULL
 int cmat_equ_add_newlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val);
 
 int cmat_cpy_equ_flipped(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst) NONNULL;
+NONNULL int cmat_copy_equ(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst);
 NONNULL
 int cmat_copy_equ_except(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst, rhp_idx vi_no);
 int cmat_append_equs(Container * restrict ctr_dst,

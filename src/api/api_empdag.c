@@ -229,7 +229,7 @@ int rhp_empdag_mpaddmpVF(Model *mdl, MathPrgm *mp,
 
    unsigned id_parent = mp->id;
    unsigned id_child = mp_child->id;
-   edgeVF->child_id = id_child;
+   edgeVF->mpid_child = id_child;
 
    return empdag_mpVFmpbyid(&mdl->empinfo.empdag, id_parent, edgeVF);
 }

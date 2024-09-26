@@ -86,11 +86,13 @@ Equ *equ_alloc(unsigned lin_maxlen) MALLOC_ATTR(equ_dealloc,1);
 void equ_basic_init(Equ *e) NONNULL;
 int equ_compar(const void *a, const void *b);
 int equ_copymetadata(Equ * restrict edst, const Equ * restrict esrc, rhp_idx ei);
-int equ_copy_to(Container *ctr, int sidx, Equ *dest, int eidx,
-                unsigned lin_space, rhp_idx vi_no);
+int equ_copy_to(Container *ctr, rhp_idx ei, Equ *edst, rhp_idx ei_dst,
+                unsigned lin_space, rhp_idx vi_no) NONNULL;
+int equ_dup(Container *ctr, rhp_idx ei, rhp_idx ei_dst) NONNULL;
 int equ_nltree_fromgams(Equ* e, unsigned codelen, const int *instrs, const int *args) NONNULL;
 void equ_free(Equ *e) NONNULL;
 void equ_print(const Equ *equ);
+unsigned equ_get_nladd_estimate(Equ *e) NONNULL;
 
 void equ_err_cone(const char *fn, const Equ * restrict e);
 
@@ -225,11 +227,13 @@ static inline void equ_add_cst(Equ *e, double val)
    case CONE_0:
       e->p.cst += val;
       break;
-   case CONE_NONE:
-      if (e->object == Mapping || e->object == BooleanRelation) {
+   case CONE_NONE: {
+      EquObjectType otype = e->object;
+      if (otype == Mapping || otype == BooleanRelation || otype == DefinedMapping) {
          e->p.cst += val;
          break;
       }
+   }
    FALLTHRU
    case CONE_POLYHEDRAL:
    case CONE_SOC:
@@ -252,10 +256,12 @@ static inline double equ_get_cst(const Equ * restrict e)
    case CONE_R:
    case CONE_0:
       return e->p.cst;
-   case CONE_NONE:
-      if (e->object == Mapping || e->object == BooleanRelation) {
+   case CONE_NONE: {
+      EquObjectType otype = e->object;
+      if (otype == Mapping || otype == BooleanRelation || otype == DefinedMapping) {
          return e->p.cst;
       }
+   }
    FALLTHRU
    case CONE_POLYHEDRAL:
    case CONE_SOC:

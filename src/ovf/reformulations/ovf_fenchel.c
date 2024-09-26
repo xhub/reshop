@@ -33,45 +33,43 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 {
    double start = get_thrdtime();
    int status = OK;
-   const struct ovf_ops *op;
+   const OvfOps *ops;
 
    Container *ctr = &mdl->ctr;
 
    struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)ctr->data;
 
    switch (type) {
-   case OVFTYPE_OVF:
-      op = &ovfdef_ops;
+   case OvfType_Ovf:
+      ops = &ovfdef_ops;
+      break;
+   case OvfType_Ccflib_Dual:
+      ops = &ccflib_ops;
       break;
    default:
       TO_IMPLEMENT("user-defined OVF is not implemented");
    }
 
-   rhp_idx vi_ovf = op->get_ovf_vidx(ovfd);
-   if (!valid_vi(vi_ovf)) {
-      error("%s :: the OVF variable is not set! Value = %d\n", __func__, vi_ovf);
-      return Error_InvalidValue;
-   }
-
-   char ovf_name[SHORT_STRING];
-   S_CHECK(ctr_copyvarname(ctr, vi_ovf, ovf_name, sizeof ovf_name));
-   size_t ovf_namelen = strlen(ovf_name);
-
    MathPrgm *mp = NULL;
    RhpSense sense;
 
-   S_CHECK(ovf_get_mp_and_sense(mdl, vi_ovf, &mp, &sense));
+   rhp_idx vi_ovf = ops->get_ovf_vidx(ovfd);
 
-   bool has_set = false;
-   struct ovf_ppty ovf_ppty;
-   op->get_ppty(ovfd, &ovf_ppty);
+   const char *ovf_name = ops->get_name(ovfd);
+   size_t ovf_namelen = strlen(ovf_name);
+
+   S_CHECK(ops->get_mp_and_sense(ovfd, mdl, vi_ovf, &mp, &sense));
+
+   OvfPpty ovf_ppty;
+   ops->get_ppty(ovfd, &ovf_ppty);
    const bool is_quad = ovf_ppty.quad;
+   bool has_set = false;
 
    /* ---------------------------------------------------------------------
     * Test compatibility between OVF and problem type
     * --------------------------------------------------------------------- */
 
-   S_CHECK(ovf_compat_types(op->get_name(ovfd), ovf_name, sense, ovf_ppty.sense));
+   S_CHECK(ovf_compat_types(ops->get_name(ovfd), ovf_name, sense, ovf_ppty.sense));
 
    /* ---------------------------------------------------------------------
     * 1. Analyze the QP structure
@@ -90,21 +88,22 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 
    /* We look for A^T and c such that A^T x - c belongs to K */
    rhpmat_set_csc(&At);
-   S_CHECK(op->get_set_nonbox(ovfd, &At, &c, true));
+   S_CHECK(ops->get_set_nonbox(ovfd, &At, &c, true));
 
    /*  Get the Cholesky factorization of M = D^TJD */
-   S_CHECK(op->get_D(ovfd, &D, &J));
+   S_CHECK(ops->get_D(ovfd, &D, &J));
 
    /* ----------------------------------------------------------------------
     * Get the indices of F(x):
     *   - indices
-    *   - types   
+    *   - types
     *   - n_args   number of arguments
     * ---------------------------------------------------------------------- */
 
    Avar *ovf_args;
-   S_CHECK(op->get_args(ovfd, &ovf_args));
-   unsigned n_args = avar_size(ovf_args);
+   S_CHECK(ops->get_args(ovfd, &ovf_args));
+   unsigned n_args;
+   S_CHECK(ops->get_nargs(ovfd, &n_args));
 
    /* ----------------------------------------------------------------------
     * Analyze the QP structure:
@@ -127,21 +126,21 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    bool has_shift = false;
 
    double *u_shift = NULL, *var_ubnd = NULL, *mat_u_tilde = NULL;
-   enum cone *cones_u = NULL;
+   Cone *cones_u = NULL;
    void **cones_u_data = NULL;
    unsigned *z_bnd_revidx = NULL;
 
-   const unsigned n_u = op->size_u(ovfd, n_args);
+   const unsigned n_u = ops->size_u(ovfd, n_args);
 
    if (n_u == 0) {
       error("[ccf:primal] the number of variable associated with the CCF '%s' "
             "of type %s is 0. This should never happen\n."
             "Check the OVF definition if it is a custom one, or file a bug\n",
-            ovf_name, op->get_name(ovfd));
+            ovf_name, ops->get_name(ovfd));
       return Error_UnExpectedData;
    }
 
-   MALLOC_EXIT(cones_u, enum cone, n_u);
+   MALLOC_EXIT(cones_u, Cone, n_u);
    MALLOC_EXIT(cones_u_data, void*, n_u);
    MALLOC_EXIT(u_shift, double, 2*n_u);
    var_ubnd = &u_shift[n_u];
@@ -150,8 +149,8 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    for (size_t i = 0; i < n_u; ++i) {
       /*  TODO(xhub) allow more general cones here */
       cones_u_data[i] = NULL;
-      double lb = op->get_var_lb(ovfd, i);
-      double ub = op->get_var_ub(ovfd, i);
+      double lb = ops->get_var_lb(ovfd, i);
+      double ub = ops->get_var_ub(ovfd, i);
 
       bool lb_fin = isfinite(lb);
       bool ub_fin = isfinite(ub);
@@ -236,8 +235,8 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
          S_CHECK_EXIT(rhpmat_get_size(&D, &n_z, &n_constr));
          n_z = 0;
       } else {
-         error("%s :: Fatal Error: no OVF set given and no "
-                 "quadratic part -> the OVF function is unbounded!\n", __func__);
+         error("[ccflib/fenchel] ERROR: no CCF set given and no quadratic part. "
+               "The CCF function associated with %s is unbounded!\n", ovf_name);
          status = Error_EMPIncorrectInput;
          goto _exit;
       }
@@ -249,7 +248,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    }
 
    if (nb_vars == 0) {
-      error("[ovf/primal] the OVF with variable '%s' has no constraints and no "
+      error("[ccflib/primal] ERROR: the CCF with variable '%s' has no constraints and no "
             "quadratic part. It is then unbounded\n", ovf_name);
       status = Error_ModelUnbounded;
       goto _exit;
@@ -290,7 +289,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       for (unsigned j = 0; j < n_z; ++j) {
          enum cone cone;
          void *cone_data;
-         S_CHECK_EXIT(op->get_cone_nonbox(ovfd, j, &cone, &cone_data));
+         S_CHECK_EXIT(ops->get_cone_nonbox(ovfd, j, &cone, &cone_data));
          rhp_idx vi = IdxNA;
 
          switch (ovf_ppty.sense) {
@@ -378,7 +377,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    }
 
    /* Check whether we have B_lin or b_lin  */
-   S_CHECK_EXIT(op->get_lin_transformation(ovfd, &B_lin, &b_lin));
+   S_CHECK_EXIT(ops->get_lin_transformation(ovfd, &B_lin, &b_lin));
 
    if (B_lin.ppty) {
       unsigned n_constr2, n_args2;
@@ -407,9 +406,9 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 
    rhp_idx *equ_idx = NULL;
    double *coeffs = NULL;
-   S_CHECK_EXIT(op->get_mappings(ovfd, &equ_idx));
+   S_CHECK_EXIT(ops->get_mappings(ovfd, &equ_idx));
    S_CHECK_EXIT(ovf_process_indices(mdl, ovf_args, equ_idx));
-   S_CHECK_EXIT(op->get_coeffs(ovfd, &coeffs));
+   S_CHECK_EXIT(ops->get_coeffs(ovfd, &coeffs));
 
    SpMat M;
    rhpmat_null(&M);
@@ -447,7 +446,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
        * ------------------------------------------------------------- */
 
       if (is_quad) {
-         S_CHECK_EXIT(op->get_M(ovfd, &M));
+         S_CHECK_EXIT(ops->get_M(ovfd, &M));
 
          quad_cst = rhpmat_evalquad(&M, u_shift);
 
@@ -475,8 +474,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       rhp_idx ei_new;
       double ovf_coeff;
 
-
-      S_CHECK_EXIT(ovf_replace_var(mdl, vi_ovf, &iter, &ovf_coeff, &ei_new, n_z));
+      S_CHECK_EXIT(ops->get_equ(ovfd, mdl, &iter, vi_ovf, &ovf_coeff, &ei_new, n_z));
 
       Equ *eq = &ctr->equs[ei_new];
 
@@ -526,38 +524,39 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
     * --------------------------------------------------------------------- */
    unsigned start_new_equ = cdat->total_m;
 
-
-   /* TODO(xhub) reuse the code before to also store that*/
-   Equ *e_rho;
    rhp_idx ei_rho = IdxNA;
-   S_CHECK_EXIT(rctr_add_equ_empty(ctr, &ei_rho, &e_rho, Mapping, CONE_NONE));
 
-   if (has_set) {
+   if (valid_vi(vi_ovf)) {
+      /* TODO(xhub) reuse the code before to also store that*/
+      Equ *e_rho;
+      S_CHECK_EXIT(rctr_add_equ_empty(ctr, &ei_rho, &e_rho, Mapping, CONE_NONE));
 
-      Avar z;
-      avar_setcompact(&z, n_z, z_start);
+      if (has_set) {
 
-      S_CHECK_EXIT(rctr_equ_addnewlvars(ctr, e_rho, &z, c));
+         Avar z;
+         avar_setcompact(&z, n_z, z_start);
 
-      if (has_shift) {
+         S_CHECK_EXIT(rctr_equ_addnewlvars(ctr, e_rho, &z, c));
 
-         /* ----------------------------------------------------------------
+         if (has_shift) {
+
+            /* ----------------------------------------------------------------
           * Add <G(F(x)), u_tilde>
           * ---------------------------------------------------------------- */
 
-         S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, e_rho, u_shift, n_u, &B_lin, b_lin, coeffs,
-                                                ovf_args, equ_idx, 1.));
+            S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, e_rho, u_shift, n_u, &B_lin, b_lin, coeffs,
+                                                   ovf_args, equ_idx, 1.));
 
+         }
       }
-   }
 
-   if (is_quad) {
-      S_CHECK_EXIT(rctr_equ_add_quadratic(ctr, e_rho, &J, &w_var, 1.));
+      if (is_quad) {
+         S_CHECK_EXIT(rctr_equ_add_quadratic(ctr, e_rho, &J, &w_var, 1.));
 
-      if (has_shift) {
-         equ_add_cst(e_rho, -quad_cst);
+         if (has_shift) {
+            equ_add_cst(e_rho, -quad_cst);
+         }
       }
-   }
 
    /* ---------------------------------------------------------------------
     * 2.2 Add an equation to evaluate rho
@@ -565,14 +564,16 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
     * If we want to initialize the values of the new variables, this is the
     * start for the new equations
     * --------------------------------------------------------------------- */
-   S_CHECK_EXIT(rctr_equ_addnewvar(ctr, e_rho, vi_ovf, -1.));
 
-   S_CHECK_EXIT(rctr_add_eval_equvar(ctr, ei_rho, vi_ovf));
+      S_CHECK_EXIT(rctr_equ_addnewvar(ctr, e_rho, vi_ovf, -1.));
 
-   /* \TODO(xhub) this is a HACK to remove this equation from the main model.
+      S_CHECK_EXIT(rctr_add_eval_equvar(ctr, ei_rho, vi_ovf));
+
+      /* \TODO(xhub) this is a HACK to remove this equation from the main model.
     */
-   S_CHECK_EXIT(rctr_deactivate_var(ctr, vi_ovf));
-   S_CHECK_EXIT(rctr_deactivate_equ(ctr, ei_rho));
+      S_CHECK_EXIT(rctr_deactivate_var(ctr, vi_ovf));
+      S_CHECK_EXIT(rctr_deactivate_equ(ctr, ei_rho));
+   }
 
 
    /* ---------------------------------------------------------------------
@@ -596,9 +597,9 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
     * Main loop to add the constraint equations
     * --------------------------------------------------------------------- */
 
-   char *eqn_name;
-   NEWNAME(eqn_name, ovf_name, ovf_namelen, "_set");
-   cdat_equname_start(cdat, eqn_name);
+   char *equ_name;
+   NEWNAME(equ_name, ovf_name, ovf_namelen, "_set");
+   cdat_equname_start(cdat, equ_name);
    /* Keep track of the   */
    size_t idx_z_bnd = z_bnd_start;
 
@@ -752,6 +753,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    unsigned nb_equs = cdat->total_m - start_new_equ;
 
    if (O_Ovf_Init_New_Variables) {
+      assert(valid_vi(vi_ovf));
       Avar ovf_vars, ovfvar;
       avar_setcompact(&ovf_vars, nb_vars, start_new_vars);
       avar_setcompact(&ovfvar, 1, vi_ovf);
@@ -798,7 +800,7 @@ _exit:
    rhpmat_free(&B_lin);
    rhpmat_free(&M);
 
-   op->trimmem(ovfd);
+   ops->trimmem(ovfd);
 
    simple_timing_add(&mdl->timings->reformulation.CCF.fenchel, get_thrdtime() - start);
 

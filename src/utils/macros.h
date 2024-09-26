@@ -141,6 +141,9 @@ void backtrace_(const char *expr, int status);
 #define SN_CHECK(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
   BACKTRACE(EXPR, status42); return NULL; } }
 
+#define NS_CHECK(EXPR) { void *obj42 = EXPR; if (RHP_UNLIKELY(!obj42)) { \
+  BACKTRACE(EXPR, Error_InsufficientMemory); return Error_InsufficientMemory; } }
+
 #define SN_CHECK_EXIT(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42)) { \
   BACKTRACE(EXPR, status42); goto _exit; } }
 

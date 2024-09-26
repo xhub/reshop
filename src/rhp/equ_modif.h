@@ -16,7 +16,7 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
                            const double *c, unsigned n_c, SpMat *B, double *b,
                            double *coeffs, rhp_idx *var_idx, rhp_idx *eis);
 int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *node, 
-                                Avar *uvar, SpMat *B, double *b, double *coeffs, Avar *v,
+                                Avar *uvar, const SpMat *B, const double *b, double *coeffs, Avar *v,
                                 Aequ* eqn);
 int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat *mat, Avar *v, double coeff);
 int rctr_equ_add_maps(Container *ctr, Equ *e, double *coeffs,

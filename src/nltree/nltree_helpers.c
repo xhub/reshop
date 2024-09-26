@@ -12,7 +12,7 @@ int nltree_get_add_node(Model* mdl, rhp_idx ei, unsigned n_children,
                         NlNode **add_node, unsigned *offset, double *coeff)
 {
    Container *ctr = &mdl->ctr;
-   assert(ei < ctr->m);
+   assert(ctr_is_rhp(ctr) && ei < rctr_totalm(ctr));
 
    Equ *e = &ctr->equs[ei];
 
@@ -32,6 +32,6 @@ int nltree_get_add_node(Model* mdl, rhp_idx ei, unsigned n_children,
 
    NlTree *tree = e->tree;
    S_CHECK(nltree_find_add_node(tree, &add_node, ctr->pool, coeff));
-   
-   return nltree_reserve_add_node(tree, add_node, n_children, offset);
+ 
+   return nltree_ensure_add_node(tree, add_node, n_children, offset);
 }

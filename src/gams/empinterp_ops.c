@@ -2,6 +2,7 @@
 #include "empinterp.h"
 #include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
+#include "empinterp_symbol_resolver.h"
 #include "empinterp_utils.h"
 #include "empparser_priv.h"
 #include "empparser_utils.h"
@@ -13,6 +14,7 @@
 #include "printout.h"
 #include "toplayer_utils.h"
 
+#include "dctmcc.h"
 
 //NOLINTBEGIN
 UNUSED static int imm_gms_resolve_param(Interpreter* restrict interp, unsigned * restrict p)
@@ -26,18 +28,20 @@ UNUSED static int imm_gms_resolve_set(Interpreter* restrict interp, unsigned * r
 }
 //NOLINTEND
 
-int parser_filter_start(Interpreter* restrict interp)
+int gmssym_iterator_init(Interpreter* restrict interp)
 {
-   assert(!interp->gms_sym_iterator.active);
-
-   interp->gms_sym_iterator.active = true;
-   interp->gms_sym_iterator.compact = true;
-   interp->gms_sym_iterator.loop_needed = false;
-   interp->gms_sym_iterator.indices.nargs = interp->cur.symdat.dim;
-
+   GmsSymIterator * restrict iterator = &interp->gms_sym_iterator;
+   assert(!iterator->active);
    assert(interp->cur.symdat.dim < GMS_MAX_INDEX_DIM);
 
-   memset(&interp->gms_sym_iterator.uels, 0, sizeof(int)*interp->cur.symdat.dim);
+   iterator->active = true;
+   iterator->compact = true;
+   iterator->loop_needed = false;
+
+
+   memset(&iterator->uels, 0, sizeof(int)*interp->cur.symdat.dim);
+
+   gmsindices_init(&iterator->indices);
 
    return OK;
 }
@@ -63,6 +67,13 @@ int parser_filter_set(Interpreter* restrict interp, unsigned i, int val)
    return OK;
 }
 
+NONNULL static const char *get_daguid_name(EmpDag *empdag, daguid_t uid)
+{
+   if (!valid_uid(uid)) { return "None"; }
+
+   return  empdag_getname(empdag, uid);
+}
+
 NONNULL_AT(1) static
 int imm_common_nodeinit(Interpreter *interp, daguid_t uid, DagRegisterEntry *regentry)
 {
@@ -71,26 +82,38 @@ int imm_common_nodeinit(Interpreter *interp, daguid_t uid, DagRegisterEntry *reg
       S_CHECK(dagregister_add(&interp->dagregister, regentry));
    }
 
-   if (valid_uid(interp->uid_grandparent)) {
+   if (valid_uid(interp->daguid_grandparent)) {
       errormsg("[empinterp] ERROR: grandparent uid is valid, please file a bug\n");
       return Error_EMPRuntimeError;
    }
 
-   interp->uid_grandparent = interp->uid_parent;
-   interp->uid_parent = uid;
+   trace_empinterp("[empinterp] interpreter daguid (GP,P) push: (%s,%s) -> (%s,%s)\n",
+                   get_daguid_name(&interp->mdl->empinfo.empdag, interp->daguid_grandparent),
+                   get_daguid_name(&interp->mdl->empinfo.empdag, interp->daguid_parent),
+                   get_daguid_name(&interp->mdl->empinfo.empdag, interp->daguid_parent),
+                   get_daguid_name(&interp->mdl->empinfo.empdag, uid));
+
+   interp->daguid_grandparent = interp->daguid_parent;
+   interp->daguid_parent = uid;
 
    return OK;
 }
 
 NONNULL static int imm_common_nodefini(Interpreter *interp)
 {
-   interp->uid_parent = interp->uid_grandparent;
-   interp->uid_grandparent = EMPDAG_UID_NONE;
+   trace_empinterp("[empinterp] interpreter daguid (GP,P) pop: (%s,%s) -> (%s,%s)\n",
+                   get_daguid_name(&interp->mdl->empinfo.empdag, interp->daguid_grandparent),
+                   get_daguid_name(&interp->mdl->empinfo.empdag, interp->daguid_parent),
+                   get_daguid_name(&interp->mdl->empinfo.empdag, EMPDAG_UID_NONE),
+                   get_daguid_name(&interp->mdl->empinfo.empdag, interp->daguid_grandparent));
+
+   interp->daguid_parent = interp->daguid_grandparent;
+   interp->daguid_grandparent = EMPDAG_UID_NONE;
 
    return OK;
 }
 
-static int imm_gms_resolve(Interpreter* restrict interp)
+static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
 {
    assert(interp->gms_sym_iterator.active && !interp->gms_sym_iterator.loop_needed);
    TokenType toktype = parser_getcurtoktype(interp);
@@ -102,7 +125,50 @@ static int imm_gms_resolve(Interpreter* restrict interp)
    data.symiter.imm.symiter = &interp->gms_sym_iterator;
    data.iscratch = &interp->cur.iscratch;
 
+   GmsSymIterator * restrict symiter = &interp->gms_sym_iterator;
+   int * restrict uels = symiter->uels;
+   int * restrict domindices = interp->cur.symdat.domindices;
+   IdentData * restrict idents = symiter->indices.idents;
+   assert(symiter->indices.nargs == 0 || symiter->indices.nargs == symiter->ident.dim);
+
    dctHandle_t dct = interp->dct;
+
+   for (unsigned i = 0, len = gmsindices_nargs(&symiter->indices); i < len; ++i) {
+      IdentData *ident = &idents[i];
+      switch (ident->type) {
+      case IdentUEL: {
+         int uelidx = (int)ident->idx;
+         uels[i] = uelidx;
+         if (uelidx > 0) {
+            symiter->compact = false;
+         }
+         break;
+      case IdentUniversalSet:
+         uels[i] = 0;
+         break;
+      case IdentSet: {
+         char domstr[GMS_SSSIZE];
+         dctDomName(dct, domindices[i], domstr, sizeof(domstr));
+         if (!strncasecmp(domstr, ident->lexeme.start, ident->lexeme.len)) {
+            uels[i] = 0;
+         } else {
+            error("[empinterp] ERROR line %u: subset selection is not implemented yet!\n",
+                  ident->lexeme.linenr);
+            return Error_NotImplemented;
+         }
+         }
+         break;
+      default:
+         error("[empinterp] ERROR line %u: while resolving symbol '%.*s', "
+               "unsupported ident '%.*s' of type %s at the %u location",
+               interp->linenr, emptok_getstrlen(&interp->cur),
+               emptok_getstrstart(&interp->cur), ident->lexeme.len,
+               ident->lexeme.start, identtype_str(ident->type), i);
+         return Error_EMPRuntimeError;
+      }
+
+      }
+   }
 
    switch (toktype) {
    case TOK_GMS_VAR:
@@ -118,115 +184,9 @@ static int imm_gms_resolve(Interpreter* restrict interp)
 
    interp->gms_sym_iterator.active = false;
 
+   // TODO gmd_resolve
    return dct_resolve(dct, &data);
 }
-
-static int imm_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
-{
-   TokenType toktype;
-
-   /* We always start, as it resets the filter, which is always required */
-   S_CHECK(parser_filter_start(interp));
-
-   /* ---------------------------------------------------------------------
-    * We distinguish between peeked token being '(' or not
-    * --------------------------------------------------------------------- */
-
-   unsigned p2 = *p;
-   S_CHECK(peek(interp, &p2, &toktype));
-
-   if (toktype == TOK_LPAREN) {
-      unsigned i = 0;
-      interp_peekseqstart(interp);
-
-      do {
-         bool has_single_quote = false, has_double_quote = false;
-
-         if (i >= GMS_MAX_INDEX_DIM) {
-            error("[empinterp] ERROR: EMP identifier '%.*s' has more than %u identifiers!\n",
-                  interp->cur.len, interp->cur.start, GMS_MAX_INDEX_DIM);
-            return Error_EMPIncorrectInput;
-         }
-
-         /* get the next token */
-         S_CHECK(peek(interp, &p2, &toktype));
-
-         if (toktype == TOK_SINGLE_QUOTE) {
-            has_single_quote = true;
-         } else if (toktype == TOK_DOUBLE_QUOTE) {
-            has_double_quote = true;
-         }
-
-         if (has_single_quote || has_double_quote) {
-            char quote = toktype == TOK_SINGLE_QUOTE ? '\'' : '"';
-            S_CHECK(parser_peekasUEL(interp, &p2, quote, &toktype));
-
-            if (toktype == TOK_UNSET) {
-               const Token *tok = &interp->peek;
-               error("[empinterp] ERROR line %u: %c%.*s%c is not a UEL\n", interp->linenr,
-                     quote, tok->len, tok->start, quote);
-               return Error_EMPIncorrectSyntax;
-            }
-
-            if (toktype != TOK_STAR && toktype != TOK_GMS_UEL) {
-               return runtime_error(interp->linenr);
-            }
-
-         } else {
-            S_CHECK(peek(interp, &p2, &toktype));
-            PARSER_EXPECTS_PEEK(interp, "A string (subset, variable) is required",
-                           TOK_GMS_SET, TOK_STAR, TOK_IDENT);
-
-         }
-
-         switch (toktype) {
-         case TOK_GMS_SET:
-            S_CHECK(parser_filter_set(interp, i, -interp->peek.symdat.idx));
-            break;
-         case TOK_GMS_UEL:
-            S_CHECK(parser_filter_set(interp, i, interp->peek.symdat.idx));
-            break;
-         case TOK_STAR:
-            S_CHECK(parser_filter_set(interp, i, 0));
-            break;
-         default:
-            errormsg("[empinterp] ERROR: unexpected failure.\n");
-            return Error_RuntimeError;
-         }
-
-         i++;
-
-         S_CHECK(peek(interp, &p2, &toktype));
-
-      } while (toktype == TOK_COMMA);
-
-      S_CHECK(parser_expect_peek(interp, "Closing ')' is required", TOK_RPAREN));
-
-      UNUSED ptrdiff_t sym_total_len = interp->peek.start - interp->cur.start + interp->peek.len;
-
-      assert(sym_total_len >= 0 && sym_total_len < INT_MAX);
-
-      if (i != interp->cur.symdat.dim) {
-         error("[empinterp] ERROR: GAMS symbol '%.*s' has dimension %d but %u "
-               "indices were given!\n",
-               interp->cur.len, interp->cur.start, interp->cur.symdat.dim, i);
-         return Error_EMPIncorrectInput;
-      }
-
-      /* update the counter */
-      *p = p2;
-      interp_peekseqend(interp);
-
-   }
-
-   S_CHECK(imm_gms_resolve(interp));
-
-   interp->cur.symdat.read = true;
-
-   return OK;
-}
-
-
 
 NONNULL static
 int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
@@ -242,7 +202,7 @@ int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcT
    }
 
    GmsIndicesData indices;
-   gms_indicesdata_init(&indices);
+   gmsindices_init(&indices);
 
    S_CHECK(parse_gmsindices(interp, p, &indices));
 
@@ -310,6 +270,19 @@ static int imm_mp_finalize(UNUSED Interpreter *interp, MathPrgm *mp)
    return OK;
 }
 
+static int imm_mp_setaschild(Interpreter *interp, MathPrgm *mp)
+{
+   if (valid_uid(interp->daguid_child)) {
+      error("[empinterp] ERROR at line %u: child daguid has valid value, "
+            "should be invalid\n", interp->linenr);
+      return Error_EMPRuntimeError;
+   }
+
+   interp->daguid_child = mpid2uid(mp->id);
+
+   return OK;
+}
+
 static int imm_mp_setobjvar(Interpreter *interp, MathPrgm *mp)
 {
    const Avar *v = &interp->cur.payload.v;
@@ -337,7 +310,7 @@ static int imm_mp_settype(UNUSED Interpreter *interp, MathPrgm *mp, unsigned typ
    return mp_settype(mp, type);
 }
 
-static int imm_mpe_new(Interpreter *interp, Nash **mpe)
+static int imm_nash_new(Interpreter *interp, Nash **nash)
 {
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
@@ -352,23 +325,23 @@ static int imm_mpe_new(Interpreter *interp, Nash **mpe)
       interp->regentry = NULL;
    }
 
-   A_CHECK(*mpe, empdag_newnashnamed(empdag, labelname));
+   A_CHECK(*nash, empdag_newnashnamed(empdag, labelname));
 
-   S_CHECK(imm_common_nodeinit(interp, nashid2uid((*mpe)->id), regentry));
+   S_CHECK(imm_common_nodeinit(interp, nashid2uid((*nash)->id), regentry));
 
-   trace_empinterp("[empinterp] line %u: new MPE(%s) #%u\n", interp->linenr,
-                   empdag_getnashname(empdag, (*mpe)->id), (*mpe)->id);
+   trace_empinterp("[empinterp] line %u: new Nash(%s) #%u\n", interp->linenr,
+                   empdag_getnashname(empdag, (*nash)->id), (*nash)->id);
 
    return OK;
 }
 
-static int imm_mpe_addmp(UNUSED Interpreter *interp, unsigned mpe_id, MathPrgm *mp)
+static int imm_nash_addmp(UNUSED Interpreter *interp, nashid_t nashid, MathPrgm *mp)
 {
-   return empdag_nashaddmpbyid(&interp->mdl->empinfo.empdag, mpe_id, mp->id);
+   return empdag_nashaddmpbyid(&interp->mdl->empinfo.empdag, nashid, mp->id);
 
 }
 
-static int imm_mpe_finalize(UNUSED Interpreter *interp, Nash *mpe)
+static int imm_nash_finalize(UNUSED Interpreter *interp, Nash *mpe)
 {
    return imm_common_nodefini(interp);
 }
@@ -395,7 +368,7 @@ static int imm_ovf_setrhovar(Interpreter* restrict interp, void *ovfdef_data)
       return Error_EMPIncorrectInput;
    }
 
-   ovfdef->ovf_vidx = avar_fget(v, 0);
+   ovfdef->vi_ovf = avar_fget(v, 0);
 
    return OK;
 }
@@ -513,6 +486,8 @@ static int imm_mp_ccflib_new(Interpreter* restrict interp, unsigned ccflib_idx,
 
 static int imm_mp_ccflib_finalize(Interpreter* restrict interp, MathPrgm *mp)
 {
+   S_CHECK(mp_finalize(mp));
+
    /* TODO: what are we doing thing here? */
    S_CHECK(imm_common_nodefini(interp));
 
@@ -640,7 +615,7 @@ const ParserOps parser_ops_imm = {
    .ctr_markequasflipped  = imm_ctr_markequasflipped,
    .gms_get_uelidx        = get_uelidx_via_dct,
    .gms_get_uelstr        = get_uelstr_via_dct,
-   .gms_parse             = imm_gms_parse,
+   .gms_resolve_sym             = imm_gms_resolve,
    .identaslabels         = imm_identaslabels,
    .mp_addcons            = imm_mp_addcons,
    .mp_addvars            = imm_mp_addvars,
@@ -648,12 +623,13 @@ const ParserOps parser_ops_imm = {
    .mp_addzerofunc        = imm_mp_addzerofunc,
    .mp_finalize           = imm_mp_finalize,
    .mp_new                = imm_mp_new,
+   .mp_setaschild         = imm_mp_setaschild,
    .mp_setobjvar          = imm_mp_setobjvar,
    .mp_setprobtype        = imm_mp_setprobtype,
    .mp_settype            = imm_mp_settype,
-   .mpe_finalize          = imm_mpe_finalize,
-   .mpe_new               = imm_mpe_new,
-   .mpe_addmp             = imm_mpe_addmp,
+   .nash_finalize          = imm_nash_finalize,
+   .nash_new               = imm_nash_new,
+   .nash_addmp             = imm_nash_addmp,
    .ovf_addbyname         = imm_ovf_addbyname,
    .ovf_addarg            = imm_ovf_addarg,
    .ovf_paramsdefstart    = imm_ovf_getparamsdef,
@@ -664,5 +640,5 @@ const ParserOps parser_ops_imm = {
    .ovf_getname           = imm_ovf_getname,
    .read_param            = imm_read_param,
    .read_elt_vector       = imm_read_elt_vector,
-   .resolve_lexeme_as_gmssymb = resolve_lexeme_as_gmssymb_via_dct,
+   .resolve_lexeme_as_gmssymb = dct_findlexeme,
 };

@@ -3,6 +3,7 @@
 #include "macros.h"
 #include "mdl.h"
 #include "mdl_rhp.h"
+#include "mdl_transform.h"
 #include "ovf_transform.h"
 #include "rhp_fwd.h"
 #include "timings.h"
@@ -65,20 +66,29 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
 
       S_CHECK(ovf_transform(mdl_reform));
 
-      mdl_orig->timings->reformulation.CCF.total = get_thrdtime() - start;
+      mdl_reform->timings->reformulation.CCF.total = get_thrdtime() - start;
    }
 
-   if (empdag_has_adversarial_mps(&empinfo->empdag)) {
+   if (empdag_needs_transformations(&mdl_orig->empinfo.empdag)) {
+
       double start = get_thrdtime();
 
+      trace_process("[process] %s model %.*s #%u: EMPDAG transformations detected\n",
+                    mdl_fmtargs(mdl_orig));
+
       if (!mdl_reform) {
+         trace_process("[process] %s model %.*s #%u: Copying model for "
+                       "EMPDAG reformulations.\n", mdl_fmtargs(mdl_orig));
+
          A_CHECK(mdl_reform, rhp_mdl_new(RHP_BACKEND_RHP));
          S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_orig));
+
+         empinfo = &mdl_reform->empinfo;
       }
 
-      S_CHECK(empdag_minimax_reformulate(mdl_reform));
+      S_CHECK(rmdl_empdag_transform(mdl_reform));
 
-      mdl_orig->timings->reformulation.CCF.total += get_thrdtime() - start;
+      mdl_orig->timings->reformulation.empdag.total = get_thrdtime() - start;
    }
 
    if (mdl_reform) {

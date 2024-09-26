@@ -21,8 +21,9 @@ typedef enum equ_ppty {
    EquPptyNone           = 0,  /**< undefined                             */
    EquPptyHasDualVar     = 1,  /**< a special dual variable is assigned   */
    EquPptyIsImplicit     = 2,  /**< defining equ for implicit var         */
-   EquPptyIsSharedVi     = 4,  /**< a shared constraint of VI type        */
-   EquPptyIsSharedGnep   = 8,  /**< a shared constraint of GNEP type      */
+   EquPptyIsExplicit     = 4,  /**< defining equ for implicit var         */
+   EquPptyIsSharedVi     = 8,  /**< a shared constraint of VI type        */
+   EquPptyIsSharedGnep   = 16, /**< a shared constraint of GNEP type      */
    EquPptyIsDeleted      = 64, /**< equation has been deleted             */
 } EquPpty;
 
@@ -32,7 +33,8 @@ __extension__ typedef enum ENUM_U8 {
    VarObjective          ,  /**< an objective variable                 */
    VarPrimal             ,  /**< a primal variable                     */
    VarDual               ,  /**< a dual variable                       */
-   VarDefiningMap,          /**< variable defining a mapping         */
+   VarDefiningMap,          /**< variable defining a mapping           */
+   VarImplicitMap,          /**< variable defining an implicit mapping */
 } VarRole;
 
 /* Bit representation
@@ -65,13 +67,11 @@ __extension__ typedef enum ENUM_U8 {
    VarIsSolutionVar         = 16, /**< Is part of a control relation         */
    VarIsShared              = 32, /**< variable is assigned to multiple nodes*/
    VarIsDeleted             = 128, /**< Deleted variable                     */
-} VarPptyType;
 
-typedef enum {
    VarPptyBasicMask         = 0xf, /**< Mask for basic type                  */ 
    VarPptyDefinedMask       = 0x4,
    VarPptyExtendedMask      = 0xf0
-} VarPptyMasks;
+} VarPptyType;
 
 /** @brief Metadata for equations */
 typedef struct equ_meta {

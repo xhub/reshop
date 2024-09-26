@@ -610,8 +610,7 @@ int equ_copymetadata(Equ * restrict edst, const Equ * restrict esrc, rhp_idx ei)
    edst->is_quad = esrc->is_quad;
 
    /* TODO(xhub) CONE SUPPORT */
-   double cst = equ_get_cst(esrc);
-   equ_set_cst(edst, cst);
+   edst->p = esrc->p;
    edst->value = esrc->value;
    edst->multiplier = esrc->multiplier;
 
@@ -666,103 +665,45 @@ int equ_copy_to(Container *ctr, rhp_idx ei_src, Equ *edst,
 }
 
 /**
- * @brief Copy a mapping f(x) at the given node of the nltree of an equation
+ * @brief Duplicate an equation
  *
- * The source equation either contains f(x) or z = f(x).
- * The given node is where the expression should be put.
+ * @param ctr        the container
+ * @param ei_src     the original equation index
+ * @param edst       the new equation
+ * @param ei_dst     the equation index for the destination
  *
- * @warning this function assumes that the expression f(x) appears
- * nonlinearly in the destination equation. This implies that
- * the expression is multiplied by an expression with no constant
- * part.
- *
- * @warning the container matrix is not updated
- *
- * @param mdl     The model
- * @param tree    The tree of the destination equation
- * @param node    The node where to copy the mapping
- * @param esrc    The equation holdiong the variable
- * @param vi_map  If valid, the variable denoting the image of the mapping
- * @param coeff   If finite, the coefficient of vi_map in the linear part
- * 
- * @return        the error code
+ * @return           the error code
  */
-int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
-                         rhp_idx vi_map, double coeff)
+int equ_dup(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
 {
-   /* ---------------------------------------------------------------------
-    * We have 3 parts to copy:
-    * - linear part
-    * - constant part
-    * - nonlinear part
-    * --------------------------------------------------------------------- */
+   assert(ei_src != ei_dst && valid_ei_(ei_src, rctr_totalm(ctr), __func__));
+   assert(valid_ei_(ei_dst, rctr_totalm(ctr), __func__));
 
-   Lequ *lequ = esrc->lequ;
+   Equ * restrict esrc = &ctr->equs[ei_src];
+   Equ * restrict edst = &ctr->equs[ei_dst];
 
-   if (valid_vi(vi_map) && !isfinite(coeff)) {
-      unsigned idx;
-      assert(lequ);
-      lequ_find(lequ, vi_map, &coeff, &idx);
+   S_CHECK(equ_copymetadata(edst, esrc, ei_dst));
 
-      if (idx == UINT_MAX) {
-         error("ERROR: variable '%s' not found in equation '%s'\n",
-               ctr_printvarname(ctr, vi_map),
-               ctr_printequname(ctr, esrc->idx));
+   if (!edst->lequ) {
+      A_CHECK(edst->lequ, lequ_alloc(esrc->lequ->len));
+   } else {
+      if (edst->lequ->len != 0) {
+         error("%s :: lequ already present!\n", __func__);
+         return Error_UnExpectedData;
       }
-
-      assert(isfinite(coeff));
-      coeff = -1./coeff;
+      S_CHECK(lequ_reserve(edst->lequ, esrc->lequ->len));
    }
 
-   assert((valid_vi(vi_map) && isfinite(coeff)) || (!valid_vi(vi_map) && !isfinite(coeff)));
-
-   S_CHECK(nltree_reset_var_list(tree));
-
-   NlNode **addr;
-   addr = node;
-   /*  Add (sum a_i x_i) */
-   if (lequ && lequ->len > 1) {
-      S_CHECK(rctr_nltree_add_lin_term(ctr, tree, &addr, lequ, vi_map, coeff));
-   }
-
-   /* add constant */
-   double cst = equ_get_cst(esrc);
-   if (fabs(cst) > DBL_EPSILON) {
-      S_CHECK(nltree_add_cst(ctr, tree, &addr, cst*coeff));
-   }
-
-   /* --------------------------------------------------------------
-    * node now contains a pointer to the node that contains the expression
-    * -------------------------------------------------------------- */
+   S_CHECK(lequ_copy(edst->lequ, esrc->lequ));
 
    S_CHECK(rctr_getnl(ctr, esrc));
 
-   if (esrc->tree && esrc->tree->root) {
-
-      /*  Get the first empty child */
-      if (*addr) {
-         S_CHECK(nlnode_next_child(tree, &addr));
-      }
-
-      /* Add coeff * ( ... )  */
-      /* TODO(xhub) we may end up in a ADD->ADD situation, be careful here */
-      S_CHECK(nltree_mul_cst(tree, &addr, ctr->pool, coeff));
-
-      /* \TODO(xhub) optimize w.r.t. umin */
-      /* Fill in Fnl_i  */
-      S_CHECK(nlnode_copy(addr, esrc->tree->root, tree));
+   if (esrc->tree) {
+      A_CHECK(edst->tree, nltree_dup(esrc->tree, NULL, 0));
+      edst->tree->idx = ei_dst;
+   } else {
+      edst->tree = NULL;
    }
-
-   /* Do a final sanity check: it may happen that the equation consists
-    * only of 1 ADD */
-   if (*addr && (*addr)->op == NLNODE_ADD) {
-      S_CHECK(nltree_check_add(*addr));
-   }
-
-   /* keep the model representation consistent */
-   Avar v;
-   avar_setlist(&v, tree->v_list->idx, tree->v_list->pool);
-   S_CHECK(cmat_equ_add_vars(ctr, tree->idx, &v, NULL, true));
 
    return OK;
 }
@@ -792,4 +733,20 @@ int equ_nltree_fromgams(Equ* e, unsigned codelen, const int *instrs, const int *
    } 
 
    return OK;
+}
+
+unsigned equ_get_nladd_estimate(Equ *e)
+{
+   unsigned res = (e->lequ ? e->lequ->len : 0);
+
+   if (e->tree && e->tree->root) {
+      NlNode *root = e->tree->root;
+      if (root->op == NLNODE_ADD) {
+         res += root->children_max;
+      } else {
+         res += 1;
+      }
+   }
+
+   return res;
 }

@@ -5,6 +5,33 @@
 #include "gamsapi_utils.h"
 #include "empinterp_ops_utils.h"
 
+static inline int symtype_dct2rhp(enum dcttypes dcttype, GamsSymData *symdat, Token *tok)
+{
+   symdat->origin = IdentOriginDct;
+
+   switch (dcttype) {
+   case dctfuncSymType:
+   case dctsetSymType:
+   case dctparmSymType:
+   case dctacrSymType:
+   default:
+      error("[empinterp] ERROR: dct type %d not supported. Please file a bug report\n", dcttype);
+      return runtime_error(tok->linenr);
+   case dctaliasSymType:
+      symdat->type = IdentAlias;
+      tok->type = TOK_GMS_ALIAS;
+      return OK;
+   case dctvarSymType:
+      symdat->type = IdentVar;
+      tok->type = TOK_GMS_VAR;
+      return OK;
+   case dcteqnSymType:
+      symdat->type = IdentEqu;
+      tok->type = TOK_GMS_EQU;
+      return OK;
+   }
+}
+
 /**
  * @brief Try to resolve a string lexeme as a gams symbol using a dictionary
  *
@@ -13,10 +40,10 @@
  *
  * @return        the error code
  */
-int resolve_lexeme_as_gmssymb_via_dct(Interpreter * restrict interp, Token * restrict tok)
+int dct_findlexeme(Interpreter * restrict interp, Token * restrict tok)
 {
    GamsSymData *symdat = &tok->symdat;
-   int symindex, uelindex;
+   int symidx, uelindex;
 
    unsigned tok_len = emptok_getstrlen(tok);
    if (tok_len >= GMS_SSSIZE) { goto _not_found; }
@@ -28,51 +55,45 @@ int resolve_lexeme_as_gmssymb_via_dct(Interpreter * restrict interp, Token * res
 
    dctHandle_t dct = interp->dct;
 
-   symindex = dctSymIndex(dct, sym_name);
-   if (symindex <= 0) { /* We do not fail here as it could be a UEL */
+   symidx = dctSymIndex(dct, sym_name);
+   if (symidx <= 0) { /* We do not fail here as it could be a UEL */
       uelindex = dctUelIndex(dct, sym_name);
       if (uelindex <= 0) goto _not_found;
 
       tok->type = TOK_GMS_UEL;
       symdat->idx = uelindex;
+      symdat->origin = IdentOriginDct;
+      symdat->type = IdentUEL;
 
       return OK;
    }
 
-   symdat->idx = symindex;
+   symdat->idx = symidx;
 
    /* ---------------------------------------------------------------------
     * Save the dimension of the symbol index
     * --------------------------------------------------------------------- */
 
    /* What does a negative value of symdim means? */
-   int symdim = MAX(dctSymDim(dct, symindex), 1);
+   int symdim = dctSymDim(dct, symidx);
    symdat->dim = symdim;
+
+   /* ---------------------------------------------------------------------
+    * Save the indices of the domains
+    * --------------------------------------------------------------------- */
+
+   /* What does a negative value of symdim means? */
+   if (symdim > 0) {
+      int dummy;
+      dctSymDomIdx(dct, symidx, symdat->domindices, &dummy);
+   }
 
    /* ---------------------------------------------------------------------
     * Save the type of the symbol
     * --------------------------------------------------------------------- */
 
-   int symtype = dctSymType(dct, symindex);
-   symdat->type = symtype;
-   switch (symtype) {
-   case dctvarSymType:
-      tok->type = TOK_GMS_VAR;
-      break;
-   case dcteqnSymType:
-      tok->type = TOK_GMS_EQU;
-      break;
-   case dctsetSymType:
-      tok->type = TOK_GMS_SET;
-      break;
-   case dctparmSymType: /* We should error here */
-      tok->type = TOK_GMS_PARAM;
-      break;
-   case dctacrSymType:
-   case dctfuncSymType:
-   default:
-      return runtime_error(interp->linenr);
-   }
+   int symtype = dctSymType(dct, symidx);
+   S_CHECK(symtype_dct2rhp(symtype, symdat, tok));
 
    symdat->read = false;
    symdat->ptr = NULL;

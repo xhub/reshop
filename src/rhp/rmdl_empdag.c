@@ -1,3 +1,6 @@
+#include "lequ.h"
+#include "mdl_rhp.h"
+#include "nltree_priv.h"
 #include "reshop_config.h"
 
 #include <assert.h>
@@ -8,8 +11,23 @@
 #include "empdag_mp.h"
 #include "empdag_mpe.h"
 #include "mathprgm.h"
+#include "mathprgm_priv.h"
 #include "mdl.h"
+#include "nltree.h"
+#include "rhp_model.h"
+#include "rmdl_priv.h"
 #include "status.h"
+
+/** @file rmdl_empdag.c
+*
+*   @brief Operations on EMPDAG of ReSHOP models
+* */
+
+#ifndef NDEBUG
+#define RMDL_DEBUG(s, ...) trace_empdag("[rmdl] DEBUG: " s, __VA_ARGS__)
+#else
+#define RMDL_DEBUG(s, ...)
+#endif
 
 #if 0
 NONNULL static
@@ -112,48 +130,548 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, const DagMpArr
 }
 #endif
 
-/** @file rmdl_empdag.c
-*
-*   @brief Operations on EMPDAG of ReSHOP models
-* */
+typedef enum {
+   CopyExprNone,
+   CopyExprInvalid,
+   CopyExprSingle,
+   CopyExprMultiple
+} CopyExprType;
 
-/**
- * @brief Contract the empdag by merging MPs with the same sense along arcVFs to a single MP
- *
- * @param mdl      the model with a contracted EMPDAG
- * @param mdl_src  the original model
- *
- * @return         the error code
- */
-int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
+typedef struct {
+   ArcVFBasicData bdat;
+   NlNode *nlnode;
+} CopyExprSingleDat;
+
+typedef struct {
+   ObjArray bdat;
+   ObjArray *nlnode;
+} CopyExprMultipleDat;
+
+typedef struct {
+   CopyExprType type;
+   ArcVFData *arc;
+   union {
+      CopyExprSingleDat single;
+      CopyExprMultipleDat multiple;
+   };
+} CopyExprDat;
+
+
+#define RHP_LOCAL_SCOPE
+#define RHP_ARRAY_PREFIX cpy_expr
+#define RHP_ELT_TYPE CopyExprDat
+#define RHP_ARRAY_TYPE CopyExprDatArray
+#define RHP_ELT_INVALID (CopyExprDat){.type = CopyExprInvalid}
+#define RHP_DEFINE_STRUCT
+#include "array_generic.inc"
+
+
+NONNULL static inline int arcVFdata2copyexprdat(CopyExprDat *cpydat)
 {
-   assert(mdl_is_rhp(mdl));
-   int status = OK;
+   assert(cpydat->type == CopyExprNone);
 
-  /* ----------------------------------------------------------------------
-   * This 
-   * ---------------------------------------------------------------------- */
+   ArcVFData *arc = cpydat->arc;
+   switch (arc->type) {
+   case ArcVFBasic:
+      memcpy(&cpydat->single.bdat, &arc->basic_dat, sizeof(arc->basic_dat));
+      cpydat->type = CopyExprSingle;
+      break;
+   case ArcVFMultipleBasic: {
+      unsigned len = arc->basics_dat.len;
+      ObjArray *bdats = &cpydat->multiple.bdat;
+      S_CHECK(rhp_obj_reserve(bdats, len));
+      ArcVFBasicData *arr = arc->basics_dat.list;
 
-   const EmpDag * empdag_src = &mdl_src->empinfo.empdag;
-   EmpDag * empdag_dst = &mdl->empinfo.empdag;
-   unsigned num_mp = empdag_src->mps.len;
-
-   if (num_mp <= 1) {
-      error("[model] ERROR with %s model '%.*s' #%u: graph contraction "
-            "meaningless with no EMPDAG", mdl_fmtargs(mdl_src));
+      for (unsigned i = 0; i < len; ++i) {
+         S_CHECK(rhp_obj_add(bdats, &arr[i]));
+      }
+      cpydat->type = CopyExprMultiple;
+      break;
+   }
+   default:
+      return error_runtime();
    }
 
+   return OK;
+}
+
+NONNULL
+static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
+                                      Equ *eobj, rhp_idx objvar,
+                                      CopyExprDat *cpydat, CopyExprDat *cpydat_child)
+{
+
+   switch (cpydat->type) {
+   case CopyExprNone:
+      memcpy(&cpydat_child->single.bdat, arcdat, sizeof (*arcdat));
+      return OK;
+   case CopyExprSingle: {
+      CopyExprSingleDat *cpydat_single = &cpydat->single;
+      double cst = arcdat->cst;
+      rhp_idx vi = arcdat->vi;
+      NlNode *nlnode = cpydat_single->nlnode;
+      Equ *e;
+
+      S_CHECK(rmdl_get_equation_modifiable(mdl, cpydat_single->bdat.ei, &e));
+
+      Container *ctr = &mdl->ctr;
+      NlTree *dtree = e->tree;
+
+      unsigned offset, s = valid_vi(vi) ? 1 : equ_get_nladd_estimate(eobj);
+
+  /* ----------------------------------------------------------------------
+   * If we already have an NLnode, then we just copy the eobj there
+   * ---------------------------------------------------------------------- */
+
+      if (nlnode) {
+         assert(dtree && dtree->root);
+
+
+         S_CHECK(nltree_ensure_add_node_inplace(dtree, &nlnode, s, &offset));
+         NlNode **addr = &nlnode->children[offset];
+
+  /* ----------------------------------------------------------------------
+   * Add either cst * vi * (...) or cst * (...)
+   * ---------------------------------------------------------------------- */
+
+         if (valid_vi(vi)) {
+            S_CHECK(rctr_nltree_add_bilin(ctr, dtree, &addr, cst, vi, IdxNA));
+         } else if (isfinite(cst) && cst != 1.) {
+            S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
+         }
+
+         S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, NAN));
+         cpydat_child->single.nlnode = *addr;
+
+        return OK;
+      }
+
+  /* ----------------------------------------------------------------------
+   * In this case, we need to
+   * - check whether we have just a constant equation. If yes, we add vi * cst
+   * - Otherwise add a nonlinear 
+   * ---------------------------------------------------------------------- */
+
+      if (valid_vi(vi)) {
+         unsigned lequ_len = eobj->lequ->len;
+         double ecst = equ_get_cst(eobj);
+
+         if (valid_vi(objvar)) { lequ_len--; assert(lequ_debug_hasvar(eobj->lequ, objvar)); }
+
+         /* If the equation is just a constant, just add the term vi * cst */
+         if (lequ_len == 0 && (!e->tree || !e->tree->root)) {
+            return rctr_equ_addlvar(&mdl->ctr, e, vi, ecst);
+         }
+
+
+         if (!dtree) {
+            S_CHECK(nltree_bootstrap(e, lequ_len+1, lequ_len+1));
+            dtree = e->tree;
+         }
+
+         NlNode *root = dtree->root;
+         S_CHECK(nltree_ensure_add_node_inplace(dtree, &root, s, &offset));
+         NlNode **addr = &nlnode->children[offset];
+
+         if (valid_vi(vi)) {
+            S_CHECK(rctr_nltree_add_bilin(&mdl->ctr, dtree, &addr, cst, vi, IdxNA));
+         } else if (isfinite(cst) && cst != 1.) {
+            S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
+         }
+
+         S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, NAN));
+         cpydat_child->single.nlnode = *addr;
+
+      } else {
+
+         if (valid_vi(objvar)) {
+            S_CHECK(rctr_equ_add_newmap(ctr, e, eobj->idx, objvar, NAN));
+         } else {
+            S_CHECK(rctr_equ_add_equ_coeff(ctr, e, eobj, cst));
+         }
+
+         if (cst != 1.) {
+            TO_IMPLEMENT("Constant case (not 1)");
+         }
+      }
+      break;
+   }
+
+   case CopyExprMultiple: {
+         TO_IMPLEMENT("multiple copies of the objequ");
+   }
+
+   default:
+      return error_runtime();
+   }
+   return OK;
+}
+
+static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
+                                       CopyExprDat *cpydat, CopyExprDat *cpydat_child)
+{
+   if (!cpydat->arc) {
+      assert(cpydat->type == CopyExprNone);
+      cpydat_child->arc = NULL;
+      return OK;
+   }
+
+   rhp_idx objequ = mp_getobjequ(mp_child), objvar = mp_getobjvar(mp_child);
+   assert(valid_ei_(objequ, mdl_nequs_total(mdl), __func__));
+
+   /* Set objvar to be evaluated via objequ */
+   if (valid_vi(objvar)) {
+      S_CHECK(rctr_add_eval_equvar(&mdl->ctr, objequ, objvar));
+   }
+
+   Equ *eobj = &mdl->ctr.equs[objequ];
+
+   ArcVFData *arc = cpydat->arc;
+   ArcVFType type = arc->type;
+   switch (type) {
+   case ArcVFBasic:
+      cpydat_child->type = CopyExprSingle;
+      S_CHECK(copy_expr_arc_parent_basic(mdl, &arc->basic_dat, eobj, objvar,
+                                        cpydat, cpydat_child));
+      break;
+
+   case ArcVFMultipleBasic: {
+      cpydat_child->type = CopyExprMultiple;
+      unsigned len = arc->basics_dat.len;
+      ArcVFBasicData *arcb_arr = arc->basics_dat.list;
+
+      for (unsigned i = 0; i < len; ++i) {
+         S_CHECK(copy_expr_arc_parent_basic(mdl, &arcb_arr[i], eobj, objvar,
+                                            cpydat, cpydat_child))
+      }
+      break;
+   }
+
+   default:
+      error("[graph:contraction] ERROR: support for arc type %s not implemented", arcVFType2str(type));
+      return Error_NotImplemented;
+   }
+
+   S_CHECK(rmdl_equ_rm(mdl, objequ));
+
+   return OK;
+}
+
+void vf_contractions_init(VFContractions *contractions)
+{
+   contractions->need_sorting = true;
+   contractions->max_size_subdag = 0;
+   contractions->num_newequs = 0;
+
+   mpidarray_init(&contractions->VFdag_starts);
+   mpidarray_init(&contractions->VFdag_mpids);
+   contractions->mpbig_vars = NULL;
+   contractions->mpbig_cons = NULL;
+}
+
+void vf_contractions_empty(VFContractions *contractions)
+{
+   free(contractions->mpbig_vars);
+   free(contractions->mpbig_cons);
+   mpidarray_empty(&contractions->VFdag_starts);
+   mpidarray_empty(&contractions->VFdag_mpids);
+}
+
+int rmdl_contract_subtrees(Model *mdl_dst, VFContractions *contractions)
+{
+  /* ----------------------------------------------------------------------
+   * 1. Prepare the reformulation:
+   *   - allocate num_newequs
+   *
+   * 2. Iterate via DFS through the subDAG:
+   *   - for each starting MP:
+   *     x All constraints and decision variables are now attached to the starting MP
+   *     x Inject the obj(equ|var), weighted by arc data, into the equations
+   *
+   * 3. For each child MP, we 
+   * ---------------------------------------------------------------------- */
+
+   Model *mdl_src = mdl_dst->mdl_up; assert(mdl_src);
+
+   EmpDag *empdag_src = &mdl_src->empinfo.empdag;
+   EmpDag *empdag_dst = &mdl_dst->empinfo.empdag;
+
+   const DagMpArray *mps_src = &empdag_src->mps;
+   DBGUSED const DagNashArray *nashs_src = &empdag_src->nashs;
+   DagMpArray *mps_dst = &empdag_dst->mps;
+
+   MpIdArray *VFdag_starts = &contractions->VFdag_starts;
+   MpIdArray *VFdag_mpids = &contractions->VFdag_mpids;
+   unsigned num_mp_big = VFdag_starts->len;
+   S_CHECK(dagmp_array_reserve(&empdag_dst->mps, num_mp_big));
+
+   unsigned num_newequs = contractions->num_newequs;
+   if (num_newequs > 0) {
+      S_CHECK(rctr_reserve_equs(&mdl_dst->ctr, num_newequs));
+   }
+
+   unsigned *mpbig_vars = contractions->mpbig_vars;
+   unsigned *mpbig_cons = contractions->mpbig_cons;
+
+   bool mp_reserve_equvar = mpbig_vars && mpbig_cons;
+
+   mpid_t *vfdag_root_arr = VFdag_starts->arr, mpid_root;
+
+   daguid_t uid_root = empdag_dst->uid_root;
+
+   if (uidisMP(uid_root)) {
+      mpid_root = uid2id(uid_root);
+   } else {
+      mpid_root = MpId_NA;
+   }
+
+   DagNashArray *nashs_dst = &empdag_dst->nashs;
+
+   CopyExprDatArray cpy_expr;
+   cpy_expr_resize(&cpy_expr, contractions->max_size_subdag+1);
+
+   VarMeta *vmeta = mdl_dst->ctr.varmeta;
+   EquMeta *emeta = mdl_dst->ctr.equmeta;
+
+   for (unsigned i = 0; i < num_mp_big; ++i) {
+      mpid_t mpid = vfdag_root_arr[i];
+
+      /* Reset the working arrays */
+      VFdag_mpids->len = 0;
+      cpy_expr.len = 0;
+
+      mpidarray_add(VFdag_mpids, mpid);
+      cpy_expr.len = 1;
+      CopyExprDat *root_cpy_expr = &cpy_expr.arr[0];
+      root_cpy_expr->type = CopyExprNone;
+      root_cpy_expr->arc = NULL;
+
+      MathPrgm *mp_root_src = mps_src->arr[mpid];
+      if (!mp_isobj(mp_root_src)) {
+         error("[empdag] ERROR: cannot contract with root MP(%s) of type %s\n",
+               empdag_getmpname(empdag_src, mpid), mp_gettypestr(mp_root_src));
+      }
+
+      mpid_t mpid_big;
+      S_CHECK(empdag_addmpnamed(empdag_dst, mp_getsense(mp_root_src),
+                                empdag_getmpname(empdag_src, mpid), &mpid_big));
+
+
+      if (valid_mpid(mpid_root) && mpid == mpid_root) {
+         empdag_dst->uid_root = mpid2uid(mpid_big);
+      }
+
+     /* ----------------------------------------------------------------------
+      * Create the dst root MP 
+      * ---------------------------------------------------------------------- */
+
+      MathPrgm *mp_big;
+      S_CHECK(empdag_getmpbyid(empdag_dst, mpid_big, &mp_big));
+
+      if (mp_reserve_equvar) {
+         S_CHECK(mp_reserve(mp_big, mpbig_vars[i], mpbig_cons[i]));
+      }
+
+      IdxArray * restrict vars_bigmp = &mp_big->vars;
+      IdxArray * restrict equs_bigmp = &mp_big->equs;
+      S_CHECK(rhp_idx_copy(vars_bigmp, &mp_root_src->vars));
+      S_CHECK(rhp_idx_copy(equs_bigmp, &mp_root_src->equs));
+
+      /* Most of the opt data is the same, minus the objequ */
+      memcpy(&mp_big->opt, &mp_root_src->opt, sizeof(struct mp_opt));
+      
+      rhp_idx objvar_big = mp_getobjvar(mp_big);
+      rhp_idx objequ_big = mp_getobjequ(mp_big);
+
+      if (valid_vi(objvar_big) && valid_ei(objequ_big)) {
+         S_CHECK(rmdl_mp_objequ2objfun(mdl_dst, mp_big, objvar_big, objequ_big));
+      }
+
+      /* Delete the arcs from the old MP and substitute with the new one */
+      DagUidArray *vrarcs_dst = &mps_src->rarcs[mpid];
+      daguid_t *vrarcs_arr = vrarcs_dst->arr;
+
+      S_CHECK(daguidarray_copy(&mps_dst->rarcs[mpid_big], vrarcs_dst));
+
+      for (unsigned j = 0, lenj = vrarcs_dst->len; j < lenj; ++j) {
+
+         daguid_t uid = vrarcs_arr[j];
+         if(uidisMP(uid)) {
+
+            mpid_t mpid_p = uid2id(uid);
+
+            if (rarcTypeVF(uid)) {
+               VarcArray *varcs_dst = &mps_dst->Varcs[mpid_p];
+               ArcVFData *varcs_arr = varcs_dst->arr;
+
+               for (unsigned k = 0, lenk = varcs_dst->len; k < lenk; ++k) {
+
+                  if (varcs_arr[k].mpid_child == mpid) {
+                     varcs_arr[k].mpid_child = mpid_big;
+                     break;
+                  }
+               }
+
+            } else {
+               DagUidArray *carcs_dst = &mps_dst->Carcs[mpid_p];
+               S_CHECK(daguidarray_rmsorted(carcs_dst, mpid2uid(mpid)));
+               S_CHECK(daguidarray_adduniqsorted(carcs_dst, mpid2uid(mpid_big)));
+
+
+            }
+         } else { /* Parent is Nash */
+            nashid_t nashid = uid2id(uid);
+
+            DagUidArray *nash_arcs = &nashs_dst->arcs[nashid];
+
+            S_CHECK(daguidarray_rmsorted(nash_arcs, mpid2uid(mpid)));
+            S_CHECK(daguidarray_adduniqsorted(nash_arcs, mpid2uid(mpid_big)));
+         }
+      }
+      /* -------------------------------------------------------------------
+       * For each subdag, we look at the number of constraints and variables
+       * are collects to allocate the size
+       * ------------------------------------------------------------------- */
+
+      for (unsigned j = 0; j < VFdag_mpids->len; ++j) {
+         mpid_t mpid_ = VFdag_mpids->arr[j];
+         assert(mpid_ < mps_src->len);
+
+         /* ----------------------------------------------------------------
+          * If a MP has been removed, this implies that it has been contracted
+          * - We would need to link the contracted 
+          * ---------------------------------------------------------------- */
+         if (!mps_dst->arr[mpid_]) {
+            TO_IMPLEMENT("Partial subtree contraction");
+            }
+
+         /* Now copy the MP objequ at the right spots */
+         CopyExprDat *cpydat = &cpy_expr.arr[j];
+
+         CopyExprDat cpydat_child_template = {.type = CopyExprNone, .arc = NULL};
+         S_CHECK(copy_expr_arc_parent(mdl_dst, mps_src->arr[mpid_], cpydat, &cpydat_child_template));
+
+         /* Need to get the type of arc*/
+         VarcArray *varcs_src = &mps_src->Varcs[mpid_];
+         ArcVFData *varcs_arr = varcs_src->arr;
+
+         for (unsigned k = 0, lenv = varcs_src->len; k < lenv; ++k) {
+            ArcVFData *arc = &varcs_arr[k];
+            cpydat_child_template.arc = arc;
+
+            unsigned arc_cons = arcVF_getnumcons(arc, mdl_src);
+
+            if (arc_cons == UINT_MAX) {
+               error("[empdag/contract] ERROR while procesing arcVF %u of MP(%s). "
+                     "Please open a bug report\n", k, empdag_getmpname(empdag_src, mpid_));
+               return Error_RuntimeError;
+            }
+
+            mpid_t mpid_child = arc->mpid_child;
+            MathPrgm *mp_child = mps_src->arr[mpid_child];
+
+            mpidarray_add(VFdag_mpids, mpid_child);
+            cpy_expr.arr[cpy_expr.len++] = cpydat_child_template;
+            assert(cpy_expr.len <= cpy_expr.max);
+
+            if (cpydat_child_template.type == CopyExprNone) {
+               S_CHECK(arcVFdata2copyexprdat(&cpy_expr.arr[cpy_expr.len-1]));
+            }
+
+            rhp_idx objequ = mp_getobjequ(mp_child);
+            rhp_idx objvar = mp_getobjvar(mp_child);
+
+            if (valid_ei(objequ)) {
+               S_CHECK(rhp_idx_extend_except_sorted(equs_bigmp, &mp_child->equs, objequ));
+            } else {
+               S_CHECK(rhp_idx_extend_sorted(equs_bigmp, &mp_child->equs));
+            }
+
+            if (valid_vi(objvar)) {
+               S_CHECK(rhp_idx_extend_except_sorted(vars_bigmp, &mp_child->vars, objvar));
+            } else {
+               S_CHECK(rhp_idx_extend_sorted(vars_bigmp, &mp_child->vars));
+            }
+
+         }
+      }
+
+     /* ----------------------------------------------------------------------
+      * Free MP in the contracted subtree
+      * ---------------------------------------------------------------------- */
+
+      mpid_t * mpid_arr = VFdag_mpids->arr;
+      MathPrgm **mps = empdag_dst->mps.arr;
+      mpid_t mpid_max = empdag_dst->mps.len;
+
+      for (unsigned j = 0, lenj = VFdag_mpids->len; j < lenj; ++j) {
+         mpid_t mpid_ = mpid_arr[j];
+
+         if (mpid_ >= mpid_max) {
+            error("[empdag] ERROR: MPID %u larger than maximum %u\n", mpid_,
+                  mpid_max);
+            return Error_RuntimeError;
+         }
+
+         mp_free(mps[mpid_]);
+         mps[mpid_] = NULL;
+      }
+
+     /* ----------------------------------------------------------------------
+      * Re-assign the variables and equations in the new big MP
+      * ---------------------------------------------------------------------- */
+
+      
+      rhp_idx *vars_bigmp_arr = vars_bigmp->arr;
+      for (unsigned j = 0, len = vars_bigmp->len; j < len; ++j) {
+         rhp_idx vi = vars_bigmp_arr[j];
+
+         if (vmeta[vi].mp_id == mpid_big) { continue; };
+
+         assert(vmeta[vi].mp_id < mpid_max && !mps[vmeta[vi].mp_id]);
+
+         vmeta[vi].mp_id = mpid_big;
+      }
+
+      rhp_idx *equs_bigmp_arr = equs_bigmp->arr;
+      for (unsigned j = 0, len = equs_bigmp->len; j < len; ++j) {
+         rhp_idx ei = equs_bigmp_arr[j];
+
+         if (emeta[ei].mp_id == mpid_big) { continue; };
+
+         assert(emeta[ei].mp_id < mpid_max && !mps[emeta[ei].mp_id]);
+
+         emeta[ei].mp_id = mpid_big;
+      }
+   }
+
+   S_CHECK(dagmp_array_trimmem(mps_dst));
+
+   return mdl_finalize(mdl_dst);
+}
+
+static int rmdl_contract_analyze(Model *mdl, VFContractions *contractions)
+{
+   int status = OK;
+
+   const EmpDag * empdag_src = &mdl->empinfo.empdag;
+   unsigned num_mp = empdag_src->mps.len;
+
+  /* ----------------------------------------------------------------------
+   * num_newequs is the number of new equations
+   * ---------------------------------------------------------------------- */
+
    unsigned num_objequs = 0, num_nodes = num_mp + empdag_src->nashs.len;
-   unsigned num_linkcons = 0;
+   unsigned num_newequs = 0, max_size_subdag = 0;
    /* XXX: unclear why this is needed */
    rhp_idx *objequs = NULL ;
-   mpid_t *rosetta_mpid = NULL;
    bool *seen_uid = NULL;
-   MpIdArray VFdag_starts, VFdag_mpids;
-   DagUidArray daguids;
-   mpidarray_init(&VFdag_starts);
-   mpidarray_init(&VFdag_mpids);
+
+   DagUidArray daguids; /* This is the */
    daguidarray_init(&daguids);
+
+   MpIdArray * restrict VFdag_starts = &contractions->VFdag_starts;
+   MpIdArray * restrict VFdag_mpids = &contractions->VFdag_mpids;
 
   /* ----------------------------------------------------------------------
    * Allocate the data:
@@ -167,16 +685,14 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
    MALLOC_EXIT(objequs, rhp_idx, num_mp);
    MALLOC_EXIT(seen_uid, bool, num_nodes);
    memset(seen_uid, 0, num_nodes*sizeof(bool));
+   MALLOC_EXIT(contractions->mpbig_cons, unsigned, num_mp);
+   MALLOC_EXIT(contractions->mpbig_vars, unsigned, num_mp);
+   unsigned * restrict mpbig_cons = contractions->mpbig_cons;
+   unsigned * restrict mpbig_vars = contractions->mpbig_vars;
 
-   S_CHECK_EXIT(mpidarray_reserve(&VFdag_starts, num_mp));
-   S_CHECK_EXIT(mpidarray_reserve(&VFdag_mpids, num_mp));
+   S_CHECK_EXIT(mpidarray_reserve(VFdag_starts, num_mp));
+   S_CHECK_EXIT(mpidarray_reserve(VFdag_mpids, num_mp));
    S_CHECK_EXIT(daguidarray_reserve(&daguids, num_nodes));
-
-   /* Prepare new EMPDAG: roots and MPE are unchanged. Reserve enough for MPS */
-   S_CHECK_EXIT(dagmp_array_reserve(&empdag_dst->mps, num_mp));
-   S_CHECK_EXIT(dagnash_array_copy(&empdag_dst->nashs, &empdag_src->nashs, mdl));
-
-
 
   /* ----------------------------------------------------------------------
    * Start of the BFS-like exploration
@@ -185,7 +701,6 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
    assert(valid_uid(empdag_src->uid_root));
    S_CHECK_EXIT(daguidarray_add(&daguids, empdag_src->uid_root));
 
-   DagMpArray *mps_dst = &empdag_dst->mps;
    const DagMpArray *mps_src = &empdag_src->mps;
    DBGUSED const DagNashArray *nashs_src = &empdag_src->nashs;
 
@@ -199,14 +714,13 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
 
       if (uidisNash(node)) {
 
-         unsigned nidx = num_mp + uid2id(node);
+         nashid_t nashid = uid2id(node); assert(nashid < nashs_src->len);
+         unsigned nidx = num_mp + nashid;
 
          if (seen_uid[nidx]) { continue; }
          seen_uid[nidx] = true;
 
-         assert(uid2id(node) < nashs_src->len);
-
-         DagUidArray *c = &empdag_src->nashs.arcs[uid2id(node)];
+         DagUidArray *c = &nashs_src->arcs[nashid];
          memcpy(&daguids.arr[daguids.len], c->arr, c->len * sizeof(daguid_t));
          daguids.len += c->len;
          continue;
@@ -225,33 +739,35 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
       memcpy(&daguids.arr[daguids.len], c->arr, c->len * sizeof(daguid_t));
       daguids.len += c->len;
 
-      VarcArray *varcs_src = &mps_src->Varcs[mpid];
+      VarcArray * restrict varcs_src = &mps_src->Varcs[mpid];
+
+      // XXX what is the purpose of start_has_objequ
       bool start_has_objequ = false;
 
       for (unsigned j = 0, len = varcs_src->len; j < len; ++j) {
          if (!start_has_objequ) { 
-            start_has_objequ = arcVF_has_objequ(&varcs_src->arr[j], mdl_src);
+            start_has_objequ = arcVF_in_objfunc(&varcs_src->arr[j], mdl);
          }
 
-         mpidarray_add(&VFdag_mpids, varcs_src->arr[j].child_id);
+         mpidarray_add(VFdag_mpids, varcs_src->arr[j].mpid_child);
       }
 
-      if (VFdag_mpids.len == 0) { continue; }
+      if (VFdag_mpids->len == 0) { continue; }
 
      /* ---------------------------------------------------------------------
       * Explore the VFdag: add mpid to starting nodes.
       * We iterate through all the MP in the subdag.
       * - If we find a Carc, we stop and bactrack
-      * - If we go over the whole 
+      * - If we go over the whole subdag
       * --------------------------------------------------------------------- */
-      mpidarray_add(&VFdag_starts, mpid);
+      mpidarray_add(VFdag_starts, mpid);
 
       unsigned num_objequs_old = num_objequs;
-      unsigned num_linkcons_subdag = 0;
+      unsigned num_newequ_subdag = 0;
+      unsigned mp_cons = 0, mp_vars = 0;
 
-
-      for (unsigned j = 0; j < VFdag_mpids.len; ++j) {
-         mpid_t mpid_ = VFdag_mpids.arr[j];
+      for (unsigned j = 0; j < VFdag_mpids->len; ++j) {
+         mpid_t mpid_ = VFdag_mpids->arr[j];
          assert(mpid_ < mps_src->len);
 
          if (mps_src->Carcs[mpid_].len > 0) {
@@ -260,9 +776,9 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
             daguids.len += c->len;
 
             /* We stop the VFdag loo and remove the start MPID */
-            VFdag_mpids.len = 0;
+            VFdag_mpids->len = 0;
             num_objequs = num_objequs_old;
-            VFdag_starts.len--;
+            VFdag_starts->len--;
             continue;
          }
 
@@ -281,7 +797,7 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
 
          if (seen_uid[mpid_]) {
             error("[model] ERROR: %s model '%.*s' #%u has a true DAG as EMPDAG\n",
-                  mdl_fmtargs(mdl_src));
+                  mdl_fmtargs(mdl));
             status = Error_NotImplemented;
             goto _exit;
          }
@@ -296,142 +812,109 @@ int rmdl_contract_along_Vpaths(Model *mdl, const Model *mdl_src)
             objequs[num_objequs++] = objequ;
          }
 
-         /* Need to get the type of arc*/
+         mp_cons += mp_getnumcons(mp_);
+
+         mp_vars += mp_getnumoptvars(mp_);
+
          varcs_src = &mps_src->Varcs[mpid_];
 
          for (unsigned k = 0, len = varcs_src->len; k < len; ++k) {
             ArcVFData *arc = &varcs_src->arr[k];
 
-            unsigned num_cons = arcVF_getnumcons(arc, mdl_src);
+            /* It is just sufficient to know the number of constraints */
+            unsigned arc_num_cons = arcVF_getnumcons(arc, mdl);
 
-            if (num_cons == UINT_MAX) {
+            if (arc_num_cons == UINT_MAX) {
                error("[empdag/contract] ERROR while procesing arcVF %u of MP(%s). "
-                     "Please open a bug report\n", k, empdag_getmpname(empdag_src, mpid_));
+                     "Please file a bug report\n", k, empdag_getmpname(empdag_src, mpid_));
                return Error_RuntimeError;
             }
 
-            num_linkcons_subdag += num_cons;
+            num_newequ_subdag += arc_num_cons;
 
-            mpidarray_add(&VFdag_mpids, arc->child_id);
+            mpidarray_add(VFdag_mpids, arc->mpid_child);
+
          }
       }
 
      /* ---------------------------------------------------------------------
       * We were successful. Just reset the VFdag_mpids array
+      * The minimum number of equation to add is 1
       * --------------------------------------------------------------------- */
 
-      num_linkcons += num_linkcons_subdag;
-      VFdag_mpids.len = 0;
+      num_newequs += (start_has_objequ ? 1 : 0 ) + num_newequ_subdag;
+      max_size_subdag = VFdag_mpids->len > max_size_subdag ? VFdag_mpids->len : max_size_subdag;
+      VFdag_mpids->len = 0;
+
+      unsigned mpbig_idx = VFdag_starts->len-1;
+      mpbig_cons[mpbig_idx] = mp_cons;
+      mpbig_vars[mpbig_idx] = mp_vars;
    }
 
   /* ----------------------------------------------------------------------
    * Now reformulate:
-   * 1. Prepare the reformulation:
-   *   - allocate num_linkcons + objequ of starting MP is involved? 1 : 0 
-   *
-   * 2. Iterate via DFS through the subDAG:
-   *   - for each starting MP:
-   *     x All constraints and decision variables are now attached to the starting MP
-   *     x Inject the obj(equ|var), weighted by arc data, into the equations
-   *
-   * 3. For each child MP, we 
    * ---------------------------------------------------------------------- */
 
-   S_CHECK_EXIT(rctr_reserve_equs(&mdl->ctr, num_linkcons + num_objequs));
-
-   /* Reset DAGuids */
-   daguids.len = 0;
-   S_CHECK_EXIT(daguidarray_add(&daguids, empdag_src->uid_root));
-
-   /* Allocate rosetta src/dst for MPs*/
-   unsigned num_mp_dst = mps_dst->len;
-
-   MALLOC_EXIT(rosetta_mpid, mpid_t, num_mp_dst);
-
-   for (unsigned i = 0; i < num_mp_dst; ++i) {
-
-   }
-
-   mpid_t *root_arr = VFdag_starts.arr;
-   mpid_t *child_arr = VFdag_starts.arr;
-
-   for (unsigned i = 0, len = VFdag_starts.len; i < len; ++i) {
-      mpid_t rootid = root_arr[i];
-
-      VFdag_mpids.len = 0;
-      mpidarray_add(&VFdag_mpids, rootid);
-
-      for (unsigned j = 0; j < VFdag_mpids.len; ++j) {
-         mpid_t mpid = child_arr[j];
-         assert(mpid < mps_src->len);
-
-         MathPrgm *mp = mps_src->arr[mpid];
-
-         rhp_idx objequ = mp_getobjequ(mp);
-
-         if (valid_ei(objequ)) {
-            objequs[num_objequs++] = objequ;
-         }
-
-         /* Need to get the type of arc*/
-         VarcArray *varcs_src = &mps_src->Varcs[mpid];
-
-         for (unsigned k = 0, lenv = varcs_src->len; k < lenv; ++k) {
-            ArcVFData *arc = &varcs_src->arr[k];
-
-            unsigned num_cons = arcVF_getnumcons(arc, mdl_src);
-
-            if (num_cons == UINT_MAX) {
-               error("[empdag/contract] ERROR while procesing arcVF %u of MP(%s). "
-                     "Please open a bug report\n", k, empdag_getmpname(empdag_src, mpid));
-               return Error_RuntimeError;
-            }
-
-            mpidarray_add(&VFdag_mpids, arc->child_id);
-         }
-      }
-   }
-      
-   #if 0
-   EmpDag *empdag = &mdl->empinfo.empdag;
-
-   typedef enum {
-      ArcWeightScalar,
-      ArcWeightVariable,
-      ArcWeightLequ,
-      ArcWeightQequ,
-      ArcWeightEqu,
-   } ArcWeightType;
-   typedef struct {
-      ArcWeightType type;
-      
-   } ArcWeight;
-
-   for (unsigned i = 0, len = VFdag_starts.len; i < len; ++i) {
-      mpid_t mpid = VFdag_starts.arr[i];
-
-      MathPrgm* mp = mps->arr[mpid];
-   
-      VFdag_mpids.len = 1;
-      VFdag_mpids.arr[0] = mpid2uid(mpid);
-
-      for (unsigned j = 0; j < VFdag_mpids.len; ++j) {
-         mpid_t mpid_j = VFdag_mpids.arr[j];
-
-
-      }
-
-   }
-   #endif
-
-   S_CHECK_EXIT(dagmp_array_trimmem(mps_dst));
+   contractions->num_newequs = num_newequs;
+   contractions->max_size_subdag = max_size_subdag;
 
 _exit:
    FREE(objequs);
-   FREE(rosetta_mpid);
-   mpidarray_empty(&VFdag_starts);
    mpidarray_empty(&daguids);
-   mpidarray_empty(&VFdag_mpids);
 
    return status;
+}
+
+/**
+ * @brief Contract the empdag by merging MPs with the same sense along arcVFs to a single MP
+ *
+ * @param mdl_src  the original model
+ * @param mdl_dst  the model with a contracted EMPDAG
+ *
+ * @return         the error code
+ */
+int rmdl_contract_along_Vpaths(Model *mdl_src, Model **mdl_dst)
+{
+   int status = OK;
+
+   unsigned num_mp = mdl_src->empinfo.empdag.mps.len;
+
+   if (num_mp <= 1) {
+      error("[model] ERROR with %s model '%.*s' #%u: graph contraction "
+            "meaningless with no EMPDAG", mdl_fmtargs(mdl_src));
+   }
+
+   char *mdlname;
+   IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_src)));
+
+   S_CHECK(rmdl_get_editable_mdl(mdl_src, mdl_dst, mdlname));
+
+   FREE(mdlname);
+
+   Model *mdl_dst_ = *mdl_dst;
+
+  /* ----------------------------------------------------------------------
+   * This 
+   * ---------------------------------------------------------------------- */
+
+   VFContractions contractions;
+   vf_contractions_init(&contractions);
+   contractions.need_sorting = false; /* We do full contractions here */
+
+   S_CHECK_EXIT(rmdl_contract_analyze(mdl_dst_, &contractions));
+
+   trace_process("[model] %s model '%.*s' #%u: contracting %u VF subdags\n",
+                 mdl_fmtargs(mdl_dst_), contractions.VFdag_starts.len);
+
+   S_CHECK_EXIT(rmdl_contract_subtrees(mdl_dst_, &contractions));
+
+   S_CHECK_EXIT(rmdl_ensurefops_activedefault(mdl_src));
+   S_CHECK_EXIT(rmdl_ensurefops_activedefault(mdl_dst_));
+
+   S_CHECK_EXIT(rmdl_export_latex(mdl_dst_, "contracted"));
+
+_exit:
+   vf_contractions_empty(&contractions);
+   return status;
+
 }

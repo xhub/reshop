@@ -43,11 +43,11 @@
 #endif
 
 #ifdef RHP_DEFINE_STRUCT
-struct RHP_LIST_TYPE {
+typedef struct RHP_LIST_TYPE {
   IDX_TYPE len;
   IDX_TYPE max;
   RHP_ELT_TYPE *list;
-};
+} RHP_LIST_TYPE;
 #endif
 
 #ifdef RHP_ONLY_DEF
@@ -180,6 +180,7 @@ _exit:
 #undef RHP_ELT_INVALID
 #undef RHP_ELT_FREE
 #undef RHP_ELT_FREE_TAKE_ADDRESS
+#undef RHP_ELT_SORT
 #undef IDX_TYPE
 #undef RHP_CONCAT
 #undef _RHP_MAKE_STR

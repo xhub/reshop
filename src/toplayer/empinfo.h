@@ -20,6 +20,7 @@ typedef struct empinfo {
 
    unsigned num_dualvar;        /**< number of dual variable                  */
    unsigned num_implicit;       /**< number of implicit variable              */
+   unsigned num_deffn;          /**< number of mappings                       */
 } EmpInfo;
 
 void empinfo_dealloc(EmpInfo *empinfo);

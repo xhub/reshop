@@ -22,23 +22,21 @@
  * @brief Analyse the EMP structure to see if we can compute the first order
  * optimality conditions
  *
- * @param mdl  the model
+ * @param mdl       the source model
+ * @param mdl_fooc  the destination model (first-order)
  *
  * @return         the error code
  */
-UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc) 
+static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc) 
 {
    int status = OK;
 
    const EmpInfo *empinfo = &mdl->empinfo;
    assert(empinfo_hasempdag(empinfo));
    const EmpDag *empdag = &empinfo->empdag;
-   Model *mdl4fooc = NULL;
+   Model *mdl4fooc = mdl;
 
-   const DagUidArray *roots = &empdag->roots;
-   unsigned roots_len = roots->len;
-
-   if (roots_len > 1) {
+   if (empdag->roots.len > 1) {
       TO_IMPLEMENT("EMPDAG with multiple roots: need to implement DAG filtering");
    }
 
@@ -47,40 +45,39 @@ UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
    * ---------------------------------------------------------------------- */
 
    if (empdag->features.hasVFpath) {
-      char *mdlname;
-      IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl)));
+      S_CHECK(rmdl_contract_along_Vpaths(mdl, &mdl4fooc));
 
-      mdl4fooc = rhp_mdl_new(RHP_BACKEND_RHP);
-      S_CHECK(mdl_setname(mdl4fooc, mdlname));
-      FREE(mdlname);
-      S_CHECK(rmdl_contract_along_Vpaths(mdl4fooc, mdl));
+      S_CHECK(mdl_check(mdl4fooc));
+      S_CHECK(mdl_checkmetadata(mdl));
 
+      empinfo = &mdl4fooc->empinfo;
+      empdag = &empinfo->empdag;
    }
 
    daguid_t root = empdag->uid_root;
 
    if (!valid_uid(root)) {
-      error("[fooc] ERROR in %s model '%.*s' #%u, no valid EMPDAG root\n", mdl_fmtargs(mdl));
+      error("[fooc] ERROR in %s model '%.*s' #%u, no valid EMPDAG root\n", mdl_fmtargs(mdl4fooc));
       return Error_EMPRuntimeError;
    }
 
    MathPrgm *mp = NULL;
-   Nash *mpe = NULL;
+   Nash *nash = NULL;
    dagid_t id = uid2id(root);
 
    if (uidisMP(root)) {
       S_CHECK(empdag_getmpbyid(empdag, id, &mp));
    } else {
-      S_CHECK(empdag_getnashbyid(empdag, id, &mpe));
+      S_CHECK(empdag_getnashbyid(empdag, id, &nash));
    }
 
-   if (mpe) {
+   if (nash) {
       UIntArray mps;
-      S_CHECK(empdag_nash_getchildren(empdag, mpe->id, &mps));
+      S_CHECK(empdag_nash_getchildren(empdag, nash->id, &mps));
       unsigned nb_mp = mps.len;
       if (nb_mp == 0) {
          error("%s ERROR: empty equilibrium '%s'\n", __func__,
-               empdag_getnashname(empdag, mpe->id));
+               empdag_getnashname(empdag, nash->id));
          return Error_EMPRuntimeError;
       }
 
@@ -93,7 +90,7 @@ UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
 
       if (!mp) {
          error("[fooc] ERROR in %s model '%.*s' #%u: Empdag root is neither an "
-               "MP or an MPE\n", mdl_fmtargs(mdl));
+               "MP or a Nash node\n", mdl_fmtargs(mdl4fooc));
          return Error_RuntimeError;
       }
 
@@ -104,12 +101,7 @@ UNUSED static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
       return status;
    }
 
-   if (mdl4fooc) {
-      mdl_linkmodels(mdl, mdl4fooc);
-      mdl_linkmodels(mdl4fooc, mdl_fooc);
-   } else {
-      mdl_linkmodels(mdl, mdl_fooc);
-   }
+   mdl_linkmodels(mdl4fooc, mdl_fooc);
 
    return OK;
 }
@@ -369,12 +361,20 @@ int mdl_transform_emp_togamsmdltype(Model *mdl_src, Model **mdl_target)
       int singleopt_solmethod = optvali(mdl_src, Options_SolveSingleOptAs);
       switch (singleopt_solmethod) {
       case Opt_SolveSingleOptAsOpt:
-         /* This is necessary to ensure that we can release mdl_target */
-         *mdl_target = mdl_borrow(mdl_src);
-         S_CHECK(mdl_reset_modeltype(mdl_src, NULL));
+         if (empdag->features.hasVFpath) {
+            S_CHECK(rmdl_contract_along_Vpaths(mdl_src, mdl_target));
+
+         } else {
+            /* This is necessary to ensure that we can release mdl_target */
+            *mdl_target = mdl_borrow(mdl_src);
+            S_CHECK(mdl_reset_modeltype(mdl_src, NULL));
+         }
+
          return OK;
+
       case Opt_SolveSingleOptAsMcp:
          return mdl_transform_tomcp(mdl_src, mdl_target);
+
       default:
          error("%s ERROR while transforming %s model '%.*s' #%u: invalid value"
                " %d for option %s", __func__, mdl_fmtargs(mdl_src),

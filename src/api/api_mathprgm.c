@@ -51,6 +51,7 @@ unsigned rhp_mp_nvars(const struct rhp_mathprgm *mp)
 RESHOP_STATIC_ASSERT((uint8_t) RhpMin == (uint8_t) RHP_MIN, "")
 RESHOP_STATIC_ASSERT((uint8_t) RhpMax == (uint8_t) RHP_MAX, "")
 RESHOP_STATIC_ASSERT((uint8_t) RhpFeasibility == (uint8_t) RHP_FEAS, "")
+RESHOP_STATIC_ASSERT((uint8_t) RhpDualSense == (uint8_t) RHP_DUAL_SENSE, "")
 RESHOP_STATIC_ASSERT((uint8_t) RhpNoSense == (uint8_t) RHP_NOSENSE, "")
 
 RESHOP_STATIC_ASSERT((uint8_t) MpTypeOpt == (uint8_t) RHP_MP_OPT, "")

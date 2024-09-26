@@ -34,23 +34,24 @@ int empdag_rootsadd(EmpDag *empdag, daguid_t uid) NONNULL;
 
 
 
-static int chk_mpid(const EmpDag *empdag, unsigned mp_id)
+static int chk_mpid_(const EmpDag *empdag, unsigned mp_id)
 {
    if (mp_id >= empdag->mps.len) {
-      if (!valid_idx(mp_id)) {
+      if (!valid_mpid(mp_id)) {
          error("%s :: %s\n", __func__, badidx_str(mp_id));
       } else {
-         error("%s ERROR: no mp with index %u, the number of mps is %u in "
-               "%s model '%.*s' #%u\n", __func__, mp_id, empdag->mps.len,
+         error("[empdag] ERROR: no MP with index %u, the number of mps is %u in "
+               "%s model '%.*s' #%u\n", mp_id, empdag->mps.len,
                mdl_fmtargs(empdag->mdl));
       }
+
       return Error_NotFound;
    }
 
    return OK;
 }
 
-static int chk_nashid(const EmpDag *empdag, nashid_t nashid)
+static int chk_nashid_(const EmpDag *empdag, nashid_t nashid)
 {
    if (nashid >= empdag->nashs.len) {
       if (!valid_idx(nashid)) {
@@ -124,6 +125,7 @@ void empdag_init(EmpDag *empdag, Model *mdl)
 {
    empdag->type = EmpDag_Unset;
    empdag->finalized = false;
+   empdag->has_resolved_arcs = true;  /* Set by false at the start of the empinterp */
    empdag->features.istree = false;
 
    memset(&empdag->node_stats, 0, sizeof (empdag->node_stats));
@@ -131,7 +133,8 @@ void empdag_init(EmpDag *empdag, Model *mdl)
 
    daguidarray_init(&empdag->roots);
    mpidarray_init(&empdag->mps2reformulate);
-   mpidarray_empty(&empdag->saddle_path_starts);
+   mpidarray_init(&empdag->saddle_path_starts);
+
    dagmp_array_init(&empdag->mps);
    dagnash_array_init(&empdag->nashs);
 
@@ -143,6 +146,13 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    empdag->simple_data.sense = RhpNoSense;
    empdag->simple_data.objequ = IdxNA;
    empdag->simple_data.objvar = IdxNA;
+
+   mpidarray_init(&empdag->fenchel_dual_nodal);
+   mpidarray_init(&empdag->fenchel_dual_subdag);
+   mpidarray_init(&empdag->epi_dual_nodal);
+   mpidarray_init(&empdag->epi_dual_subdag);
+   mpidarray_init(&empdag->fooc.orig);
+   mpidarray_init(&empdag->fooc.vi);
 
    empdag->mdl = mdl;
 }
@@ -276,6 +286,8 @@ int empdag_fini(EmpDag *empdag)
 
    MathPrgm **mps = empdag->mps.arr;
    for (unsigned i = 0; i < mp_len; ++i) {
+      if (!mps[i]) { continue; }
+
       S_CHECK(mp_finalize(mps[i]));
    }
 
@@ -312,12 +324,18 @@ int empdag_fini(EmpDag *empdag)
    printout(PO_INFO, "\nEmpdag for %s model '%.*s' #%u has type %s\n",
             mdl_fmtargs(empdag->mdl), empdag_typename(empdag->type));
 
-   unsigned n_opt = 0, n_vi = 0, n_ccflib = 0;
+   unsigned n_opt = 0, n_vi = 0, n_ccflib = 0, n_hidden = 0, n_dual = 0, n_fooc = 0;
    for (unsigned i = 0, len = empdag->mps.len; i < len; ++i) {
-      MathPrgm *mp = empdag->mps.arr[i]; assert(mp);
-      if (mp_isopt(mp)) { n_opt++; }
+      MathPrgm *mp = empdag->mps.arr[i];
+
+      if (!mp) { continue; }
+
+      if (mp_ishidden(mp)) { n_hidden++; }
+      else if (mp_isopt(mp)) { n_opt++; }
       else if (mp_isvi(mp)) { n_vi++; }
       else if (mp_isccflib(mp)) { n_ccflib++; }
+      else if (mp_isdual(mp)) { n_dual++; }
+      else if (mp_isfooc(mp)) { n_fooc++; }
       else { return error_runtime(); }
    }
    
@@ -329,6 +347,9 @@ int empdag_fini(EmpDag *empdag)
    printuint(&l, "OPT MPs", n_opt);
    printuint(&l, "VI MPs", n_vi);
    printuint(&l, "CCFLIB MPs", n_ccflib);
+   printuint(&l, "hidden MPs", n_hidden);
+   printuint(&l, "dual MPs", n_dual);
+   printuint(&l, "FOOC MPs", n_fooc);
    l.ident -= 2;
    printuint(&l, "Nash nodes", empdag->nashs.len);
    printuint(&l, "VF edges", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
@@ -358,7 +379,7 @@ int empdag_fini(EmpDag *empdag)
 
    printstr(PO_INFO, "\n");
 
-   return OK;
+   return empdag_export(empdag->mdl);
 }
 
 void empdag_rel(EmpDag *empdag)
@@ -367,6 +388,13 @@ void empdag_rel(EmpDag *empdag)
    daguidarray_empty(&empdag->roots);
    mpidarray_empty(&empdag->mps2reformulate);
    mpidarray_empty(&empdag->saddle_path_starts);
+
+   mpidarray_empty(&empdag->fenchel_dual_nodal);
+   mpidarray_empty(&empdag->fenchel_dual_subdag);
+   mpidarray_empty(&empdag->epi_dual_nodal);
+   mpidarray_empty(&empdag->epi_dual_subdag);
+   mpidarray_empty(&empdag->fooc.orig);
+   mpidarray_empty(&empdag->fooc.vi);
 
    /****************************************************************************
    * Free MP and Nash data structures
@@ -539,12 +567,14 @@ int empdag_dup(EmpDag * restrict empdag, const EmpDag * restrict empdag_up, Mode
       return Error_EMPRuntimeError;
    }
    assert(empdag_up->type != EmpDag_Empty && empdag_up->type != EmpDag_Unset);
+   assert(empdag->type == EmpDag_Unset);
 
    empdag->type = empdag_up->type;
    memcpy(&empdag->features, &empdag_up->features, sizeof(EmpDagFeatures));
    memcpy(&empdag->node_stats, &empdag_up->node_stats, sizeof(EmpDagNodeStats));
    memcpy(&empdag->edge_stats, &empdag_up->edge_stats, sizeof(EmpDagEdgeStats));
-   empdag->finalized = empdag_up->finalized;
+
+   empdag->finalized = false;
    empdag->uid_root = empdag_up->uid_root;
 
    /* Do not borrow to avoid circular reference */
@@ -593,8 +623,7 @@ MathPrgm *empdag_newmp(EmpDag *empdag, RhpSense sense)
    return empdag->mps.arr[mp_id];
 }
 
-int empdag_addmpnamed(EmpDag *empdag, RhpSense sense,
-                      const char *name, unsigned *id)
+int empdag_addmpnamed(EmpDag *empdag, RhpSense sense, const char *name, unsigned *id)
 {
    MathPrgm *mp;
    A_CHECK(mp, mp_new(empdag->mps.len, sense, empdag->mdl));
@@ -604,8 +633,7 @@ int empdag_addmpnamed(EmpDag *empdag, RhpSense sense,
    return dagmp_array_add(&empdag->mps, mp, name);
 }
 
-MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense,
-                              const char *name)
+MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense, const char *name)
 {
    unsigned mp_id;
    SN_CHECK(empdag_addmpnamed(empdag, sense, name, &mp_id));
@@ -660,7 +688,7 @@ Nash* empdag_newnashnamed(EmpDag *empdag, char* name)
 
 int empdag_rootsaddnash(EmpDag *empdag, nashid_t nashid)
 {
-   S_CHECK(chk_nashid(empdag, nashid));
+   S_CHECK(chk_nashid_(empdag, nashid));
 
    empdag->finalized = false;
 
@@ -669,7 +697,7 @@ int empdag_rootsaddnash(EmpDag *empdag, nashid_t nashid)
 
 int empdag_rootsaddmp(EmpDag *empdag, mpid_t mpid)
 {
-   S_CHECK(chk_mpid(empdag, mpid));
+   S_CHECK(chk_mpid_(empdag, mpid));
 
    empdag->finalized = false;
 
@@ -695,10 +723,10 @@ int empdag_setroot(EmpDag *empdag, daguid_t uid)
 }
 
 int empdag_getmpparents(const EmpDag *empdag, const MathPrgm *mp,
-                        const UIntArray **parents_uid)
+                        const DagUidArray **parents_uid)
 {
    unsigned mp_id = mp->id;
-   S_CHECK(chk_mpid(empdag, mp_id));
+   S_CHECK(chk_mpid_(empdag, mp_id));
 
    *parents_uid = &empdag->mps.rarcs[mp_id];
 
@@ -709,7 +737,7 @@ int empdag_getnashparents(const EmpDag *empdag, const Nash *nash,
                          const UIntArray **parents_uid)
 {
    nashid_t nashid = nash->id;
-   S_CHECK(chk_mpid(empdag, nashid));
+   S_CHECK(chk_mpid_(empdag, nashid));
 
    *parents_uid = &empdag->nashs.rarcs[nashid];
 
@@ -718,8 +746,8 @@ int empdag_getnashparents(const EmpDag *empdag, const Nash *nash,
 
 int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
 {
-   S_CHECK(chk_nashid(empdag, nashid));
-   S_CHECK(chk_mpid(empdag, mpid));
+   S_CHECK(chk_nashid_(empdag, nashid));
+   S_CHECK(chk_mpid_(empdag, mpid));
 
    MathPrgm *mp = empdag->mps.arr[mpid];
    if (mp->type == MpTypeUndef) {
@@ -728,8 +756,8 @@ int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
       return Error_RuntimeError;
    }
 
-   S_CHECK(rhp_uint_adduniq(&empdag->nashs.arcs[nashid], mpid2uid(mpid)));
-   S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mpid], nashid2uid(nashid)));
+   S_CHECK(daguidarray_adduniqsorted(&empdag->nashs.arcs[nashid], mpid2uid(mpid)));
+   S_CHECK(daguidarray_adduniqsorted(&empdag->mps.rarcs[mpid], nashid2uid(nashid)));
 
    trace_empdag("[empdag] adding an edge of type %s from Nash(%s) to MP(%s)\n",
                 arctype_str(ArcNash), empdag_getnashname(empdag, nashid),
@@ -742,13 +770,13 @@ int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
 
 int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const ArcVFData *edgeVF)
 {
-   unsigned id_child = edgeVF->child_id;
-   S_CHECK(chk_mpid(empdag, id_parent));
-   S_CHECK(chk_mpid(empdag, id_child));
+   unsigned id_child = edgeVF->mpid_child;
+   S_CHECK(chk_mpid_(empdag, id_parent));
+   S_CHECK(chk_mpid_(empdag, id_child));
    assert(id_parent != id_child);
    assert(valid_arcVF(edgeVF));
 
-   S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[id_child], edgeVFuid(mpid2uid(id_parent))));
+   S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[id_child], rarcVFuid(mpid2uid(id_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
                 arcVFType2str(edgeVF->type), empdag_getmpname(empdag, id_parent),
@@ -765,12 +793,12 @@ int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const ArcVFData *edgeVF)
 
 int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t id_parent, mpid_t id_child)
 {
-   S_CHECK(chk_mpid(empdag, id_parent));
-   S_CHECK(chk_mpid(empdag, id_child));
+   S_CHECK(chk_mpid_(empdag, id_parent));
+   S_CHECK(chk_mpid_(empdag, id_child));
    assert(id_parent != id_child);
 
-   S_CHECK(rhp_uint_adduniq(&empdag->mps.Carcs[id_parent], edgeCTRLuid(mpid2uid(id_child))));
-   S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[id_child], edgeCTRLuid(mpid2uid(id_parent))));
+   S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.Carcs[id_parent], mpid2uid(id_child)));
+   S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.rarcs[id_child], rarcCTRLuid(mpid2uid(id_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
                 arctype_str(ArcCtrl), empdag_getmpname(empdag, id_parent),
@@ -783,11 +811,11 @@ int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t id_parent, mpid_t id_child)
 
 int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mp_id, nashid_t nashid)
 {
-   S_CHECK(chk_mpid(empdag, mp_id));
-   S_CHECK(chk_nashid(empdag, nashid));
+   S_CHECK(chk_mpid_(empdag, mp_id));
+   S_CHECK(chk_nashid_(empdag, nashid));
 
-   S_CHECK(rhp_uint_adduniq(&empdag->mps.Carcs[mp_id], edgeCTRLuid(nashid2uid(nashid))));
-   S_CHECK(rhp_uint_adduniq(&empdag->nashs.rarcs[nashid], edgeCTRLuid(mpid2uid(mp_id))));
+   S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.Carcs[mp_id], nashid2uid(nashid)));
+   S_CHECK(rhp_uint_adduniqsorted(&empdag->nashs.rarcs[nashid], rarcCTRLuid(mpid2uid(mp_id))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to Nash(%s)\n",
                 arctype_str(ArcCtrl), empdag_getmpname(empdag, mp_id),
@@ -797,25 +825,25 @@ int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mp_id, nashid_t nashid)
 
    return OK;
 }
-
-int empdag_nashaddmpsbyid(EmpDag *empdag, nashid_t nashid,
-                         const MpIdArray *arr)
-{
-
-   S_CHECK(chk_nashid(empdag, nashid));
-
-   for (unsigned i = 0, len = arr->len; i < len; ++i) {
-      unsigned mp_id = arr->arr[i];
-      S_CHECK(chk_mpid(empdag, mp_id));
-      S_CHECK(rhp_uint_adduniq(&empdag->mps.rarcs[mp_id], nashid));
-   }
-
-   S_CHECK(rhp_uint_addset(&empdag->nashs.arcs[nashid], arr));
-
-   empdag->finalized = false;
-
-   return OK;
-}
+/* TODO: empdag->nashs.arcs contains daguid_t not mpid_t */
+//int empdag_nashaddmpsbyid(EmpDag *empdag, nashid_t nashid,
+//                         const MpIdArray *arr)
+//{
+//
+//   S_CHECK(chk_nashid(empdag, nashid));
+//
+//   for (unsigned i = 0, len = arr->len; i < len; ++i) {
+//      unsigned mp_id = arr->arr[i];
+//      S_CHECK(chk_mpid(empdag, mp_id));
+//      S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.rarcs[mp_id], nashid));
+//   }
+//
+//   S_CHECK(rhp_uint_addset(&empdag->nashs.arcs[nashid], arr));
+//
+//   empdag->finalized = false;
+//
+//   return OK;
+//}
 
 int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
                   EmpDagArc *arc)
@@ -887,28 +915,14 @@ int empdag_getmpidbyname(const EmpDag *empdag, const char * const name,
    return OK;
 }
 
-int empdag_getmpbyid(const EmpDag *empdag, unsigned id,
-                     MathPrgm **mp)
+int empdag_getmpbyid(const EmpDag *empdag, mpid_t id, MathPrgm **mp)
 {
-   S_CHECK(chk_mpid(empdag, id));
+   S_CHECK(chk_mpid_(empdag, id));
 
    *mp = empdag->mps.arr[id];
+   assert(*mp);
 
    return OK;
-}
-
-unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp)
-{
-   while (mp->next_id != UINT_MAX) {
-      unsigned next_id = mp->next_id; 
-      if (chk_mpid(empdag, next_id)) {
-         return UINT_MAX;
-      }
-      MathPrgm *mp_next = empdag->mps.arr[next_id];
-      mp = mp_next;
-   }
-
-   return mp->id;
 }
 
 int empdag_getnashbyname(const EmpDag *empdag, const char * const name,
@@ -943,7 +957,7 @@ int empdag_getnashidbyname(const EmpDag *empdag, const char * const name,
 
 int empdag_getnashbyid(const EmpDag *empdag, unsigned id, Nash **nash)
 {
-   S_CHECK(chk_nashid(empdag, id));
+   S_CHECK(chk_nashid_(empdag, id));
 
    *nash = empdag->nashs.arr[id];
 
@@ -1000,8 +1014,10 @@ int empdag_check(EmpDag *empdag)
    /* Check if all MP node:
     * - are finalized
     * - have parents or are roots */
+
+   MathPrgm ** const mps_arr = mps->arr;
    for (unsigned i = 0; i < mp_len; ++i) {
-      const MathPrgm *mp = mps->arr[i];
+      const MathPrgm *mp = mps_arr[i];
       if (!mp) continue;
 
       if (!(mp->status & MpFinalized)) {
@@ -1011,7 +1027,7 @@ int empdag_check(EmpDag *empdag)
       }
 
       /* If we have no parent and are not in the root set, we error */
-      if ((mps->rarcs[i].len == 0) &&
+      if ((mps->rarcs[i].len == 0) && !mp_ishidden(mp) &&
          (rhp_uint_findsorted(roots, mpid2uid(i)) == UINT_MAX)) {
          error("[empdag:check] ERROR: MP(%s) is not in the EMPDAG\n",
                   empdag_getmpname(empdag, mp->id));
@@ -1050,8 +1066,8 @@ int empdag_check(EmpDag *empdag)
 const ArcVFData* empdag_find_edgeVF(const EmpDag *empdag, unsigned mpid_parent,
                                  unsigned mpid_child)
 {
-   SN_CHECK(chk_mpid(empdag, mpid_parent));
-   SN_CHECK(chk_mpid(empdag, mpid_child));
+   SN_CHECK(chk_mpid_(empdag, mpid_parent));
+   SN_CHECK(chk_mpid_(empdag, mpid_child));
 
    struct VFedges *Varcs = &empdag->mps.Varcs[mpid_parent];
 
@@ -1077,7 +1093,7 @@ const ArcVFData* empdag_find_edgeVF(const EmpDag *empdag, unsigned mpid_parent,
  */
 int empdag_setmpname(EmpDag *empdag, mpid_t mpid, const char *const name)
 {
-   S_CHECK(chk_mpid(empdag, mpid));
+   S_CHECK(chk_mpid_(empdag, mpid));
 
    if (empdag->mps.names[mpid]) {
       error("%s :: MP already has name \"%s\"\n", __func__, empdag->mps.names[mpid]);
@@ -1096,7 +1112,7 @@ int empdag_setmpname(EmpDag *empdag, mpid_t mpid, const char *const name)
 int empdag_nash_getchildren(const EmpDag *empdag, nashid_t nashid,
                            DagUidArray *mps)
 {
-   S_CHECK(chk_nashid(empdag, nashid));
+   S_CHECK(chk_nashid_(empdag, nashid));
 
    memcpy(mps, &empdag->nashs.arcs[nashid], sizeof(DagUidArray));
 
@@ -1115,7 +1131,7 @@ int empdag_reserve_mp(EmpDag *empdag, unsigned reserve)
 
 static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
 {
-   if (chk_mpid(empdag, mp_id) != OK) {
+   if (chk_mpid_(empdag, mp_id) != OK) {
       error("[empdag] ERROR: seeking to delete MP ID #%u, which does not exists",
             mp_id);
       return Error_RuntimeError;
@@ -1146,7 +1162,7 @@ static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
 
 static int empdag_delnash(EmpDag *empdag, nashid_t nashid)
 {
-   if (chk_nashid(empdag, nashid) != OK) {
+   if (chk_nashid_(empdag, nashid) != OK) {
       error("[empdag] ERROR: seeking to delete Nash ID #%u, which does not exists",
             nashid);
       return Error_RuntimeError;
@@ -1291,7 +1307,7 @@ static int dfs_mplist(const EmpDag *empdag, daguid_t uid, UIntArray *mplist)
 
    struct rhp_empdag_arcVF *Vlist = Varcs->arr;
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      S_CHECK(dfs_mplist(empdag, mpid2uid(Vlist[i].child_id), mplist));
+      S_CHECK(dfs_mplist(empdag, mpid2uid(Vlist[i].mpid_child), mplist));
    }
 
    return OK;
@@ -1321,22 +1337,26 @@ int empdag_finalize(Model *mdl)
    return OK;
 }
 
-int empdag_collectroots(EmpDag *empdag, UIntArray *roots)
+int empdag_collectroots(EmpDag *empdag, DagUidArray *roots)
 {
-   rhp_uint_init(roots);
-   MathPrgm **mps =  empdag->mps.arr;
+   daguidarray_init(roots);
+   MathPrgm * restrict * mps =  empdag->mps.arr;
    UIntArray * restrict rarcs = empdag->mps.rarcs;
+
    for (unsigned i = 0, n_mps = empdag->mps.len; i < n_mps; ++i) {
-      if (rarcs[i].len == 0) {
-         S_CHECK(rhp_uint_add(roots, mpid2uid(mps[i]->id)));
+      const MathPrgm *mp = mps[i]; assert(mp);
+
+      if (rarcs[i].len == 0 && !mp_ishidden(mp)) {
+         S_CHECK(daguidarray_add(roots, mpid2uid(mp->id)));
       }
    }
 
-   Nash **nashs = empdag->nashs.arr;
+   Nash * restrict *nashs = empdag->nashs.arr;
    rarcs = empdag->nashs.rarcs;
+
    for (unsigned i = 0, num_nash = empdag->nashs.len; i < num_nash; ++i) {
       if (rarcs[i].len == 0) {
-         S_CHECK(rhp_uint_add(roots, nashid2uid(nashs[i]->id)));
+         S_CHECK(daguidarray_add(roots, nashid2uid(nashs[i]->id)));
       }
    }
 
@@ -1348,18 +1368,25 @@ unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl)
    assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
 
    rhp_idx ei = arc->basic_dat.ei;
+
+   if (ei == IdxObjFunc) { return 0; }
+
    assert(chk_ei(mdl, ei, __func__) == OK);
 
    return mdl->ctr.equmeta[ei].role == EquConstraint ? 1 : 0;
 }
 
-bool arcVFb_has_objequ(ArcVFData *arc, const Model *mdl)
+bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl)
 {
    assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
 
    rhp_idx ei = arc->basic_dat.ei;
+
+   if (ei == IdxObjFunc) { return true; }
+
    assert(chk_ei(mdl, ei, __func__) == OK);
 
    return mdl->ctr.equmeta[ei].role == EquObjective;
 }
+
 

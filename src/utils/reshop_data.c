@@ -3,6 +3,24 @@
 #include "reshop_data.h"
 #include "rhp_search.h"
 
+static bool chk_sorted_intarray(const int * restrict arr, unsigned len)
+{
+   for (unsigned i = 1; i < len; ++i) {
+      if (arr[i-1] > arr[i]) { return false; }
+   }
+
+   return true;
+}
+
+static bool chk_sorted_uintarray(const unsigned * restrict arr, unsigned len)
+{
+   for (unsigned i = 1; i < len; ++i) {
+      if (arr[i-1] > arr[i]) { return false; }
+   }
+
+   return true;
+}
+
 void rhp_int_init(IntArray *dat)
 {
    dat->len = 0;
@@ -60,6 +78,8 @@ int rhp_int_addsorted(IntArray * restrict dat, int v)
    dat->arr[pos] = v;
    dat->len++;
 
+   assert(chk_sorted_intarray(dat->arr, dat->len));
+
    return OK;
 }
 
@@ -103,6 +123,137 @@ int rhp_int_copy(IntArray * restrict dat,
    return OK;
 }
 
+int rhp_int_extend(IntArray * restrict dat, const IntArray * restrict dat_src)
+{
+
+   unsigned len = dat_src->len;
+
+   if (len == 0) {
+      return OK;
+   }
+
+   unsigned len_ = dat->len;
+   dat->len += len;
+
+   if (dat->len > dat->max) {
+      dat->max = MAX(2*dat->max, dat->len+1);
+      REALLOC_(dat->arr, int, dat->max);
+   }
+
+   memcpy(&dat->arr[len_], dat_src->arr, len*sizeof(int));
+
+   return OK;
+}
+
+int rhp_int_extend_sorted(IntArray * restrict dat,
+                          const IntArray * restrict dat_src)
+{
+   assert(chk_sorted_intarray(dat->arr, dat->len));
+   assert(chk_sorted_intarray(dat_src->arr, dat_src->len));
+
+   unsigned slen = dat_src->len;
+
+   if (slen == 0) {
+      return OK;
+   }
+
+   unsigned dlen = dat->len;
+   dat->len += slen;
+   unsigned len_new = dat->len;
+
+   if (dat->len > dat->max) {
+      dat->max = MAX(2*dat->max, dat->len+1);
+      REALLOC_(dat->arr, int, dat->max);
+   }
+
+   int * restrict sarr = dat_src->arr, * restrict darr = dat->arr;
+
+   int b1 = sarr[0], b2 = darr[0], e1 = sarr[slen-1], e2 = darr[dlen-1];
+
+   if (b1 <= b2) {
+      if (e1 <= b2) {
+         memmove(&darr[slen], darr, dlen*sizeof(int));
+         memcpy(darr, sarr, slen*sizeof(int));
+
+         return OK;
+      }
+
+      unsigned idx = bin_insert_int(sarr, slen, b2);
+      memmove(&darr[idx], darr, idx*sizeof(int));
+      memcpy(darr, sarr, idx*sizeof(int));
+
+      assert(idx < slen);
+      slen -= idx;
+      sarr = &sarr[idx];
+      darr = &darr[idx];
+   } 
+
+   if (e1 >= e2) {
+      if (b1 >= e2) {
+         memcpy(&darr[dlen], sarr, slen*sizeof(int));
+
+         return OK;
+      }
+
+      unsigned idx = bin_insert_int(sarr, slen, e2); assert(idx < slen);
+
+      /* Insert the last slen-idx elements of sarr at the end of dlen */
+      unsigned cpy_len = slen-idx;
+      memcpy(&darr[dlen], &sarr[idx], (cpy_len)*sizeof(int));
+
+      /* We don't update dlen as we can ignore the bits we just copied in the
+       * subsequent search */
+      slen = idx;
+   }
+
+   while (slen > 0) {
+
+      unsigned idx = bin_insert_int(darr, dlen, sarr[0]);
+      unsigned offset = 1;
+      darr += idx;
+      int v = darr[0];
+
+      /* Maximize the length of the copy */
+      while (offset <= slen && sarr[offset] <= v) { offset++; }
+
+      assert(dlen >= idx+offset);
+      dlen -= idx+offset;
+
+
+      memmove(&darr[offset], darr, (len_new-offset)*sizeof(int));
+      memcpy(darr, sarr, offset*sizeof(int));
+
+      darr += offset;
+      sarr += offset;
+      slen -= offset;
+   }
+
+
+   assert(chk_sorted_intarray(dat->arr, len_new));
+
+   return OK;
+}
+
+int rhp_int_extend_except_sorted(IntArray * restrict dat,
+                                 const IntArray * restrict dat_src,
+                                 int val)
+{
+   /* Quick and dirty implementation */
+   S_CHECK(rhp_int_extend_sorted(dat, dat_src));
+
+   return rhp_int_rmsorted(dat, val);
+}
+
+int rhp_int_extend_except(IntArray * restrict dat,
+                        const IntArray * restrict dat_src,
+                        int val)
+{
+   /* Quick and dirty implementation */
+   S_CHECK(rhp_int_extend(dat, dat_src));
+
+   return rhp_int_rm(dat, val);
+}
+
 void rhp_int_empty(IntArray *dat)
 {
    if (dat->len > 0) {
@@ -110,7 +261,7 @@ void rhp_int_empty(IntArray *dat)
    }
 }
 
-unsigned rhp_int_find(IntArray *dat, int v)
+unsigned rhp_int_find(const IntArray *dat, int v)
 {
    for (unsigned i = 0, len = dat->len; i < len; ++i) {
       if (dat->arr[i] == v) return i;
@@ -120,29 +271,46 @@ unsigned rhp_int_find(IntArray *dat, int v)
 
 unsigned rhp_int_findsorted(const IntArray *dat, int val)
 {
+   assert(chk_sorted_intarray(dat->arr, dat->len));
+
    if (dat->len == 0) { return UINT_MAX; }
    return bin_search_int(dat->arr, dat->len, val);
 }
 
 int rhp_int_rmsorted(IntArray *dat, int v)
 {
-   unsigned pos = UINT_MAX;
-   for (unsigned len = dat->len, i = len-1; i < len; --i) {
-      if (dat->arr[i] < v) { goto error; } 
+   assert(chk_sorted_intarray(dat->arr, dat->len));
 
-      if (dat->arr[i] == v) { pos = i; break; }
-   }
+   unsigned pos = rhp_int_findsorted(dat, v);
 
-   if (pos == UINT_MAX) goto error;
+   if (pos == UINT_MAX) { goto error; }
 
    dat->len--;
    memmove(&dat->arr[pos], &dat->arr[pos+1], (dat->len-pos) * sizeof(int));
+
+   assert(chk_sorted_intarray(dat->arr, dat->len));
 
    return OK;
 
 error:
    error("Could not find value %d in the dataset\n", v);
    return Error_NotFound;
+}
+
+int rhp_int_rmsortednofail(IntArray *dat, int v)
+{
+   assert(chk_sorted_intarray(dat->arr, dat->len));
+
+   unsigned pos = rhp_int_findsorted(dat, v);
+
+   if (pos == UINT_MAX) { return OK; }
+
+   dat->len--;
+   memmove(&dat->arr[pos], &dat->arr[pos+1], (dat->len-pos) * sizeof(int));
+
+   assert(chk_sorted_intarray(dat->arr, dat->len));
+
+   return OK;
 }
 
 int rhp_int_rm(IntArray *dat, int v)
@@ -205,6 +373,16 @@ void rhp_obj_empty(ObjArray *dat)
    if (dat->len > 0) {
       FREE(dat->arr);
    }
+}
+
+int rhp_obj_reserve(ObjArray *dat, unsigned size)
+{
+   if (dat->max < size) {
+      REALLOC_(dat->arr, void *, size);
+      dat->max = size;
+   }
+
+   return OK;
 }
 
 struct rhp_stack_gen* rhp_stack_gen_alloc(unsigned len)
@@ -273,6 +451,8 @@ int rhp_uint_add(UIntArray *dat, unsigned v)
 
 int rhp_uint_addsorted(UIntArray * restrict dat, unsigned v)
 {
+   assert(chk_sorted_uintarray(dat->arr, dat->len));
+
    if (dat->len >= dat->max) {
       dat->max = MAX(2*dat->max, dat->len+1);
       REALLOC_(dat->arr, unsigned, dat->max);
@@ -302,6 +482,8 @@ int rhp_uint_addsorted(UIntArray * restrict dat, unsigned v)
    memmove(&dat->arr[pos+1], &dat->arr[pos], (len-pos) * sizeof(unsigned));
    dat->arr[pos] = v;
    dat->len++;
+
+   assert(chk_sorted_uintarray(dat->arr, dat->len));
 
    return OK;
 }
@@ -348,12 +530,16 @@ unsigned rhp_uint_find(UIntArray *dat, unsigned v)
 
 unsigned rhp_uint_findsorted(const UIntArray *dat, unsigned val)
 {
+   assert(chk_sorted_uintarray(dat->arr, dat->len));
+
    if (dat->len == 0) { return UINT_MAX; }
    return bin_search_uint(dat->arr, dat->len, val);
 }
 
-int rhp_uint_adduniq(UIntArray *dat, unsigned v)
+int rhp_uint_adduniqsorted(UIntArray *dat, unsigned v)
 {
+   assert(chk_sorted_uintarray(dat->arr, dat->len));
+
    if (dat->len > 0) {
       unsigned idx = rhp_uint_findsorted(dat, v);
       if (idx != UINT_MAX) {
@@ -368,6 +554,8 @@ int rhp_uint_adduniq(UIntArray *dat, unsigned v)
 
 int rhp_uint_adduniqnofail(UIntArray *dat, unsigned v)
 {
+   assert(chk_sorted_uintarray(dat->arr, dat->len));
+
    if (dat->len > 0 && rhp_uint_findsorted(dat, v) != UINT_MAX) {
       return OK;
    }
@@ -413,6 +601,28 @@ int rhp_uint_reserve(UIntArray *dat, unsigned size)
    }
 
    return OK;
+}
+
+int rhp_uint_rmsorted(UIntArray *dat, unsigned v)
+{
+   assert(chk_sorted_uintarray(dat->arr, dat->len));
+
+   if (dat->len == 0) { goto error; }
+
+   unsigned pos = rhp_uint_findsorted(dat, v);
+
+   if (pos == UINT_MAX) { goto error; }
+
+   dat->len--;
+   memmove(&dat->arr[pos], &dat->arr[pos+1], (dat->len-pos) * sizeof(unsigned));
+
+   assert(chk_sorted_uintarray(dat->arr, dat->len));
+
+   return OK;
+
+error:
+   error("Could not find value %u in the dataset\n", v);
+   return Error_NotFound;
 }
 
 int rhp_uint_rm(UIntArray *dat, unsigned v)

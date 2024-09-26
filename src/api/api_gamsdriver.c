@@ -48,84 +48,71 @@ int rhp_gms_loadlibs(const char* sysdir)
  */
 int rhp_gms_readempinfo(Model *mdl, const char *fname)
 {
-   char empinfofile[PATH_MAX], gmdfile[PATH_MAX];
+   char empinfofile[PATH_MAX], gmdfile[PATH_MAX], scrext[GMS_SSSIZE];
 
    S_CHECK(gams_chk_mdl(mdl, __func__));
 
    Container *ctr = &mdl->ctr;
    const GmsContainerData *gms = (const GmsContainerData*)ctr->data;
-   bool has_embrhp_empinfo = false, has_embrhp_gmdfile = false;
+   bool has_embrhp_gmdfile = false;
 
 
   /* ----------------------------------------------------------------------
    * If the argument fname is provided, then we use it. Otherwise,
-   * - if SCRDIR/EMBCODE_DIR/empinfo.dat exists, use it
-   * - else use SCRDIR/empinfo.dat
+   * else use SCRDIR/empinfo.dat
    * ---------------------------------------------------------------------- */
 
    if (!fname) {
 
       gevGetStrOpt(gms->gev, gevNameScrDir, empinfofile);
+      gevGetStrOpt(gms->gev, gevNameScrExt, scrext);
+
       size_t scrdirlen = strlen(empinfofile);
-      if (scrdirlen + + strlen(EMBCODE_DIR) > sizeof(empinfofile)) {
-         error("[empinterp] ERROR: path '%s%s' is too long for this OS\n",
-               empinfofile, EMBCODE_DIR);
-         return Error_SystemError;
-      }
+      const char *empinfofile_opt = optvals(mdl, Options_EMPInfoFile);
 
-      strcat(empinfofile, EMBCODE_DIR);
-      if (access(empinfofile, R_OK) == 0) {
-         if (strlen(empinfofile) + strlen(DIRSEP) + strlen("empinfo.dat") > sizeof(empinfofile)) {
-            error("[empinterp] ERROR: path '%s%s%s' is too long for this OS\n",
-                  empinfofile, DIRSEP, "empinfo.dat");
-            return Error_SystemError;
-         }
-         strcat(empinfofile, DIRSEP);
-         strcat(empinfofile, "empinfo.dat");
-
-         if (access(empinfofile, R_OK) == 0) {
-            has_embrhp_empinfo = true;
-
-            size_t embcode_dirlen = scrdirlen + strlen(EMBCODE_DIR) + strlen(DIRSEP);
-            memcpy(gmdfile, empinfofile, embcode_dirlen * sizeof(char));
- 
-            if (embcode_dirlen + strlen(EMBCODE_GMDOUT_FNAME) >= sizeof(gmdfile)) {
-               error("[empinterp] ERROR: path '%s%s' is too long for this OS\n",
-                     gmdfile, EMBCODE_GMDOUT_FNAME);
-               return Error_SystemError;
-            }
-            strcpy(&gmdfile[embcode_dirlen], EMBCODE_GMDOUT_FNAME);
-
-            has_embrhp_gmdfile = access(gmdfile, R_OK) == 0;
-         }
-      }
-
-      if (!has_embrhp_empinfo) {
-
-         const char *empinfofile_opt = optvals(mdl, Options_EMPInfoFile);
-         bool absolute_path;
+      bool absolute_path;
 #ifdef _WIN32
-         /* TODO: This is quite an assumption, room for improvement */
-         char c1 = empinfofile_opt[0], c2 = empinfofile_opt[1];
-         absolute_path = ((c1 >= 'A' && c1 <= 'Z') || (c1 >= 'a' && c1 <= 'z')) && c2 == ':';
+      /* TODO: This is quite an assumption, room for improvement */
+      char c1 = empinfofile_opt[0], c2 = empinfofile_opt[1];
+      absolute_path = ((c1 >= 'A' && c1 <= 'Z') || (c1 >= 'a' && c1 <= 'z')) && c2 == ':';
 #else
-         absolute_path = empinfofile_opt[0] == '/';
+      absolute_path = empinfofile_opt[0] == '/';
 #endif
 
-         if (absolute_path) {
-            strncpy(empinfofile, empinfofile_opt, PATH_MAX-1);
-         } else {
-            empinfofile[scrdirlen] = '\0';
-            if (scrdirlen + strlen(empinfofile_opt) > sizeof(empinfofile)) {
-               error("[empinterp] ERROR: path '%s%s' is too long for this OS\n",
-                     empinfofile, empinfofile_opt);
-               return Error_SystemError;
-            }
-            strcat(empinfofile, empinfofile_opt);
+      if (absolute_path) {
+         strncpy(empinfofile, empinfofile_opt, PATH_MAX-1);
+      } else {
+         empinfofile[scrdirlen] = '\0';
+         if (scrdirlen + strlen(empinfofile_opt) > sizeof(empinfofile)) {
+            error("[empinterp] ERROR: path '%s%s' is too long for this OS\n",
+                  empinfofile, empinfofile_opt);
+            return Error_SystemError;
          }
-         logger(PO_V, "[empinterp] Using option EMPinfo='%s' for EMPinfo file\n", empinfofile);
-         FREE(empinfofile_opt);
+         strcat(empinfofile, empinfofile_opt);
       }
+
+      logger(PO_V, "[empinterp] Using option EMPinfo='%s' for EMPinfo file\n", empinfofile);
+      FREE(empinfofile_opt);
+
+      if (scrdirlen + strlen(EMBCODE_GMDOUT_FNAME) >= sizeof(gmdfile)) {
+         error("[empinterp] ERROR: path '%s%s' is too long for this OS\n",
+               gmdfile, EMBCODE_GMDOUT_FNAME);
+         return Error_SystemError;
+      }
+      memcpy(gmdfile, empinfofile, scrdirlen * sizeof(char));
+      strcpy(&gmdfile[scrdirlen], EMBCODE_GMDOUT_FNAME);
+
+      has_embrhp_gmdfile = access(gmdfile, R_OK) == 0;
+      if (has_embrhp_gmdfile) {
+         logger(PO_V, "[empinterp] Using GDX file '%s'\n", gmdfile);
+      }
+
+  /* ----------------------------------------------------------------------
+   * TODO: implement looking for empinfo.%gams.scrext% and gdx_gms.%gams.scrext%
+   * GG #8
+   * ---------------------------------------------------------------------- */
+
+
 
    } else {
       logger(PO_V, "[empinterp] Using argument '%s' for EMPinfo file\n", fname);
@@ -143,6 +130,7 @@ int rhp_gms_readempinfo(Model *mdl, const char *fname)
 
       return OK;
    }
+
 
    EmpInfo *empinfo = &mdl->empinfo;
    S_CHECK(empinfo_alloc(empinfo, mdl));

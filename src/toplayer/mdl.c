@@ -359,7 +359,7 @@ int mdl_getobjequs(const Model *mdl, Aequ *objs)
     rhp_idx *list;
     MALLOC_(list, rhp_idx, max);
 
-    for (rhp_idx i = 0; i < ctr_nequs_total(ctr); ++i) {
+    for (rhp_idx i = 0, len = ctr_nequs_total(ctr); i < len; ++i) {
       if (ctr->equmeta[i].role == EquObjective &&
         !(ctr->equmeta[i].ppty & EquPptyIsDeleted)) {
 

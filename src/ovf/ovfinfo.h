@@ -52,11 +52,12 @@ typedef union {
 const char *ovf_argtype_str(OvfArgType type);
 
 
-enum OVF_TYPE {
-   OVFTYPE_OV,
-   OVFTYPE_OVF,
-   OVFTYPE_CCFLIB,
-};
+typedef enum OVF_TYPE {
+   OvfType_OV,
+   OvfType_Ovf,
+   OvfType_Ccflib,
+   OvfType_Ccflib_Dual,
+} OvfType;
 
 typedef enum {
    OvfNoStatus  = 0,
@@ -64,22 +65,23 @@ typedef enum {
    OvfFinalized = 2
 } OvfStatus;
 
-typedef struct rhp_ovf_def {
-   unsigned idx;                /**< Index of the generator for this OVF */
-   rhp_idx ovf_vidx;            /**< index of the OVF variable */
+typedef struct rhp_ovfdef {
+   unsigned idx;                /**< Index of the generator for this OVF      */
+   rhp_idx vi_ovf;              /**< index of the OVF variable                */
 
    Avar *args;                  /**< variable arguments                       */
    rhp_idx *eis;                /**< Equations which are arguments to the CCF */
    double *coeffs;              /**< Coefficients of the OVF variable arg     */
-   unsigned num_empdag_children; /**< Number of EMPDAG children               */
+   unsigned num_empdag_children;/**< Number of EMPDAG children               */
 
    const OvfGenOps *generator;  /**< generator for this OVF */
    const char *name;            /**< name of this OVF */
    OvfDef *next;                /**< next OVF */
    OvfParamList params;         /**< set of parameters associated with this OVF */
    unsigned char reformulation; /**< Reformulation scheme for this OVF */
-   bool sense;                    /**< true if the OVF is in sup form (inf form otherwise) */
+   bool sense;                  /**< true if the OVF is in sup form (inf form otherwise) */
    OvfStatus status;            /**< status of the OVF def                               */
+   unsigned refcnt;             /**< Reference counter                        */
 } OvfDef;
 
 
@@ -90,20 +92,26 @@ typedef struct ovfinfo {
    unsigned refcnt;
 } OvfInfo;
 
-union ovf_ops_data {
-   OvfDef *ovf;
+typedef struct {
    MathPrgm *mp;
-};
+   mpid_t mpid_dual;
+} CcflibData;
 
-void ovf_def_free(OvfDef* def);
-OvfDef* ovf_def_new_ovfinfo(struct ovfinfo *ovfinfo, unsigned ovf_idx) MALLOC_ATTR(ovf_def_free,1);
-OvfDef* ovf_def_new(unsigned ovf_idx) MALLOC_ATTR(ovf_def_free,1);
+typedef union ovf_ops_data {
+   OvfDef *ovf;
+   CcflibData *ccfdat;
+} OvfOpsData;
+
+void ovfdef_free(OvfDef* def);
+OvfDef* ovfdef_new_ovfinfo(struct ovfinfo *ovfinfo, unsigned ovf_idx) MALLOC_ATTR(ovfdef_free,1);
+OvfDef* ovfdef_new(unsigned ovf_idx) MALLOC_ATTR(ovfdef_free,1);
+OvfDef* ovfdef_borrow(OvfDef* ovfdef) NONNULL;
+
 int ovfinfo_alloc(EmpInfo *empinfo);
 void ovfinfo_dealloc(EmpInfo *empinfo);
 struct ovfinfo *ovfinfo_borrow(struct ovfinfo *ovfinfo) NONNULL;
 
-int ovf_addbyname(EmpInfo *empinfo, const char *name,
-                      OvfDef **ovfdef) NONNULL;
+int ovf_addbyname(EmpInfo *empinfo, const char *name, OvfDef **ovfdef) NONNULL;
 int ovf_params_sync(OvfDef * restrict ovf, OvfParamList * restrict params) NONNULL;
 unsigned ovf_findbyname(const char *name) NONNULL;
 unsigned ovf_findbytoken(const char *start, unsigned len) NONNULL;

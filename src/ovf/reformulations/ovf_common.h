@@ -14,10 +14,10 @@
  */
 
 /** Some property of OVF*/
-struct ovf_ppty {
+typedef struct ovf_ppty {
    bool quad;  /**< true if the OVF is quadratic */
    RhpSense sense;   /**< true if the OVF is in SUP form */
-};
+} OvfPpty;
 
 /** Quick access to some OVF data */
 struct ovf_basic_data {
@@ -45,6 +45,11 @@ int ovf_process_indices(Model *mdl, Avar *args, rhp_idx *eis) NONNULL;
       strcpy(VAR, OVFVAR_NAME); \
       strcat(VAR, SUFFIX);
 
+#define NEWNAME2(VAR, OVFVAR_NAME, OVFVAR_NAME_LEN, SUFFIX) \
+      MALLOC(VAR, char, 1 + OVFVAR_NAME_LEN + strlen(SUFFIX)); \
+      strcpy(VAR, OVFVAR_NAME); \
+      strcat(VAR, SUFFIX);
+
 #define EMPMAT_GET_CSR_SIZE(M, i, size) \
 if (M.ppty & EMPMAT_EYE) { size += 1; } else { \
    size += M.csr->p[i+1] - M.csr->p[i]; }
@@ -69,14 +74,18 @@ typedef struct ovf_ops {
    int (*add_k)(union ovf_ops_data ovfd, Model *mdl, Equ *e,
                 Avar *y, unsigned n_args);
    int (*get_args)(union ovf_ops_data ovfd, Avar **v);
+   int (*get_nargs)(union ovf_ops_data ovfd, unsigned *nargs);
    int (*get_mappings)(union ovf_ops_data ovfd, rhp_idx **eis);
    int (*get_coeffs)(union ovf_ops_data ovfd, double **coeffs);
    int (*get_cone)(union ovf_ops_data ovfd, unsigned idx, enum cone *cone, void **cone_data);
    int (*get_cone_nonbox)(union ovf_ops_data ovfd, unsigned idx, enum cone *cone,
                    void **cone_data);
    int (*get_D)(union ovf_ops_data ovfd, SpMat *D, SpMat *J);
+   int (*get_equ)(OvfOpsData ovfd, Model *mdl, void **iterator, rhp_idx vi_ovf,
+                  double *ovf_coeff, rhp_idx *ei_new, unsigned n_z);
    int (*get_lin_transformation)(union ovf_ops_data ovfd,  SpMat *B, double **b);
    int (*get_M)(union ovf_ops_data ovfd, SpMat *M);
+   int (*get_mp_and_sense)(OvfOpsData ovfd, const Model *mdl, rhp_idx vi_ovf, MathPrgm **mp, RhpSense *sense);
    const char* (*get_name)(union ovf_ops_data ovfd);
    rhp_idx (*get_ovf_vidx)(union ovf_ops_data ovfd);
    int (*get_set)(union ovf_ops_data ovfd, SpMat *At, double** b, bool trans);

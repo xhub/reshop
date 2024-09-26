@@ -245,7 +245,7 @@ int nlnode_reserve(NlTree *tree, NlNode *node, size_t len)
    memcpy(c, node->children, node->children_max * sizeof(NlNode *));
    node->children = c;
 
-   for (unsigned i = node->children_max; i < node->children_max + len; ++i) {
+   for (unsigned i = node->children_max, max = node->children_max + len; i < max; ++i) {
       node->children[i] = NULL;
    }
 
@@ -500,7 +500,7 @@ static int _nlnode_replacevarbytree(NlNode* node, rhp_idx vidx,
            /* TODO(xhub) when we will support refcnt in node, do that instead
             * of copying  */
            for (unsigned j = 0; j < subnode->children_max; ++j) {
-              S_CHECK(nlnode_copy(&lnode->children[j], subnode->children[j], tree));
+              S_CHECK(nlnode_dup(&lnode->children[j], subnode->children[j], tree));
            }
          } else { continue; }
       } else if (op == NLNODE_CST) { continue;
@@ -550,7 +550,7 @@ NlTree* nltree_dup(const NlTree *tree, const unsigned *var_indices, unsigned nb_
       AA_CHECK_EXIT(copy->vt, _vartree_alloc(nb_var, var_indices));
    }
 
-   SN_CHECK_EXIT(nlnode_copy(&copy->root, tree->root, copy))
+   SN_CHECK_EXIT(nlnode_dup(&copy->root, tree->root, copy))
 
    if (copy->vt) copy->vt->done = true;
 
@@ -580,7 +580,7 @@ NlTree* nltree_dup_rosetta(const NlTree* restrict tree, const rhp_idx* restrict 
   /* TODO(xhub) TREE this should better handled. free the memory? borrow the memory? */
    SN_CHECK_EXIT(nltree_reset_var_list(tree_copy));
 
-   SN_CHECK_EXIT(nlnode_copy_rosetta(&tree_copy->root, tree->root, tree_copy, rosetta))
+   SN_CHECK_EXIT(nlnode_dup_rosetta(&tree_copy->root, tree->root, tree_copy, rosetta))
 
    return tree_copy;
 
@@ -796,7 +796,7 @@ int nltree_mul_cst(NlTree* tree, NlNode ***node, NlPool *pool, double coeff)
  *
  *  @return                  the error code
  */
-int nltree_mul_cst_x(NlTree* tree, NlNode ***node, NlPool *pool, double coeff,
+int nltree_mul_cst_x(NlTree* tree, NlNode ** restrict *node, NlPool *pool, double coeff,
                      bool *new_node)
 {
    NlNode *lnode;
@@ -949,13 +949,20 @@ int nltree_mul_cst_add_node(NlTree* tree, NlNode ***node, NlPool *pool,
 
    if (new_node) {
       *node = caddr;
-      S_CHECK(nltree_reserve_add_node(tree, caddr, size, idx));
+      S_CHECK(nltree_ensure_add_node(tree, caddr, size, idx));
    } else {
       unsigned dummy_offset;
-      S_CHECK(nltree_reserve_add_node(tree, *node, size-1, &dummy_offset));
+      S_CHECK(nltree_ensure_add_node(tree, *node, size-1, &dummy_offset));
    }
 
    return OK;
+}
+
+int rctr_nltree_mul_cst(Container *ctr, NlTree* tree, NlNode ** restrict *node,
+                        double coeff)
+{
+   bool dummy;
+   return nltree_mul_cst_x(tree, node, ctr_getpool(ctr), coeff, &dummy);
 }
 
 /** 
@@ -1135,7 +1142,7 @@ int rctr_nltree_add_lin_term(Container *ctr, NlTree* tree,
    unsigned offset = 0;
    unsigned size = valid_vi(vi_no) ? lequ->len : lequ->len + 1;
 
-   S_CHECK(nltree_reserve_add_node(tree, *node, size, &offset));
+   S_CHECK(nltree_ensure_add_node(tree, *node, size, &offset));
    lnode = **node;
 
    /* TODO(xhub) reintrooduce FMA?*/
@@ -1412,8 +1419,7 @@ int rctr_nltree_var(Container *ctr, NlTree* tree, NlNode ***node, rhp_idx vi,
  *
  *
  */
-int nltree_reserve_add_node(NlTree *tree, NlNode **node,
-                             unsigned size, unsigned *offset)
+int nltree_ensure_add_node(NlTree *tree, NlNode **node, unsigned size, unsigned *offset)
 {
    NlNode *lnode = *node;
    if (lnode) {
@@ -1451,6 +1457,57 @@ int nltree_reserve_add_node(NlTree *tree, NlNode **node,
    return OK;
 }
 
+/** @brief ensure that the node is of the ADD type and has enough space for
+ *         a number of children nodes. Returns also the offset for the first
+ *         available child. In place version
+ *
+ *  @param         tree    the tree
+ *  @param[in,out] node    On input, the address of the current node. On output,
+ *                         the address of the ADD node
+ *  @param         size    the number of additional children for the node
+ *  @param[out]    offset  the index of the first available child
+ *
+ *
+ */
+int nltree_ensure_add_node_inplace(NlTree *tree, NlNode **node, unsigned size, unsigned *offset)
+{
+   NlNode *lnode = *node;
+   if (lnode) {
+      if (lnode->op == __OPCODE_LEN) {
+         nlnode_default(lnode, NLNODE_ADD);
+         S_CHECK(nlnode_reserve(tree, lnode, size));
+         *offset = 0;
+      } else if (lnode->op == NLNODE_ADD) {
+         /* ----------------------------------------------------------------
+          * This is a bit dangerous since we are going to change a node that we
+          * may want to reference later. This requires a thoro solution of not
+          * asking for children directly,  via the array, put via a function
+          * that return the next available child. This could be implemented for
+          * dynamic node, while static node (with fixed number of children,
+          * would still be allowed to have direct access of their children via
+          * the array
+          * ---------------------------------------------------------------- */
+
+         *offset = lnode->children_max;
+         S_CHECK(nlnode_reserve(tree, lnode, size));
+      } else {
+         NlNode *node_dup;
+         A_CHECK(node_dup, nlnode_dup_norecur(lnode, tree));
+         nlnode_default(lnode, NLNODE_ADD);
+         S_CHECK(nlnode_reserve(tree, lnode, size+1));
+         lnode->children[0] = node_dup;
+         *offset = 1;
+         memset(&lnode->children[1], 0, size * sizeof(NlNode*));
+      }
+   } else {
+      A_CHECK(*node, nlnode_alloc_init(tree, size));
+      nlnode_default(*node, NLNODE_ADD);
+      *offset = 0;
+   }
+
+   return OK;
+}
+
 /** 
  *  @brief add a variable to a NL expression
  *
@@ -1469,7 +1526,7 @@ int nltree_add_var_tree(Container *ctr, NlTree *tree, rhp_idx vi, double val)
    S_CHECK(nltree_find_add_node(tree, &addr, ctr->pool, &lval));
 
    unsigned offset;
-   S_CHECK(nltree_reserve_add_node(tree, addr, 1, &offset));
+   S_CHECK(nltree_ensure_add_node(tree, addr, 1, &offset));
 
    addr = &(*addr)->children[offset];
 
@@ -1524,7 +1581,7 @@ static int nltree_add_expr_common(NlTree *tree, const NlNode *node,
      S_CHECK(nltree_mul_cst_add_node(tree, &add_node, pool, lcst,
                                      children_from_node, offset));
    } else {
-     S_CHECK(nltree_reserve_add_node(tree, add_node, children_from_node, offset));
+     S_CHECK(nltree_ensure_add_node(tree, add_node, children_from_node, offset));
    }
 
    *out_node = *add_node;
@@ -1559,11 +1616,11 @@ int nltree_add_nlexpr(NlTree *tree, NlNode *node, NlPool *pool, double cst)
    if (node->op == NLNODE_ADD) {
       for (unsigned i = 0; i < children_from_node; ++i) {
          if (!node->children[i]) { continue; }
-         S_CHECK(nlnode_copy(&lnode->children[offset], node->children[i], tree));
+         S_CHECK(nlnode_dup(&lnode->children[offset], node->children[i], tree));
          offset++;
       }
    } else {
-      S_CHECK(nlnode_copy(&lnode->children[offset], node, tree));
+      S_CHECK(nlnode_dup(&lnode->children[offset], node, tree));
    }
 
    return nltree_check_add(lnode);
@@ -1656,7 +1713,7 @@ int rctr_nltree_copy_to(Container *ctr, NlTree *tree, NlNode **dstnode, NlNode *
    unsigned offset = 0;
 
    if (!*dstnode) {
-      S_CHECK(nlnode_copy(dstnode, srcnode, tree));
+      S_CHECK(nlnode_dup(dstnode, srcnode, tree));
 
    } else {
 
@@ -1681,13 +1738,13 @@ int rctr_nltree_copy_to(Container *ctr, NlTree *tree, NlNode **dstnode, NlNode *
             S_CHECK(nltree_mul_cst_add_node(tree, &add_node, ctr->pool, cst,
                                              nchildren, &offset));
          } else {
-            S_CHECK(nltree_reserve_add_node(tree, add_node, nchildren, &offset));
+            S_CHECK(nltree_ensure_add_node(tree, add_node, nchildren, &offset));
          }
 
          lnode = *add_node;
          for (unsigned i = 0, len = nchildren; i < len; ++i) {
             if (!srcnode->children[i]) { continue; }
-            S_CHECK(nlnode_copy(&lnode->children[offset], srcnode->children[i], tree));
+            S_CHECK(nlnode_dup(&lnode->children[offset], srcnode->children[i], tree));
             offset++;
          }
 
@@ -1695,7 +1752,7 @@ int rctr_nltree_copy_to(Container *ctr, NlTree *tree, NlNode **dstnode, NlNode *
 
          S_CHECK(nlnode_reserve_and_getoffset(tree, lnode, nchildren, &offset));
 
-         S_CHECK(nlnode_copy(&lnode->children[offset], srcnode, tree));
+         S_CHECK(nlnode_dup(&lnode->children[offset], srcnode, tree));
       }
 
       S_CHECK(nltree_check_add(lnode));
@@ -1739,11 +1796,11 @@ int rctr_equ_add_nlexpr_full(Container *ctr, NlTree *tree, const NlNode *node,
    if (node->op == NLNODE_ADD) {
       for (unsigned i = 0; i < children_from_node; ++i) {
          if (!node->children[i]) { continue; }
-         S_CHECK(nlnode_copy_rosetta(&lnode->children[offset], node->children[i], tree, rosetta));
+         S_CHECK(nlnode_dup_rosetta(&lnode->children[offset], node->children[i], tree, rosetta));
          offset++;
       }
    } else {
-      S_CHECK(nlnode_copy_rosetta(&lnode->children[offset], node, tree, rosetta));
+      S_CHECK(nlnode_dup_rosetta(&lnode->children[offset], node, tree, rosetta));
    }
 
    /* keep the model representation consistent */

@@ -66,6 +66,23 @@ UNUSED static void GDX_CALLCONV store_vector_filt(const int Indx[], const double
 }
 /* END TDataStoreProc_t functions */
 
+GdxReader* gdx_readers_new(Interpreter* restrict interp)
+{
+   GdxReaders * restrict gdxreaders = &interp->gdx_readers;
+   if (gdxreaders->len >= gdxreaders->max) {
+      gdxreaders->max = MAX(2*gdxreaders->max, 2);
+      REALLOC_NULL(gdxreaders->list, GdxReader, gdxreaders->max);
+   }
+
+   return &gdxreaders->list[gdxreaders->len++];
+}
+
+GdxReader* gdx_reader_last(Interpreter* restrict interp)
+{
+   GdxReaders * restrict gdxreaders = &interp->gdx_readers;
+   return gdxreaders->len > 0 ? &gdxreaders->list[gdxreaders->len-1] : NULL;
+}
+
 
 void gdx_reader_free(GdxReader *reader)
 {
@@ -126,6 +143,8 @@ int gdx_reader_init(GdxReader *reader, Model *mdl, const char *fname)
 int gdx_reader_find(GdxReader *reader, const char *symname)
 {
    assert(reader->gdxh);
+   GdxSymData *symdat = &reader->symdat;
+
    int symidx, symdim, symtype;
    if (!gdxFindSymbol(reader->gdxh, symname, &symidx) || symidx < 0) {
       error("[empinterp] ERROR: couldn't find symbol '%s' in file '%s'\n",
@@ -133,13 +152,14 @@ int gdx_reader_find(GdxReader *reader, const char *symname)
       //reader->cursym.idx = -2;
       return Error_NotFound;
    }
+   symdat->idx = symidx;
 
    char buf[GMS_SSSIZE];
    gdxSymbolInfo(reader->gdxh, symidx, buf, &symdim, &symtype);
 
-   reader->cursym.idx = symidx;
-   reader->cursym.dim = symdim;
-   reader->cursym.type = symtype;
+   symdat->dim = symdim;
+   symdat->type = symtype;
+
 
    if (symtype > GMS_DT_MAX) {
       error("[empinterp] ERROR gdx file '%s': symbol '%s' has type %u > %u (max)\n",
@@ -164,7 +184,7 @@ static int gdx_reader_readset(GdxReader * restrict reader, const char *setname)
    gdxStrIndexPtrs_t  uels_str;
 
    assert(gdxh);
-   assert(reader->cursym.dim == 1);
+   assert(reader->symdat.dim == 1);
 
    rhp_int_init(&reader->setobj);
 
@@ -177,7 +197,7 @@ static int gdx_reader_readset(GdxReader * restrict reader, const char *setname)
     * --------------------------------------------------------------------- */
 
    int nrecs;
-   gdx_call_rc(gdxDataReadStrStart, gdxh, reader->cursym.idx, &nrecs);
+   gdx_call_rc(gdxDataReadStrStart, gdxh, reader->symdat.idx, &nrecs);
 
    if (nrecs <= 0) {
       error("%s :: Set '%s': invalid record size %d", __func__, setname, nrecs);
@@ -217,10 +237,10 @@ static int gdx_reader_readscalar(GdxReader *reader, const char *symname)
    int dummyuels[GMS_MAX_INDEX_DIM] = {0};
 
    assert(gdxh);
-   assert(reader->cursym.dim == 0);
+   assert(reader->symdat.dim == 0);
 
    int nrecs;
-   gdx_call_rc(gdxDataReadRawStart, gdxh, reader->cursym.idx, &nrecs);
+   gdx_call_rc(gdxDataReadRawStart, gdxh, reader->symdat.idx, &nrecs);
    assert(nrecs == 1);
 
    int dummyint;
@@ -247,10 +267,10 @@ static int gdx_reader_readvector(GdxReader *reader, const char *symname)
    gdxStrIndexPtrs_t  uels_str;
 
    assert(gdxh);
-   assert(reader->cursym.dim == 1);
+   assert(reader->symdat.dim == 1);
 
    int nrecs;
-   gdx_call_rc(gdxDataReadStrStart, gdxh, reader->cursym.idx, &nrecs);
+   gdx_call_rc(gdxDataReadStrStart, gdxh, reader->symdat.idx, &nrecs);
    assert(nrecs >= 1);
 
    A_CHECK(reader->vector, lequ_alloc(nrecs));
@@ -292,34 +312,34 @@ int gdx_reader_readsym(GdxReader *reader, const char *symname)
 {
    S_CHECK(gdx_reader_find(reader, symname));
 
-   int type = reader->cursym.type;
+   int type = reader->symdat.type;
    switch (type) {
    case GMS_DT_SET:
-      if (reader->cursym.dim == 1) {
+      if (reader->symdat.dim == 1) {
          return gdx_reader_readset(reader, symname);
       } else { /* The callee gets the data and handles it */
          return OK;
       }
       break;
    case GMS_DT_ALIAS: {
-      int dummyint, idx_alias, idx = reader->cursym.idx, symdim;
+      int dummyint, idx_alias, idx = reader->symdat.idx, symdim;
       char buf[GMS_SSSIZE];
       gdxSymbolInfoX(reader->gdxh, idx, &dummyint, &idx_alias, buf);
 
       trace_empdag("[empinterp] In gdx '%s': symbol '%s' is an alias to %d.\n",
                    reader->fname, symname, idx_alias);
 
-      gdxSymbolInfo(reader->gdxh, idx_alias, reader->cursym.alias_name, &symdim,
-                    &reader->cursym.alias_type);
+      gdxSymbolInfo(reader->gdxh, idx_alias, reader->symdat.alias_name, &symdim,
+                    &reader->symdat.alias_gdx_type);
 
-      reader->cursym.alias_idx = idx_alias;
-      reader->cursym.type = GMS_DT_ALIAS;
-      reader->cursym.dim = symdim;
+      reader->symdat.alias_idx = idx_alias;
+      reader->symdat.type = GMS_DT_ALIAS;
+      reader->symdat.dim = symdim;
 
       return OK;
    }
    case GMS_DT_PAR: {
-      int dim  = reader->cursym.dim;
+      int dim  = reader->symdat.dim;
       if (dim == 0) { return gdx_reader_readscalar(reader, symname); }
       if (dim == 1) { return gdx_reader_readvector(reader, symname); }
 
@@ -329,8 +349,8 @@ int gdx_reader_readsym(GdxReader *reader, const char *symname)
       return Error_NotImplemented;
    }
    default:
-      error("[empinterp] ERROR in gdx '%s': symbol '%s' is not a set\n",
-            reader->fname, symname);
+      error("[empinterp] ERROR in gdx file '%s': symbol '%s' is neither a set "
+            "or a parameter\n", reader->fname, symname);
       return Error_NotImplemented;
    }
 }
@@ -344,12 +364,13 @@ int gdx_reader_boolean_test(GdxReader * restrict reader, VmGmsSymIterator *filte
    gdxHandle_t gdxh = reader->gdxh;
    dctHandle_t dcth = reader->dcth;
 
+   assert(filter->ident.origin == IdentOriginGdx);
    /* reset tlsvar */
    test_result = false;
 
-   gdx_call_rc(gdxDataReadSliceStart, gdxh, filter->symbol.idx, elt_cnt);
+   gdx_call_rc(gdxDataReadSliceStart, gdxh, filter->ident.idx, elt_cnt);
 
-   for (unsigned i = 0, len = filter->symbol.dim; i < len; ++i) {
+   for (unsigned i = 0, len = filter->ident.dim; i < len; ++i) {
       int uel = filter->uels[i];
       if (uel > 0) {
          char dummyquote = ' ';
@@ -371,10 +392,10 @@ int gdx_reader_boolean_test(GdxReader * restrict reader, VmGmsSymIterator *filte
    if (O_Output & PO_TRACE_EMPINTERP) {
       char symname[GMS_SSSIZE];
       int symdim, symtype;
-      gdx_call_rc(gdxSymbolInfo,reader->gdxh, filter->symbol.idx, symname, &symdim, &symtype);
+      gdx_call_rc(gdxSymbolInfo,reader->gdxh, filter->ident.idx, symname, &symdim, &symtype);
       trace_empparser("[empinterp] Testing if '%.*s' has an entry for indices (%s",
                       (int)sizeof(symname), symname, UELfilter[0]);
-      for (unsigned i = 1, len = filter->symbol.dim; i < len; ++i) {
+      for (unsigned i = 1, len = filter->ident.dim; i < len; ++i) {
          trace_empparser(", %s", UELfilter[i]);
       }
       trace_empparser("): result = %s\n", test_result ? "TRUE" : "FALSE");

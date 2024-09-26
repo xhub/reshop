@@ -34,9 +34,8 @@
       int offset42; \
       error("[gmd] %nERROR: call to %s failed!\n", &offset42, #func); \
       char msg42[GMS_SSSIZE]; \
-      while(gmdGetLastError(gmdh, msg42)) { \
-         error("%*s%s\n", offset42, "", msg42); \
-      } \
+      gmdGetLastError(gmdh, msg42); \
+      error("%*s%s\n", offset42, "", msg42); \
    }
 
 #define GMD_FIND_CHK(func, gmdh, ...) \
@@ -59,9 +58,8 @@
       int offset42; \
       error("[gmd] GMD errors: %n\n", &offset42); \
       char msg42[GMS_SSSIZE]; \
-      while(gmdGetLastError(gmdh, msg42)) { \
-         error("%*s%s\n", offset42, "", msg42); \
-      } \
+      gmdGetLastError(gmdh, msg42); \
+      error("%*s%s\n", offset42, "", msg42); \
       return Error_SymbolNotInTheGamsRim; \
    }
 

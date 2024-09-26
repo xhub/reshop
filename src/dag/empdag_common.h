@@ -42,50 +42,49 @@ typedef enum {
 } ArcVFType;
 
 /** arc VF weight of the form:   b y  */
-typedef struct ArcVFBasicData {
+typedef struct {
    rhp_idx ei;            /**< mapping where the term appears */
    rhp_idx vi;            /**< variable index   */
    double cst;            /**< constant part */
-} EdgeVFBasicData;
+} ArcVFBasicData;
 
 
 /** arc VF weight of the form: Σᵢ bᵢ yᵢ   */
-typedef struct EdgeVFLequData {
+typedef struct {
    rhp_idx   ei;          /**< mapping where the term appears */
    unsigned  len;         /**< Number of linear terms         */
    rhp_idx*  vis;         /**< Variable indices               */
    double *  vals;        /**<  Coefficients                  */
-} EdgeVFLequData;
+} ArcVFLequData;
 
 /** General simple arc VF */
-typedef struct ArcVFEquData {
+typedef struct {
    rhp_idx ei;            /**< mapping where the term appears */
    Equ *e;                /**< equation capturing the VF weight */
-} EdgeVFEquData;
+} ArcVFEquData;
 
 /** arc VF when a child VF appears in different equations of a given MP VF */
-typedef struct EdgeVFMultipleBasicData {
+typedef struct {
    unsigned len;
    unsigned max;
-   EdgeVFBasicData *list;
-} EdgeVFMultipleBasicData;
-
+   ArcVFBasicData *list;
+} ArcVFMultipleBasicData;
 
 
 /** VF arc data */
 typedef struct rhp_empdag_arcVF {
    ArcVFType type;       /**< arcVF type */
-   mpid_t child_id;       /**< MP index */
+   mpid_t mpid_child;       /**< MP index */
    union {
-      EdgeVFBasicData basic_dat;
-      EdgeVFMultipleBasicData basics_dat;
-      EdgeVFEquData equ_dat;
-      EdgeVFLequData lequ_dat;
+      ArcVFBasicData basic_dat;
+      ArcVFMultipleBasicData basics_dat;
+      ArcVFEquData equ_dat;
+      ArcVFLequData lequ_dat;
    };
 } ArcVFData;
 
 /** Generic EMPDAG arc */
-typedef struct empdag_edge {
+typedef struct empdag_arc {
    ArcType type;
    union {
       ArcVFData Varc;
@@ -93,6 +92,18 @@ typedef struct empdag_edge {
 } EmpDagArc;
 
 const char* arcVFType2str(ArcVFType type);
+
+/** Basic data structure to copy an expression in an equation */
+typedef struct {
+   Equ *equ;        /**< Equation where to inject the expression */
+   union {
+      ArcVFBasicData basic_dat;
+      ArcVFMultipleBasicData basics_dat;
+      ArcVFEquData equ_dat;
+      ArcVFLequData lequ_dat;
+   };
+   NlNode **node;  /**< Node where to inject the data. */
+} CopyExprData;
 
 
 NONNULL static inline bool valid_arcVF(const ArcVFData *arc)
@@ -121,7 +132,7 @@ NONNULL static inline bool valid_arcVF(const ArcVFData *arc)
 static inline void arcVFb_init(struct rhp_empdag_arcVF *arcVF, rhp_idx ei)
 {
    arcVF->type = ArcVFBasic;
-   arcVF->child_id = UINT_MAX;
+   arcVF->mpid_child = UINT_MAX;
    arcVF->basic_dat.cst = 1.;
    arcVF->basic_dat.vi = IdxNA;
    arcVF->basic_dat.ei = ei;
@@ -145,7 +156,7 @@ NONNULL static inline void arcVFb_setcst(struct rhp_empdag_arcVF *arcVF, double 
 
 NONNULL static inline void arcVFb_setmp(struct rhp_empdag_arcVF *arcVF, unsigned mp_id)
 {
-   arcVF->child_id = mp_id;
+   arcVF->mpid_child = mp_id;
 }
 
 NONNULL static inline rhp_idx arcVFb_getequ(const ArcVFData *arcVF)
@@ -157,7 +168,7 @@ NONNULL static inline rhp_idx arcVFb_getequ(const ArcVFData *arcVF)
 static inline void arcVF_empty(struct rhp_empdag_arcVF *arcVF)
 {
    arcVF->type = ArcVFUnset;
-   arcVF->child_id = UINT_MAX;
+   arcVF->mpid_child = UINT_MAX;
    arcVF->basic_dat.cst = NAN;
    arcVF->basic_dat.vi = IdxInvalid;
    arcVF->basic_dat.ei = IdxInvalid;
@@ -168,7 +179,7 @@ NONNULL static inline
 int arcVFb_copy(ArcVFData *dst, const ArcVFData *src)
 {
    dst->type = ArcVFBasic;
-   memcpy(&dst->basic_dat, &src->basic_dat, sizeof(EdgeVFBasicData));
+   memcpy(&dst->basic_dat, &src->basic_dat, sizeof(ArcVFBasicData));
 
    return OK;
 }
@@ -176,7 +187,7 @@ int arcVFb_copy(ArcVFData *dst, const ArcVFData *src)
 NONNULL static inline
 int arcVF_copy(ArcVFData *dst, const ArcVFData *src)
 {
-   dst->child_id = src->child_id;
+   dst->mpid_child = src->mpid_child;
 
    switch (src->type) {
    case ArcVFBasic:
@@ -284,7 +295,7 @@ int arcVFb_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double * rest
 /**
  * @brief Multiply an arc VF by a linear equation
  *
- * @param arcVF the VF arc
+ * @param arcVF  the VF arc
  * @param len    the number of linear terms
  * @param idxs   the variable indices
  * @param vals   the values
@@ -317,27 +328,35 @@ unsigned arcVF_getnumcons(ArcVFData *arc, const Model *mdl)
    switch (arc->type) {
    case ArcVFBasic:
       return arcVFb_getnumcons(arc, mdl);
+   case ArcVFMultipleBasic: {
+      unsigned res = 0;
+
+      for (unsigned i = 0, len = arc->basics_dat.len; i < len; ++i) {
+         res += arcVFb_getnumcons(arc, mdl);
+      }
+      return res;
+   }
    default:
       error("%s :: Unsupported arcVF type %u", __func__, arc->type);
-      return Error_NotImplemented;
+      return UINT_MAX;
    }
 
 }
 
-bool arcVFb_has_objequ(ArcVFData *arc, const Model *mdl);
+bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl);
 
 NONNULL static inline
-unsigned arcVF_has_objequ(ArcVFData *arc, const Model *mdl)
+unsigned arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
 {
    assert(valid_arcVF(arc));
 
    switch (arc->type) {
    case ArcVFBasic:
-      return arcVFb_has_objequ(arc, mdl);
+      return arcVFb_in_objfunc(arc, mdl);
    default:
       error("%s :: Unsupported arcVF type %u", __func__, arc->type);
       return Error_NotImplemented;
    }
-
 }
+
 #endif /* EMPDAG_COMMON_H */

@@ -6,6 +6,8 @@
 #include <limits.h>
 #include <stdbool.h>
 
+#include "empdag_data.h"
+
 #define EMPDAG_IDMAX (UINT_MAX >> 2) - 1
 #define EMPDAG_UID_NONE UINT_MAX
 
@@ -58,12 +60,12 @@ static inline unsigned mpid2uid(unsigned id)
   return uid;
 }
 
-static inline unsigned edgeVFuid(unsigned uid)
+static inline unsigned rarcVFuid(unsigned uid)
 {
    return uid | EmpEdgeVF;
 }
 
-static inline unsigned edgeCTRLuid(unsigned uid)
+static inline unsigned rarcCTRLuid(unsigned uid)
 {
    return uid | EmpEdgeCtrl;
 }
@@ -83,12 +85,12 @@ static inline bool uidisNash(unsigned uid)
   return (uid & EmpNodeMask) == EmpNodeNash;
 }
 
-static inline bool rarcTypeVF(unsigned uid)
+static inline bool rarcTypeVF(daguid_t uid)
 {
   return (uid & EmpEdgeMask) == EmpEdgeVF; 
 }
 
-static inline bool rarcTypeCtrl(unsigned uid)
+static inline bool rarcTypeCtrl(daguid_t uid)
 {
   return (uid & EmpEdgeMask) == EmpEdgeCtrl; 
 }

@@ -8,8 +8,8 @@
 #include "printout.h"
 #include "tlsdef.h"
 
-static tlsvar char bufMPE[3*sizeof(unsigned)*CHAR_BIT/8+5];
-static tlsvar char bufMPE2[3*sizeof(unsigned)*CHAR_BIT/8+5];
+static tlsvar char bufNash[3*sizeof(unsigned)*CHAR_BIT/8+5];
+static tlsvar char bufNash2[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char bufMP[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char bufMP2[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char msg[3*sizeof(unsigned)*CHAR_BIT/8+41];
@@ -17,7 +17,7 @@ static tlsvar char msg2[3*sizeof(unsigned)*CHAR_BIT/8+41];
 
 const char *daguid_type2str(unsigned uid)
 {
-   return uidisMP(uid) ? "MP" : "MPE";
+   return uidisMP(uid) ? "MP" : "Nash";
 }
 
 bool valid_uid_(const EmpDag *empdag, daguid_t uid, const char *fn)
@@ -40,20 +40,37 @@ bool valid_uid_(const EmpDag *empdag, daguid_t uid, const char *fn)
 
    assert(uidisNash(uid));
 
-   nashid_t mpeid = uid2id(uid);
-   if (mpeid >= empdag->nashs.len) {
-      error("[empdag] ERROR in function %s: MPE id %u is outside of [0, %u)",
-            fn, mpeid, empdag->nashs.len);
+   nashid_t nash = uid2id(uid);
+   if (nash >= empdag->nashs.len) {
+      error("[empdag] ERROR in function %s: Nash id %u is outside of [0, %u)",
+            fn, nash, empdag->nashs.len);
       return  false;
    }
 
       return true;
 }
 
-bool empdag_mphasname(const EmpDag *empdag, unsigned mp_id)
+bool empdag_mp_hasname(const EmpDag *empdag, unsigned mpid)
 {
-   assert(mp_id < empdag->mps.len);
-   return ((mp_id < empdag->mps.len) && empdag->mps.names[mp_id]);
+   assert(mpid < empdag->mps.len);
+   return ((mpid < empdag->mps.len) && empdag->mps.names[mpid]);
+}
+
+bool empdag_mp_hasobjVFchildren(const EmpDag *empdag, mpid_t mpid)
+{
+   assert(mpid < empdag->mps.len);
+   if (mpid >= empdag->mps.len) { 
+      return false;
+   }
+
+   const VarcArray * Varcs = &empdag->mps.Varcs[mpid];
+   const Varc *arr = Varcs->arr;
+
+   for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
+      if (arcVF_in_objfunc(&arr[i], empdag->mdl)) { return true; }
+   }
+
+   return false;
 }
 
 const char* empdag_getmpname(const EmpDag *empdag, mpid_t mpid)
@@ -111,36 +128,36 @@ const char* empdag_getnashname(const EmpDag *empdag, unsigned id)
    UNUSED int status;
 
    if (id >= empdag->nashs.len) {
-      IO_CALL_EXIT(snprintf(msg, sizeof msg, "ERROR: MPE index %u is out of bound",
+      IO_CALL_EXIT(snprintf(msg, sizeof msg, "ERROR: Nash index %u is out of bound",
                             id));
       return msg;
    }
 
-   const char *mpe_name = empdag->nashs.names[id];
-   if (mpe_name) { return mpe_name; }
-   IO_CALL_EXIT(snprintf(bufMPE, sizeof bufMPE, "ID %u", id));
+   const char *nash_name = empdag->nashs.names[id];
+   if (nash_name) { return nash_name; }
+   IO_CALL_EXIT(snprintf(bufNash, sizeof bufNash, "ID %u", id));
 
-   return bufMPE;
+   return bufNash;
 
 _exit:
    return "RUNTIME ERROR";
 }
 
-const char* empdag_getmpename2(const EmpDag *empdag, unsigned id)
+const char* empdag_getnashname2(const EmpDag *empdag, unsigned id)
 {
    UNUSED int status;
 
    if (id >= empdag->nashs.len) {
-      IO_CALL_EXIT(snprintf(msg2, sizeof msg2, "ERROR: MPE index %u is out of bound",
+      IO_CALL_EXIT(snprintf(msg2, sizeof msg2, "ERROR: Nash index %u is out of bound",
                             id));
       return msg;
    }
 
-   const char *mpe_name = empdag->nashs.names[id];
-   if (mpe_name) { return mpe_name; }
-   IO_CALL_EXIT(snprintf(bufMPE2, sizeof bufMPE2, "ID %u", id));
+   const char *nash_name = empdag->nashs.names[id];
+   if (nash_name) { return nash_name; }
+   IO_CALL_EXIT(snprintf(bufNash2, sizeof bufNash2, "ID %u", id));
 
-   return bufMPE2;
+   return bufNash2;
 
 _exit:
    return "RUNTIME ERROR";
@@ -207,12 +224,12 @@ const char *empdag_getname2(const EmpDag *empdag, unsigned uid)
    } 
 
    assert(uidisNash(uid));
-   return empdag_getmpename2(empdag, id);
+   return empdag_getnashname2(empdag, id);
 }
 
 
 
-int empdag_exportasdot(Model *mdl)
+int empdag_export(Model *mdl)
 {
    int status = OK;
    static unsigned cnt = 0;
@@ -229,7 +246,7 @@ int empdag_exportasdot(Model *mdl)
    myfreeenvval(latex_dir);
 
    const char *empdag_dotdir = mygetenv("RHP_EMPDAG_DOTDIR");
-   
+
    if (empdag_dotdir) {
       IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", empdag_dotdir, cnt));
       S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));

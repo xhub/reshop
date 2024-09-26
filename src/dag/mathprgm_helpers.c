@@ -51,7 +51,7 @@ int mp_identify_objequ(MathPrgm *mp)
       ctr->equs[objequ].cone == CONE_0) {
 
       /* The objequ is a mapping */
-      ctr->equs[objequ].object = Mapping;
+      ctr->equs[objequ].object = DefinedMapping;
       ctr->equs[objequ].cone   = CONE_NONE;
 
       trace_process("[MP] MP(%s) now has %s as objective equation\n",

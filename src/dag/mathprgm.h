@@ -3,9 +3,11 @@
 
 #include <assert.h>
 
+#include "macros.h"
 #include "mdl_data.h"
 #include "empdag_data.h"
 #include "mathprgm_data.h"
+#include "printout.h"
 #include "reshop.h"
 #include "reshop_data.h"
 #include "rhp_fwd.h"
@@ -58,8 +60,14 @@ struct mp_ccflib {
    OvfDef *ccf;
 };
 
+struct mp_dual {
+   mpid_t mpid;
+   DualOperatorData dualdat;
+};
+
 typedef enum {
    MpFinalized = 0x1,  /**< MP has been finalized                            */
+   MpIsHidden  = 0x2,  /**< Hidden MP                                        */
 } MpStatus;
 
 /** @struct mathprgm
@@ -68,7 +76,6 @@ typedef enum {
  */
 typedef struct rhp_mathprgm {
   mpid_t id;                 /**< mathprgm ID                          */
-  mpid_t next_id;            /**< Replacement MP  (TODO: DEL ?)        */
   RhpSense sense;              /**< mathprgm sense                       */
   MpType type;                 /**< mathprgm type                        */
 //  enum EmpDAGType type_subdag; /**< type of the subdag of this node      */
@@ -81,6 +88,7 @@ typedef struct rhp_mathprgm {
     struct mp_opt opt;
     struct mp_vi vi;
     struct mp_ccflib ccflib;
+    struct mp_dual dual;
   };
 
   IdxArray equs;               /**< equations owned by the programm      */
@@ -95,9 +103,9 @@ int mp_addconstraints(MathPrgm *mp, Aequ *e);
 int mp_addequ(MathPrgm *mp, rhp_idx ei);
 NONNULL OWNERSHIP_TAKES(3)
 int mp_addobjexprbylabel(MathPrgm *mp, const struct rhp_empdag_arcVF *expr,
-                               const char *label);
+                         const char *label);
 int mp_addobjexprbyid(MathPrgm *mp,
-                            const struct rhp_empdag_arcVF *expr) NONNULL;
+                      const struct rhp_empdag_arcVF *expr) NONNULL;
 int mp_addvar(MathPrgm *mp, rhp_idx vi);
 int mp_addvars(MathPrgm *mp, Avar *v);
 int mp_addvipair(MathPrgm *mp, rhp_idx ei, rhp_idx vi);
@@ -114,6 +122,7 @@ int mp_setobjvar(MathPrgm *mp, rhp_idx vi);
 int mp_setprobtype(MathPrgm *mp, unsigned probtype);
 int mp_from_ccflib(MathPrgm *mp, unsigned ccflib_idx) NONNULL;
 
+
 void mp_free(MathPrgm *mp);
 MALLOC_ATTR(mp_free, 1)
 MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl);
@@ -123,35 +132,40 @@ MathPrgm *mp_dup(const struct rhp_mathprgm *mp_src,
 
 int mp_isconstraint(const MathPrgm *mp, rhp_idx eidx) NONNULL;
 
-unsigned mp_getid(const MathPrgm *mp) NONNULL;
+mpid_t mp_getid(const MathPrgm *mp) NONNULL;
 double mp_getobjjacval(const MathPrgm *mp) NONNULL;
 const char *mp_gettypestr(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumcons(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumzerofunc(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumvars(const MathPrgm *mp) NONNULL;
+unsigned mp_getnumoptvars(const MathPrgm *mp) NONNULL;
 int mp_objvarval2objequval(MathPrgm *mp) NONNULL;
 int mp_fixobjequval(MathPrgm *mp) NONNULL;
 
-int mp_empfile_parse(Model *mdl, MathPrgm **mp,
-                           int empitem, rhp_idx *addr) NONNULL;
+int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei) NONNULL;
+
 int mp_trim_memory(MathPrgm *mp) NONNULL;
 int mp_setobjcoef(MathPrgm *mp, double coef) NONNULL;
-int mp_rm_var(MathPrgm *mp, rhp_idx vidx) NONNULL;
+int mp_rm_cons(MathPrgm *mp, rhp_idx ei) NONNULL;
+int mp_rm_var(MathPrgm *mp, rhp_idx vi) NONNULL;
+
+int mp_dualize_fenchel(MathPrgm *mp) NONNULL;
 
 void mp_err_noobjdata(const MathPrgm *mp) NONNULL;
 
 const char* mp_getname_(const MathPrgm * mp, mpid_t mp_id) NONNULL;
 
-static inline MpType mp_gettype(const MathPrgm *mp) {
+NONNULL static inline MpType mp_gettype(const MathPrgm *mp)
+{
   return mp->type;
 }
 
-static inline const char* mp_getname(const MathPrgm * mp)
+NONNULL static inline const char* mp_getname(const MathPrgm * mp)
 {
    return mp_getname_(mp, mp->id);
 }
 
-static inline bool mp_isopt(const MathPrgm *mp) {
+NONNULL static inline bool mp_isopt(const MathPrgm *mp) {
    MpType type = mp->type;
    assert(type != MpTypeUndef);
 
@@ -166,7 +180,7 @@ static inline bool mp_isopt(const MathPrgm *mp) {
    }
 }
 
-static inline bool mp_isvi(const MathPrgm *mp) {
+NONNULL static inline bool mp_isvi(const MathPrgm *mp) {
    MpType type = mp->type;
    assert(type != MpTypeUndef);
 
@@ -175,13 +189,57 @@ static inline bool mp_isvi(const MathPrgm *mp) {
    return type == MpTypeVi;
 }
 
-static inline bool mp_isccflib(const MathPrgm *mp) {
+NONNULL static inline bool mp_isccflib(const MathPrgm *mp) {
    MpType type = mp->type;
    assert(type != MpTypeUndef);
 
    return type == MpTypeCcflib;
 }
 
-const char* mptype_str(unsigned type);
+NONNULL static inline bool mp_isdual(const MathPrgm *mp) {
+   MpType type = mp->type;
+   assert(type != MpTypeUndef);
+
+   return type == MpTypeDual;
+}
+
+NONNULL static inline bool mp_isfooc(const MathPrgm *mp) {
+   MpType type = mp->type;
+   assert(type != MpTypeUndef);
+
+   return type == MpTypeFooc;
+}
+
+NONNULL static inline bool mp_ishidden(const MathPrgm *mp) {
+   return mp->status & MpIsHidden;
+}
+
+NONNULL static inline bool mp_isfinalized(const MathPrgm *mp) {
+   return mp->status & MpFinalized;
+}
+
+NONNULL static inline void mp_hide(MathPrgm *mp) {
+   mp->status |= MpIsHidden;
+}
+
+NONNULL static inline int mp_reserve(MathPrgm *mp, unsigned nvars, unsigned nequs)
+{
+   if (mp->vars.len > 0 || mp->equs.len > 0) {
+      error("[mp] ERROR: MP(%s) has %u vars and %u equs\n", mp_getname(mp),
+            mp->vars.len, mp->equs.len);
+      return Error_RuntimeError;
+   }
+
+   S_CHECK(rhp_idx_reserve(&mp->vars, nvars));
+   S_CHECK(rhp_idx_reserve(&mp->equs, nequs));
+
+   return OK;
+}
+
+const char* mptype2str(unsigned type);
+
+NONNULL static inline bool mp_isvalid(const MathPrgm *mp) {
+   return (mp->mdl && mpid_regularmp(mp->id));
+}
 
 #endif /* MATHPRGM_H */

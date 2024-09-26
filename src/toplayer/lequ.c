@@ -30,14 +30,14 @@ UNUSED static bool lequ_chk_idxs(Lequ *le, Avar *v) {
    switch (v->type) {
    case EquVar_Compact:
       for (size_t i = 0; i < v->size; ++i) {
-         bool res = lequ_debug_idx(le, v->start + i);
-         if(!res) { return res; }
+         bool res = lequ_debug_hasvar(le, v->start + i);
+         if (res) { return !res; }
       }
       break;
    case EquVar_List:
       for (size_t i = 0; i < v->size; ++i) {
-         bool res = lequ_debug_idx(le, v->list[i]);
-         if(!res) { return res; }
+         bool res = lequ_debug_hasvar(le, v->list[i]);
+         if (res) { return !res; }
       }
       break;
    default:
@@ -78,6 +78,14 @@ void lequ_dealloc(Lequ *lequ)
    FREE(lequ);
 }
 
+void lequ_init(Lequ *lequ)
+{
+   lequ->max = 0;
+   lequ->len = 0;
+   lequ->coeffs = NULL;
+   lequ->vis = NULL;
+}
+
 void lequ_empty(Lequ *lequ)
 {
    if (!lequ) return;
@@ -88,7 +96,7 @@ void lequ_empty(Lequ *lequ)
 
 int lequ_add(Lequ *lequ, rhp_idx vi, double value)
 {
-   assert(lequ_debug_idx(lequ, vi) && isfinite(value));
+   assert(!lequ_debug_hasvar(lequ, vi) && isfinite(value));
 
    S_CHECK(lequ_reserve(lequ, lequ->len + 1));
 

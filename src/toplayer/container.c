@@ -137,26 +137,26 @@ _exit:
    return status;
 }
 
-// TODO GITLAB #78
-#if 0
-int ctr_equcontainvar(const Container *ctr, rhp_idx ei, rhp_idx vi,
+int ctr_equ_findvar(const Container *ctr, rhp_idx ei, rhp_idx vi,
                       double *jacval, int *nlflag)
 {
-   int colidx;
+   rhp_idx vi_;
    void *jac;
 
    jac = NULL;
    do {
-      ctr_getrowjacinfo(ctr, ei, &jac, jacval, &colidx, nlflag);
+      if (ctr_equ_itervars(ctr, ei, &jac, jacval, &vi_, nlflag) != OK) {
+         goto _exit;
+      }
 
-      if (colidx == vi) {
+      if (vi_ == vi) {
          return true;
       }
    } while (jac != NULL);
 
+_exit:
    return false;
 }
-#endif
 
 unsigned ctr_nequs(const Container *ctr)
 {
@@ -587,6 +587,54 @@ int ctr_markequasflipped(Container *ctr, Aequ *e)
 }
 
 
+int ctr_gen_rosettas(Container *ctr)
+{
+   assert(!ctr->rosetta_vars); assert(!ctr->rosetta_equs);
+
+   size_t total_n = ctr_nvars_total(ctr);
+   size_t total_m = ctr_nequs_total(ctr);
+   MALLOC_(ctr->rosetta_vars, rhp_idx, total_n);
+   MALLOC_(ctr->rosetta_equs, rhp_idx, MAX(total_m, 1));
+
+   Fops *fops = ctr->fops; assert(fops);
+   rhp_idx * restrict rosetta_equs = ctr->rosetta_equs;
+   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
+
+   size_t skip_equ = 0;
+   for (size_t i = 0; i < total_m; ++i) {
+
+      if (!fops->keep_equ(fops->data, i)) {
+         rosetta_equs[i] = IdxDeleted;
+         skip_equ++;
+         continue;
+      }
+
+      rhp_idx ei = i - skip_equ;
+      rosetta_equs[i] = ei;
+   }
+
+   size_t nequs = total_m - skip_equ;
+   assert(ctr->m == nequs);
+
+   size_t skip_var = 0;
+   for (size_t i = 0; i < total_n; ++i) {
+
+      if (!fops->keep_var(fops->data, i)) {
+         skip_var++;
+         rosetta_vars[i] = IdxDeleted;
+         continue;
+      }
+
+      rhp_idx vi = i - skip_var;
+      rosetta_vars[i] = vi;
+   }
+   size_t nvars = total_n - skip_var;
+
+   assert(ctr->n == nvars);
+
+   return OK;
+}
+
 /**
  * @brief Prepare the export of a container to another one
  *
@@ -629,8 +677,8 @@ int ctr_prepare_export(Container *ctr_src, Container *ctr_dst)
    MALLOC_(ctr_src->rosetta_equs, rhp_idx, MAX(total_m, 1));
 
 
-   rhp_idx *rosetta_equs = ctr_src->rosetta_equs;
-   rhp_idx *rosetta_vars = ctr_src->rosetta_vars;
+   rhp_idx * restrict rosetta_equs = ctr_src->rosetta_equs;
+   rhp_idx * restrict rosetta_vars = ctr_src->rosetta_vars;
 
    size_t skip_equ = 0;
    for (size_t i = 0; i < total_m; ++i) {
@@ -644,6 +692,7 @@ int ctr_prepare_export(Container *ctr_src, Container *ctr_dst)
       rhp_idx ei = i - skip_equ;
       rosetta_equs[i] = ei;
    }
+
    size_t nequs = total_m - skip_equ;
 
    size_t skip_var = 0;

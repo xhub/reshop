@@ -13,9 +13,9 @@ int empinfo_alloc(EmpInfo *empinfo, Model *mdl)
 {
    empinfo->num_dualvar = 0;
    empinfo->num_implicit = 0;
+   empinfo->num_deffn = 0;
 
    empdag_init(&empinfo->empdag, mdl);
-
 
    return OK;
 }

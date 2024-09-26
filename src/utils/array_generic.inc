@@ -43,11 +43,11 @@
 #endif
 
 #ifdef RHP_DEFINE_STRUCT
-struct RHP_ARRAY_TYPE {
+typedef struct RHP_ARRAY_TYPE {
   IDX_TYPE len;
   IDX_TYPE max;
   RHP_ELT_TYPE *arr;
-};
+} RHP_ARRAY_TYPE;
 #endif
 
 #ifdef RHP_ONLY_DEF
@@ -128,6 +128,22 @@ FN_SCOPE void RHP_MAKE_STR(free)(struct RHP_ARRAY_TYPE *dat)
    }
 }
 
+#ifdef RHP_ELT_FREE
+FN_SCOPE void RHP_MAKE_STR(freeall)(struct RHP_ARRAY_TYPE *dat)
+{
+   RHP_ELT_TYPE *arr = dat->arr;
+   assert(arr || dat->len == 0);
+   for (unsigned i = 0, len = dat->len; i < len; ++i) {
+#ifdef RHP_ELT_FREE_TAKE_ADDRESS
+      RHP_ELT_FREE(&arr[i]);
+#else
+      RHP_ELT_FREE(arr[i]);
+#endif
+   }
+   FREE(arr);
+}
+#endif
+
 #ifdef RHP_ELT_SORT
 FN_SCOPE int RHP_MAKE_STR(find)(struct RHP_ARRAY_TYPE *dat, unsigned val)
 {
@@ -160,8 +176,10 @@ _exit:
 
 #undef RHP_ARRAY_PREFIX
 #undef RHP_ARRAY_TYPE
-#undef RHP_ELT_TYPE
+#undef RHP_ELT_FREE
 #undef RHP_ELT_INVALID
+#undef RHP_ELT_SORT
+#undef RHP_ELT_TYPE
 #undef IDX_TYPE
 #undef RHP_CONCAT
 #undef _RHP_MAKE_STR

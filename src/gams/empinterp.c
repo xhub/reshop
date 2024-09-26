@@ -48,7 +48,7 @@ static void finalization_init(InterpFinalization *finalize)
    finalize->mp_owns_remaining_vars = MpId_NA;
 }
 
-void interp_init(Interpreter *interp, Model *mdl, const char *fname)
+void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 {
    interp->peekisactive = false;
    interp->linenr = 1;
@@ -83,8 +83,10 @@ void interp_init(Interpreter *interp, Model *mdl, const char *fname)
    interp->dag_root_label = NULL;
    dagregister_init(&interp->dagregister);
 
-   daglabels2edges_init(&interp->labels2edges);
-   daglabel2edge_init(&interp->label2edge);
+   daglabels2arcs_init(&interp->labels2arcs);
+   daglabel2arc_init(&interp->label2arc);
+   dual_labels_init(&interp->dual_label);
+   fooc_labels_init(&interp->fooc_label);
 
    gdxreaders_init(&interp->gdx_readers);
    namedints_init(&interp->globals.sets);
@@ -100,8 +102,12 @@ void interp_init(Interpreter *interp, Model *mdl, const char *fname)
    interp->gms_sym_iterator.compact = true;
    interp->gms_sym_iterator.loop_needed = false;
 
-   interp->uid_parent = EMPDAG_UID_NONE;
-   interp->uid_grandparent = EMPDAG_UID_NONE;
+   gmsindices_init(&interp->gmsindices);
+   assert(gmsindices_deactivate(&interp->gmsindices));
+
+   interp->daguid_parent = EMPDAG_UID_NONE;
+   interp->daguid_grandparent = EMPDAG_UID_NONE;
+   interp->daguid_child = EMPDAG_UID_NONE;
 }
 
 NONNULL void interp_free(Interpreter *interp)
@@ -142,9 +148,10 @@ NONNULL void interp_free(Interpreter *interp)
 
    FREE(interp->regentry);
 
-   daglabel2edge_freeall(&interp->label2edge);
-   daglabels2edges_freeall(&interp->labels2edges);
+   daglabel2arc_freeall(&interp->label2arc);
+   daglabels2arcs_freeall(&interp->labels2arcs);
 
+   assert(interp->health != PARSER_OK || !gmsindices_isactive(&interp->gmsindices));
 }
 
 int interp_create_buf(Interpreter *interp)
@@ -201,10 +208,12 @@ static int interp_loadgmdsets(Interpreter *interp)
 
    trace_empinterp("[empinterp] Loading sets from GMD: ");
 
+   bool has_set = false;
+
    for (int i = 0; i < nsymbols; ++i) {
       void *symptr;
       int symtype, symdim, nrecs;
-      GMD_CHK(gmdGetSymbolByIndex, gmd, i + 1, &symptr);
+      GMD_CHK(gmdGetSymbolByIndex, gmd, i+1, &symptr);
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_TYPE, &symtype, NULL, NULL);
 
       if (symtype != GMS_DT_SET) { continue; }
@@ -240,13 +249,100 @@ static int interp_loadgmdsets(Interpreter *interp)
       S_CHECK(namedints_add(&interp->globals.sets, set, strdup(setname)));
 
       trace_empinterp("%s ", setname);
+      has_set = true;
    }
 
-   trace_empinterp("\n");
+   if (!has_set) {
+      trace_empinterp("none\n");
+   } else {
+      trace_empinterp("\n");
+   }
+
 
    return OK;
 }
 
+static int interp_loadgmdparams(Interpreter *interp)
+{
+   assert(interp->gmd); assert(interp->dct);
+
+   gmdHandle_t gmd = interp->gmd;
+   dctHandle_t dct = interp->dct;
+   int nsymbols;
+   GMD_CHK(gmdInfo, gmd, GMD_NRSYMBOLS, &nsymbols, NULL, NULL);
+
+   Lequ v;
+   lequ_init(&v);
+   char param_name[GMS_SSSIZE];
+
+   trace_empinterp("[empinterp] Loading parameters from GMD: ");
+
+   bool has_param = false;
+
+   for (int i = 0; i < nsymbols; ++i) {
+      void *symptr;
+      int symtype, symdim, nrecs;
+      GMD_CHK(gmdGetSymbolByIndex, gmd, i+1, &symptr);
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_TYPE, &symtype, NULL, NULL);
+
+      if (symtype != GMS_DT_PAR) { continue; }
+
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_DIM, &symdim, NULL, NULL);
+
+      if (symdim > 1) { continue; }
+
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, param_name);
+
+      void *symiterptr;
+      GMD_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
+
+      if (symdim == 0) {
+         double val;
+         GMD_CHK(gmdGetLevel,gmd, symiterptr, &val);
+         S_CHECK(namedscalar_add(&interp->globals.scalars, val, strdup(param_name)));
+         goto _end_loop;
+      }
+
+      /* We have a vector */
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &nrecs, NULL, NULL);
+      assert(nrecs > 0);
+
+      S_CHECK(lequ_reserve(&v, nrecs))
+
+      bool has_next;
+      do {
+         char uel[GLOBAL_UEL_IDENT_SIZE];
+         GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uel)
+         int uelidx = dctUelIndex(dct, uel);
+         if (uelidx < 0) {
+            error("[empinterp] ERROR: cound't find UEL '%s' in DCT\n", uel);
+            return Error_GamsCallFailed;
+         }
+
+         double val;
+         GMD_CHK(gmdGetLevel,gmd, symiterptr, &val);
+         lequ_add(&v, uelidx, val);
+
+         has_next = gmdRecordHasNext(gmd, symiterptr);
+         if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
+      } while (has_next);
+
+      S_CHECK(namedvec_add(&interp->globals.vectors, v, strdup(param_name)));
+
+_end_loop:
+      trace_empinterp("%s ", param_name);
+      has_param = true;
+   }
+
+   if (!has_param) {
+      trace_empinterp("none\n");
+   } else {
+      trace_empinterp("\n");
+   }
+
+
+   return OK;
+}
 int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fname) 
 {
    trace_empinterp("[empinterp] Processing file '%s'\n", empinfo_fname);
@@ -254,7 +350,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
    int status = OK;
 
    Interpreter interp;
-   interp_init(&interp, mdl, empinfo_fname);
+   empinterp_init(&interp, mdl, empinfo_fname);
 
    /* ---------------------------------------------------------------------
     * Read the file content in memory. If there is a GMD filename, load it
@@ -285,6 +381,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
       interp.gmd = gmd;
 
       S_CHECK_EXIT(interp_loadgmdsets(&interp));
+      S_CHECK_EXIT(interp_loadgmdparams(&interp));
    }
 
    /* ---------------------------------------------------------------------
@@ -305,7 +402,8 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
 
    S_CHECK_EXIT(advance(&interp, &p, &toktype));
 
-   mdl_settype(interp.mdl, MdlType_emp);
+   mdl_settype(mdl, MdlType_emp);
+   mdl->empinfo.empdag.has_resolved_arcs = false; /* disable check in mp_finalize */
 
    /* TODO(xhub) do we want to continue or error if we have an error */
 
@@ -344,10 +442,6 @@ _exit:
       }
 
       if (status == OK) {
-         status = empdag_exportasdot(interp.mdl);
-      }
-
-      if (status == OK) {
          status = empdag_fini(empdag);
       }
 
@@ -358,7 +452,7 @@ _exit:
    return status;
 }
 
-static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
+static int resolve_ident(Interpreter * restrict interp, IdentData * restrict ident)
 {
    /* ---------------------------------------------------------------------
     * Strategy here for resolution:
@@ -370,7 +464,7 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
     * --------------------------------------------------------------------- */
 
    const char *identstr = NULL;
-   struct emptok *tok = &interp->cur;
+   struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
    identdata_init(ident, interp->linenr, tok);
 
    if (resolve_local(interp->compiler, ident)) {
@@ -378,6 +472,9 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
    }
 
    /* 2: global TODO */
+
+   /* Set this here, so that we don't copy this line over and over */
+   ident->origin = IdentOriginGdx;
 
    /* 3. alias */
    A_CHECK(identstr, tok_dupident(tok));
@@ -398,7 +495,7 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
 
    if (idx != UINT_MAX) {
       ident->idx = idx;
-      ident->type = IdentGdxSet;
+      ident->type = IdentSet;
       ident->dim = 1;
       ident->ptr = &sets->list[idx];
       goto _exit;
@@ -410,7 +507,7 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
    if (idx != UINT_MAX) {
       GdxMultiSet ms = multisets_at(multisets, idx);
       ident->idx = ms.idx;
-      ident->type = IdentGdxMultiSet;
+      ident->type = IdentMultiSet;
       ident->dim = ms.dim;
       ident->ptr = ms.gdxreader;
       goto _exit;
@@ -439,6 +536,7 @@ static int resolve_ident(Interpreter * restrict interp, IdentData *ident)
    }
 
    /* TODO: Params */
+   ident->origin = IdentOriginUnknown;
 
 _exit:
    FREE(identstr);
@@ -467,9 +565,9 @@ int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
    }
 
    if (type == IdentNotFound) {
+      Token *tok = interp->peekisactive ? &interp->peek : &interp->cur;
       error("[empinterp] ERROR line %u: ident '%.*s' is unknown\n",
-            interp->linenr, emptok_getstrlen(&interp->cur),
-            emptok_getstrstart(&interp->cur));
+            tok->linenr, emptok_getstrlen(tok), emptok_getstrstart(tok));
       status = Error_EMPIncorrectInput;
       goto _exit;
    }
@@ -527,10 +625,12 @@ int empinterp_finalize(Interpreter *interp)
       trace_empinterp("[empinterp] Resolving edges for %u nodes in the EMPDAG.\n",
                       interp->dagregister.len);
 
-      S_CHECK(empinterp_resolve_empdag_edges(interp));
+      S_CHECK(empinterp_resolve_labels(interp));
    }
 
    S_CHECK(empinterp_set_empdag_root(interp));
+
+   interp->mdl->empinfo.empdag.has_resolved_arcs = true;
 
   /* ----------------------------------------------------------------------
    * Step 3: Finalize the container
@@ -599,5 +699,21 @@ int empinterp_finalize(Interpreter *interp)
    if (mpid_regularmp(mp_vars) && mp_equs != mp_vars) {
       S_CHECK(mp_finalize(interp->mdl->empinfo.empdag.mps.arr[mp_vars]));
    }
+
+   const EmpDag *empdag = &interp->mdl->empinfo.empdag;
+   MathPrgm **mparr = empdag->mps.arr;
+
+   for (unsigned i = 0, len = interp->mdl->empinfo.empdag.mps.len; i < len; ++i) {
+      MathPrgm *mp = mparr[i];
+      if (mp->status & MpFinalized) { continue; }
+
+      if (!mp_isopt(mp)) {
+         error("[empinterp] ERROR: MP(%s) has not been finalized and is of type %s\n",
+               empdag_getmpname(empdag, mp->id), mp_gettypestr(mp));
+      }
+      assert(!valid_ei(mp->opt.objequ) && !valid_vi(mp->opt.objvar));
+      S_CHECK(mp_finalize(mp));
+   }
+
    return OK;
 }

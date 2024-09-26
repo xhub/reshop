@@ -8,7 +8,13 @@
 static rhp_idx ovfdef_varidx(union ovf_ops_data ovfd)
 {
    OvfDef *ovf = ovfd.ovf;
-   return ovf->ovf_vidx;
+   rhp_idx vi_ovf = ovf->vi_ovf;
+
+   if (!valid_vi(vi_ovf)) {
+      error("[OVF] ERROR: the OVF variable is not set! Value = %d\n", vi_ovf);
+      return Error_InvalidValue;
+   }
+   return vi_ovf;
 }
 
 static int ovfdef_getarg(union ovf_ops_data ovfd, Avar **v)
@@ -16,6 +22,15 @@ static int ovfdef_getarg(union ovf_ops_data ovfd, Avar **v)
    OvfDef *ovf = ovfd.ovf;
 
    *v = ovf->args;
+
+   return OK;
+}
+
+static int ovfdef_getnarg(union ovf_ops_data ovfd, unsigned *nargs)
+{
+   OvfDef *ovf = ovfd.ovf;
+
+   *nargs = ovf->args->size;
 
    return OK;
 }
@@ -75,6 +90,13 @@ static int ovfdef_get_M(union ovf_ops_data ovfd, SpMat *M)
    return ovfgen_get_M(ovf, M);
 }
 
+static int ovfdef_get_mp_and_sense(UNUSED OvfOpsData dat, const Model *mdl,
+                                   rhp_idx vi_ovf, MathPrgm **mp_dual,
+                                   RhpSense *sense)
+{
+   return ovf_get_mp_and_sense(mdl, vi_ovf, mp_dual, sense);
+}
+
 static int ovfdef_get_set(union ovf_ops_data ovfd, SpMat *A, double** b, bool trans)
 {
    OvfDef *ovf = ovfd.ovf;
@@ -117,6 +139,13 @@ static int ovfdef_get_cone_nonbox(union ovf_ops_data ovfd, unsigned idx, enum co
    return ovfgen_get_cone_nonbox(ovf, idx, cone, cone_data);
 }
 
+static int ovfdef_get_equ(UNUSED OvfOpsData ovfd, Model *mdl, void **iterator,
+                          UNUSED rhp_idx vi_ovf, UNUSED double *ovf_coeff,
+                          rhp_idx *ei_new, UNUSED unsigned n_z)
+{
+   return ovf_replace_var(mdl, vi_ovf, iterator, ovf_coeff, ei_new, n_z);
+}
+
 static size_t ovfdef_size_u(union ovf_ops_data ovfd, size_t n_args)
 {
    OvfDef *ovf = ovfd.ovf;
@@ -153,16 +182,19 @@ static void ovf_trimmem(union ovf_ops_data ovfd)
    FREE(ovf->coeffs);
 }
 
-const struct ovf_ops ovfdef_ops = {
+const OvfOps ovfdef_ops = {
    .add_k = ovfdef_add_k,
    .get_args = ovfdef_getarg,
+   .get_nargs = ovfdef_getnarg,
    .get_mappings = ovfdef_getmappings,
    .get_coeffs =  ovfdef_getcoeffs,
    .get_cone = ovfdef_get_cone,
    .get_cone_nonbox = ovfdef_get_cone_nonbox,
    .get_D = ovfdef_get_D,
+   .get_equ = ovfdef_get_equ,
    .get_lin_transformation = ovfdef_get_lin_transformation,
    .get_M = ovfdef_get_M,
+   .get_mp_and_sense = ovfdef_get_mp_and_sense,
    .get_name = ovfdef_get_name,
    .get_ovf_vidx = ovfdef_varidx,
    .get_set = ovfdef_get_set,

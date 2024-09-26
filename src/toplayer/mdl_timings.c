@@ -66,6 +66,8 @@ int mdl_timings_alloc(Model *mdl)
    simple_timing_init(&t->reformulation.CCF.conjugate.stats);
    t->reformulation.CCF.total = 0.;
 
+   t->reformulation.empdag.total = 0.;
+
    t->solve.presolve_wall = 0.;
    t->solve.fooc = 0.;
    t->solve.solver_wall = 0.;

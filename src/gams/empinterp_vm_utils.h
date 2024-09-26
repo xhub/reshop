@@ -1,9 +1,12 @@
 #ifndef EMPPARSER_VM_UTILS_H
 #define EMPPARSER_VM_UTILS_H
 
-#include "empinterp_vm.h"
 #include <assert.h>
 #include <stdint.h>
+
+#include "compat.h"
+#include "empinterp_utils.h"
+#include "empinterp_vm.h"
 
 #ifdef NAN_BOXING
 
@@ -41,7 +44,7 @@
 
 #define MASK_TYPE_STRING       ((uint64_t)0x0001000000000000)
 #define MASK_TYPE_MPOBJ        ((uint64_t)0x0002000000000000)
-#define MASK_TYPE_MPEOBJ       ((uint64_t)0x0003000000000000)
+#define MASK_TYPE_NASHOBJ      ((uint64_t)0x0003000000000000)
 #define MASK_TYPE_OVFOBJ       ((uint64_t)0x0004000000000000)
 #define MASK_TYPE_GMSSYMITER   ((uint64_t)0x0005000000000000)
 #define MASK_TYPE_REGENTRY     ((uint64_t)0x0006000000000000)
@@ -61,11 +64,11 @@
 
 #define SIGNATURE_STRING      (SIGNATURE_POINTER | MASK_TYPE_STRING)
 #define SIGNATURE_MPOBJ       (SIGNATURE_POINTER | MASK_TYPE_MPOBJ)
-#define SIGNATURE_MPEOBJ      (SIGNATURE_POINTER | MASK_TYPE_MPEOBJ)
+#define SIGNATURE_NASHOBJ     (SIGNATURE_POINTER | MASK_TYPE_NASHOBJ)
 #define SIGNATURE_OVFOBJ      (SIGNATURE_POINTER | MASK_TYPE_OVFOBJ)
 #define SIGNATURE_GMSSYMITER  (SIGNATURE_POINTER | MASK_TYPE_GMSSYMITER)
 #define SIGNATURE_REGENTRY    (SIGNATURE_POINTER | MASK_TYPE_REGENTRY)
-#define SIGNATURE_ARCOBJ     (SIGNATURE_POINTER | MASK_TYPE_ARCOBJ)
+#define SIGNATURE_ARCOBJ      (SIGNATURE_POINTER | MASK_TYPE_ARCOBJ)
 
 
 #define TAG_FALSE           1
@@ -93,7 +96,7 @@
 #define IS_PTR(value)        (((value) & MASK_SIGNATURE) == SIGNATURE_POINTER)
 #define IS_STR(value)        (((value) & MASK_SIGNATURE) == SIGNATURE_STRING)
 #define IS_MPOBJ(value)      (((value) & MASK_SIGNATURE) == SIGNATURE_MPOBJ)
-#define IS_MPEOBJ(value)     (((value) & MASK_SIGNATURE) == SIGNATURE_MPEOBJ)
+#define IS_NASHOBJ(value)    (((value) & MASK_SIGNATURE) == SIGNATURE_NASHOBJ)
 #define IS_OVFOBJ(value)     (((value) & MASK_SIGNATURE) == SIGNATURE_OVFOBJ)
 #define IS_GMSSYMITER(value) (((value) & MASK_SIGNATURE) == SIGNATURE_GMSSYMITER)
 #define IS_REGENTRY(value)   (((value) & MASK_SIGNATURE) == SIGNATURE_REGENTRY)
@@ -106,16 +109,16 @@
 #define AS_LOOPVAR(value)   (int32_t)((value) & MASK_PAYLOAD_32)
 
 
-#define AS_OBJ(value) \
-    ((void*)(uintptr_t)((value) & MASK_PAYLOAD_PTR)) //NOLINT(performance-no-int-to-ptr)
+#define AS_OBJ(type, value) \
+    ((type)(uintptr_t)((value) & MASK_PAYLOAD_PTR)) //NOLINT(performance-no-int-to-ptr)
 
-#define AS_STR(value)        (const char*)AS_OBJ((value))
-#define AS_MPOBJ(value)      (MathPrgm*)AS_OBJ((value))
-#define AS_MPEOBJ(value)     (Mpe*)AS_OBJ((value))
-#define AS_OVFOBJ(value)     (OvfDef*)AS_OBJ((value))
-#define AS_GMSSYMITER(value) (void *)AS_OBJ((value))
-#define AS_REGENTRY(value)   (void *)AS_OBJ((value))
-#define AS_ARCOBJ(value)    (void *)AS_OBJ((value))
+#define AS_STR(value)        AS_OBJ(const char*, (value))
+#define AS_MPOBJ(value)      AS_OBJ(MathPrgm*, (value))
+#define AS_NASHOBJ(value)    AS_OBJ(Nash*, (value))
+#define AS_OVFOBJ(value)     AS_OBJ(OvfDef*, (value))
+#define AS_GMSSYMITER(value) AS_OBJ(void *, (value))
+#define AS_REGENTRY(value)   AS_OBJ(void *, (value))
+#define AS_ARCOBJ(value)     AS_OBJ(void *, (value))
 
 
 #define BOOL_VAL(b)         ((b) ? TRUE_VAL : FALSE_VAL)
@@ -130,8 +133,8 @@
    (VmValue)(SIGNATURE_STRING    |   (uint64_t)(uintptr_t)(obj)) 
 #define MPOBJ_VAL(obj)  \
    (VmValue)(SIGNATURE_MPOBJ      |  (uint64_t)(uintptr_t)(obj)) 
-#define MPEOBJ_VAL(obj) \
-   (VmValue)(SIGNATURE_MPEOBJ     |  (uint64_t)(uintptr_t)(obj)) 
+#define NASHOBJ_VAL(obj) \
+   (VmValue)(SIGNATURE_NASHOBJ    |  (uint64_t)(uintptr_t)(obj)) 
 #define OVFOBJ_VAL(obj) \
    (VmValue)(SIGNATURE_OVFOBJ     |  (uint64_t)(uintptr_t)(obj)) 
 #define GMSSYMITER_VAL(obj) \
@@ -145,7 +148,7 @@
 #define VM_VALUE_INC(value)  ((value))++
 
 /* Custom defines */
-#define AS_PTR AS_OBJ
+#define AS_PTR(X) AS_OBJ(void*, X)
 #define PTR_VAL OBJ_VAL
 
 
@@ -177,7 +180,7 @@
 
 typedef struct vm_gms_sym_iterator {
    bool compact;
-   IdentData symbol;
+   IdentData ident;
    int uels[]; // Clang-18 fails to understand __counted_by(symbol.dim)
 } VmGmsSymIterator;
 
@@ -211,5 +214,36 @@ static inline DagRegisterEntry* getregentry(VmValueArray * globals, unsigned gid
    return AS_REGENTRY(globals->arr[gidx]);
 }
 
-#endif
+NONNULL
+int error_ident_origin_dct(const IdentData * restrict ident, const char* fn);
+NONNULL
+int vm_store_set_nrecs_gdx(Interpreter * restrict interp, EmpVm * restrict vm,
+                           const IdentData * restrict ident, GIDX_TYPE *gidx);
+NONNULL
+int vm_store_set_nrecs_gmd(Interpreter * restrict interp, EmpVm * restrict vm,
+                           const IdentData * restrict ident, GIDX_TYPE *gidx);
 
+static inline 
+int vm_store_set_nrecs(Interpreter * restrict interp, EmpVm * restrict vm,
+                       const IdentData * restrict ident, GIDX_TYPE *gidx)
+{
+   switch (ident->origin) {
+   case IdentOriginGdx: return vm_store_set_nrecs_gdx(interp, vm, ident, gidx);
+   case IdentOriginGmd: return vm_store_set_nrecs_gmd(interp, vm, ident, gidx);
+   case IdentOriginDct: return error_ident_origin_dct(ident, __func__);
+   default:             return runtime_error(ident->lexeme.linenr);
+   }
+}
+
+static inline
+int vm_multiset_membership_test(void *ptr, VmGmsSymIterator *filter, bool *res)
+{
+   switch (filter->ident.origin) {
+   case IdentOriginGdx: return gdx_reader_boolean_test(ptr, filter, res);
+   case IdentOriginGmd: TO_IMPLEMENT("Multiset membership test with GMD");
+   case IdentOriginDct: return error_ident_origin_dct(&filter->ident, __func__);
+   default:             return runtime_error(filter->ident.lexeme.linenr);
+   }
+}
+
+#endif

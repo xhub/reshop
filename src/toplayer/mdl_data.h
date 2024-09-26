@@ -34,7 +34,8 @@ typedef enum {
    RhpMin = 0,
    RhpMax = 1,
    RhpFeasibility = 2,
-   RhpNoSense = 3,
+   RhpDualSense = 3,
+   RhpNoSense = 4,
    RhpSenseLast = RhpNoSense,
 } RhpSense;
 

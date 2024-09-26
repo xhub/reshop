@@ -8,7 +8,6 @@
  */
 
 #include <assert.h>
-#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -18,13 +17,11 @@
 #include "empdag_data.h"
 #include "empinterp_data.h"
 #include "empinterp_fwd.h"
-#include "empparser.h"
-#include "equ.h"
+#include "empparser_data.h"
 #include "gdx_reader.h"
 #include "mdl_data.h"
 #include "ovfinfo.h"
 #include "reshop_data.h"
-#include "var.h"
 
 struct ovf_param_def;
 struct ovf_param_def_list;
@@ -55,21 +52,6 @@ enum _dag_idents {
    IDENT_TIMES   = 64,
 };
 
-typedef struct lexeme {
-   unsigned linenr;
-   unsigned len;
-   const char* start;
-} Lexeme;
-
-
-typedef struct ident_data {
-   IdentType type;
-   uint8_t dim;
-   Lexeme lexeme;
-   unsigned idx;
-   void *ptr;
-} IdentData;
-
 typedef struct gms_indices_data {
    uint8_t nargs;
    uint8_t num_iterators;
@@ -85,22 +67,6 @@ typedef struct {
    const Lequ *data;
 } VmVector;
 
-struct emptok {
-   enum emptok_type type;
-   unsigned linenr;
-   unsigned len;
-   const char* start;
-   GamsSymData symdat;
-   IntScratch iscratch;
-   DblScratch dscratch;
-   union {
-      double real;
-      rhp_idx idx;
-      Avar v;
-      Aequ e;
-      char *label;
-   } payload;
-};
 
 /** State of the interpreter */
 typedef struct {
@@ -284,45 +250,87 @@ typedef struct dag_labels {
    int data[]; /* Layout: uels[dim] + pos[num_vars]*/
 } DagLabels;
 
-
 typedef struct dag_label {
    uint8_t dim;
    ArcType arc_type;
    uint16_t nodename_len;
-   daguid_t daguid_parent; 
+   daguid_t daguid_parent;
    const char *nodename;
    int uels[] __counted_by(dim);
 } DagLabel;
 
+typedef struct dual_label {
+   uint8_t dim;
+   uint16_t label_len;
+   mpid_t mpid_dual;
+   const char *label;
+   int uels[] __counted_by(dim);
+} DualLabel;
 
-typedef struct DagLabels2Edges {
+typedef struct fooc_label {
+   uint8_t dim;
+   uint16_t label_len;
+   daguid_t daguid_fooc;
+   const char *label;
+   int uels[] __counted_by(dim);
+} FoocLabel;
+
+typedef struct DagLabels2Arcs {
    unsigned len;
    unsigned max;
-   DagLabels **list;
-} DagLabels2Edges;
+   DagLabels **arr;
+} DagLabels2Arcs;
 
-typedef struct DagLabel2Edge {
+typedef struct DagLabel2Arc {
    unsigned len;
    unsigned max;
-   DagLabel **list;
-} DagLabel2Edge;
+   DagLabel **arr;
+} DagLabel2Arc;
+
+typedef struct DualLabelArray {
+   unsigned len;
+   unsigned max;
+   DualLabel **arr;
+} DualLabelArray;
+
+typedef struct FoocLabelArray {
+   unsigned len;
+   unsigned max;
+   FoocLabel **arr;
+} FoocLabelArray;
 
 #include "empinterp_edgebuilder.h" /* For dag_labels_free */
 #define RHP_LOCAL_SCOPE
-#define RHP_LIST_PREFIX daglabels2edges
-#define RHP_LIST_TYPE DagLabels2Edges
+#define RHP_ARRAY_PREFIX daglabels2arcs
+#define RHP_ARRAY_TYPE DagLabels2Arcs
 #define RHP_ELT_FREE dag_labels_free
 #define RHP_ELT_TYPE DagLabels*
 #define RHP_ELT_INVALID NULL
-#include "list_generic.inc"
+#include "array_generic.inc"
 
 #define RHP_LOCAL_SCOPE
-#define RHP_LIST_PREFIX daglabel2edge
-#define RHP_LIST_TYPE DagLabel2Edge
+#define RHP_ARRAY_PREFIX daglabel2arc
+#define RHP_ARRAY_TYPE DagLabel2Arc
 #define RHP_ELT_FREE FREE
 #define RHP_ELT_TYPE DagLabel*
 #define RHP_ELT_INVALID NULL
-#include "list_generic.inc"
+#include "array_generic.inc"
+
+#define RHP_LOCAL_SCOPE
+#define RHP_ARRAY_PREFIX dual_labels
+#define RHP_ARRAY_TYPE DualLabelArray
+#define RHP_ELT_FREE FREE
+#define RHP_ELT_TYPE DualLabel*
+#define RHP_ELT_INVALID NULL
+#include "array_generic.inc"
+
+#define RHP_LOCAL_SCOPE
+#define RHP_ARRAY_PREFIX fooc_labels
+#define RHP_ARRAY_TYPE FoocLabelArray
+#define RHP_ELT_FREE FREE
+#define RHP_ELT_TYPE FoocLabel*
+#define RHP_ELT_INVALID NULL
+#include "array_generic.inc"
 
 /* ---------------------------------------------------------------------
  *  This is a registry of all labels that have been defined.
@@ -381,9 +389,9 @@ typedef struct interpreter {
    void *gmd;
 
    /* Tokens */
-   struct emptok cur;
-   struct emptok peek;
-   struct emptok pre;
+   Token cur;
+   Token peek;
+   Token pre;
 
    /* Parser state info */
    InterpParsedKwds state;
@@ -400,20 +408,24 @@ typedef struct interpreter {
    DagLabel *dag_root_label;
    DagRegister dagregister;
 
-   DagLabels2Edges labels2edges;
-   DagLabel2Edge label2edge;
+   DagLabels2Arcs labels2arcs;
+   DagLabel2Arc label2arc;
+   DualLabelArray dual_label;
+   FoocLabelArray fooc_label;
 
    /* Other dynamic data */
    GdxReaders gdx_readers;
    CompilerGlobals globals;
 
    GmsSymIterator gms_sym_iterator;        /**< Iterator for GAMS symbol     */
+   GmsIndicesData gmsindices;              /**< Indices                      */
    /* Set filtering data structures */
    GmsIndicesData indices_membership_test;
 
    /* Immediate mode data*/
-   daguid_t uid_parent;                    /**< UID of the EMPDAG parent node */
-   daguid_t uid_grandparent;               /**< UID of the EMPDAG parent node */
+   daguid_t daguid_parent;                    /**< UID of the EMPDAG parent node */
+   daguid_t daguid_grandparent;               /**< UID of the EMPDAG parent node */
+   daguid_t daguid_child;                     /**< */
 } Interpreter;
 
 
@@ -428,23 +440,24 @@ typedef struct parser_ops {
    int (*ccflib_new)(Interpreter* restrict interp, unsigned ccf_idx, MathPrgm **mp);
    int (*ccflib_finalize)(Interpreter* restrict interp, MathPrgm *mp);
    int (*ctr_markequasflipped)(Interpreter* restrict interp);
-   int (*gms_parse)(Interpreter* restrict interp, unsigned *p); 
-   int (*gms_add_uel)(Interpreter* restrict interp, const struct emptok *tok, unsigned i); 
+   int (*gms_resolve_sym)(Interpreter* restrict interp, unsigned *p); 
+   int (*gms_add_uel)(Interpreter* restrict interp, const Token *tok, unsigned i); 
    int (*gms_get_uelidx)(Interpreter *interp, const char *uelstr, int *uelidx);
    int (*gms_get_uelstr)(Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr);
-   int (*label_getidentstr)(Interpreter* restrict interp, const struct emptok *tok, char **ident, unsigned *ident_len);
+   int (*label_getidentstr)(Interpreter* restrict interp, const Token *tok, char **ident, unsigned *ident_len);
    int (*mp_addcons)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_addvars)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_addvipairs)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_addzerofunc)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_finalize)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_new)(Interpreter* restrict interp, RhpSense sense, MathPrgm **mp);
+   int (*mp_setaschild)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_setobjvar)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_setprobtype)(Interpreter* restrict interp, MathPrgm *mp, unsigned type);
    int (*mp_settype)(Interpreter* restrict interp, MathPrgm *mp, unsigned type);
-   int (*mpe_addmp)(Interpreter* restrict interp, unsigned equil_id, MathPrgm *mp);
-   int (*mpe_finalize)(Interpreter* restrict interp, Nash *mpe);
-   int (*mpe_new)(Interpreter* restrict interp, Nash **mpe);
+   int (*nash_addmp)(Interpreter* restrict interp, nashid_t nashid, MathPrgm *mp);
+   int (*nash_finalize)(Interpreter* restrict interp, Nash *nash);
+   int (*nash_new)(Interpreter* restrict interp, Nash **nash);
    int (*identaslabels)(Interpreter * interp, unsigned * p, ArcType edge_type);
    int (*ovf_addbyname)(Interpreter* restrict interp, EmpInfo *empinfo, const char *name, void ** ovfdef_data);
 //   int (*ovf_args_init)(Parser* restrict parser, void *ovfdef_data);
@@ -469,32 +482,32 @@ typedef struct parser_ops {
 extern const struct parser_ops parser_ops_imm;
 extern const struct parser_ops parser_ops_compiler;
 
-int parser_filter_start(Interpreter* restrict interp) NONNULL;
+int gmssym_iterator_init(Interpreter* restrict interp) NONNULL;
 int parser_filter_set(Interpreter* restrict interp, unsigned i, int val) NONNULL;
 
 int empinterp_finalize(Interpreter *interp) NONNULL;
 
-static inline unsigned emptok_getlinenr(const struct emptok *tok)
+static inline unsigned emptok_getlinenr(const Token *tok)
 {
    return tok->linenr;
 }
 
-static inline unsigned emptok_getstrlen(const struct emptok *tok)
+static inline unsigned emptok_getstrlen(const Token *tok)
 {
    return tok->len;
 }
 
-static inline const char * emptok_getstrstart(const struct emptok *tok)
+static inline const char * emptok_getstrstart(const Token *tok)
 {
    return tok->start;
 }
 
-static inline enum emptok_type emptok_gettype(struct emptok *tok)
+static inline enum emptok_type emptok_gettype(Token *tok)
 {
    return tok->type;
 }
 
-static inline void emptok_settype(struct emptok *tok, enum emptok_type type)
+static inline void emptok_settype(Token *tok, enum emptok_type type)
 {
    tok->type = type;
 }

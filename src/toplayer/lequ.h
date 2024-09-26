@@ -16,6 +16,7 @@ void lequ_dealloc(Lequ *lequ);
 Lequ *lequ_alloc(int maxlen) MALLOC_ATTR(lequ_dealloc,1);
 
 void lequ_empty(Lequ *lequ);
+void lequ_init(Lequ *lequ) NONNULL;
 
 int lequ_add(Lequ *lequ, rhp_idx vi, double value ) NONNULL;
 int lequ_add_unique(Lequ *lequ, int index, double value ) NONNULL;
@@ -34,19 +35,22 @@ void lequ_print(const Lequ *lequ, unsigned mode) NONNULL;
 int lequ_reserve(Lequ *lequ, unsigned maxlen ) NONNULL;
 int lequ_scal(Lequ *lequ, double coeff) NONNULL;
 
-static inline NONNULL bool lequ_debug_idx(Lequ *le, rhp_idx vi)
+static inline NONNULL bool lequ_debug_hasvar(Lequ *le, rhp_idx vi)
 {
-   for (size_t i = 0; i < le->len; ++i) {
-      if (le->vis[i] == vi) {
-         return false;
+   rhp_idx *vis = le->vis;
+
+   for (size_t i = 0, len = le->len; i < len; ++i) {
+      if (vis[i] == vi) {
+         return true;
       }
    }
-   return true;
+   return false;
 }
 
 static inline NONNULL int lequ_debug_quick_chk(rhp_idx vi, unsigned len, rhp_idx *idx, double *vals)
 {
    Lequ le = {.max = len, .len = len, .vis = idx, .coeffs = vals};
-   return lequ_debug_idx(&le, vi);
+   return !lequ_debug_hasvar(&le, vi);
 }
+
 #endif /* LEQU_H */

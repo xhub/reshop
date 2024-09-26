@@ -394,7 +394,7 @@ skip:
 
       if (0 == strncasecmp(mdldat->solvername, "reshop", strlen("reshop"))) {
          gevGetSolverDefault(gms->gev, gams_probtype, mdldat->solvername);
-         trace_stack("[model] %s model '%.*s' #%u: setting solver to %s",
+         trace_stack("[model] %s model '%.*s' #%u: setting solver to %s\n",
                      mdl_fmtargs(mdl), mdldat->solvername);
       }
 
@@ -579,6 +579,8 @@ static int gams_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)
 static int gams_copyassolvable_no_transform(Model *mdl, Model *mdl_src)
 {
    BackendType backend = mdl_src->backend;
+
+   S_CHECK(mdl_check(mdl_src));
 
    switch (backend) {
    case RHP_BACKEND_GAMS_GMO:
@@ -1066,8 +1068,9 @@ static int rmdl_resetequbasis_v2(Container *ctr, double objmaxmin)
 }
 
 
-static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
+static int gams_reportvalues_from_rhp(Model *mdl, const Model *mdl_src)
 {
+   Container *ctr = &mdl->ctr;
    GmsContainerData *gms = (GmsContainerData *)ctr->data;
 
    RhpSense objsense;
@@ -1086,8 +1089,8 @@ static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
    bool flip_multiplier = false;
    EquMeta * restrict equmeta = NULL;
    VarMeta * restrict varmeta = NULL;
-   DBGUSED unsigned mp_len = mdl_src->empinfo.empdag.mps.len;
-   MathPrgm ** const mps = mdl_src->empinfo.empdag.mps.arr;
+   DBGUSED unsigned mp_len = mdl->empinfo.empdag.mps.len;
+   MathPrgm ** const mps = mdl->empinfo.empdag.mps.arr;
 
    switch (objsense) {
    case RhpMin:
@@ -1099,8 +1102,8 @@ static int gams_reportvalues_from_rhp(Container *ctr, const Model *mdl_src)
       flip_multiplier = true;
       break;
    case RhpNoSense:
-      varmeta = mdl_src->ctr.varmeta;
-      equmeta = mdl_src->ctr.equmeta;
+      varmeta = mdl->ctr.varmeta;
+      equmeta = mdl->ctr.equmeta;
       objmaxmin = 1.; /* TODO  GITLAB #93 */
       break;
    default:
@@ -1183,7 +1186,7 @@ static int gams_reportvalues(Model *mdl, const Model *mdl_src)
       return gams_reportvalues_from_gams(&mdl->ctr, &mdl_src->ctr);
    case RHP_BACKEND_RHP:
    case RHP_BACKEND_JULIA:
-      return gams_reportvalues_from_rhp(&mdl->ctr, mdl_src);
+      return gams_reportvalues_from_rhp(mdl, mdl_src);
    default:
       error("%s :: not implement for container of type %s\n", __func__, backend_name(mdl_src->backend));
       return Error_NotImplemented;

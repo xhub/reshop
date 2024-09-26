@@ -28,8 +28,6 @@ struct ctrmem {
 
 /** Status of the Container */
 typedef enum ctr_status {
-   CtrChecked            = 0x1,
-   CtrMetaChecked        = 0x2,
    CtrNeedEquVarNames    = 0x4,
    CtrHasBeenSolvedOnce  = 0x8,
    CtrEquVarInherited    = 0x10,
@@ -93,8 +91,8 @@ int ctr_alloc(Container *ctr, BackendType backend) NONNULL;
 void ctr_dealloc(Container *ctr) NONNULL;
 int ctr_resize(Container *ctr, unsigned n, unsigned m);
 
-int ctr_equcontainvar(const Container *ctr, int e, int x, double *jacval,
-                      int *nlflag);
+int ctr_equ_findvar(const Container *ctr, rhp_idx ei, rhp_idx vi, double *jacval,
+                    int *nlflag);
 
 /* Wrapper functions for container_ops. */
 int ctr_evalequvar(Container *ctr);
@@ -181,6 +179,7 @@ int ctr_setvarub(Container *ctr, rhp_idx vi, double ub);
  * Container Export
  * ---------------------------------------------------------------------- */
 
+int ctr_gen_rosettas(Container *ctr) NONNULL;
 int ctr_prepare_export(Container *ctr_src, Container *ctr_dst) NONNULL;
 
 /* ----------------------------------------------------------------------
@@ -228,5 +227,7 @@ static inline bool ctr_is_rhp(const Container *ctr)
       return false;
    }
 }
+
+static inline NlPool *ctr_getpool(Container *ctr) { return ctr->pool; }
 
 #endif /* CONTAINER_H */

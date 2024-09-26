@@ -22,8 +22,9 @@ enum rhp_special_idx {
    IdxDuplicate  = MAX_VAL_IDX-6,    /**< A duplicate value was found        */
    IdxNone       = MAX_VAL_IDX-7,    /**< No value passed                    */
    IdxCcflib     = MAX_VAL_IDX-8,     /**< Special value for CCFLIB MP data  */
+   IdxObjFunc    = MAX_VAL_IDX-9,    /**< Objective function */
    IdxEmpDagChildNotFound = MAX_VAL_IDX-11, /**< Child not found in empdagc  */
-   IdxMaxValid   = MAX_VAL_IDX-100,  /**< Biggest valid indx                 */
+   IdxMaxValid   = MAX_VAL_IDX-100,  /**< Biggest valid index                */
 };
 
 static inline bool valid_vi(rhp_idx vi) {

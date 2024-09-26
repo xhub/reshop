@@ -28,11 +28,12 @@ UNUSED static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
       if (!valid_vi_(vi_map, rctr_totaln(ctr), __func__)) { return false; }
 
       // TODO: equation might already have been deleted. Maybe base this on rctr_walkallequ
-      if (cdat->equs[ei] && !cmat_chk_varinequ(cdat->equs[ei], vi_map)) { return false; }
+      if (cdat->equs[ei] && !cmat_chk_varinequ(cdat->last_equ[vi_map], ei)) { return false; }
    }
 
-   return (valid_vimap && ctr->equs[ei].object == ConeInclusion) ||
-          (!valid_vimap &&  ctr->equs[ei].object == Mapping);
+   EquObjectType object = ctr->equs[ei].object;
+   return (valid_vimap && (object == ConeInclusion || object == DefinedMapping)) ||
+          (!valid_vimap && object == Mapping);
 }
 
 
@@ -411,7 +412,7 @@ UNUSED static int _equ_add_nl_part_rosetta(Container *ctr, Equ * dst, Equ *src,
  *
  * @warning This function does not check whether the linear part of f contains
  * variables already present in the destination equation. If that were true,
- * this results in a 
+ * this results in a bogus equation
  *
  * @ingroup EquUnsafeEditing
  *
@@ -419,19 +420,36 @@ UNUSED static int _equ_add_nl_part_rosetta(Container *ctr, Equ * dst, Equ *src,
  * @param edst    the destination equation
  * @param ei      the source equation/map
  * @param vi_map  If valid, the variable defining the map in the equation
- * @param coeff   The coefficient to apply on the map
- * @return 
+ * @param coeff   If finite, the coefficient to apply on the map.
+ *
+ * @return        The error code
  */
 int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, double coeff)
 {
    assert(valid_ei_(edst->idx, rctr_totalm(ctr), __func__));
    assert(rctr_chk_map(ctr, ei, vi_map));
+   Lequ *lequ = ctr->equs[ei].lequ;
+
+   /* --------------------------------------------------------------------
+    * If coeff is not given, it is -coeff(vi_map)
+    * -------------------------------------------------------------------- */
+   if (!isfinite(coeff)) {
+      unsigned pos_dummy;
+      S_CHECK(lequ_find(lequ, vi_map, &coeff, &pos_dummy));
+
+      if (pos_dummy == UINT_MAX) {
+         error("[container] ERROR: could not find variable '%s' in equation '%s'",
+               ctr_printvarname(ctr, vi_map), ctr_printequname(ctr, ei));
+         return Error_RuntimeError;
+      }
+
+      coeff = -1./coeff;
+   }
 
    /* --------------------------------------------------------------------
     * Deal with the linear part
     * -------------------------------------------------------------------- */
 
-   Lequ *lequ = ctr->equs[ei].lequ;
    Lequ *le   = edst->lequ;
 
    double cst = equ_get_cst(&ctr->equs[ei]);
@@ -447,7 +465,7 @@ int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, d
       /* Could use memcpy or BLAS if we know where the argument is */
       for (unsigned l = 0, k = le->len; l < lequ->len; ++l) {
          if (lequ->vis[l] == vi_map || !isfinite(lequ->coeffs[l])) continue;
-         assert(lequ_debug_idx(le, lequ->vis[l]));
+         assert(!lequ_debug_hasvar(le, lequ->vis[l]));
          le->coeffs[k] = lequ->coeffs[l];
          le->vis[k] = lequ->vis[l];
          k++;
@@ -469,7 +487,7 @@ int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, d
       for (unsigned l = 0, k = le->len; l < lequ->len; ++l) {
          /*  Do not use the placeholder variable */
          if (lequ->vis[l] == vi_map || !isfinite(lequ->coeffs[l])) continue;
-         assert(lequ_debug_idx(le, lequ->vis[l]));
+         assert(!lequ_debug_hasvar(le, lequ->vis[l]));
          le->coeffs[k] = coeff*lequ->coeffs[l];
          le->vis[k] = lequ->vis[l];
 
@@ -617,9 +635,9 @@ int rctr_equ_min_equ_rosetta(Container *ctr, Equ *dst, Equ *src, const rhp_idx* 
 }
 
 /**
- * @brief Multiply an equation by a variable and subtract the content to an equation
+ * @brief Multiply an equation by a variable and add the result to an equation
  *
- * dst -= vidx * src
+ * dst += cst * vi * src
  *
  * @warning This function does not perform any model update! Only for use in fooc computations
  *
@@ -633,8 +651,11 @@ int rctr_equ_min_equ_rosetta(Container *ctr, Equ *dst, Equ *src, const rhp_idx* 
  *
  * @return     the error code
  */
-int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, double coeff)
+int rctr_equ_addmulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, double coeff)
 {
+   /* TODO: we cannot use valid_vi_() because of issues with bilevel problems */
+   assert(valid_vi(vi));
+
    /* ----------------------------------------------------------------------
     * If src is just a constant, then we add vi to the to dst->lequ.
     * Otherwise, we add a bilinear term in the tree
@@ -657,14 +678,10 @@ int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
             A_CHECK(dst->lequ, lequ_alloc(3));
          }
 
-#ifndef NDEBUG
-         double val;
-         unsigned pos;
-         assert(lequ_find(dst->lequ, vi, &val, &pos) == OK && pos == UINT_MAX);
-#endif
+         assert(!lequ_debug_hasvar(dst->lequ, vi));
 
-         /* -cst since we subtract; cmat update in  cmat_sync_lequ */
-         S_CHECK(lequ_add(dst->lequ, vi, -coeff*cst));
+         /* cmat update in  cmat_sync_lequ */
+         S_CHECK(lequ_add(dst->lequ, vi, coeff*cst));
       }
       return OK;
    }
@@ -672,12 +689,6 @@ int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
    S_CHECK(rctr_getnl(ctr, dst));
 
    NlNode **add_node = NULL;
-
-   /* ----------------------------------------------------------------------
-    * we want to subtract!
-    * ---------------------------------------------------------------------- */
-
-   double lcoeff = -coeff;
 
    /* ----------------------------------------------------------------------
     * Get the tree and initialize it if needed
@@ -688,7 +699,7 @@ int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
       S_CHECK(nltree_bootstrap(dst, est, est));
       add_node = &dst->tree->root;
    } else {
-      S_CHECK(nltree_find_add_node(dst->tree, &add_node, ctr->pool, &lcoeff));
+      S_CHECK(nltree_find_add_node(dst->tree, &add_node, ctr->pool, &coeff));
    }
 
    assert(add_node);
@@ -698,16 +709,16 @@ int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
    * TODO: rewrite this by copying the tree
    * ---------------------------------------------------------------------- */
 
-
    unsigned offset;
-   S_CHECK(nltree_reserve_add_node(tree, add_node, nb_nodes, &offset));
+   S_CHECK(nltree_ensure_add_node(tree, add_node, nb_nodes, &offset));
 
-   if (src->lequ && src->lequ->len > 0) {
+   Lequ *le = src->lequ;
+   if (le && le->len > 0) {
       NlNode ** restrict node = &(*add_node)->children[offset++];
   //    S_CHECK(nltree_umin(tree, &node));
 
-      S_CHECK(rctr_nltree_add_bilin(ctr, tree, &node, lcoeff, vi, IdxNA));
-      S_CHECK(rctr_nltree_add_lin_term(ctr, tree, &node, src->lequ, IdxNA, 1.));
+      S_CHECK(rctr_nltree_add_bilin(ctr, tree, &node, coeff, vi, IdxNA));
+      S_CHECK(rctr_nltree_add_lin_term(ctr, tree, &node, le, IdxNA, 1.));
    }
 
    /* --------------------------------------------------------------------
@@ -725,10 +736,10 @@ int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
       }
 //      S_CHECK(nltree_umin(tree, &node));
 
-      S_CHECK(rctr_nltree_add_bilin(ctr, tree, &node, lcoeff, vi, IdxNA));
+      S_CHECK(rctr_nltree_add_bilin(ctr, tree, &node, coeff, vi, IdxNA));
 
       /* Fill in v * e_NL  */
-      S_CHECK(nlnode_copy(node, src->tree->root, tree));
+      S_CHECK(nlnode_dup(node, src->tree->root, tree));
 
       /* WARNING: this breaks if we change tree->v_list to be sorted */
       if (tree->v_list->idx > old_idx) {
@@ -743,6 +754,130 @@ int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
       NlNode **dummynode = NULL;
       S_CHECK(nltree_add_var(ctr, tree, &dummynode, vi, -cst));
    }
+
+   return OK;
+}
+
+/**
+ * @brief Multiply an equation by a variable and subtract the content to an equation
+ *
+ * dst -= vidx * src
+ *
+ * @warning This function does not perform any model update! Only for use in fooc computations
+ *
+ * @ingroup EquSafeEditing
+ *
+ * @param ctr      the container
+ * @param dst      the destination
+ * @param src      the equation to copy info the destination
+ * @param vi       the variable to multiply
+ * @param coeff    the variable to multiply
+ *
+ * @return     the error code
+ */
+int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, double coeff)
+{
+   return rctr_equ_addmulv_equ_coeff(ctr, dst, src, vi, -coeff);
+}
+
+/**
+ * @brief Copy a mapping f(x) at the given node of the nltree of an equation
+ *
+ * The source equation either contains f(x) or z = f(x).
+ * The given node is where the expression should be put.
+ *
+ * @warning this function assumes that the expression f(x) appears
+ * nonlinearly in the destination equation. This implies that
+ * the expression is multiplied by an expression with no constant
+ * part.
+ *
+ * @warning the container matrix is not updated
+ *
+ * @param ctr     The container
+ * @param tree    The tree of the destination equation
+ * @param node    The node where to copy the mapping
+ * @param esrc    The equation holdiong the variable
+ * @param vi_map  If valid, the variable denoting the image of the mapping
+ * @param coeff   If finite, the coefficient of vi_map in the linear part
+ * 
+ * @return        the error code
+ */
+int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
+                         rhp_idx vi_map, double coeff)
+{
+   /* ---------------------------------------------------------------------
+    * We have 3 parts to copy:
+    * - linear part
+    * - constant part
+    * - nonlinear part
+    * --------------------------------------------------------------------- */
+
+   Lequ *lequ = esrc->lequ;
+
+   if (valid_vi(vi_map) && !isfinite(coeff)) {
+      unsigned idx;
+      assert(lequ);
+      lequ_find(lequ, vi_map, &coeff, &idx);
+
+      if (idx == UINT_MAX) {
+         error("ERROR: variable '%s' not found in equation '%s'\n",
+               ctr_printvarname(ctr, vi_map),
+               ctr_printequname(ctr, esrc->idx));
+      }
+
+      assert(isfinite(coeff));
+      coeff = -1./coeff;
+   }
+
+   assert((valid_vi(vi_map) && isfinite(coeff)) || (!valid_vi(vi_map) && !isfinite(coeff)));
+
+   S_CHECK(nltree_reset_var_list(tree));
+
+   NlNode **addr;
+   addr = node;
+   /*  Add (sum a_i x_i) */
+   if (lequ && lequ->len > 1) {
+      S_CHECK(rctr_nltree_add_lin_term(ctr, tree, &addr, lequ, vi_map, coeff));
+   }
+
+   /* add constant */
+   double cst = equ_get_cst(esrc);
+   if (fabs(cst) > DBL_EPSILON) {
+      S_CHECK(nltree_add_cst(ctr, tree, &addr, cst*coeff));
+   }
+
+   /* --------------------------------------------------------------
+    * node now contains a pointer to the node that contains the expression
+    * -------------------------------------------------------------- */
+
+   S_CHECK(rctr_getnl(ctr, esrc));
+
+   if (esrc->tree && esrc->tree->root) {
+
+      /*  Get the first empty child */
+      if (*addr) {
+         S_CHECK(nlnode_next_child(tree, &addr));
+      }
+
+      /* Add coeff * ( ... )  */
+      /* TODO(xhub) we may end up in a ADD->ADD situation, be careful here */
+      S_CHECK(nltree_mul_cst(tree, &addr, ctr->pool, coeff));
+
+      /* \TODO(xhub) optimize w.r.t. umin */
+      /* Fill in Fnl_i  */
+      S_CHECK(nlnode_dup(addr, esrc->tree->root, tree));
+   }
+
+   /* Do a final sanity check: it may happen that the equation consists
+    * only of 1 ADD */
+   if (*addr && (*addr)->op == NLNODE_ADD) {
+      S_CHECK(nltree_check_add(*addr));
+   }
+
+   /* keep the model representation consistent */
+   Avar v;
+   avar_setlist(&v, tree->v_list->idx, tree->v_list->pool);
+   S_CHECK(cmat_equ_add_vars(ctr, tree->idx, &v, NULL, true));
 
    return OK;
 }

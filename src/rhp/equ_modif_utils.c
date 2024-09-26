@@ -42,7 +42,7 @@ int rctr_nltree_add_quad_coo_abs(Container *ctr, Equ * e, NlNode **addr,
    unsigned cur_idx;
    NlNode *node;
 
-   S_CHECK(nltree_reserve_add_node(e->tree, addr, nnz, &cur_idx));
+   S_CHECK(nltree_ensure_add_node(e->tree, addr, nnz, &cur_idx));
    N_CHECK(node, (*addr));
 
    for (size_t k = 0; k < nnz; ++k, ++cur_idx) {
@@ -109,7 +109,7 @@ int rctr_nltree_add_quad_coo_rel(Container *ctr, Equ * e, NlNode **addr,
    unsigned cur_idx;
    NlNode *node;
 
-   S_CHECK(nltree_reserve_add_node(e->tree, addr, nnz, &cur_idx));
+   S_CHECK(nltree_ensure_add_node(e->tree, addr, nnz, &cur_idx));
    N_CHECK(node, (*addr));
 
    for (size_t k = 0; k < nnz; ++k, ++cur_idx) {

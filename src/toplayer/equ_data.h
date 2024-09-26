@@ -12,7 +12,8 @@
 /** @brief Type of equation */
 __extension__ typedef enum equ_object_type ENUM_U8 {
    EquTypeUnset = 0,          /**< Equation type unset */
-   Mapping,            /**< Mapping (objective fn, functional part of VI, ...)*/
+   Mapping,            /**< Mapping (objective fn, functional part of VI, ...) */
+   DefinedMapping,     /**< Mapping defined by an equation                     */
    ConeInclusion,     /**< Inclusion in a cone (usual constraint) */
    BooleanRelation,   /**< Boolean relation */
    EquTypeUnsupported,        /**< Unsupported type */ 

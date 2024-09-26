@@ -75,18 +75,16 @@ int rmdl_equ_rm(Model *mdl, rhp_idx ei)
  *  @param         mdl       the container
  *  @param[in,out] ei         on input, the equation to copy. On output, the index
  *                           off the new equation
- *  @param         lin_space additional space in the linear vector
- *  @param         vi_no     if valid, the variable index not to copy
  *
  *  @return the status of the operation
  */
-int rmdl_dup_equ(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_no)
+int rmdl_dup_equ(Model *mdl, rhp_idx *ei)
 {
    Container *ctr = &mdl->ctr;
-   RhpContainerData *ctrdat = (RhpContainerData *)ctr->data;
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
    rhp_idx ei_src = *ei;
-   S_CHECK(ei_inbounds(ei_src, ctrdat->total_m, __func__));
+   S_CHECK(ei_inbounds(ei_src, cdat->total_m, __func__));
 
    /* \TODO(xhub) NAMING */
 
@@ -94,29 +92,89 @@ int rmdl_dup_equ(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_no)
    S_CHECK(ctr_copyequname(ctr, ei_src, name, sizeof(name)/sizeof(char)));
    size_t indx = strlen(name);
    char name2[SHORT_STRING];
-   snprintf(name2, SHORT_STRING, "_s%u", ctrdat->current_stage);
+   snprintf(name2, SHORT_STRING, "_s%u", cdat->current_stage);
    size_t indx2 = strlen(name2);
    char *name_;
    MALLOC_(name_, char, 1 + indx + indx2);
    strcpy(name_, name);
    strcat(name_, name2);
 
-   S_CHECK(cdat_equname_start(ctrdat, name_));
+   S_CHECK(cdat_equname_start(cdat, name_));
    rhp_idx ei_new = IdxNA;
    S_CHECK(rctr_add_equ_empty(ctr, &ei_new, NULL, ctr->equs[ei_src].object, ctr->equs[ei_src].cone));
-   cdat_equname_end(ctrdat);
+   cdat_equname_end(cdat);
 
-   S_CHECK(equ_copy_to(ctr, ei_src, &ctr->equs[ei_new], ei_new, lin_space, vi_no));
+   S_CHECK(equ_dup(ctr, ei_src, ei_new));
 
-   S_CHECK(cmat_copy_equ_except(ctr, ei_src, ei_new, vi_no));
+   S_CHECK(cmat_copy_equ(ctr, ei_src, ei_new));
 
-   trace_ctr("[container] DUY equ '%s' into '%s'\n",
+   trace_ctr("[container] DUP equ '%s' into '%s'\n",
              ctr_printequname(ctr, ei_src), ctr_printequname2(ctr, ei_new));
 
    S_CHECK(rmdl_equ_rm(mdl, ei_src));
 
    /* Update the rosetta info  */
-   ctrdat->equ_rosetta[ei_src].res.equ = ei_new;
+   cdat->equ_rosetta[ei_src].res.equ = ei_new;
+
+   /* Update the model info  */
+   rhp_idx objequ;
+   rmdl_getobjequ_nochk(mdl, &objequ);
+   if (objequ == ei_src) {
+      rmdl_setobjfun(mdl, ei_new);
+   }
+
+   *ei = ei_new;
+
+   return OK;
+}
+
+/** @brief Create an equation based on an existing one for editing
+ *
+ *  @param         mdl       the container
+ *  @param[in,out] ei         on input, the equation to copy. On output, the index
+ *                           off the new equation
+ *  @param         lin_space additional space in the linear vector
+ *  @param         vi_no     if valid, the variable index not to copy
+ *
+ *  @return the status of the operation
+ */
+int rmdl_dup_equ_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_no)
+{
+   Container *ctr = &mdl->ctr;
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+
+   rhp_idx ei_src = *ei;
+   S_CHECK(ei_inbounds(ei_src, cdat->total_m, __func__));
+
+   /* \TODO(xhub) NAMING */
+
+   char name[SHORT_STRING];
+   S_CHECK(ctr_copyequname(ctr, ei_src, name, sizeof(name)/sizeof(char)));
+   size_t indx = strlen(name);
+   char name2[SHORT_STRING];
+   snprintf(name2, SHORT_STRING, "_s%u", cdat->current_stage);
+   size_t indx2 = strlen(name2);
+   char *name_;
+   MALLOC_(name_, char, 1 + indx + indx2);
+   strcpy(name_, name);
+   strcat(name_, name2);
+
+   S_CHECK(cdat_equname_start(cdat, name_));
+   rhp_idx ei_new = IdxNA;
+   S_CHECK(rctr_add_equ_empty(ctr, &ei_new, NULL, ctr->equs[ei_src].object, ctr->equs[ei_src].cone));
+   cdat_equname_end(cdat);
+
+   S_CHECK(equ_copy_to(ctr, ei_src, &ctr->equs[ei_new], ei_new, lin_space, vi_no));
+
+   S_CHECK(cmat_copy_equ_except(ctr, ei_src, ei_new, vi_no));
+
+   trace_ctr("[container] DUP equ '%s' into '%s'\n",
+             ctr_printequname(ctr, ei_src), ctr_printequname2(ctr, ei_new));
+
+   S_CHECK(rmdl_equ_rm(mdl, ei_src));
+
+   /* Update the rosetta info  */
+   cdat->equ_rosetta[ei_src].res.equ = ei_new;
 
    /* Update the model info  */
    rhp_idx objequ;

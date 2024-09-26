@@ -16,6 +16,7 @@
  *  to contact the developers
  */
 
+#include "equvar_helpers.h"
 #include "rhp_fwd.h"
 #include "container.h"
 #include "empinfo.h"
@@ -188,6 +189,46 @@ static inline void mdl_setfinalized(Model *mdl) {
   mdl->status |= MdlFinalized;
 }
 
+static inline void mdl_unsetfinalized(Model *mdl) {
+  mdl->status &= ~MdlFinalized;
+}
+
+static inline void mdl_unsetallchecks(Model *mdl) {
+   mdl_unsetchecked(mdl);
+   mdl_unsetmetachecked(mdl);
+   mdl_unsetfinalized(mdl);
+   empdag_unsetallchecks(&mdl->empinfo.empdag);
+}
+
 #define mdl_fmtargs(mdl) backend_name((mdl)->backend), mdl_getnamelen(mdl), mdl_getname(mdl), (mdl)->id
+
+static inline unsigned mdl_nequs(const Model *mdl){
+   return  ctr_nequs(&mdl->ctr);
+}
+
+static inline unsigned mdl_nequs_total(const Model *mdl){
+   return  ctr_nequs_total(&mdl->ctr);
+}
+
+static inline unsigned mdl_nequs_max(const Model *mdl){
+   return  ctr_nequs_max(&mdl->ctr);
+}
+
+static inline unsigned mdl_nvars(const Model *mdl){
+   return  ctr_nvars(&mdl->ctr);
+}
+
+static inline unsigned mdl_nvars_total(const Model *mdl){
+   return  ctr_nvars_total(&mdl->ctr);
+}
+
+static inline unsigned mdl_nvars_max(const Model *mdl){
+   return  ctr_nvars_max(&mdl->ctr);
+}
+
+NONNULL
+static inline bool mdl_valid_vi_(const Model *mdl, rhp_idx vi, const char *fn) {
+   return valid_vi_(vi, ctr_nvars_total(&mdl->ctr), fn);
+}
 
 #endif /* RHP_MDL_H */

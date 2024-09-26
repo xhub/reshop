@@ -6,13 +6,15 @@
 #include "mathprgm.h"
 #include "mdl.h"
 #include "mdl_rhp.h"
+#include "mdl_transform.h"
 #include "ovf_conjugate.h"
 #include "ovf_fenchel.h"
 #include "ovf_options.h"
 #include "printout.h"
 #include "rhp_fwd.h"
+#include "timings.h"
 
-int empdag_minimax_reformulate(Model *mdl)
+static int rmdl_empdag_minimax_reformulate(Model *mdl)
 {
    EmpDag * empdag = &mdl->empinfo.empdag;
 
@@ -21,7 +23,7 @@ int empdag_minimax_reformulate(Model *mdl)
       return Error_NullPointer;
    }
 
-   const UIntArray * restrict mps2reform = &empdag->empdag_up->mps2reformulate;
+   const MpIdArray * restrict mps2reform = &empdag->empdag_up->mps2reformulate;
 
    S_CHECK(rmdl_incstage(mdl));
 
@@ -47,16 +49,17 @@ int empdag_minimax_reformulate(Model *mdl)
 
       unsigned reformulation = O_Ovf_Reformulation;
 
+      CcflibData ccfdat = {.mp = mp, .mpid_dual = IdxNA};
+      OvfOpsData ovfd = {.ccfdat = &ccfdat };
+
       switch (reformulation) {
          case OVF_Fenchel:
             trace_processmsg("dual optimization\n");
-            S_CHECK(ovf_fenchel(mdl, OVFTYPE_CCFLIB,
-                                    (union ovf_ops_data){.mp = mp}));
+            S_CHECK(ovf_fenchel(mdl, OvfType_Ccflib, ovfd));
             break;
          case OVF_Conjugate:
             trace_processmsg("conjugate reformulation\n");
-            S_CHECK(ovf_conjugate(mdl, OVFTYPE_CCFLIB,
-                                       (union ovf_ops_data){.mp = mp}));
+            S_CHECK(ovf_conjugate(mdl, OvfType_Ccflib, ovfd));
             break;
          default:
             error("\r%s :: unsupported case %s\n", __func__,
@@ -66,7 +69,43 @@ int empdag_minimax_reformulate(Model *mdl)
    }
 
 _exit:
-   S_CHECK(empdag_fini(empdag));
+   return OK;
 
-   return empdag_exportasdot(mdl);
 }
+
+int rmdl_empdag_transform(Model *mdl_reform)
+{
+   EmpDag *empdag = &mdl_reform->empinfo.empdag;
+   const EmpDag *empdag_up = empdag->empdag_up;
+
+   assert(empdag_up);
+
+   unsigned len = empdag_up->fenchel_dual_nodal.len;
+   const mpid_t * restrict mpid_arr = empdag_up->fenchel_dual_nodal.arr;
+
+   trace_process("[model] %s model '%.*s' #%u: transforming EMPDAG\n",
+                 mdl_fmtargs(mdl_reform->mdl_up));
+
+   empdag->finalized = false;
+
+   for (unsigned i = 0; i < len; ++i) {
+
+      mpid_t mpid = mpid_arr[i];
+      MathPrgm *mp;
+
+      S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));
+
+      S_CHECK(mp_dualize_fenchel(mp));
+   }
+
+   if (empdag_has_adversarial_mps(empdag)) {
+      double start = get_thrdtime();
+
+      S_CHECK(rmdl_empdag_minimax_reformulate(mdl_reform));
+
+      mdl_reform->timings->reformulation.CCF.total += get_thrdtime() - start;
+   }
+
+   return empdag_fini(empdag);
+}
+

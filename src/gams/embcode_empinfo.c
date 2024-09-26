@@ -68,14 +68,14 @@ static int resolve_lexeme_as_gmssymb_via_gmd(Interpreter * restrict interp, Toke
     * Save the index of the symbol
     * --------------------------------------------------------------------- */
 
-   int symidx;
-   if (!gmdSymbolInfo(gmd, symptr, GMD_NUMBER, &symidx, NULL, NULL)) {
+   int symnr;
+   if (!gmdSymbolInfo(gmd, symptr, GMD_NUMBER, &symnr, NULL, NULL)) {
       error("[embcode] ERROR: could not query number of symbol '%s'\n", lexeme);
       return Error_GamsCallFailed;
    }
-   assert(symidx >= 0);
+   assert(symnr >= 0);
    // TODO: this is a hack!
-   symdat->idx = symidx;
+   symdat->idx = symnr;
 
 
    /* ---------------------------------------------------------------------
@@ -100,40 +100,10 @@ static int resolve_lexeme_as_gmssymb_via_gmd(Interpreter * restrict interp, Toke
       return Error_GamsCallFailed;
    }
 
-   switch (symtype) {
-   case GMS_DT_VAR:
-      tok->type = TOK_GMS_VAR;
-      symdat->type = IdentVar;
-      break;
-   case GMS_DT_EQU:
-      tok->type = TOK_GMS_EQU;
-      symdat->type = IdentEqu;
-      break;
-   case GMS_DT_SET:
-      if (symdim == 1) {
-         tok->type = TOK_GMS_SET;
-         symdat->type = IdentGmdSet;
-      } else {
-         tok->type = TOK_GMS_MULTISET;
-         symdat->type = IdentGmdMultiSet;
-      }
-      break;
-   case GMS_DT_PAR:
-      tok->type = TOK_GMS_PARAM;
-      symdat->type = symdim == 0 ? IdentScalar : symdim == 1 ? IdentVector : IdentParam;
-      break;
-   case GMS_DT_ALIAS:
-      errormsg("[embcode] ERROR: support for alias needs to be done\n");
-      return Error_NotImplemented;
-      // tok->type = TOK_GMS_ALIAS;
-      break;
-   default:
-      error("[embcode] ERROR: unexpected type %d for symbol '%s'\n", symtype, lexeme);
-      return runtime_error(interp->linenr);
-   }
-
-   symdim = MAX(symdim, 1);
    symdat->dim = symdim;
+   symdat->origin = IdentOriginGmd;
+   S_CHECK(symtype_gdx2rhp(symtype, symdat, tok));
+
    symdat->ptr = symptr;
 
    symdat->read = false;
@@ -198,7 +168,7 @@ int embcode_register_basename(Interpreter *interp, DagRegisterEntry *regentry)
     return OK;
 }
 
-static int emb_gms_resolve(Interpreter* restrict interp)
+static int emb_gms_resolve(Interpreter* restrict interp, UNUSED unsigned * p)
 {
    /* TODO(xhub) unclear if we need a real function here */
    #if 0
@@ -216,112 +186,9 @@ static int emb_gms_resolve(Interpreter* restrict interp)
    // needed?
    interp->gms_sym_iterator.active = false;
 #endif
-   return OK;
-}
-
-static int emb_gms_parse(Interpreter * restrict interp, unsigned * restrict p)
-{
-   TokenType toktype;
-
-   /* ---------------------------------------------------------------------
-    * We distinguish between peeked token being '(' or not
-    * --------------------------------------------------------------------- */
-
-   unsigned p2 = *p;
-   S_CHECK(peek(interp, &p2, &toktype));
-
-   if (toktype == TOK_LPAREN) {
-      unsigned i = 0;
-      interp_peekseqstart(interp);
-
-      do {
-         bool has_single_quote = false, has_double_quote = false;
-
-         if (i >= GMS_MAX_INDEX_DIM) {
-            error("[embcode] ERROR: EMP identifier '%.*s' has more than %u identifiers!\n",
-                  interp->cur.len, interp->cur.start, GMS_MAX_INDEX_DIM);
-            return Error_EMPIncorrectInput;
-         }
-
-         /* get the next token */
-         S_CHECK(peek(interp, &p2, &toktype));
-
-         if (toktype == TOK_SINGLE_QUOTE) {
-            has_single_quote = true;
-         } else if (toktype == TOK_DOUBLE_QUOTE) {
-            has_double_quote = true;
-         }
-
-         if (has_single_quote || has_double_quote) {
-            char quote = toktype == TOK_SINGLE_QUOTE ? '\'' : '"';
-            S_CHECK(parser_peekasUEL(interp, &p2, quote, &toktype));
-
-            if (toktype == TOK_UNSET) {
-               const Token *tok = &interp->peek;
-               error("[embcode] ERROR line %u: %c%.*s%c is not a UEL\n", interp->linenr,
-                     quote, tok->len, tok->start, quote);
-               return Error_EMPIncorrectSyntax;
-            }
-
-            if (toktype != TOK_STAR && toktype != TOK_GMS_UEL) {
-               return runtime_error(interp->linenr);
-            }
-
-         } else {
-            PARSER_EXPECTS_PEEK(interp, "A string (subset, variable) is required",
-                                TOK_GMS_SET, TOK_STAR, TOK_IDENT);
-
-         }
-
-#if 0
-         switch (toktype) {
-         case TOK_GMS_SET:
-            S_CHECK(parser_filter_set(interp, i, -interp->peek.symdat.idx));
-            break;
-         case TOK_GMS_UEL:
-            S_CHECK(parser_filter_set(interp, i, interp->peek.symdat.idx));
-            break;
-         case TOK_STAR:
-            S_CHECK(parser_filter_set(interp, i, 0));
-            break;
-         default:
-            errormsg("[embcode] ERROR: unexpected failure.\n");
-            return Error_RuntimeError;
-         }
-#endif
-
-         i++;
-
-         S_CHECK(peek(interp, &p2, &toktype));
-
-      } while (toktype == TOK_COMMA);
-
-      S_CHECK(parser_expect_peek(interp, "Closing ')' is required", TOK_RPAREN));
-
-      UNUSED ptrdiff_t sym_total_len = interp->peek.start - interp->cur.start + interp->peek.len;
-
-      assert(sym_total_len >= 0 && sym_total_len < INT_MAX);
-
-      if (i != interp->cur.symdat.dim) {
-         error("[embcode] ERROR: GAMS symbol '%.*s' has dimension %d but %u "
-               "indices were given!\n",
-               interp->cur.len, interp->cur.start, interp->cur.symdat.dim, i);
-         return Error_EMPIncorrectInput;
-      }
-
-      /* update the counter */
-      *p = p2;
-      interp_peekseqend(interp);
-
-   }
-
-   S_CHECK(emb_gms_resolve(interp));
-
    interp->cur.symdat.read = true;
-
    return OK;
 }
-
 
 
 NONNULL static
@@ -338,7 +205,7 @@ int emb_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcT
    }
 
    GmsIndicesData indices;
-   gms_indicesdata_init(&indices);
+   gmsindices_init(&indices);
 
    S_CHECK(parse_gmsindices(interp, p, &indices));
 
@@ -390,6 +257,11 @@ static int emb_mp_finalize(UNUSED Interpreter *interp, MathPrgm *mp)
 }
 
 static int emb_mp_setobjvar(Interpreter *interp, MathPrgm *mp)
+{
+   return OK;
+}
+
+static int emb_mp_setaschild(UNUSED Interpreter *interp, UNUSED MathPrgm *mp)
 {
    return OK;
 }
@@ -481,7 +353,7 @@ static int emb_ovf_getparamsdef(UNUSED Interpreter* restrict interp, void *ovfde
 }
 
 static int emb_ovf_setparam(UNUSED Interpreter* restrict interp,
-                            UNUSED void *ovfdef_data, UNUSED unsigned i,
+                            UNUSED void *ovfdef_data, UNUSED unsigned pidx,
                             UNUSED OvfArgType type, UNUSED OvfParamPayload payload)
 {
    return OK;
@@ -490,9 +362,10 @@ static int emb_ovf_setparam(UNUSED Interpreter* restrict interp,
 static int emb_ovf_check(UNUSED Interpreter* restrict interp, void *ovfdef_data)
 {
    OvfDef *ovfdef = ovfdef_data;
-   ovf_def_free(ovfdef);
+   ovfdef_free(ovfdef);
    return OK;
 }
+
 
 static int emb_mp_ccflib_new(Interpreter* restrict interp, unsigned ccflib_idx,
                              MathPrgm **mp)
@@ -571,7 +444,7 @@ const ParserOps parser_ops_emb = {
    .ctr_markequasflipped  = emb_ctr_markequasflipped,
    .gms_get_uelidx        = get_uelidx_via_gmd,
    .gms_get_uelstr        = get_uelstr_via_gmd,
-   .gms_parse             = emb_gms_parse,
+   .gms_resolve_sym       = emb_gms_resolve,
    .identaslabels         = emb_identaslabels,
    .mp_addcons            = emb_mp_addcons,
    .mp_addvars            = emb_mp_addvars,
@@ -579,12 +452,13 @@ const ParserOps parser_ops_emb = {
    .mp_addzerofunc        = emb_mp_addzerofunc,
    .mp_finalize           = emb_mp_finalize,
    .mp_new                = emb_mp_new,
+   .mp_setaschild         = emb_mp_setaschild,
    .mp_setobjvar          = emb_mp_setobjvar,
    .mp_setprobtype        = emb_mp_setprobtype,
    .mp_settype            = emb_mp_settype,
-   .mpe_finalize          = emb_mpe_finalize,
-   .mpe_new               = emb_mpe_new,
-   .mpe_addmp             = emb_mpe_addmp,
+   .nash_finalize          = emb_mpe_finalize,
+   .nash_new               = emb_mpe_new,
+   .nash_addmp             = emb_mpe_addmp,
    .ovf_addbyname         = emb_ovf_addbyname,
    .ovf_addarg            = emb_ovf_addarg,
    .ovf_paramsdefstart    = emb_ovf_getparamsdef,
@@ -667,20 +541,11 @@ static NONNULL int embcode_empinfo_finalize(Interpreter *interp, const char *scr
    if (!interp->gmdout) { return OK; }
 
    char *fname;
-   MALLOC_(fname, char, strlen(scrdir) + strlen(EMBCODE_DIR) + strlen(DIRSEP) + 
-           MAX(strlen(EMBCODE_GMDOUT_FNAME), strlen("empinfo.dat")) + 1);
+   MALLOC_(fname, char, strlen(scrdir) + MAX(strlen(EMBCODE_GMDOUT_FNAME), strlen("empinfo.dat")) + 1);
 
    strcpy(fname, scrdir);
-   strcat(fname, EMBCODE_DIR); strcat(fname, DIRSEP);
+   size_t scrdir_len = strlen(fname);
 
-   if (mkdir(fname, S_IRWXU)) {
-      perror("mkdir");
-      error("[embcode] ERROR: Could not create output directory '%s'\n", fname);
-      status = Error_SystemError;
-      goto _exit;
-   }
-
-   size_t embrhp_dirlen = strlen(fname);
    strcat(fname, EMBCODE_GMDOUT_FNAME);
 
   /* ----------------------------------------------------------------------
@@ -703,7 +568,7 @@ static NONNULL int embcode_empinfo_finalize(Interpreter *interp, const char *scr
   /* ----------------------------------------------------------------------
    * Save the empinfo file
    * ---------------------------------------------------------------------- */
-   memcpy(&fname[embrhp_dirlen], "empinfo.dat", sizeof("empinfo.dat"));
+   memcpy(&fname[scrdir_len], "empinfo.dat", sizeof("empinfo.dat"));
 
    S_CHECK_EXIT(write_empinfo(interp, fname));
 _exit:
@@ -730,7 +595,7 @@ int embcode_process_empinfo(void *gmdobj, const char *scrdir, const char *fname)
    int status = OK;
 
    Interpreter interp;
-   interp_init(&interp, NULL, fname);
+   empinterp_init(&interp, NULL, fname);
 
    /* ---------------------------------------------------------------------
     * Read the file content in memory

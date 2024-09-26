@@ -32,7 +32,7 @@ _exit:
 int dot2png(const char *fname)
 {
    char *cmd;
-   IO_CALL(asprintf(&cmd, "dot -Tpng -O %s", fname));
+   IO_CALL(asprintf(&cmd, "dot -Tpng -O \"%s\"", fname));
    int rc = system(cmd); /* YOLO */
    if (rc) {
       error("[empdag] executing '%s' yielded return code %d\n", cmd, rc);
@@ -60,7 +60,7 @@ int view_png(const char *fname, Model *mdl)
 
    if (png_viewer) {
       char *cmd;
-      IO_CALL(asprintf(&cmd, "cat %s.png | %s", fname, png_viewer));
+      IO_CALL(asprintf(&cmd, "cat \"%s.png\" | %s", fname, png_viewer));
       int rc = system(cmd); /* YOLO */
       if (rc) {
          error("[empdag] ERROR: executing '%s' yielded return code %d\n", cmd, rc);

@@ -61,6 +61,7 @@ static int rmdl_allocdata(Model *mdl)
    RhpModelData *mdldata = NULL;
    MALLOC_EXIT(mdldata, RhpModelData, 1);
    mdldata->solver = RMDL_SOLVER_UNSET;
+   mdldata->status = Rmdl_NoStatus;
 
    A_CHECK_EXIT(mdldata->options, rmdl_set_options());
 
@@ -326,7 +327,7 @@ static inline void  _copy_equs(Equ * restrict equs_dst,
 }
 
 /* Copy variables attributes with filtering */
-static inline void  _copy_vars_fops(Container * ctr_dst,
+static inline void  copy_vars_fops(Container * ctr_dst,
                                     const Container * ctr_src,
                                     unsigned total_n, 
                                     const Fops * restrict fops)
@@ -341,12 +342,12 @@ static inline void  _copy_vars_fops(Container * ctr_dst,
       if (!fops->keep_var(fops_data, i)) {
          /* we cannot check for v->is_deleted as this variable might just never
           * appear in the mode (happens with OVF) */
-         assert(rosetta_vars && !valid_vi(rosetta_vars[i]));
+         assert(!rosetta_vars || !valid_vi(rosetta_vars[i]));
          v->value = SNAN;
          v->multiplier = SNAN;
          v->basis = BasisUnset;
       } else {
-         assert((rosetta_vars && valid_vi(rosetta_vars[i])) && !v->is_deleted);
+         assert((!rosetta_vars || valid_vi(rosetta_vars[i])) && !v->is_deleted);
          const Var * restrict v_src = &vars_src[j];
          v->value = v_src->value;
          v->multiplier = v_src->multiplier;
@@ -359,16 +360,21 @@ static inline void  _copy_vars_fops(Container * ctr_dst,
    }
 }
 
-static inline int  _copy_equs_fops(Container * restrict ctr_dst,
-                                   const Container * restrict ctr_src,
-                                   unsigned total_m, 
-                                   const Fops * restrict fops)
+static inline int copy_equs_fops(Container * restrict ctr_dst,
+                                 const Container * restrict ctr_src,
+                                 unsigned total_m, 
+                                 const Fops * restrict fops)
 {
    void * restrict fops_data = fops->data;
    Equ * restrict equs_dst = ctr_dst->equs;
    Equ * restrict equs_src = ctr_src->equs;
    const  rhp_idx * restrict rosetta_equs = ctr_dst->rosetta_equs;
-   assert(rosetta_equs);
+
+   if (!rosetta_equs) {
+      errormsg("[solreport] ERROR: missing rosetta for equation\n");
+      return Error_NullPointer;
+   }
+
    rhp_idx ei_new;
 
    for (unsigned i = 0; i < total_m; ++i) {
@@ -383,7 +389,7 @@ static inline int  _copy_equs_fops(Container * restrict ctr_dst,
 
          ei_new = equinfo.ei;
          assert(valid_ei(ei_new));
-         rhp_idx ei_src = rosetta_equs[ei_new];
+         rhp_idx ei_src = rosetta_equs ? rosetta_equs[ei_new] : ei_new;
 
          // TODO  if (!ppty[EQU_PPTY_EXPANDED] && valid_ei(ei_new)) {
          if (valid_ei(ei_src)) {
@@ -566,8 +572,8 @@ static int rmdl_reportvalues_from_rhp(Container * restrict ctr_dst,
     * --------------------------------------------------------------------- */
 
    if (fops) {
-      _copy_vars_fops(ctr_dst, ctr_src, cdat->total_n, fops);
-      _copy_equs_fops(ctr_dst, ctr_src, cdat->total_m, fops);
+      copy_vars_fops(ctr_dst, ctr_src, cdat->total_n, fops);
+      copy_equs_fops(ctr_dst, ctr_src, cdat->total_m, fops);
       return OK;
    }
 
@@ -631,7 +637,7 @@ int rmdl_setobjfun(Model *mdl, rhp_idx ei)
    Container *ctr = &mdl->ctr;
    EquObjectType equtype = ctr->equs[ei].object;
 
-   if (equtype != Mapping) {
+   if (equtype != Mapping && equtype != DefinedMapping) {
       error("[%s] ERROR: %s model '%.*s' #%u, the objective equation '%s' is "
             "of the wrong type: %s. Expected type is %s\n", __func__,
             mdl_fmtargs(mdl), mdl_printequname(mdl, ei), equtype_name(equtype),
@@ -769,10 +775,11 @@ int ensure_newobjfun(Model *mdl, Fops *fops, rhp_idx objvar, rhp_idx *objequ,
       return Error_IndexOutOfRange;
    }
 
-   S_CHECK(rmdl_dup_equ(mdl, objequ, 0, objvar));
+   S_CHECK(rmdl_dup_equ_except(mdl, objequ, 0, objvar));
    lobjequ = *objequ;
    Equ *e = &mdl->ctr.equs[lobjequ];
    *e_obj = e;
+   e->object = Mapping;
 
    double coeff_inv = -1./objvar_coeff;
    S_CHECK(lequ_scal(e->lequ, coeff_inv));
@@ -1060,6 +1067,31 @@ int check_var_is_really_deleted(Container *ctr, Fops *fops, rhp_idx vi)
    return OK;
 }
 
+int rmdl_mp_objequ2objfun(Model *mdl, MathPrgm *mp, rhp_idx objvar, rhp_idx objequ)
+{
+   Container *ctr = &mdl->ctr;
+   /* TODO GITLAB #71 */
+   Fops *fops = ctr->fops;
+
+   Equ *e_obj;
+   rhp_idx objequ_old = objequ;
+
+   S_CHECK(ensure_newobjfun(mdl, fops, objvar, &objequ, &e_obj));
+
+   assert(objequ_old != objequ);
+   S_CHECK(rctr_add_eval_equvar(ctr, objequ_old, objvar));
+   S_CHECK(check_var_is_really_deleted(ctr, fops, objvar));
+   /* TODO ensure that objvar values are set  */
+
+   S_CHECK(mp_setobjvar(mp, IdxNA));
+   S_CHECK(mp_setobjequ(mp, objequ));
+   trace_process("[process] MP(%s): objvar '%s' removed; objequ is now '%s'\n",
+                 empdag_getmpname(&mdl->empinfo.empdag, mp->id), mdl_printvarname(mdl, objvar),
+                 mdl_printequname(mdl, objequ));
+
+   return OK;
+}
+
 static NONNULL
 int rmdl_prepare_ctrexport_rhp(Model *mdl, Model *mdl_dst)
 {
@@ -1113,21 +1145,9 @@ int rmdl_prepare_ctrexport_rhp(Model *mdl, Model *mdl_dst)
          rhp_idx objequ = mp_getobjequ(mp);
 
          if (valid_vi(objvar) && valid_ei(objequ)) {
-            Equ *e_obj;
-            rhp_idx objequ_old = objequ;
 
-            S_CHECK(ensure_newobjfun(mdl, fops, objvar, &objequ, &e_obj));
+            S_CHECK(rmdl_mp_objequ2objfun(mdl, mp, objvar, objequ));
 
-            assert(objequ_old != objequ);
-            S_CHECK(rctr_add_eval_equvar(ctr_src, objequ_old, objvar));
-            S_CHECK(check_var_is_really_deleted(ctr_src, fops, objvar));
-            /* TODO ensure that objvar values are set  */
-
-            S_CHECK(mp_setobjvar(mp, IdxNA));
-            S_CHECK(mp_setobjequ(mp, objequ));
-            trace_process("[process] MP(%s): objvar '%s' removed; objequ is now '%s'\n",
-                          empdag_getmpname(empdag, i), mdl_printvarname(mdl, objvar),
-                          mdl_printequname(mdl, objequ));
          }
       }
    }

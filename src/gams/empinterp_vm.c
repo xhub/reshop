@@ -28,6 +28,7 @@
 #include "empdag.h"
 #include "empinterp_edgebuilder.h"
 #include "empinterp_priv.h"
+#include "empinterp_symbol_resolver.h"
 #include "empinterp_utils.h"
 #include "empinterp_vm.h"
 #include "empinterp_vm_utils.h"
@@ -166,15 +167,15 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
                       empdag_getmpname(&vm->data.mdl->empinfo.empdag, mp_id));
       break;
    }
-   case SIGNATURE_MPEOBJ: {
-      const Nash *mpe = AS_PTR(val_);
-      if (!mpe) {
-         trace_empinterpmsg("  MPE: NULL!\n");
+   case SIGNATURE_NASHOBJ: {
+      const Nash *nash = AS_PTR(val_);
+      if (!nash) {
+         trace_empinterpmsg("  Nash: NULL!\n");
          break;
       } 
-      unsigned mpe_id = nash_getid(mpe);
-      trace_empinterp("%*s: '%s'\n", pad, "MPE",
-                      empdag_getnashname(&vm->data.mdl->empinfo.empdag, mpe_id));
+      unsigned nashid = nash_getid(nash);
+      trace_empinterp("%*s: '%s'\n", pad, "Nash",
+                      empdag_getnashname(&vm->data.mdl->empinfo.empdag, nashid));
       break;
    }
    case SIGNATURE_OVFOBJ: {
@@ -202,7 +203,7 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
    }
    case SIGNATURE_GMSSYMITER: {
       VmGmsSymIterator *symiter = AS_GMSSYMITER(val_);
-      Lexeme *lexeme = &symiter->symbol.lexeme;
+      Lexeme *lexeme = &symiter->ident.lexeme;
       trace_empinterp("%*s: %.*s\n", pad, "GmsSymIterator", lexeme->len, lexeme->start);
       break;
    }
@@ -255,19 +256,20 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
       if (!mp) {
          printstr(mode, "   MP: NULL!\n");
          break;
-      } 
-      unsigned mp_id = mp_getid(mp);
+      }
+
+      mpid_t mp_id = mp_getid(mp);
       printout(mode, " MP('%s') ", empdag_getmpname(&vm->data.mdl->empinfo.empdag, mp_id));
       break;
    }
-   case SIGNATURE_MPEOBJ: {
-      const Nash *mpe = AS_PTR(v);
-      if (!mpe) {
-         printstr(mode, " MPE: NULL!\n");
+   case SIGNATURE_NASHOBJ: {
+      const Nash *nash = AS_PTR(v);
+      if (!nash) {
+         printstr(mode, " Nash: NULL!\n");
          break;
       } 
-      unsigned mpe_id = nash_getid(mpe);
-      printout(mode, " MPE('%s') ", empdag_getnashname(&vm->data.mdl->empinfo.empdag, mpe_id));
+      unsigned nashid = nash_getid(nash);
+      printout(mode, " Nash('%s') ", empdag_getnashname(&vm->data.mdl->empinfo.empdag, nashid));
       break;
    }
    case SIGNATURE_OVFOBJ: {
@@ -294,7 +296,7 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
    }
    case SIGNATURE_GMSSYMITER: {
       VmGmsSymIterator *symiter = AS_GMSSYMITER(v);
-      Lexeme *lexeme = &symiter->symbol.lexeme;
+      Lexeme *lexeme = &symiter->ident.lexeme;
       printout(mode, "%20.*s", lexeme->len, lexeme->start);
       break;
    }
@@ -312,9 +314,9 @@ DBGUSED static int getpadding(int offset)
 
 DBGUSED static void print_symiter(VmGmsSymIterator *symiter, EmpVm *vm)
 {
-   DBGUSED Lexeme *lexeme = &symiter->symbol.lexeme;
+   DBGUSED Lexeme *lexeme = &symiter->ident.lexeme;
    DEBUGVMRUN("%.*s", lexeme->len, lexeme->start);
-   int dim = symiter->symbol.dim;
+   int dim = symiter->ident.dim;
    if (dim > 0) {
       int *uels = symiter->uels;
       DEBUGVMRUN("%s", "(");
@@ -390,7 +392,7 @@ static void _print_uels(dctHandle_t dct, unsigned mode, int *uels, unsigned nuel
 
 static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
 {
-   IdentType type = symiter->symbol.type;
+   IdentType type = symiter->ident.type;
    assert(identisequvar(type));
 
    GmsResolveData data;
@@ -411,7 +413,7 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
       data.iscratch = &vmdata->e_data;
       vmdata->e_current = &vmdata->e;
       break;
-   case IdentGdxSet:
+   case IdentSet:
       data.iscratch = &vmdata->iscratch;
       break;
    case IdentScalar:
@@ -432,7 +434,7 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
    case IdentEqu:
       status = dct_resolve(dct, &data);
       break;
-   case IdentGdxSet:
+   case IdentSet:
    case IdentScalar:
    case IdentVector:
    case IdentParam:
@@ -461,7 +463,7 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
 
 static int gms_resolve_extend_symb(VmData *vmdata, VmGmsSymIterator *filter)
 {
-   IdentType type = filter->symbol.type;
+   IdentType type = filter->ident.type;
    assert(identisequvar(type));
 
    S_CHECK(gms_resolve_symb(vmdata, filter));
@@ -517,18 +519,18 @@ static int gms_extend_sync(VmData *vmdata, IdentType type)
    return OK;
 }
 
-static int gms_membership_test(UNUSED VmData *vmdata, VmGmsSymIterator *symiter,
+static int vm_membership_test(UNUSED VmData *vmdata, VmGmsSymIterator *symiter,
                                bool *res)
 {
-   IdentType type = symiter->symbol.type;
+   IdentType type = symiter->ident.type;
 
    switch (type) {
-   case IdentGdxMultiSet:
-      assert(symiter->symbol.ptr);
-      return gdx_reader_boolean_test(symiter->symbol.ptr, symiter, res);
+   case IdentMultiSet:
+      assert(symiter->ident.ptr);
+      return vm_multiset_membership_test(symiter->ident.ptr, symiter, res);
    case IdentLocalSet:
-   case IdentGdxSet: {
-      IntArray *obj = symiter->symbol.ptr;
+   case IdentSet: {
+      IntArray *obj = symiter->ident.ptr;
       assert(obj && valid_set(*obj));
       int uel = symiter->uels[0];
       unsigned idx = rhp_int_find(obj, uel);
@@ -581,8 +583,8 @@ struct empvm* empvm_new(Interpreter *interp)
    vm->data.dagregister = &interp->dagregister;
    vm->data.daglabels = NULL;
    vm->data.daglabels_ws = NULL;
-   vm->data.labels2edges = &interp->labels2edges;
-   vm->data.label2edge = &interp->label2edge;
+   vm->data.labels2edges = &interp->labels2arcs;
+   vm->data.label2edge = &interp->label2arc;
 
    vmvals_add(&vm->globals, UINT_VAL(0));
    vmvals_add(&vm->globals, INT_VAL(0));
@@ -710,7 +712,7 @@ int empvm_run(struct empvm *vm)
             DEBUGVMRUN("'%s' <- %n", vm->data.globals->localsets.names[gidx], &offset1);
             break;
          }
-         case IdentGdxSet: {
+         case IdentSet: {
             assert(gidx < vm->data.globals->sets.len);
             set = namedints_at(&vm->data.globals->sets, gidx);
             DEBUGVMRUN("'%s' <- %n", vm->data.globals->sets.names[gidx], &offset1);
@@ -726,7 +728,7 @@ int empvm_run(struct empvm *vm)
          vm->locals[lidx_loopvar] = LOOPVAR_VAL(set.arr[idx]);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, (set.arr[idx]), PO_TRACE_EMPINTERP, &offset2);});
          DEBUGVMRUN("%*s%s#%u[lvar%u = %u]\n", getpadding(offset0 + offset1 + offset2), "",
-                    type == IdentGdxSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
+                    type == IdentSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
          break;
       }
       case OP_LOCAL_COPYFROM_GIDX: {
@@ -756,21 +758,6 @@ int empvm_run(struct empvm *vm)
             DEBUGVMRUN("objname is %s of type localvector\n", vm->data.globals->localvectors.names[gidx]);
             break;
          }
-         case IdentGmdSet:
-         case IdentGdxSet: {
-            IntArray obj = namedints_at(&vm->data.globals->sets, gidx);
-            assert(valid_set(obj));
-            len = obj.len;
-            DEBUGVMRUN("objname is %s of type set\n", vm->data.globals->sets.names[gidx]);
-            break;
-         }
-         case IdentVector: {
-            Lequ obj = namedvec_at(&vm->data.globals->vectors, gidx);
-            assert(valid_vector(obj));
-            len = obj.len;
-            DEBUGVMRUN("objname is %s of type vector\n", vm->data.globals->vectors.names[gidx]);
-            break;
-         }
          default:
             error("[empvm_run] in %s: unexpected ident type %s", opcodes_name(instr),
                   identtype_str(type));
@@ -790,7 +777,7 @@ int empvm_run(struct empvm *vm)
          VmGmsSymIterator *symiter;
          N_CHECK_EXIT(symiter, getgmssymiter(&vm->globals, gidx));
 
-         assert(idx < symiter->symbol.dim);
+         assert(idx < symiter->ident.dim);
          assert(IS_LOOPVAR(vm->locals[lidx]));
 
          int uel = AS_LOOPVAR(vm->locals[lidx]);
@@ -798,7 +785,7 @@ int empvm_run(struct empvm *vm)
 
          if (uel > 0) symiter->compact = false;
          DBGUSED int offset1, offset2;
-         DBGUSED Lexeme *lexeme = &symiter->symbol.lexeme;
+         DBGUSED Lexeme *lexeme = &symiter->ident.lexeme;
          DEBUGVMRUN("%.*s[%u] <- %n", lexeme->len, lexeme->start, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
@@ -907,8 +894,8 @@ int empvm_run(struct empvm *vm)
          assert(vm->data.dscratch.data);
          assert(param_gidx < vm->globals.len);
 
-         VmVector * restrict vmvec = AS_OBJ(vm->locals[vmvec_lidx]);
-         OvfParam * param = AS_OBJ(vm->globals.arr[param_gidx]);
+         VmVector * restrict vmvec = AS_OBJ(VmVector *, vm->locals[vmvec_lidx]);
+         OvfParam * param = AS_OBJ(OvfParam *, vm->globals.arr[param_gidx]);
          unsigned size = vmvec->len;
          param->type = ARG_TYPE_VEC;
          param->size_vector = size;
@@ -930,7 +917,7 @@ int empvm_run(struct empvm *vm)
          assert(IS_PTR(vm->locals[vmvec_lidx]));
          assert(IS_LOOPVAR(vm->locals[vecidx_lidx]));
 
-         VmVector * restrict vmvec = AS_OBJ(vm->locals[vmvec_lidx]);
+         VmVector * restrict vmvec = AS_OBJ(VmVector *, vm->locals[vmvec_lidx]);
          unsigned len = vmvec->len;
          DblScratch *dscratch = &vm->data.dscratch;
          assert(dscratch->data);
@@ -1080,7 +1067,7 @@ int empvm_run(struct empvm *vm)
          N_CHECK_EXIT(symiter, getgmssymiter(&vm->globals, gidx));
 
          bool res;
-         status = gms_membership_test(&vm->data, symiter, &res);
+         status = vm_membership_test(&vm->data, symiter, &res);
 
          if (status != OK) { goto _exit; }
 
@@ -1148,7 +1135,7 @@ int empvm_run(struct empvm *vm)
          A_CHECK(dagl_cpy, dag_labels_dupaslabel(dagl_src));
          dagl_cpy->daguid_parent = vm->data.uid_parent;
 
-         S_CHECK(daglabel2edge_add(vm->data.label2edge, dagl_cpy));
+         S_CHECK(daglabel2arc_add(vm->data.label2edge, dagl_cpy));
 
          break;
       }
@@ -1162,7 +1149,7 @@ int empvm_run(struct empvm *vm)
          A_CHECK(dagl_cpy, dag_labels_dup(dagl_src));
          dagl_cpy->daguid_parent = vm->data.uid_parent;
 
-         S_CHECK(daglabels2edges_add(vm->data.labels2edges, dagl_cpy));
+         S_CHECK(daglabels2arcs_add(vm->data.labels2edges, dagl_cpy));
 
          vm->data.daglabels = dagl_cpy;
          REALLOC_(vm->data.daglabels_ws, int, dagl_cpy->num_var);

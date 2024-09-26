@@ -29,10 +29,11 @@
 #include "toplayer_utils.h"
 
 
-const char * const nodestyle_min  = "style=filled,color=lightblue1";
-const char * const nodestyle_max  = "style=filled,color=lightsalmon1";
-const char * const nodestyle_vi = "style=filled,color=lightseagreen";
-const char * const nodestyle_mpe = "style=filled,color=lightgreen";
+const char * const nodestyle_min   =  "style=filled,color=lightblue1";
+const char * const nodestyle_max   =  "style=filled,color=lightsalmon1";
+const char * const nodestyle_vi    =  "style=filled,color=lightseagreen";
+const char * const nodestyle_dual  =  "style=filled,color=darkorange";
+const char * const nodestyle_nash  =  "style=filled,color=lightgreen";
 
 const char * const arcstyle_CTRL = "color=\"magenta:invis:magenta\"";
 const char * const arcstyle_NASH = "color=lightgreen, arrowhead=box";
@@ -45,7 +46,7 @@ typedef struct {
    bool do_free_weight;
 } EdgeVFStrings;
 
-static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
+static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, const MathPrgm *mp,
                                const Model *mdl, EdgeVFStrings *strs)
 {
    if (edgeVF->type != ArcVFBasic) {
@@ -53,7 +54,7 @@ static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
       return OK;
    }
 
-   const EdgeVFBasicData *dat = &edgeVF->basic_dat;
+   const ArcVFBasicData *dat = &edgeVF->basic_dat;
    rhp_idx ei = dat->ei;
    if (valid_ei(ei)) {
       rhp_idx objequ = mp_getobjequ(mp);
@@ -62,11 +63,14 @@ static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
    } else if (ei == IdxCcflib) {
       strs->labelcolor = "brown";
       strs->equname = "CCF obj";
+   } else if (ei == IdxObjFunc) {
+      strs->labelcolor = "green";
+      strs->equname = "objequ";
    } else {
       const EmpDag *empdag = &mdl->empinfo.empdag;
       error("[empdag:dot] ERROR: invalid equation for VF arc between MP(%s) and "
-            "MP(%s)", empdag_getmpname(empdag, mp->id),
-            empdag_getmpname(empdag, edgeVF->child_id));
+            "MP(%s)\n", empdag_getmpname(empdag, mp->id),
+            empdag_getmpname(empdag, edgeVF->mpid_child));
       strs->equname = "ERROR invalid equation index";
       strs->labelcolor = "red";
       strs->weight = NULL;
@@ -95,15 +99,17 @@ static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, MathPrgm *mp,
    return OK;
 }
 
-static int print_mp_edges(const EmpDag* empdag, FILE* f)
+static int print_mp_arcs(const EmpDag* empdag, FILE* f)
 {
    const struct mp_namedarray* mps = &empdag->mps;
 
    for (unsigned i = 0, len = mps->len; i < len; ++i) {
-      if (mps->Carcs[i].len == 0 && mps->Varcs[i].len == 0) continue;
+      const MathPrgm *mp = mps->arr[i];
+
+      if (!mp || (mps->Carcs[i].len == 0 && mps->Varcs[i].len == 0)) continue;
 
       const UIntArray *Carcs = &mps->Carcs[i];
-      unsigned mp_id = mps->arr[i]->id;
+      unsigned mp_id = mp->id;
 
       for (unsigned j = 0, alen = Carcs->len; j < alen; ++j) {
 
@@ -113,7 +119,7 @@ static int print_mp_edges(const EmpDag* empdag, FILE* f)
  
 
          IO_CALL(fprintf(f, " MP%u -> %s%u [%s];\n", mp_id,
-                         isMP ? "MP" : "MPE", id, arcstyle_CTRL));
+                         isMP ? "MP" : "Nash", id, arcstyle_CTRL));
       }
 
       const struct VFedges *Varcs = &mps->Varcs[i];
@@ -121,9 +127,8 @@ static int print_mp_edges(const EmpDag* empdag, FILE* f)
       for (unsigned j = 0, alen = Varcs->len; j < alen; ++j) {
 
          const struct rhp_empdag_arcVF* edgeVF = &Varcs->arr[j];
-         unsigned mpchild_id = edgeVF->child_id;
+         unsigned mpchild_id = edgeVF->mpid_child;
 
-         MathPrgm *mp = mps->arr[i];
          EdgeVFStrings VFstrings = {.do_free_weight = false};
 
          switch (edgeVF->type) {
@@ -146,7 +151,7 @@ static int print_mp_edges(const EmpDag* empdag, FILE* f)
             IO_CALL(fprintf(f, "<BR/>%s", VFstrings.weight));
          }
 
-         IO_CALL(fprintf(f, ">, labelfontcolor=%s, %s];\n",
+         IO_CALL(fprintf(f, ">, fontcolor=%s, %s];\n",
                          VFstrings.labelcolor, arcstyle_VF));
 
          if (VFstrings.do_free_weight) { FREE(VFstrings.weight); }
@@ -176,7 +181,7 @@ static int print_nash_edges(const struct nash_namedarray* mpes, FILE* f)
        
          const char *arcstyle = arcstyle_NASH;
 
-         IO_CALL(fprintf(f, " MPE%u -> %s%u [%s];\n", mpe_id, isMP ? "MP" : "MPE", id, arcstyle));
+         IO_CALL(fprintf(f, " Nash%u -> %s%u [%s];\n", mpe_id, isMP ? "MP" : "Nash", id, arcstyle));
       }
 
    }
@@ -186,26 +191,33 @@ static int print_nash_edges(const struct nash_namedarray* mpes, FILE* f)
 
 static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Container *ctr)
 {
-   for (unsigned i = 0, len = mps->len; i < len; ++i) {
-      if (!mps->arr[i]) continue;
+    MathPrgm ** const mps_arr = mps->arr;
 
-      const MathPrgm *mp = mps->arr[i];
+   char *hidden_mps = NULL;
+
+   for (unsigned i = 0, len = mps->len; i < len; ++i) {
+      const MathPrgm *mp = mps_arr[i];
+
+      if (!mp) continue;
 
       const char *nodestyle_mp, *prefix;
       RhpSense sense = mp_getsense(mp);
       switch(sense) {
-      case RHP_MIN:
+      case RhpMin:
          nodestyle_mp = nodestyle_min;
          prefix = sense2str(sense);
          break;
-      case RHP_MAX:
+      case RhpMax:
          nodestyle_mp = nodestyle_max;
          prefix = sense2str(sense);
          break;
-      case RHP_FEAS:
+      case RhpFeasibility:
          nodestyle_mp = nodestyle_vi;
-         prefix = mptype_str(mp->type);
+         prefix = mptype2str(mp->type);
          break;
+      case RhpDualSense:
+         nodestyle_mp = nodestyle_dual;
+         prefix = mptype2str(mp->type);
       default:
          error("%s :: unsupported sense %s #%d", __func__, sense2str(sense), sense);
          return Error_InvalidValue;
@@ -222,7 +234,7 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
             IO_CALL(asprintf(&lname, "CCF '%s'", ovf_getname(ccf)));
             break;
          }
-         case RHP_MP_OPT:
+         case MpTypeOpt:
             if (valid_vi(mp->opt.objvar)) {
                mp_ident = ctr_printvarname(ctr, mp->opt.objvar);
                IO_CALL(asprintf(&lname, "%s %s", prefix, mp_ident));
@@ -242,7 +254,20 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
       }
 
 
-      IO_CALL(fprintf(f, " MP%u [label=\"%s\", %s];\n", mp->id, name, nodestyle_mp));
+      if (mp_ishidden(mp)) { 
+         char *tmp = hidden_mps;
+         IO_CALL(asprintf(&hidden_mps, "%s MP%u [label=\"%s\", %s];\n", tmp ? tmp : "",
+                 mp->id, name, nodestyle_mp));
+         free(tmp);
+      } else {
+         IO_CALL(fprintf(f, " MP%u [label=\"%s\", %s];\n", mp->id, name, nodestyle_mp));
+      }
+   }
+
+   if (hidden_mps) {
+      IO_CALL(fprintf(f, " subgraph cluster_mps_hidden { \n label = \"Hidden MPs\"\n%s}\n",
+                      hidden_mps));
+      free(hidden_mps);
    }
 
    return OK;
@@ -257,11 +282,11 @@ static int print_nash_nodes(const struct nash_namedarray* mpes, FILE* f, const C
       const char *name = mpes->names[i];
       if (!name) {
          char *lname;
-         IO_CALL(asprintf(&lname, "MPE(%u)", mpe->id));
+         IO_CALL(asprintf(&lname, "Nash(%u)", mpe->id));
          name = lname;
       }
 
-      IO_CALL(fprintf(f, " MPE%u [label=\"%s\", %s];\n", mpe->id, name, nodestyle_mpe));
+      IO_CALL(fprintf(f, " Nash%u [label=\"%s\", %s];\n", mpe->id, name, nodestyle_nash));
    }
 
    return OK;
@@ -275,7 +300,7 @@ static int empdag2dot(const EmpDag *empdag, FILE *f)
    S_CHECK(print_mp_nodes(&empdag->mps, f, &empdag->mdl->ctr));
    S_CHECK(print_nash_nodes(&empdag->nashs, f, &empdag->mdl->ctr));
 
-   S_CHECK(print_mp_edges(empdag, f));
+   S_CHECK(print_mp_arcs(empdag, f));
    S_CHECK(print_nash_edges(&empdag->nashs, f));
 
    IO_CALL(fputs("\n}\n", f));

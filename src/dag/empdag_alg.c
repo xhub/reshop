@@ -197,7 +197,7 @@ int runtime_error_rc(int rc)
 NONNULL static
 int runtime_error_type(MpType type)
 {
-   error("[empdag] unexpected MP type %s\n", mptype_str(type));
+   error("[empdag] unexpected MP type %s\n", mptype2str(type));
    return Error_EMPRuntimeError;
 }
 
@@ -226,7 +226,7 @@ NONNULL static inline
 const char* nidx_typename(nidx_t nidx, const EmpDagDfsData *dfsdata)
 {
    if (nidx >= dfsdata->num_nodes) { return nidx_badidxstr(); }
-   return nidx < dfsdata->num_mps ? "MP" : "MPE";
+   return nidx < dfsdata->num_mps ? "MP" : "Nash";
 }
 
 NONNULL static inline
@@ -504,7 +504,7 @@ DagPathType sense2pathtype(RhpSense sense)
     * Generate the path type from the UID and MP type
     * --------------------------------------------------------------------- */
 
-//   if (uidisMPE(uid_parent)) return DfsPathEquil;
+//   if (uidisNash(uid_parent)) return DfsPathEquil;
 
    switch (sense) {
    case RhpMin:
@@ -567,7 +567,7 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
        * path and the child MP are opposite.
        * ------------------------------------------------------------------ */
 
-      mpid_t mpid_child = arcVF->child_id;
+      mpid_t mpid_child = arcVF->mpid_child;
       const MathPrgm *mp_child = empdag->mps.arr[mpid_child];
       RhpSense sense = mp_getsense(mp_child);
 
@@ -840,7 +840,7 @@ int dfs_mpe(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 
    /* We are at a leaf node */
    if (arcs->len == 0) {
-      error("[empdag] ERROR: MPE(%s) has no child.\n", empdag_getnashname(empdag, id_parent));
+      error("[empdag] ERROR: Nash(%s) has no child.\n", empdag_getnashname(empdag, id_parent));
       return -DagErrMpeNoChild;
    }
 
@@ -849,14 +849,14 @@ int dfs_mpe(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 
    for (unsigned i = 0, len = arcs->len; i < len; ++i) {
       daguid_t uid_child = arcs->arr[i];
-      assert(uidisMP(uid_child));
+      assert(uidisMP(uid_child)); assert(empdag->mps.arr[uid2id(uid_child)]);
 
       int rc = dfs_mpInNashOrRoot(uid2id(uid_child), dfsdata, pathdata_child);
 
       if (rc == 0) continue;
       if (rc > 0) { return rc; }
       if (rc == -DagErrDagCycle) {
-         error("MPE(%s)\n", empdag_getnashname(empdag, id_parent));
+         error("Nash(%s)\n", empdag_getnashname(empdag, id_parent));
           DfsState stat = get_state(dfsdata, node_idx);
          if (stat == CycleStart) { return -DagErrGeneric; }
          return rc;
@@ -968,7 +968,7 @@ NONNULL static inline
 bool is_child_Varcs(const struct VFedges *Varcs, mpid_t mp_id)
 {
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
-      if (Varcs->arr[i].child_id == mp_id) return true;
+      if (Varcs->arr[i].mpid_child == mp_id) return true;
    }
 
    return false;
@@ -1144,7 +1144,14 @@ NONNULL static
 int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
 {
    const DagMpArray *mps = &dfsdata->empdag->mps;
-   const MathPrgm * restrict mp = mps->arr[mp_id]; assert(mp);
+   const MathPrgm * restrict mp = mps->arr[mp_id];
+
+  /* ----------------------------------------------------------------------
+   * If the EMPDAG was edited, we allow for NULL mps
+   * ---------------------------------------------------------------------- */
+
+   if (!mp) { return OK; }
+
    DagMpPpty * restrict mp_ppty = &dfsdata->mp_ppty[mp_id];
    const IdxArray * restrict equs = &mp->equs;
    const Model *mdl = dfsdata->empdag->mdl;
@@ -1373,7 +1380,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
          /* -----------------------------------------------------------------
           * If we reached this point, the last option is an equilibrium variable
           * We proceed to look for the least common ancestor and check
-          * that it is an MPE node
+          * that it is an Nash node
           * ---------------------------------------------------------------- */
          nidx_t nidx_lca = lca(mp_id, mp_var, dfsdata);
          if (!valid_uid(nidx_lca)) {
@@ -1415,7 +1422,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
 
    /* ---------------------------------------------------------------------
     * We just want to compute the level of the mpe node.
-    * An MPE node can only have an MP as parent.
+    * An Nash node can only have an MP as parent.
     * --------------------------------------------------------------------- */
 
    unsigned level;
@@ -1446,7 +1453,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
       unsigned l = dfsdata->mp_ppty[pid].level;
 
       if (l != level) {
-         error("[empdag] MPE(%s) has different levels by different parents: %u "
+         error("[empdag] Nash(%s) has different levels by different parents: %u "
                "vs %u\n", mpes->names[mpe_id], l, level);
          return Error_NotImplemented;
       }
@@ -1526,7 +1533,7 @@ int empdag_analysis(EmpDag * restrict empdag)
          break;
       default:
          error("[empdag] ERROR: unsupported root MP with type %s",
-               mptype_str(mptype));
+               mptype2str(mptype));
          return Error_EMPRuntimeError;
       }
       
@@ -1557,28 +1564,46 @@ int empdag_analysis(EmpDag * restrict empdag)
     * --------------------------------------------------------------------- */
 
    if (dfsdata.num_visited < dfsdata.num_nodes) {
-      errormsg("[empdag:check] ERROR: some problems are not present in the graph:\n");
-      unsigned missing_nodes = dfsdata.num_nodes - dfsdata.num_visited;
-      unsigned num_visited = 0;
 
-      do {
-         missing_nodes--;
+      /* -------------------------------------------------------------------
+       * If the EMPDAG, was edited, some MPS could have disappeared, count these
+       * ------------------------------------------------------------------- */
 
-         while (dfsdata.nodes_stat[num_visited] == Processed) { num_visited++; }
+      unsigned num_mps = empdag->mps.len, num_mps_null = 0, num_mps_hidden = 0;
+      MathPrgm **mps = empdag->mps.arr;
+      for (unsigned i = 0; i < num_mps; ++i) {
+         MathPrgm *mp = mps[i];
+         if (!mp) { num_mps_null++; continue; }
 
-         switch (dfsdata.nodes_stat[num_visited]) {
-         case NotExplored: break;
-         default:
-            runtime_error_state(dfsdata.nodes_stat[num_visited]);
-         }
+         if (mp_ishidden(mp)) { num_mps_hidden++; }
+      }
 
-         error("\t%s(%s)\n", nidx_typename(num_visited, &dfsdata),
-               nidx_getname(num_visited, &dfsdata));
-         num_visited++;
+      if (dfsdata.num_visited + num_mps_null + num_mps_hidden != dfsdata.num_nodes) {
 
-      } while (missing_nodes > 0);
+         errormsg("[empdag:check] ERROR: some problems are not present in the graph:\n");
+         unsigned missing_nodes = dfsdata.num_nodes - dfsdata.num_visited;
+         unsigned num_visited = 0;
+   
+         do {
+            missing_nodes--;
+   
+            while (dfsdata.nodes_stat[num_visited] == Processed) { num_visited++; }
+   
+            switch (dfsdata.nodes_stat[num_visited]) {
+            case NotExplored: break;
+            default:
+               runtime_error_state(dfsdata.nodes_stat[num_visited]);
+            }
+   
+            error("\t%s(%s)\n", nidx_typename(num_visited, &dfsdata),
+                  nidx_getname(num_visited, &dfsdata));
 
-      return Error_EMPIncorrectInput;
+            num_visited++;
+   
+         } while (missing_nodes > 0);
+   
+         return Error_EMPIncorrectInput;
+      }
    }
 
    /* Now we can perform all the checks */

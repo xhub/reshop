@@ -12,5 +12,6 @@
 int mdl_transform_tomcp(Model *mdl, Model **mdl_target) NONNULL;
 int mdl_transform_emp_togamsmdltype(Model *mdl_src, Model **mdl_target) NONNULL;
 
+int rmdl_empdag_transform(Model *mdl_reform) NONNULL;
 
 #endif

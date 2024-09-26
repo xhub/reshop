@@ -244,8 +244,8 @@ int mdl_checkmetadata(Model *mdl)
       return mdl_chk_mcpmetadata(mdl);
    }
 
-   unsigned num_unattached_vars = 0;
-   unsigned num_unattached_equs = 0;
+   unsigned num_unattached_vars = 0, num_unattached_equs = 0;
+   unsigned num_invalid_mps = 0;
 
    Fops *fops = ctr->fops, *fops_active, fops_active_dat;
 
@@ -258,8 +258,12 @@ int mdl_checkmetadata(Model *mdl)
       TO_IMPLEMENT("metadata check for new backend model");
    }
 
+   MathPrgm **mps = empdag->mps.arr;
+   unsigned num_mps = empdag->mps.len;
+
    size_t total_n = ctr_nvars_total(ctr);
    size_t total_m = ctr_nequs_total(ctr);
+
    int status = OK;
 
    for (rhp_idx i = 0; i < total_n; ++i) {
@@ -270,12 +274,32 @@ int mdl_checkmetadata(Model *mdl)
 
       const VarMeta var_md = ctr->varmeta[i];
 
-      if (!valid_mpid(var_md.mp_id)) {
+      mpid_t mpid = var_md.mp_id;
+      if (!valid_mpid(mpid)) {
          error("[empdag] ERROR: variable '%s' is not attached to any MP\n",
                ctr_printvarname(ctr, i));
          num_unattached_vars++;
          status = status == OK ? Error_IncompleteModelMetadata : status;
          continue;
+      }
+
+      if (mpid_regularmp(mpid)) {
+         if (mpid >= num_mps) {
+            error("[empdag] ERROR: variable '%s' belongs to non-existing MP #%u, "
+                  "the largest ID is %u\n", ctr_printvarname(ctr, i), mpid,
+                  num_mps-1);
+            num_invalid_mps++;
+            status = status == OK ? Error_RuntimeError : status;
+            continue;
+         }
+
+         if (!mps[mpid]) {
+            error("[empdag] ERROR: variable '%s' belongs to deleted MP #%u\n",
+                  ctr_printvarname(ctr, i), mpid);
+            num_invalid_mps++;
+            status = status == OK ? Error_RuntimeError : status;
+            continue;
+         }
       }
 
       switch (var_md.type) {
@@ -391,11 +415,29 @@ int mdl_checkmetadata(Model *mdl)
 
       const struct equ_meta *equ_md = &ctr->equmeta[i];
 
+      mpid_t mpid = equ_md->mp_id;
       if (!valid_mpid(equ_md->mp_id)) {
          error("[empdag] ERROR: equation '%s' is not attached to any MP\n",
                ctr_printequname(ctr, i));
          status = status == OK ? Error_IncompleteModelMetadata : status;
          continue;
+      }
+
+      if (mpid_regularmp(mpid)) {
+         if (mpid >= num_mps) {
+            error("[empdag] ERROR: equation '%s' belongs to non-existing MP #%u, "
+                  "the largest ID is %u\n", ctr_printequname(ctr, i), mpid,
+                  num_mps-1);
+            num_invalid_mps++;
+            status = status == OK ? Error_RuntimeError : status;
+         }
+
+         if (!mps[mpid]) {
+            error("[empdag] ERROR: equation '%s' belongs to deleted MP #%u\n",
+                  ctr_printequname(ctr, i), mpid);
+            num_invalid_mps++;
+            status = status == OK ? Error_RuntimeError : status;
+         }
       }
 
       switch (equ_md->role) {
@@ -490,6 +532,9 @@ int mdl_checkmetadata(Model *mdl)
       }
       if (num_unattached_equs > 0) {
          error("[metadata check] ERROR: %u unattached equations\n", num_unattached_equs);
+      }
+      if (num_invalid_mps > 0) {
+         error("[metadata check] ERROR: %u invalid MPs\n", num_invalid_mps);
       }
    }
 

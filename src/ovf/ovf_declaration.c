@@ -124,7 +124,7 @@ int ovf_addbyname(EmpInfo *empinfo, const char *name, OvfDef **ovfdef)
 
    printout(PO_DEBUG, "[OVF] function '%s' detected\n", name);
 
-   A_CHECK(*ovfdef, ovf_def_new_ovfinfo(empinfo->ovf, ovf_idx));
+   A_CHECK(*ovfdef, ovfdef_new_ovfinfo(empinfo->ovf, ovf_idx));
 
    A_CHECK((*ovfdef)->name, strdup(name));
 
@@ -240,7 +240,7 @@ int rhp_ovf_add(Model *mdl, const char* name, rhp_idx ovf_vi,
    /*  For convenience */
    OvfDef *ovfdef_ = *ovf_def;
 
-   ovfdef_->ovf_vidx = ovf_vi;
+   ovfdef_->vi_ovf = ovf_vi;
    avar_extend(ovfdef_->args, v_args);
 
    for (size_t i = 0, len = avar_size(v_args); i < len; ++i) {
@@ -607,6 +607,8 @@ int ccflib_finalize(Model *mdl, OvfDef *ovf_def, MathPrgm* mp)
    S_CHECK(preprocess_ccflibargs(mdl, ovf_def, mp));
 
    ovf_def->status |= OvfFinalized;
+
+   mp->status |= MpFinalized;
 
    return OK;
 }

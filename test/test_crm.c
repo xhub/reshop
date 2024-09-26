@@ -283,7 +283,7 @@ static int _DFS_ovf(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
    }
 
    /* declare the CRM */
-  struct rhp_ovf_def *ovf_def;
+  struct rhp_ovfdef *ovf_def;
   RESHOP_CHECK(rhp_ovf_add(mdl, "ecvarup", theta_idx, argTheta, &ovf_def));
   RESHOP_CHECK(rhp_ovf_param_add_scalar(ovf_def, "tail", .8));
   RESHOP_CHECK(rhp_ovf_param_add_scalar(ovf_def, "cvar_weight", .7));

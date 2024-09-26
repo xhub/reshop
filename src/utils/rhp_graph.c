@@ -137,9 +137,9 @@ static int _print_ovfgraph_nodes(const OvfDef* ovf, FILE* f,
 {
    while (ovf) {
 
-      unsigned idx = ovf->ovf_vidx;
+      unsigned idx = ovf->vi_ovf;
       IO_CALL(fprintf(f, " OVF%u [label=\"OVF(%s)\\nfn: %s\\n\", %s];\n", idx,
-                      ctr_printvarname(ctr, ovf->ovf_vidx), ovf_getname(ovf),
+                      ctr_printvarname(ctr, ovf->vi_ovf), ovf_getname(ovf),
                       nodestyle_ovf));
       ovf = ovf->next;
    }
@@ -153,13 +153,13 @@ static int _print_ovfgraph_edges(struct rhp_graph_gen **nodes,
 {
    for (unsigned i = 0; i < n_nodes; ++i) {
       const struct rhp_graph_gen *node = nodes[i];
-      const OvfDef *ovf = ( const struct rhp_ovf_def *)node->obj;
+      const OvfDef *ovf = ( const struct rhp_ovfdef *)node->obj;
 
-      unsigned idx = ovf->ovf_vidx;
+      unsigned idx = ovf->vi_ovf;
 
       for (unsigned j = 0, len = node->len; j < len; ++j) {
            rhp_idx cidx = node->children[j].idx;
-           unsigned c_n = ((const OvfDef*)node->children[j].child->obj)->ovf_vidx;
+           unsigned c_n = ((const OvfDef*)node->children[j].child->obj)->vi_ovf;
            IO_CALL(fprintf(f, " OVF%u -> OVF%u [label=\"%s\", %s];\n", idx, c_n,
                            ctr_printvarname(ctr, cidx), arcstyle_ovf));
            }

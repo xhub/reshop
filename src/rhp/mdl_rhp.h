@@ -11,7 +11,8 @@
 
 int rmdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ) NONNULL;
 
-int rmdl_dup_equ(Model *mdl, rhp_idx *eidx, unsigned lin_space, rhp_idx vi_no) NONNULL;
+int rmdl_dup_equ(Model *mdl, rhp_idx *ei) NONNULL;
+int rmdl_dup_equ_except(Model *mdl, rhp_idx *eidx, unsigned lin_space, rhp_idx vi_no) NONNULL;
 int rmdl_equ_flip(Model *mdl, rhp_idx ei, rhp_idx *ei_new) NONNULL;
 int rmdl_equ_rm(Model* mdl, rhp_idx eidx) NONNULL;
 int rmdl_appendequs(Model *mdl, const Aequ *e) NONNULL;
@@ -25,6 +26,7 @@ int rmdl_setobjsense(Model *mdl, RhpSense objsense) NONNULL;
 
 int rmdl_set_simpleprob(Model *mdl, const MpDescr *descr) NONNULL;
 
+int rmdl_initctrfromfull(Model *mdl, Model *mdl_up) NONNULL;
 int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up) NONNULL;
 int rmdl_fix_objequ_value(Model *mdl);
 int rmdl_remove_fixedvars(Model *mdl) NONNULL;
@@ -35,5 +37,7 @@ Fops* rmdl_getfops(const Model *mdl) NONNULL;
 int rmdl_export_latex(Model *mdl, const char *phase_name) NONNULL;
 int rmdl_ensurefops_activedefault(Model *mdl) NONNULL;
 int rmdl_prepare_export(Model * restrict mdl_src, Model * restrict mdl_dst) NONNULL;
+
+int rmdl_mp_objequ2objfun(Model *mdl, MathPrgm *mp, rhp_idx objvar, rhp_idx objequ) NONNULL;
 
 #endif /* MODEL_RMDL_H */

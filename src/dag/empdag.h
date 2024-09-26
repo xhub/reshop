@@ -15,7 +15,7 @@
  *
  */
 
-struct empdag_edge;
+struct empdag_arc;
 
 /** Edges for value function */
 typedef struct VFedges {
@@ -53,8 +53,8 @@ struct vi_equil {
 };
 
 /** @brief Equilibrium structure */
-typedef struct rhp_equilibrium {
-  unsigned id;
+typedef struct rhp_nash_equilibrium {
+  nashid_t id;
   struct vi_equil ve;        /**< Variational Equilibrium details */
    Model *mdl;
   /* TODO: variational equilibrium with EPEC? */
@@ -123,6 +123,16 @@ typedef struct {
    unsigned num_vf;
 } EmpDagEdgeStats;
 
+typedef struct {
+   MpIdArray primal;
+   MpIdArray dual;
+} DualMpInfo;
+
+typedef struct {
+   MpIdArray orig;
+   MpIdArray vi;
+} FoocMpInfo;
+
 /** @brief Main EMP DAG structure */
 typedef struct empdag {
    EmpDagType type;
@@ -130,6 +140,7 @@ typedef struct empdag {
    EmpDagNodeStats node_stats;
    EmpDagEdgeStats edge_stats;
    bool finalized;
+   bool has_resolved_arcs;
 
    DagMpArray mps;
    DagNashArray nashs;
@@ -139,6 +150,12 @@ typedef struct empdag {
 
    MpIdArray mps2reformulate;
    MpIdArray saddle_path_starts;
+
+   MpIdArray fenchel_dual_nodal;
+   MpIdArray fenchel_dual_subdag;
+   MpIdArray epi_dual_nodal;
+   MpIdArray epi_dual_subdag;
+   FoocMpInfo fooc;
 
    struct {
       RhpSense sense;
@@ -253,7 +270,7 @@ int empdag_nashaddmpsbyname(EmpDag *empdag, const char *nash_name,
                            const char *mp_names, unsigned mps_len) NONNULL;
 
 int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
-                          struct empdag_edge *edge) NONNULL;
+                          struct empdag_arc *edge) NONNULL;
 /* --------------------------------------------------------------------------
  * Roots related functions
  * -------------------------------------------------------------------------- */
@@ -285,32 +302,21 @@ int empdag_delete(EmpDag *empdag, daguid_t uid) NONNULL;
 int empdag_nash_getchildren(const EmpDag *empdag, nashid_t nashid,
                            DagUidArray *mps) WRITE_ONLY(3) NONNULL;
 
-bool empdag_mphasname(const EmpDag *empdag, mpid_t mpid);
+
 const char *empdag_getmpname(const EmpDag *empdag, mpid_t mpid);
 const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getnashname(const EmpDag *empdag, nashid_t nashid);
-const char *empdag_getmpename2(const EmpDag *empdag, nashid_t nashid);
-unsigned empdag_getmpcurid(const EmpDag *empdag, MathPrgm *mp) NONNULL;
+const char *empdag_getnashname2(const EmpDag *empdag, nashid_t nashid);
 const struct rhp_empdag_arcVF* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
                                             mpid_t mpid_child) NONNULL;
-
-/* --------------------------------------------------------------------------
- * Parsing
- * -------------------------------------------------------------------------- */
-
-int empdag_empfile_parse(Model *mdl, int *addr);
 
 /* --------------------------------------------------------------------------
  * Analysis
  * -------------------------------------------------------------------------- */
 
 int empdag_check(EmpDag *empdag);
-
-/* --------------------------------------------------------------------------
- * Transformation
- * -------------------------------------------------------------------------- */
-
-int empdag_minimax_reformulate(Model *mdl) NONNULL;
+bool empdag_mp_hasname(const EmpDag *empdag, mpid_t mpid);
+bool empdag_mp_hasobjVFchildren(const EmpDag *empdag, mpid_t mpid);
 
 
 static inline bool empdag_mphaschild(const EmpDag *empdag, mpid_t mpid) {
@@ -319,7 +325,7 @@ static inline bool empdag_mphaschild(const EmpDag *empdag, mpid_t mpid) {
 }
 
 
-NONNULL static inline bool empdag_rootismpe(const EmpDag *empdag) {
+NONNULL static inline bool empdag_rootisnash(const EmpDag *empdag) {
    assert(valid_uid(empdag->uid_root));
    return uidisNash(empdag->uid_root);
 }
@@ -348,7 +354,7 @@ const char* empdag_printnashid(const EmpDag *empdag, nashid_t nashid) NONNULL;
 const char* empdag_typename(EmpDagType type);
 
 
-int empdag_exportasdot(Model *mdl) NONNULL;
+int empdag_export(Model *mdl) NONNULL;
 int empdag2dotfile(const EmpDag* empdag, const char* fname) NONNULL;
 int empdag2dotenvname(const EmpDag* empdag, const char *envname) NONNULL;
 
@@ -367,7 +373,7 @@ static inline unsigned empdag_num_mp(const EmpDag *empdag)
    return empdag->mps.len;
 }
 
-static inline Nash* empdag_getmpefast(const EmpDag *empdag, nashid_t nashid)
+static inline Nash* empdag_getnashfast(const EmpDag *empdag, nashid_t nashid)
 {
    assert(nashid < empdag->nashs.len);
    return empdag->nashs.arr[nashid];
@@ -447,7 +453,7 @@ static inline int empdag_getmpbyuid(const EmpDag *empdag, unsigned uid,
 }
 
 ACCESS_ATTR(write_only, 3) NONNULL
-static inline int empdag_getmpebyuid(const EmpDag *empdag, unsigned uid,
+static inline int empdag_getnashbyuid(const EmpDag *empdag, unsigned uid,
                                      Nash **nash) {
    assert(uidisNash(uid));
    return empdag_getnashbyid(empdag, uid2id(uid), nash);
@@ -457,6 +463,19 @@ static inline bool empdag_has_adversarial_mps(const EmpDag *empdag) {
    return empdag->mps2reformulate.len > 0;
 }
 
+static inline bool empdag_needs_transformations(const EmpDag *empdag) {
+   return (empdag->fenchel_dual_nodal.len  > 0 ||
+           empdag->fenchel_dual_subdag.len > 0 ||
+           empdag->epi_dual_nodal.len      > 0 ||
+           empdag->epi_dual_subdag.len     > 0)
 
+          || empdag->mps2reformulate.len > 0;
+}
+
+
+static inline void empdag_unsetallchecks(EmpDag *empdag)
+{
+   empdag->finalized = false;
+}
 
 #endif /* EMPDAG_H */

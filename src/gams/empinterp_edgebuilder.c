@@ -22,7 +22,6 @@ DagLabels * dag_labels_new(const char *basename, unsigned basename_len,
    dagl->max_children = size;
    dagl->daguid_parent = EMPDAG_UID_NONE;
    dagl->nodename = basename;
-   
 
    return dagl;
 _exit:
@@ -63,7 +62,6 @@ DagLabel * dag_labels_dupaslabel(const DagLabels * dagl_src)
    memcpy(dagc->uels, dagl_src->data, sizeof(int) * dim);
 
    dagc->daguid_parent = dagl_src->daguid_parent;
-   
 
    return dagc;
 }
@@ -110,6 +108,42 @@ DagLabel* dag_label_new(const char *identname, unsigned identname_len, uint8_t d
 void dag_label_free(DagLabel *dagl)
 {
    FREE(dagl);
+}
+
+DualLabel* dual_label_new(const char *identname, unsigned identname_len, uint8_t dim, mpid_t mpid_dual)
+{
+   DualLabel *dual;
+   MALLOCBYTES_NULL(dual, DualLabel, sizeof(DualLabel) + sizeof(int) * dim);
+
+   dual->dim = dim;
+   dual->label_len = identname_len;
+   dual->mpid_dual = mpid_dual;
+   dual->label = identname;
+
+   return dual;
+}
+
+void dual_label_free(DualLabel *dual)
+{
+   free(dual);
+}
+
+FoocLabel* fooc_label_new(const char *identname, unsigned identname_len, uint8_t dim, daguid_t uid)
+{
+   FoocLabel *fooc;
+   MALLOCBYTES_NULL(fooc, FoocLabel, sizeof(FoocLabel) + sizeof(int) * dim);
+
+   fooc->dim = dim;
+   fooc->label_len = identname_len;
+   fooc->daguid_fooc = uid;
+   fooc->label = identname;
+
+   return fooc;
+}
+
+void fooc_label_free(FoocLabel *fooc)
+{
+   free(fooc);
 }
 
 

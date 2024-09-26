@@ -2,6 +2,7 @@
 #include "container.h"
 #include "equ.h"
 #include "equvar_helpers.h"
+#include "mathprgm.h"
 #include "mdl.h"
 #include "printout.h"
 #include "var.h"
@@ -141,7 +142,7 @@ int chk_mp(const MathPrgm *mp, const char *fn)
       return Error_NullPointer;
    }
 
-   return OK;
+   return mp_isvalid(mp) ? OK : Error_RuntimeError;
 }
 
 int chk_nash(const Nash *nash, const char *fn)

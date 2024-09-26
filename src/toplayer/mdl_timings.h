@@ -50,6 +50,9 @@ typedef struct mdl_timings {
          ConjugateCcfTiming conjugate;
          double total;
       } CCF;
+      struct {
+         double total;
+      } empdag;
    } reformulation;
 
    double gmo_creation;

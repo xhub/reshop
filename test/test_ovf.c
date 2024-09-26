@@ -99,7 +99,7 @@ int linear_quantile_regression(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver,
    }
 
    /* Define the CCF */
-   struct rhp_ovf_def *ovf_def;
+   struct rhp_ovfdef *ovf_def;
    RESHOP_CHECK(rhp_ovf_add(mdl, "sum_pos_part", sumPosPart, sumPosPartArg, &ovf_def));
    RESHOP_CHECK(rhp_ovf_setreformulation(ovf_def, formulation));
    RESHOP_CHECK(rhp_ovf_check(mdl, ovf_def));

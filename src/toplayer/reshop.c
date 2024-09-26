@@ -56,9 +56,15 @@ int rhp_postprocess(Model *mdl_solver)
    double start = get_thrdtime();
    S_CHECK(chk_mdl(mdl_solver, __func__));
 
+   const char *no_solve = mygetenv("RHP_TEST_PARSER");
+   if (no_solve) {
+      myfreeenvval(no_solve);
+      return OK;
+   }
+ 
+
    Model *mdl = mdl_solver;
    Model *mdl_up = mdl_solver->mdl_up;
-   assert(mdl_up);
 
    while (mdl_up) {
       S_CHECK(mdl_solreport(mdl_up, mdl));
@@ -97,6 +103,13 @@ int rhp_postprocess(Model *mdl_solver)
 int rhp_solve(Model *mdl)
 {
    S_CHECK(chk_mdl(mdl, __func__));
+
+   const char *no_solve = mygetenv("RHP_TEST_PARSER");
+   if (no_solve) {
+      myfreeenvval(no_solve);
+      return OK;
+   }
+ 
 
    if (!mdl->mdl_up) { TO_IMPLEMENT("rhp_solve without upstream model"); }
    S_CHECK(mdl_check(mdl->mdl_up));
@@ -139,13 +152,19 @@ int rhp_process(Model *mdl, Model *mdl_solver)
       return Error_UnExpectedData;
    }
 
-
    ctr_setneednames(&mdl->ctr);
 
    Model *mdl_local = NULL;
 
    S_CHECK_EXIT(mdl_check(mdl));
    S_CHECK_EXIT(mdl_checkmetadata(mdl));
+
+   const char *no_solve = mygetenv("RHP_TEST_PARSER");
+   if (no_solve) {
+      myfreeenvval(no_solve);
+      return OK;
+   }
+ 
 
    /* ---------------------------------------------------------------------
     * PART I: Perform any kind of reformulation

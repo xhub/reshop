@@ -145,8 +145,8 @@ enum EmpApi {
    FN_MP_SETOBJVAR,
    FN_MP_SETPROBTYPE,
    FN_MP_SETTYPE,
-   FN_MPE_ADDMPBYID,
-   FN_MPE_FINALIZE,
+   FN_NASH_ADDMPBYID,
+   FN_NASH_FINALIZE,
    FN_OVF_ADDARG,
    FN_OVF_FINALIZE,
    FN_OVF_SETRHO,
@@ -158,7 +158,7 @@ enum EmpApi {
 enum EmpObjNew {
    FN_CCFLIB_NEW,
    FN_MP_NEW,
-   FN_MPE_NEW,
+   FN_NASH_NEW,
    FN_OVF_NEW,
 };
 
@@ -206,8 +206,8 @@ typedef struct {
    DagRegister *dagregister;
    DagLabels *daglabels;
    int *daglabels_ws;
-   DagLabels2Edges *labels2edges;
-   DagLabel2Edge *label2edge;
+   DagLabels2Arcs *labels2edges;
+   DagLabel2Arc *label2edge;
 } VmData;
 
 typedef int (*empapi)(VmData *data, unsigned argc, const VmValue *values);

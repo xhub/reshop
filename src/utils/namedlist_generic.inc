@@ -239,11 +239,11 @@ FN_SCOPE void RHP_MAKE_STR(freeall)(struct RHP_LIST_TYPE *dat)
 
 #undef RHP_LIST_PREFIX
 #undef RHP_LIST_TYPE
-#undef RHP_ELT_TYPE
-#undef RHP_ELT_SORT
 #undef RHP_ELT_INVALID
 #undef RHP_ELT_FREE
 #undef RHP_ELT_FREE_TAKE_ADDRESS
+#undef RHP_ELT_SORT
+#undef RHP_ELT_TYPE
 #undef IDX_TYPE
 #undef RHP_CONCAT
 #undef _RHP_MAKE_STR

@@ -90,7 +90,7 @@ int ovf_transform(Model *mdl)
    while (ovf) {
       struct sort_obj *o = &ovf_objs[n_ovfs];
       o->mp_id = n_ovfs;          /* Set counter for this OVF */
-      o->vi = ovf->ovf_vidx;     /* Store the OVF vidx       */
+      o->vi = ovf->vi_ovf;     /* Store the OVF vidx       */
       o->obj = rhp_graph_gen_alloc(ovf);
       ovf_nodes[n_ovfs] = o->obj;
       ovfs[n_ovfs] = ovf;
@@ -157,7 +157,7 @@ int ovf_transform(Model *mdl)
           if (!valid_ei(ei)) {
             error("%s :: Invalid equation for OVF argument variable %s of OVF "
                   "variable %s.\n", __func__, ctr_printvarname(ctr, vi_arg),
-                  ctr_printvarname2(ctr, ovf->ovf_vidx));
+                  ctr_printvarname2(ctr, ovf->vi_ovf));
             status = Error_InvalidValue;
             goto _exit;
           }
@@ -246,7 +246,7 @@ int ovf_transform(Model *mdl)
       S_CHECK_EXIT(ovf_finalize(mdl, ovf));
 
       printout(PO_V, "[OVF] Reformulating OVF variable %s (#%d) with scheme ",
-               ctr_printvarname(ctr, ovf->ovf_vidx), ovf->ovf_vidx);
+               ctr_printvarname(ctr, ovf->vi_ovf), ovf->vi_ovf);
 
       enum ovf_scheme reformulation;
       if (ovf->reformulation != OVF_Scheme_Unset) {
@@ -259,17 +259,17 @@ int ovf_transform(Model *mdl)
       switch (reformulation) {
       case OVF_Equilibrium:
          printout(PO_V, "equilibrium\n");
-         S_CHECK_EXIT(ovf_equil(mdl, OVFTYPE_OVF,
+         S_CHECK_EXIT(ovf_equil(mdl, OvfType_Ovf,
                           (union ovf_ops_data){.ovf =  ovf}));
          break;
       case OVF_Fenchel:
          printout(PO_V, "Fenchel duality\n");
-         S_CHECK_EXIT(ovf_fenchel(mdl, OVFTYPE_OVF,
+         S_CHECK_EXIT(ovf_fenchel(mdl, OvfType_Ovf,
                            (union ovf_ops_data){.ovf =  ovf}));
          break;
       case OVF_Conjugate:
          printout(PO_V, "conjugate duality\n");
-         S_CHECK_EXIT(ovf_conjugate(mdl, OVFTYPE_OVF,
+         S_CHECK_EXIT(ovf_conjugate(mdl, OvfType_Ovf,
                               (union ovf_ops_data){.ovf =  ovf}));
          break;
       default:

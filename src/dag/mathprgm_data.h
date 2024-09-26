@@ -19,15 +19,34 @@ struct mp_parents {
 
 typedef enum {
    MpTypeUndef = 0,
-   MpTypeOpt,
-   MpTypeVi,
+   MpTypeOpt = 1,
+   MpTypeVi = 2,
    /* TODO: All these types could be added, see GITLAB #83*/
 //   MpTypeMcp,
 //   MpTypeQvi,
 //   MpTypeMpcc,
 //   MpTypeMpec,
-   MpTypeCcflib,
-   MpTypeLast = MpTypeCcflib,
+   MpTypeCcflib = 3,
+   MpTypeDual = 4,
+   MpTypeFooc = 5,
+   MpTypeLast = MpTypeFooc,
 } MpType;
+
+typedef enum {
+   FenchelScheme = 0,
+   EpiScheme = 1,
+   DualOperatorSchemeLast = EpiScheme,
+} DualOperatorScheme;
+
+typedef enum {
+   SubDagDomain = 0,
+   NodeDomain = 1,
+   DualOperatorDomainLast = NodeDomain,
+} DualOperatorDomain;
+
+typedef struct {
+   DualOperatorScheme scheme;
+   DualOperatorDomain domain;
+} DualOperatorData;
 
 #endif
