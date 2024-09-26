@@ -218,6 +218,7 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
       case RhpDualSense:
          nodestyle_mp = nodestyle_dual;
          prefix = mptype2str(mp->type);
+         break;
       default:
          error("%s :: unsupported sense %s #%d", __func__, sense2str(sense), sense);
          return Error_InvalidValue;

@@ -613,8 +613,7 @@ int ctr_gen_rosettas(Container *ctr)
       rosetta_equs[i] = ei;
    }
 
-   size_t nequs = total_m - skip_equ;
-   assert(ctr->m == nequs);
+   assert(ctr->m == total_m - skip_equ);
 
    size_t skip_var = 0;
    for (size_t i = 0; i < total_n; ++i) {
@@ -628,9 +627,8 @@ int ctr_gen_rosettas(Container *ctr)
       rhp_idx vi = i - skip_var;
       rosetta_vars[i] = vi;
    }
-   size_t nvars = total_n - skip_var;
 
-   assert(ctr->n == nvars);
+   assert(ctr->n == total_n - skip_var);
 
    return OK;
 }

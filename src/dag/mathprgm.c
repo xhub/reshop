@@ -1128,7 +1128,7 @@ int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
    rhp_idx objvar = mp->opt.objvar;
 
    /* TODO NAMING */
-   Equ *eobj;
+   Equ *eobj = NULL;
    Container *ctr = &mp->mdl->ctr;
    S_CHECK(rctr_add_equ_empty(ctr, ei, &eobj, Mapping, CONE_NONE));
 

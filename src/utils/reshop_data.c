@@ -3,7 +3,7 @@
 #include "reshop_data.h"
 #include "rhp_search.h"
 
-static bool chk_sorted_intarray(const int * restrict arr, unsigned len)
+DBGUSED static bool chk_sorted_intarray(const int * restrict arr, unsigned len)
 {
    for (unsigned i = 1; i < len; ++i) {
       if (arr[i-1] > arr[i]) { return false; }
@@ -12,7 +12,7 @@ static bool chk_sorted_intarray(const int * restrict arr, unsigned len)
    return true;
 }
 
-static bool chk_sorted_uintarray(const unsigned * restrict arr, unsigned len)
+DBGUSED static bool chk_sorted_uintarray(const unsigned * restrict arr, unsigned len)
 {
    for (unsigned i = 1; i < len; ++i) {
       if (arr[i-1] > arr[i]) { return false; }
