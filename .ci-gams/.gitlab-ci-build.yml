@@ -2,7 +2,7 @@ build-leg:
   stage: build
   tags: [puma]
   image:
-    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    name: $MACHINES_CONTAINER_REG/leg/builder-devel:latest
     entrypoint: [""]
   script:
     - !reference [.get-gams]
@@ -10,7 +10,7 @@ build-leg:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
-    - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
+    - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-leg
@@ -23,7 +23,7 @@ build-debug-leg:
   stage: build
   tags: [puma]
   image:
-    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    name: $MACHINES_CONTAINER_REG/leg/builder-devel:latest
     entrypoint: [""]
   script:
     - !reference [.get-gams]
@@ -31,7 +31,7 @@ build-debug-leg:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Debug -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
-    - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
+    - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-debug-leg
@@ -49,7 +49,7 @@ build-deg:
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
-    - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
+    - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-deg
@@ -67,7 +67,7 @@ build-dac:
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
-    - python3 ci/report_for_log.py clang build_log.txt warnings.xml
+    - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-dac
@@ -89,7 +89,7 @@ build-wei:
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -S .
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
-    - python ci/report_for_log.py icl build_log.txt warnings.xml
+    - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-wei
