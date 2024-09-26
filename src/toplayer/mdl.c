@@ -546,21 +546,16 @@ int mdl_solreport(Model *mdl_dst, Model *mdl_src)
  * to the appropriate type.
  *
  * @param mdl   the model
- * @param fops  the filter object
  *
  * @return      the error code
  */
-int mdl_reset_modeltype(Model *mdl, Fops *fops)
+int mdl_recompute_modeltype(Model *mdl)
 {
-   if (fops) {
-      TO_IMPLEMENT("non-NULL fops needs tp be implemented.");
-   }
-
    ModelType mdltype;
    S_CHECK(mdl_gettype(mdl, &mdltype));
    S_CHECK(mdl_settype(mdl, MdlType_none));
 
-   S_CHECK(mdl_analyze_modeltype(mdl, fops));
+   S_CHECK(mdl_analyze_modeltype(mdl));
 
    ModelType mdltype_new;
    S_CHECK(mdl_gettype(mdl, &mdltype_new));
@@ -571,17 +566,29 @@ int mdl_reset_modeltype(Model *mdl, Fops *fops)
 
       if (empdag_singleprob(empdag)) {
 
-         MathPrgm *mp = mdl->empinfo.empdag.mps.arr[0];
+         daguid_t uid_root = empdag->uid_root;
+
+         assert(uidisMP(uid_root));
+
+         mpid_t mpid_root = uid2id(uid_root);
+
+         DagMpArray *mps = &mdl->empinfo.empdag.mps;
+         if (mpid_root >= mps->len) {
+            error("[empdag] ERROR: MP root has index #%u, but the number of MP "
+                  "is %u\n", mpid_root, mps->len);
+         }
+
+         MathPrgm *mp = mps->arr[mpid_root];
          if (!mp) { return error_runtime(); }
 
          rhp_idx objvar = mp_getobjvar(mp);
          rhp_idx objequ = mp_getobjequ(mp);
          RhpSense sense = mp_getsense(mp);
 
+         empdag->type = EmpDag_Empty;
          S_CHECK(mdl_setsense(mdl, sense));
 
          if (mdltype_isopt(mdltype_new)) {
-            empdag->type = EmpDag_Empty;
             S_CHECK(mdl_setobjvar(mdl, objvar));
 
             if (mdl_is_rhp(mdl)) {
@@ -623,11 +630,10 @@ int mdl_reset_modeltype(Model *mdl, Fops *fops)
  * @brief Analyze the model to set the modeltype (LP, NLP, MIP, ...)
  *
  * @param mdl   the model to analyze
- * @param fops  the filter operations
  *
  * @return      the error code
  */
-int mdl_analyze_modeltype(Model *mdl, Fops *fops)
+int mdl_analyze_modeltype(Model *mdl)
 {
    ModelType mdltype;
    S_CHECK(mdl_gettype(mdl, &mdltype));

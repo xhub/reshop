@@ -43,6 +43,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    case OvfType_Ovf:
       ops = &ovfdef_ops;
       break;
+   case OvfType_Ccflib:
    case OvfType_Ccflib_Dual:
       ops = &ccflib_ops;
       break;

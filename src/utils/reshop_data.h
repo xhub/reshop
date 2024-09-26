@@ -91,6 +91,7 @@ void rhp_uint_empty(UIntArray *dat) NONNULL;
 int rhp_uint_reserve(UIntArray *dat, unsigned size) NONNULL;
 int rhp_uint_rm(UIntArray *dat, unsigned v) NONNULL;
 int rhp_uint_rmsorted(UIntArray *dat, unsigned v) NONNULL;
+int rhp_uint_rmnofail(UIntArray *dat, unsigned v) NONNULL;
 int rhp_int_set(IntArray *dat, unsigned idx, int v) NONNULL;
 
 static inline unsigned rhp_uint_at(const UIntArray *dat, unsigned i)
@@ -147,6 +148,7 @@ static inline unsigned rhp_uint_at(const UIntArray *dat, unsigned i)
 #define daguidarray_reserve rhp_uint_reserve
 #define daguidarray_rmsorted rhp_uint_rmsorted
 #define daguidarray_rm rhp_uint_rm
+#define daguidarray_rmnofail rhp_uint_rmnofail
 #define daguidarray_set rhp_uint_set
 
 

@@ -252,7 +252,7 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
       S_CHECK(mdl_setname(mdl_rhp_for_fooc, "RHP mdl for FOOC"));
 
       S_CHECK(rmdl_initfromfullmdl(mdl_rhp_for_fooc, mdl));
-      S_CHECK(mdl_analyze_modeltype(mdl_rhp_for_fooc, NULL));
+      S_CHECK(mdl_analyze_modeltype(mdl_rhp_for_fooc));
 
    } else if (mdl_is_rhp(mdl)) {
       mdl_rhp_for_fooc = mdl;
@@ -363,13 +363,15 @@ int mdl_transform_emp_togamsmdltype(Model *mdl_src, Model **mdl_target)
       case Opt_SolveSingleOptAsOpt:
          if (empdag->features.hasVFpath) {
             S_CHECK(rmdl_contract_along_Vpaths(mdl_src, mdl_target));
+            S_CHECK(mdl_finalize(*mdl_target));
 
          } else {
             /* This is necessary to ensure that we can release mdl_target */
             *mdl_target = mdl_borrow(mdl_src);
-            S_CHECK(mdl_reset_modeltype(mdl_src, NULL));
          }
 
+         Model *mdl_target_ = *mdl_target;
+         S_CHECK(mdl_recompute_modeltype(mdl_target_));
          return OK;
 
       case Opt_SolveSingleOptAsMcp:

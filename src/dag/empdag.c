@@ -129,7 +129,7 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    empdag->features.istree = false;
 
    memset(&empdag->node_stats, 0, sizeof (empdag->node_stats));
-   memset(&empdag->edge_stats, 0, sizeof (empdag->edge_stats));
+   memset(&empdag->arc_stats, 0, sizeof (empdag->arc_stats));
 
    daguidarray_init(&empdag->roots);
    mpidarray_init(&empdag->mps2reformulate);
@@ -193,14 +193,14 @@ static int empdag_infertype(EmpDag *empdag)
    }
 
    if (empdag->features.constraint == EmpDag_SimpleConstraint) {
-      unsigned nb_mps = empdag->mps.len;
+      unsigned num_node_active = empdag->node_stats.num_active;
 
       switch (empdag->features.rootnode) {
       case EmpDag_RootOpt:
-         empdag->type = nb_mps > 1 ? EmpDag_Opt : EmpDag_Single_Opt;
+         empdag->type = num_node_active > 1 ? EmpDag_Opt : EmpDag_Single_Opt;
          break;
       case EmpDag_RootVi:
-         empdag->type = nb_mps > 1 ? EmpDag_Vi : EmpDag_Single_Vi;
+         empdag->type = num_node_active > 1 ? EmpDag_Vi : EmpDag_Single_Vi;
          break;
       case EmpDag_RootEquil:
          empdag->type = EmpDag_Mopec;
@@ -468,8 +468,7 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
    assert(valid_sense(sense));
    MathPrgm *mp;
 
-   char *mp_name;
-   A_CHECK(mp_name, strdup(mdl->commondata.name ? mdl->commondata.name : "user model"));
+   char *mp_name = mdl->commondata.name ? mdl->commondata.name : "user model";
    A_CHECK(mp, empdag_newmpnamed(empdag, sense, mp_name));
 
    S_CHECK(mp_settype(mp, mptype));
@@ -572,7 +571,7 @@ int empdag_dup(EmpDag * restrict empdag, const EmpDag * restrict empdag_up, Mode
    empdag->type = empdag_up->type;
    memcpy(&empdag->features, &empdag_up->features, sizeof(EmpDagFeatures));
    memcpy(&empdag->node_stats, &empdag_up->node_stats, sizeof(EmpDagNodeStats));
-   memcpy(&empdag->edge_stats, &empdag_up->edge_stats, sizeof(EmpDagEdgeStats));
+   memcpy(&empdag->arc_stats, &empdag_up->arc_stats, sizeof(EmpDagEdgeStats));
 
    empdag->finalized = false;
    empdag->uid_root = empdag_up->uid_root;
@@ -630,7 +629,11 @@ int empdag_addmpnamed(EmpDag *empdag, RhpSense sense, const char *name, unsigned
 
    *id = mp->id;
 
-   return dagmp_array_add(&empdag->mps, mp, name);
+   char *name_cpy = name ? strdup(name) : NULL;
+
+   assert((name_cpy && name) || (!name_cpy && !name));
+
+   return dagmp_array_add(&empdag->mps, mp, name_cpy);
 }
 
 MathPrgm *empdag_newmpnamed(EmpDag *empdag, RhpSense sense, const char *name)
@@ -1387,6 +1390,24 @@ bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl)
    assert(chk_ei(mdl, ei, __func__) == OK);
 
    return mdl->ctr.equmeta[ei].role == EquObjective;
+}
+
+int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new)
+{
+   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+
+   if (arc->basic_dat.ei == ei_old) {
+      arc->basic_dat.ei = ei_new;
+   }
+
+   return OK;
+}
+
+bool arcVFb_has_abstract_objfunc(const ArcVFData *arc)
+{
+   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+
+   return arc->basic_dat.ei == IdxObjFunc;
 }
 
 

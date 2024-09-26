@@ -166,7 +166,7 @@ OvfDef* ovfdef_borrow(OvfDef* ovfdef)
 void ovfdef_free(OvfDef* restrict ovfdef)
 {
    ovfdef->refcnt--;
-   printout(PO_TRACE_REFCNT, "[refcnt] ovf %s: %u -> %u\n",
+   printout(PO_TRACE_REFCNT, "[refcnt] OVF %s: %u -> %u\n",
             ovfdef->name, ovfdef->refcnt+1, ovfdef->refcnt);
 
    if (ovfdef->refcnt > 0) { return; }

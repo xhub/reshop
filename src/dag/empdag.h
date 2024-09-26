@@ -114,7 +114,8 @@ typedef struct {
    unsigned num_max;
    unsigned num_feas;
    unsigned num_vi;
-   unsigned num_equil;
+   unsigned num_nash;
+   unsigned num_active;
 } EmpDagNodeStats;
 
 typedef struct {
@@ -138,7 +139,7 @@ typedef struct empdag {
    EmpDagType type;
    EmpDagFeatures features;
    EmpDagNodeStats node_stats;
-   EmpDagEdgeStats edge_stats;
+   EmpDagEdgeStats arc_stats;
    bool finalized;
    bool has_resolved_arcs;
 

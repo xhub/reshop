@@ -232,6 +232,9 @@ static int imm_mp_new(Interpreter *interp, RhpSense sense, MathPrgm **mp)
                    sense2str(sense));
 
    S_CHECK(imm_common_nodeinit(interp, mpid2uid((*mp)->id), regentry));
+
+   free(labelname);
+
    return OK;
 }
 
@@ -480,6 +483,8 @@ static int imm_mp_ccflib_new(Interpreter* restrict interp, unsigned ccflib_idx,
 
    S_CHECK(imm_common_nodeinit(interp, mpid2uid(mp_->id), regentry));
    *mp = mp_;
+
+   free(label);
 
    return OK;
 }

@@ -1503,7 +1503,7 @@ int empdag_analysis(EmpDag * restrict empdag)
 
    /* For now we assume that there is only 1 root, could be multiple ones.
     * Lots has to be changed to extend this. This includes LCA */
-   if (empdag->roots.len > 1) {
+   if (empdag->roots.len > 1 && !valid_uid(empdag->uid_root)) {
       error("[empdag] ERROR: EMPDAG of %s model '%.*s' #%u has %u roots. This "
             "is not yet supported\n", mdl_fmtargs(empdag->mdl), empdag->roots.len);
       return Error_EMPIncorrectInput;
@@ -1515,7 +1515,12 @@ int empdag_analysis(EmpDag * restrict empdag)
       return Error_EMPIncorrectInput;
    }
 
-   daguid_t root_uid =  empdag->roots.arr[0];
+   if (!valid_uid(empdag->uid_root)) {
+      empdag->uid_root = empdag->roots.arr[0];
+   }
+
+   daguid_t root_uid = empdag->uid_root;
+
    if (uidisMP(root_uid)) {
       mpid_t mpid = uid2id(root_uid);
       assert(mpid < empdag->mps.len);
@@ -1678,6 +1683,7 @@ int empdag_analysis(EmpDag * restrict empdag)
 
    empdag->features.istree = dfsdata.isTree;
    empdag->features.hasVFpath = dfsdata.hasVFPath;
+   empdag->node_stats.num_active = dfsdata.num_visited;
 
 _exit_analysis_loop:
    analysis_data_free(&analysis_data);

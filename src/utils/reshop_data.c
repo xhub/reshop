@@ -109,15 +109,17 @@ int rhp_int_copy(IntArray * restrict dat,
 
    unsigned len = dat_src->len;
 
+   dat->len = len;
+
    if (len == 0) {
-      dat->len = dat->max = 0;
-      dat->arr = NULL;
       return OK;
    }
 
-   dat->len = len;
-   dat->max = len;
-   MALLOC_(dat->arr, int, len);
+   if (dat->max < len) {
+      dat->max = len;
+      REALLOC_(dat->arr, int, len);
+   }
+
    memcpy(dat->arr, dat_src->arr, len*sizeof(int));
 
    return OK;
@@ -158,6 +160,10 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
    }
 
    unsigned dlen = dat->len;
+   if (dlen == 0) {
+      return rhp_int_copy(dat, dat_src);
+   }
+
    dat->len += slen;
    unsigned len_new = dat->len;
 
@@ -639,6 +645,26 @@ int rhp_uint_rm(UIntArray *dat, unsigned v)
          break;
       }
    }
+
+   dat->len--;
+   memmove(&dat->arr[pos], &dat->arr[pos+1], (dat->len-pos) * sizeof(unsigned));
+
+   return OK;
+}
+
+int rhp_uint_rmnofail(UIntArray *dat, unsigned v)
+{
+   unsigned len = dat->len;
+   unsigned pos = UINT_MAX;
+
+   for (unsigned i = 0; i < len-1; ++i) {
+      if (dat->arr[i] == v) {
+         pos = i;
+         break;
+      }
+   }
+
+   if (pos == UINT_MAX) { return OK; }
 
    dat->len--;
    memmove(&dat->arr[pos], &dat->arr[pos+1], (dat->len-pos) * sizeof(unsigned));

@@ -100,8 +100,8 @@ int mdl_getobjjacval(const Model *mdl, double *objjacval);
 int mdl_getoption(const Model *mdl, const char *option, void *val);
 const char *mdl_getprobtypetxt(ModelType probtype);
 
-int mdl_analyze_modeltype(Model *mdl, Fops *fops) NONNULL_AT(1);
-int mdl_reset_modeltype(Model *mdl, Fops *fops) NONNULL_AT(1);
+int mdl_analyze_modeltype(Model *mdl) NONNULL;
+int mdl_recompute_modeltype(Model *mdl) NONNULL;
 
 int mdl_getmodelstat(const Model *mdl, int *modelstat);
 const char *mdl_getmodelstatastxt(const Model *mdl) NONNULL;
@@ -229,6 +229,11 @@ static inline unsigned mdl_nvars_max(const Model *mdl){
 NONNULL
 static inline bool mdl_valid_vi_(const Model *mdl, rhp_idx vi, const char *fn) {
    return valid_vi_(vi, ctr_nvars_total(&mdl->ctr), fn);
+}
+
+NONNULL static inline void mdl_resettype(Model *mdl)
+{
+   mdl_settype(mdl, MdlType_none);
 }
 
 #endif /* RHP_MDL_H */

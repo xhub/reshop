@@ -1132,11 +1132,21 @@ int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
    Container *ctr = &mp->mdl->ctr;
    S_CHECK(rctr_add_equ_empty(ctr, ei, &eobj, Mapping, CONE_NONE));
 
+   rhp_idx ei_new = eobj->idx;
    S_CHECK(mp_setobjvar(mp, IdxNA));
-   S_CHECK(mp_setobjequ(mp, eobj->idx));
+   S_CHECK(mp_setobjequ(mp, ei_new));
 
    if (valid_vi(objvar)) {
       S_CHECK(rctr_equ_addnewvar(ctr, eobj, objvar, 1.));
+   }
+
+   EmpDag * empdag = &mp->mdl->empinfo.empdag;
+   VarcArray *varcs = empdag->mps.Varcs;
+   Varc * varcs_arr = varcs->arr;
+
+   /* Update the objequ in the EMPDAG arcs */
+   for (unsigned i = 0, len = varcs->len; i < len; ++i) {
+      S_CHECK(arcVF_subei(&varcs_arr[i], ei_, ei_new));
    }
 
    return OK;

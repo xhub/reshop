@@ -551,7 +551,7 @@ int mdl_finalize(Model *mdl)
 
    if (probtype == MdlType_none) {
       if (mdl_is_rhp(mdl)) {
-         S_CHECK(mdl_analyze_modeltype(mdl, NULL));
+         S_CHECK(mdl_analyze_modeltype(mdl));
       } else {
          error("[process] ERROR: %s model '%.*s' #%u has no type set\n",
                mdl_fmtargs(mdl));

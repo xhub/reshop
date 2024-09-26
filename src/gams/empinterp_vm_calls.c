@@ -103,6 +103,8 @@ static void* ccflib_newobj(VmData *data, unsigned argc, const VmValue *values)
 
    SN_CHECK(vm_common_nodeinit(data, mpid2uid(mp->id), regentry));
 
+   free(label);
+
    return mp;
 }
 
@@ -134,6 +136,8 @@ static void* mp_newobj(VmData *data, unsigned argc, const VmValue *values)
    AA_CHECK(mp, empdag_newmpnamed(empdag, sense, label));
 
    SN_CHECK(vm_common_nodeinit(data, mpid2uid(mp->id), regentry));
+
+   free(label);
 
    return mp;
 }

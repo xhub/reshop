@@ -265,7 +265,7 @@ int gmdl_ensuresimpleprob(Model *mdl)
    empdag->simple_data.objequ = objequ;
 
    S_CHECK(mdl_settype(mdl, MdlType_none));
-   S_CHECK(mdl_analyze_modeltype(mdl, NULL));
+   S_CHECK(mdl_analyze_modeltype(mdl));
 
    trace_empdag("[empdag] %s model '%.*s' #%u has now EMPDAG type %s\n", mdl_fmtargs(mdl),
                 empdag_typename(empdag->type));

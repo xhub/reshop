@@ -257,7 +257,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
     * Create the new MP and add it to the equilibrium
     * ---------------------------------------------------------------------- */
 
-   A_CHECK(lmp_ovf, empdag_newmpnamed(empdag, ovf_data->sense, strdup(ovf_data->name)));
+   A_CHECK(lmp_ovf, empdag_newmpnamed(empdag, ovf_data->sense, ovf_data->name));
 
    S_CHECK(mp_settype(lmp_ovf, MpTypeOpt));
    S_CHECK(empdag_nashaddmpbyid(empdag, mpe->id, lmp_ovf->id));

@@ -346,7 +346,7 @@ unsigned arcVF_getnumcons(ArcVFData *arc, const Model *mdl)
 bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl);
 
 NONNULL static inline
-unsigned arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
+bool arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
 {
    assert(valid_arcVF(arc));
 
@@ -359,4 +359,35 @@ unsigned arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
    }
 }
 
+int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new);
+
+NONNULL static inline
+int arcVF_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new)
+{
+   assert(valid_arcVF(arc));
+
+   switch (arc->type) {
+   case ArcVFBasic:
+      return arcVFb_subei(arc, ei_old, ei_new);
+   default:
+      error("%s :: Unsupported arcVF type %u", __func__, arc->type);
+      return Error_NotImplemented;
+   }
+}
+
+bool arcVFb_has_abstract_objfunc(const ArcVFData *arc);
+
+NONNULL static inline
+bool arcVF_has_abstract_objfunc(const ArcVFData *arc)
+{
+   assert(valid_arcVF(arc));
+
+   switch (arc->type) {
+   case ArcVFBasic:
+      return arcVFb_has_abstract_objfunc(arc);
+   default:
+      error("%s :: Unsupported arcVF type %u", __func__, arc->type);
+      return Error_NotImplemented;
+   }
+}
 #endif /* EMPDAG_COMMON_H */

@@ -92,7 +92,8 @@ $offecho
 $onecho > %solver%.opt
 ovf_reformulation=%reformulation%
 subsolveropt=1
-output_subsolver_log=1$offecho
+output_subsolver_log=1
+$offecho
 
 $onecho > path.opt
 convergence_tolerance=1e-11
@@ -149,7 +150,6 @@ solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
 abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
-
 $offText
 
 * This is the EC of Listing 2 

@@ -1089,6 +1089,15 @@ int rmdl_mp_objequ2objfun(Model *mdl, MathPrgm *mp, rhp_idx objvar, rhp_idx obje
                  empdag_getmpname(&mdl->empinfo.empdag, mp->id), mdl_printvarname(mdl, objvar),
                  mdl_printequname(mdl, objequ));
 
+   EmpDag * empdag = &mdl->empinfo.empdag;
+   VarcArray *varcs = empdag->mps.Varcs;
+   Varc * varcs_arr = varcs->arr;
+
+   /* Update the objequ in the EMPDAG arcs */
+   for (unsigned i = 0, len = varcs->len; i < len; ++i) {
+      S_CHECK(arcVF_subei(&varcs_arr[i], objequ_old, objequ));
+   }
+
    return OK;
 }
 

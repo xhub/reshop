@@ -164,7 +164,10 @@ static inline void dagmp_array_free(DagMpArray *dat)
    unsigned len = dat->len;
    if (len > 0) {
       for (unsigned i = 0; i < len; ++i) {
-         mp_free(dat->arr[i]);
+
+         if (dat->arr[i]) {
+            mp_free(dat->arr[i]);
+         }
          FREE(dat->names[i]);
          rhp_uint_empty(&dat->Carcs[i]);
          rhp_uint_empty(&dat->rarcs[i]);

@@ -49,7 +49,7 @@ static int rmdl_empdag_minimax_reformulate(Model *mdl)
 
       unsigned reformulation = O_Ovf_Reformulation;
 
-      CcflibData ccfdat = {.mp = mp, .mpid_dual = IdxNA};
+      CcflibData ccfdat = {.mp = mp, .mpid_dual = MpId_NA};
       OvfOpsData ovfd = {.ccfdat = &ccfdat };
 
       switch (reformulation) {

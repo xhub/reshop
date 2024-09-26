@@ -251,7 +251,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
 
    S_CHECK(empinfo_initfromupstream(mdl));
 
-   S_CHECK(mdl_analyze_modeltype(mdl, NULL));
+   S_CHECK(mdl_analyze_modeltype(mdl));
 
   /* ----------------------------------------------------------------------
    * Final adjustements (after EMPDAG is set):

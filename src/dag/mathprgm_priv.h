@@ -84,13 +84,7 @@ static inline VarPptyType _getvarsubtype(MathPrgm *mp, rhp_idx vi)
 static inline bool mp_isobj(const MathPrgm *mp)
 {
    assert(mp->sense < RhpNoSense);
-   switch (mp->sense) {
-   case RhpMin:
-   case RhpMax:
-      return mp->type != MpTypeCcflib;
-   default:
-      return false;
-   }
+   return mp->type == MpTypeOpt;
 }
 
 static inline void mpopt_init(struct mp_opt *opt)
