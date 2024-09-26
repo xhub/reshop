@@ -7,8 +7,10 @@ build-leg:
   before_script:
     - pip3 install --user -U pip
     - pip3 install --user cmake
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
   script:
+    - !reference [.get-gams]
+    - !reference [.gams-folder-leg]
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
@@ -29,8 +31,10 @@ build-debug-leg:
   before_script:
     - pip3 install --user -U pip
     - pip3 install --user cmake
-    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
   script:
+    - !reference [.get-gams]
+    - !reference [.gams-folder-leg]
+    - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Debug -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
@@ -46,8 +50,10 @@ build-deg:
   stage: build
   tags: [macos]
   before_script:
-    - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
   script:
+    - !reference [.get-gams]
+    - !reference [.gams-folder-deg]
+    - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py gcc build_log.txt warnings.xml
@@ -63,8 +69,10 @@ build-dac:
   stage: build
   tags: [macos-arm64]
   before_script:
-    - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
   script:
+    - !reference [.get-gams]
+    - !reference [.gams-folder-dac]
+    - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - python3 ci/report_for_log.py clang build_log.txt warnings.xml
@@ -82,10 +90,12 @@ build-wei:
   image:
     name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
   before_script:
+  script:
+    - !reference [.get-gams]
+    - !reference [.gams-folder-wei]
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
-  script:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -S .
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - python ci/report_for_log.py icl build_log.txt warnings.xml

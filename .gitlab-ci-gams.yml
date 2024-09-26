@@ -1,6 +1,6 @@
 stages:
   - fetch-scripts
-  - install-gams # from builds.gams.com or web, all platforms
+  - use-gams # from builds.gams.com or web, all platforms
   - build
   - analyze
   - test
@@ -9,12 +9,14 @@ stages:
 
 include:
   - project: 'devel/ciscripts'
-    file: .install-jobs.yml
+    file: .shared-snippets.yml
+  - project: 'devel/ciscripts'
+    file: .fetch-job.yml
   - project: 'devel/ciscripts'
     file: .shared-vars.yml
   - project: 'devel/ciscripts'
     file: .codechecker.yml
-  - '.ci-gams/.gitlab-ci-install-gams.yml'
+    # - '.ci-gams/.gitlab-ci-install-gams.yml'
   - '.ci-gams/.gitlab-ci-build.yml'
   #  - '.ci-gams/.gitlab-ci-analyze.yml'
   - '.ci-gams/.gitlab-ci-test.yml'
