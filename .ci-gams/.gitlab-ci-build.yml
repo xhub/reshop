@@ -82,7 +82,7 @@ build-wei:
   image:
     name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
   script:
-    - !reference [.get-gams]
+    - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"

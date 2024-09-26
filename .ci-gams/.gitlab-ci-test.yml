@@ -2,14 +2,12 @@ test-leg:
   stage: test
   tags: [puma]
   image:
-    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    name: $MACHINES_CONTAINER_REG/leg/builder-devel:latest
     entrypoint: [""]
   needs: [fetch-ci-scripts,build-leg]
-  before_script:
-    - pip3 install --user -U pip
-    - pip3 install --user cmake
-    - export PATH="$HOME/.local/bin:$PATH"
   script:
+    - !reference [ .get-gams ]
+    - !reference [ .gams-folder-leg ]
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
   artifacts:
     name: unittest-results-linux
@@ -21,14 +19,12 @@ test-debug-leg:
   stage: test
   tags: [puma]
   image:
-    name: $MACHINES_CONTAINER_REG/leg/builder-full:latest
+    name: $MACHINES_CONTAINER_REG/leg/builder-devel:latest
     entrypoint: [""]
   needs: [fetch-ci-scripts,build-debug-leg]
-  before_script:
-    - pip3 install --user -U pip
-    - pip3 install --user cmake
-    - export PATH="$HOME/.local/bin:$PATH"
   script:
+    - !reference [ .get-gams ]
+    - !reference [ .gams-folder-leg ]
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
   artifacts:
     name: unittest-results-debug-linux
@@ -67,6 +63,8 @@ test-wei:
     name: $MACHINES_CONTAINER_REG/wei/builder-full:latest
   needs: [fetch-ci-scripts,build-wei]
   script:
+    - !reference [ .get-gams-wei ]
+    - !reference [ .gams-folder-wei ]
     - ctest --test-dir build/test --output-junit doctest_results_windows.xml -E tree
   artifacts:
     name: unittest-results-windows
