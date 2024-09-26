@@ -155,10 +155,10 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
     %append_output(SWIG_NewPointerObj((void*)($1), $1_descriptor, new_flags));
 }
 
-%typemap(in,numinputs=0,noblock=1) struct rhp_ovf_def **ovf_def ($*1_ltype temp) {
+%typemap(in,numinputs=0,noblock=1) struct rhp_ovfdef **ovf_def ($*1_ltype temp) {
   $1 = &temp;
 }
-%typemap(argout,noblock=1) struct rhp_ovf_def **ovf_def {
+%typemap(argout,noblock=1) struct rhp_ovfdef **ovf_def {
 /* This is owned by reshop */
   int new_flags = 0;
   %append_output(SWIG_NewPointerObj((void*)(*$1), $*1_descriptor, new_flags));
