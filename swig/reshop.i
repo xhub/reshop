@@ -86,7 +86,7 @@ const BasisStatus BasisFixedObj      = {.status = RHP_BASIS_FIXED};
 %rename(Avar)              rhp_avar;
 %rename(Aequ)              rhp_aequ;
 %rename(MathPrgm)          rhp_mathprgm;
-%rename(NashEquilibrium)   rhp_equilibrium;
+%rename(NashEquilibrium)   rhp_nash_equilibrium;
 %rename(VariableRef)       rhp_variable_ref;
 %rename(EquationRef)       rhp_equation_ref;
 
@@ -642,11 +642,11 @@ typedef struct rhp_mathprgm {
 
 } MathPrgm;
 
-// Note to self: since struct rhp_equilibrium is opaque, one needs to "declare" the struct there
+// Note to self: since struct rhp_nash_equilibrium is opaque, one needs to "declare" the struct there
 
-%newobject rhp_equilibrium::__str__;
-%ignore rhp_equilibrium::mdl;
-typedef struct rhp_equilibrium {
+%newobject rhp_nash_equilibrium::__str__;
+%ignore rhp_nash_equilibrium::mdl;
+typedef struct rhp_nash_equilibrium {
 %extend  {
 
    const char *__str__() {
