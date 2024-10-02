@@ -90,7 +90,7 @@ static int ovfdef_get_M(union ovf_ops_data ovfd, SpMat *M)
    return ovfgen_get_M(ovf, M);
 }
 
-static int ovfdef_get_mp_and_sense(UNUSED OvfOpsData dat, const Model *mdl,
+static int ovfdef_get_mp_and_sense(UNUSED OvfOpsData dat, Model *mdl,
                                    rhp_idx vi_ovf, MathPrgm **mp_dual,
                                    RhpSense *sense)
 {

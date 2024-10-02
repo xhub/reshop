@@ -435,8 +435,6 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       mpid_root = MpId_NA;
    }
 
-   DagNashArray *nashs_dst = &empdag->nashs;
-
    CopyExprDatArray cpy_expr;
    cpy_expr_resize(&cpy_expr, contractions->max_size_subdag+1);
 
@@ -505,48 +503,8 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
          S_CHECK(rmdl_mp_objequ2objfun(mdl, mp_big, objvar_big, objequ_big));
       }
 
+      S_CHECK(empdag_substitute_mp_parents_arcs(empdag, mpid, mpid_big));
 
-      /* Delete the arcs from the old MP and substitute with the new one */
-      DagUidArray *rarcs = &mps->rarcs[mpid];
-      daguid_t *rarcs_arr = rarcs->arr;
-
-      S_CHECK(daguidarray_copy(&mps->rarcs[mpid_big], rarcs));
-
-      for (unsigned j = 0, lenj = rarcs->len; j < lenj; ++j) {
-
-         daguid_t uid = rarcs_arr[j];
-         if(uidisMP(uid)) {
-
-            mpid_t mpid_p = uid2id(uid);
-
-            if (rarcTypeVF(uid)) {
-               VarcArray *varcs_dst = &mps->Varcs[mpid_p];
-               ArcVFData *varcs_arr = varcs_dst->arr;
-
-               for (unsigned k = 0, lenk = varcs_dst->len; k < lenk; ++k) {
-
-                  if (varcs_arr[k].mpid_child == mpid) {
-                     varcs_arr[k].mpid_child = mpid_big;
-                     break;
-                  }
-               }
-
-            } else {
-
-               DagUidArray *carcs_dst = &mps->Carcs[mpid_p];
-               S_CHECK(daguidarray_rmsorted(carcs_dst, mpid2uid(mpid)));
-               S_CHECK(daguidarray_adduniqsorted(carcs_dst, mpid2uid(mpid_big)));
-
-            }
-         } else { /* Parent is Nash */
-            nashid_t nashid = uid2id(uid);
-
-            DagUidArray *nash_arcs = &nashs_dst->arcs[nashid];
-
-            S_CHECK(daguidarray_rmsorted(nash_arcs, mpid2uid(mpid)));
-            S_CHECK(daguidarray_adduniqsorted(nash_arcs, mpid2uid(mpid_big)));
-         }
-      }
       /* -------------------------------------------------------------------
        * For each subdag, we look at the number of constraints and variables
        * are collects to allocate the size

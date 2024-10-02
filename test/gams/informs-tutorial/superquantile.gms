@@ -133,7 +133,6 @@ endEmbeddedCode
 * defobj is not needed
 model superquantile_EC /superquantile-defobj/;
 
-$onText
 solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
@@ -150,7 +149,6 @@ solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
 abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
-$offText
 
 * This is the EC of Listing 2 
 EmbeddedCode ReSHOP:
@@ -163,8 +161,6 @@ solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
 abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
-
-$exit
 
 EmbeddedCode ReSHOP:
 deffn phi(i) defphi(i)

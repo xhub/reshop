@@ -150,7 +150,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
    EmpDag *empdag = &empinfo->empdag;
 
    MathPrgm *lmp_ovf, *mp = NULL; /* init just to silence compiler */
-   Nash *mpe;
+   Nash *nash;
 
    const DagUidArray *mp_parents = NULL;
 
@@ -203,11 +203,11 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
 
       char *mpe_ovf_name;
       IO_CALL(asprintf(&mpe_ovf_name, "%s", ovf_data->name));
-      A_CHECK(mpe, empdag_newnashnamed(empdag, mpe_ovf_name));
+      A_CHECK(nash, empdag_newnashnamed(empdag, mpe_ovf_name));
 
-      S_CHECK(empdag_nashaddmpbyid(empdag, mpe->id, mp->id));
+      S_CHECK(empdag_nashaddmpbyid(empdag, nash->id, mp->id));
 
-      S_CHECK(empdag_setroot(empdag, nashid2uid(mpe->id)));
+      S_CHECK(empdag_setroot(empdag, nashid2uid(nash->id)));
 
       /* --------------------------------------------------------------------
        * The objective variable of the original problem won't have the correct
@@ -236,9 +236,9 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
          TO_IMPLEMENT("The MP has an MP parent; only Nash parent are currently supported.");
       }
 
-      empdag_getnashbyid(empdag, uid2id(parent_uid), &mpe);
+      empdag_getnashbyid(empdag, uid2id(parent_uid), &nash);
 
-      assert(mp && mpe); /* Just to silence a warning */
+      assert(mp && nash); /* Just to silence a warning */
 
       S_CHECK(rhp_ensure_mp(mdl, empdag_num_mp(empdag) + 1));
 
@@ -260,7 +260,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
    A_CHECK(lmp_ovf, empdag_newmpnamed(empdag, ovf_data->sense, ovf_data->name));
 
    S_CHECK(mp_settype(lmp_ovf, MpTypeOpt));
-   S_CHECK(empdag_nashaddmpbyid(empdag, mpe->id, lmp_ovf->id));
+   S_CHECK(empdag_nashaddmpbyid(empdag, nash->id, lmp_ovf->id));
 
    *mp_ovf = lmp_ovf;
 

@@ -594,8 +594,10 @@ int rhp_uint_copy(UIntArray * restrict dat,
 
 void rhp_uint_empty(UIntArray *dat)
 {
-   if (dat->len > 0) {
+   if (dat->max > 0) {
       FREE(dat->arr);
+      dat->max = 0;
+      dat->len = 0;
    }
 }
 

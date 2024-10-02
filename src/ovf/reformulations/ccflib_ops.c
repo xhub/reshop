@@ -92,20 +92,59 @@ static int ccflib_get_M(OvfOpsData ovfd, SpMat *M)
    return ovfgen_get_M(ovf, M);
 }
 
-static int ccflib_get_mp_and_sense(UNUSED OvfOpsData dat, const Model *mdl,
+static int ccflib_get_mp_and_sense(UNUSED OvfOpsData dat, Model *mdl,
                                    UNUSED rhp_idx vi_ovf, MathPrgm **mp_dual,
                                    RhpSense *sense)
 {
    MathPrgm *mp_;
+   char *name_dual = NULL;
+   int status = OK;
 
    mpid_t mpid_dual = dat.ccfdat->mpid_dual;
 
-   S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid_dual, mp_dual));
+   /* HACK sense is set to just pass a later check */
+   if (mpid_dual == MpId_NA) {
+      MathPrgm *mp_primal = dat.ccfdat->mp;
 
-   mp_ = *mp_dual;
-   *sense = mp_getsense(mp_);
+      if (!mp_primal) {
+         errormsg("[ccflib] ERROR: primal MP is NULL!\n");
+         return Error_NullPointer;
+      }
+
+      if (mp_primal->type != MpTypeCcflib) {
+         TO_IMPLEMENT("Dualization for general MP");
+      }
+
+      const char *name_primal = mp_getname(mp_primal);
+      IO_CALL(asprintf(&name_dual, "%s_dual", name_primal));
+
+      OvfDef * ovfdef = mp_primal->ccflib.ccf;
+      RhpSense sense_ = ovfdef->sense == RhpMax ? RhpMin : RhpMax;
+      *sense = sense_;
+
+      EmpDag *empdag = &mdl->empinfo.empdag;
+      A_CHECK_EXIT(mp_, empdag_newmpnamed(empdag, sense_, name_dual));
+      free(name_dual);
+      *mp_dual = mp_;
+
+      mpid_dual = mp_->id;
+      dat.ccfdat->mpid_dual = mpid_dual;
+      S_CHECK(empdag_subsitute_mp_arcs(empdag, mp_primal->id, mpid_dual));
+      mp_hide(mp_primal);
+
+   } else {
+      S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid_dual, mp_dual));
+      mp_ = *mp_dual;
+
+      *sense = mp_->sense;
+   }
+
 
    return OK;
+
+_exit:
+   free(name_dual);
+   return status;
 }
 
 static int ccflib_get_set(OvfOpsData ovfd, SpMat *A, double** b, bool trans)

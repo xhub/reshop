@@ -95,7 +95,7 @@ int rmdl_empdag_transform(Model *mdl_reform)
 
       S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));
 
-      S_CHECK(mp_dualize_fenchel(mp));
+      S_CHECK(mp_instantiate_fenchel_dual(mp));
    }
 
    if (empdag_has_adversarial_mps(empdag)) {

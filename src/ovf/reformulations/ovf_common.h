@@ -85,7 +85,7 @@ typedef struct ovf_ops {
                   double *ovf_coeff, rhp_idx *ei_new, unsigned n_z);
    int (*get_lin_transformation)(union ovf_ops_data ovfd,  SpMat *B, double **b);
    int (*get_M)(union ovf_ops_data ovfd, SpMat *M);
-   int (*get_mp_and_sense)(OvfOpsData ovfd, const Model *mdl, rhp_idx vi_ovf, MathPrgm **mp, RhpSense *sense);
+   int (*get_mp_and_sense)(OvfOpsData ovfd, Model *mdl, rhp_idx vi_ovf, MathPrgm **mp, RhpSense *sense);
    const char* (*get_name)(union ovf_ops_data ovfd);
    rhp_idx (*get_ovf_vidx)(union ovf_ops_data ovfd);
    int (*get_set)(union ovf_ops_data ovfd, SpMat *At, double** b, bool trans);

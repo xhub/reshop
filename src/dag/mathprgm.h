@@ -149,7 +149,7 @@ int mp_setobjcoef(MathPrgm *mp, double coef) NONNULL;
 int mp_rm_cons(MathPrgm *mp, rhp_idx ei) NONNULL;
 int mp_rm_var(MathPrgm *mp, rhp_idx vi) NONNULL;
 
-int mp_dualize_fenchel(MathPrgm *mp) NONNULL;
+int mp_instantiate_fenchel_dual(MathPrgm *mp) NONNULL;
 
 void mp_err_noobjdata(const MathPrgm *mp) NONNULL;
 

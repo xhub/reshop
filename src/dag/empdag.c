@@ -34,14 +34,14 @@ int empdag_rootsadd(EmpDag *empdag, daguid_t uid) NONNULL;
 
 
 
-static int chk_mpid_(const EmpDag *empdag, unsigned mp_id)
+static int chk_mpid_(const EmpDag *empdag, mpid_t mpid)
 {
-   if (mp_id >= empdag->mps.len) {
-      if (!valid_mpid(mp_id)) {
-         error("%s :: %s\n", __func__, badidx_str(mp_id));
+   if (mpid >= empdag->mps.len) {
+      if (!mpid_regularmp(mpid)) {
+         error("%s :: %s\n", __func__, mpid_specialvalue(mpid));
       } else {
          error("[empdag] ERROR: no MP with index %u, the number of mps is %u in "
-               "%s model '%.*s' #%u\n", mp_id, empdag->mps.len,
+               "%s model '%.*s' #%u\n", mpid, empdag->mps.len,
                mdl_fmtargs(empdag->mdl));
       }
 
@@ -771,23 +771,23 @@ int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
    return OK;
 }
 
-int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const ArcVFData *edgeVF)
+int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const ArcVFData *arcVF)
 {
-   unsigned id_child = edgeVF->mpid_child;
+   mpid_t mpid_child = arcVF->mpid_child;
    S_CHECK(chk_mpid_(empdag, id_parent));
-   S_CHECK(chk_mpid_(empdag, id_child));
-   assert(id_parent != id_child);
-   assert(valid_arcVF(edgeVF));
+   S_CHECK(chk_mpid_(empdag, mpid_child));
+   assert(id_parent != mpid_child);
+   assert(valid_arcVF(arcVF));
 
-   S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[id_child], rarcVFuid(mpid2uid(id_parent))));
+   S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[mpid_child], rarcVFuid(mpid2uid(id_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
-                arcVFType2str(edgeVF->type), empdag_getmpname(empdag, id_parent),
-                empdag_getmpname(empdag, id_child));
+                arcVFType2str(arcVF->type), empdag_getmpname(empdag, id_parent),
+                empdag_getmpname(empdag, mpid_child));
 
 
    /* We store the details of the VF edge on the parent MP */
-   S_CHECK(_edgeVFs_add(&empdag->mps.Varcs[id_parent], *edgeVF));
+   S_CHECK(_edgeVFs_add(&empdag->mps.Varcs[id_parent], *arcVF));
 
    empdag->finalized = false;
 
@@ -1277,7 +1277,7 @@ int empdag_single_MP_to_Nash(EmpDag* empdag)
 static int dfs_mplist(const EmpDag *empdag, daguid_t uid, UIntArray *mplist)
 {
    daguid_t * restrict children;
-   struct VFedges * restrict Varcs;
+   VarcArray * restrict Varcs;
    unsigned num_children;
 
    if (uidisMP(uid)) {
@@ -1410,4 +1410,125 @@ bool arcVFb_has_abstract_objfunc(const ArcVFData *arc)
    return arc->basic_dat.ei == IdxObjFunc;
 }
 
+int empdag_substitute_mp_parents_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
+{
+   DagMpArray *mps = &empdag->mps;
+   DagNashArray *nashs = &empdag->nashs;
+
+   /* Delete the arcs from the old MP and substitute with the new one */
+   mps->rarcs[mpid_new] = mps->rarcs[mpid_old];
+   daguidarray_init(&mps->rarcs[mpid_old]);
+
+   DagUidArray *rarcs = &mps->rarcs[mpid_new];
+   daguid_t *rarcs_arr = rarcs->arr;
+
+   for (unsigned j = 0, lenj = rarcs->len; j < lenj; ++j) {
+
+      daguid_t uid = rarcs_arr[j];
+      if(uidisMP(uid)) {
+
+         mpid_t mpid_parent = uid2id(uid);
+
+         if (rarcTypeVF(uid)) {
+
+            VarcArray *varcs = &mps->Varcs[mpid_parent];
+            ArcVFData *varcs_arr = varcs->arr;
+
+            for (unsigned k = 0, lenk = varcs->len; k < lenk; ++k) {
+
+               if (varcs_arr[k].mpid_child == mpid_old) {
+                  varcs_arr[k].mpid_child = mpid_new;
+                  break;
+               }
+            }
+
+         } else {
+
+            DagUidArray *carcs_dst = &mps->Carcs[mpid_parent];
+            S_CHECK(daguidarray_rmsorted(carcs_dst, mpid2uid(mpid_old)));
+            S_CHECK(daguidarray_adduniqsorted(carcs_dst, mpid2uid(mpid_new)));
+
+         }
+      } else { /* Parent is Nash */
+         nashid_t nashid = uid2id(uid);
+
+         DagUidArray *nash_arcs = &nashs->arcs[nashid];
+
+         S_CHECK(daguidarray_rmsorted(nash_arcs, mpid2uid(mpid_old)));
+         S_CHECK(daguidarray_adduniqsorted(nash_arcs, mpid2uid(mpid_new)));
+      }
+   }
+
+   empdag->finalized = false;
+
+   return OK;
+}
+
+int empdag_subsitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
+{
+   DagMpArray *mps = &empdag->mps;
+   DagNashArray *nashs = &empdag->nashs;
+
+   /* Delete the arcs from the old MP and substitute with the new one */
+   VarcArray *Varcs = &mps->Varcs[mpid_old];
+   ArcVFData *Varcs_arr = Varcs->arr;
+
+   S_CHECK(_edgeVFs_copy(&mps->Varcs[mpid_new], Varcs));
+
+   daguid_t uid_old = mpid2uid(mpid_old);
+   daguid_t VFuid_old = rarcVFuid(uid_old);
+   daguid_t uid_new = mpid2uid(mpid_new);
+   daguid_t VFuid_new = rarcVFuid(uid_new);
+
+
+   for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
+
+      mpid_t mpid_child = Varcs_arr[i].mpid_child;
+      assert(chk_mpid_(empdag, mpid_child));
+
+      DagUidArray *rarcs_child = &mps->rarcs[mpid_child];
+
+      S_CHECK(daguidarray_rmsorted(rarcs_child, VFuid_old));
+      S_CHECK(daguidarray_adduniqsorted(rarcs_child, VFuid_new));
+   }
+
+   DagUidArray * restrict Carcs = &mps->Carcs[mpid_old];
+   daguid_t * restrict Carcs_arr = Carcs->arr;
+   S_CHECK(daguidarray_copy(&mps->Carcs[mpid_new], Carcs));
+
+   daguid_t Cuid_old = rarcCTRLuid(uid_old);
+   daguid_t Cuid_new = rarcCTRLuid(uid_new);
+
+   for (unsigned i = 0, len = Carcs->len; i < len; ++i) {
+
+      daguid_t uid_child = Carcs_arr[i];
+      DagUidArray *rarcs_child;
+
+      if (uidisMP(uid_child)) {
+         mpid_t mpid_child = uid2id(uid_child);
+         assert(chk_mpid_(empdag, mpid_child));
+
+         rarcs_child = &mps->rarcs[mpid_child];
+
+      } else {
+         nashid_t nashid_child = uid2id(uid_child);
+         assert(chk_nashid_(empdag, nashid_child));
+
+         rarcs_child = &nashs->rarcs[nashid_child];
+      }
+
+      S_CHECK(daguidarray_rmsorted(rarcs_child, Cuid_old));
+      S_CHECK(daguidarray_adduniqsorted(rarcs_child, Cuid_new));
+   }
+
+   empdag->finalized = false;
+
+   return OK;
+}
+
+int empdag_subsitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
+{
+   S_CHECK(empdag_substitute_mp_parents_arcs(empdag, mpid_old, mpid_new));
+   return empdag_subsitute_mp_child_arcs(empdag, mpid_old, mpid_new);
+}
 

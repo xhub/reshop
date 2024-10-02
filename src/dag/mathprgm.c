@@ -1067,7 +1067,7 @@ int mp_rm_cons(MathPrgm *mp, rhp_idx ei)
    return OK;
 }
 
-int mp_dualize_fenchel(MathPrgm *mp)
+int mp_instantiate_fenchel_dual(MathPrgm *mp)
 {
    Model *mdl = mp->mdl;
    EmpDag *empdag = &mdl->empinfo.empdag;

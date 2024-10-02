@@ -189,6 +189,7 @@ int empdag_initfrommodel(EmpDag * restrict empdag, const Model *mdl_up) NONNULL;
 int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no) NONNULL;
 
 int empdag_finalize(Model *mdl) NONNULL;
+
 /* --------------------------------------------------------------------------
  * Node (MP, Nash) creation functions
  * -------------------------------------------------------------------------- */
@@ -336,12 +337,23 @@ NONNULL static inline bool empdag_rootisnash(const EmpDag *empdag) {
    return uidisMP(empdag->uid_root);
 }
 
+/* --------------------------------------------------------------------------
+ * EMPDAG Single operations
+ * -------------------------------------------------------------------------- */
+
 int empdag_simple_init(EmpDag *empdag);
 int empdag_simple_setsense(EmpDag *empdag, RhpSense sense);
 int empdag_simple_setobjequ(EmpDag *empdag, rhp_idx objequ);
 int empdag_simple_setobjvar(EmpDag *empdag, rhp_idx objvar);
 
+/* --------------------------------------------------------------------------
+ * EMPDAG Transformation
+ * -------------------------------------------------------------------------- */
+
 int empdag_single_MP_to_Nash(EmpDag* empdag) NONNULL;
+int empdag_substitute_mp_parents_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
+int empdag_subsitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
+int empdag_subsitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
 
 /* --------------------------------------------------------------------------
  * Misc (printing and exporting)
