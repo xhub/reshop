@@ -1,3 +1,5 @@
+#include "asprintf.h"
+
 #include "container.h"
 #include "empdag.h"
 #include "macros.h"
