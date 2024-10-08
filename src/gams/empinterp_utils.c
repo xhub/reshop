@@ -103,15 +103,19 @@ DagRegisterEntry* regentry_dup(DagRegisterEntry *regentry)
    return regentry_;
 }
 
-const char *arctype_str(ArcType type)
+const char *linktype2str(LinkType type)
 {
    switch (type) {
-   case ArcVF:
+   case LinkArcVF:
       return "ArcVF";
-   case ArcCtrl:
+   case LinkArcCtrl:
       return "ArcCtrl";
-   case ArcNash:
+   case LinkArcNash:
       return "ArcNash";
+   case LinkViKkt:
+      return "VI KKT";
+   case LinkVFObjFn:
+      return "ObjFn";
    default:
       return "ERROR: invalid arc type";
    }

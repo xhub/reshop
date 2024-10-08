@@ -7,10 +7,8 @@
 #include "rhp_fwd.h"
 struct ovf_ppty;
 
-int ovfgen_add_k(OvfDef *ovf, Model *mdl, Equ *e,
-                 Avar *y, unsigned n_args) NONNULL;
-int ovfgen_create_uvar(OvfDef *ovf, Container *ctr,
-                       char* name, Avar *uvar) NONNULL;
+int ovfgen_add_k(OvfDef *ovf, Model *mdl, Equ *e, Avar *y) NONNULL;
+int ovfgen_create_uvar(OvfDef *ovf, Container *ctr, char* name, Avar *uvar) NONNULL;
 int ovfgen_get_D(OvfDef *ovf, SpMat *D, SpMat *J) NONNULL;
 int ovfgen_get_lin_transformation(OvfDef *ovf, SpMat *B, double** b) NONNULL;
 int ovfgen_get_M(OvfDef *ovf, SpMat *M) NONNULL;

@@ -65,7 +65,6 @@ EmbeddedCode Python:
 # This code would go into the reshop python module
 def create_mp_opt(m, mp_descr, vv, ee):
     mp = rhp.empdag_newmp(m, mp_descr["sense"])
-    rhp.mp_settype(mp, mp_descr["type"])
     for i, v in enumerate(vv):
         if v.split('(')[0] in mp_descr["var"]:
             rhp.mp_addvar(mp, i)
@@ -85,7 +84,6 @@ def create_mp_opt(m, mp_descr, vv, ee):
 
 def create_mp_vi(m, mp_descr, vv, ee):
     mp = rhp.empdag_newmp(m, mp_descr["sense"])
-    rhp.mp_settype(mp, mp_descr["type"])
     zerovars = mp_descr.get("zerovars", ())
     for zv in zerovars:
        for i in (i for i, v in enumerate(vv) if v.startswith(zv)):

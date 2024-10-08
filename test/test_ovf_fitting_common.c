@@ -304,7 +304,6 @@ static int add_v1(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
   RESHOP_CHECK(rhp_equ_addnewlvar(mdl, objequ, ovfvar, 1.));
 
   if (mp) {
-    RESHOP_CHECK(rhp_mp_settype(mp, RHP_MP_OPT));
     /* Add variant with objvar  */
     RESHOP_CHECK(rhp_mp_setobjequ(mp, objequ));
 
@@ -374,7 +373,6 @@ static int add_v2(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
   RESHOP_CHECK(rhp_equ_addnewlvar(mdl, objequ, ovfvar, 1.));
 
   if (mp) {
-    RESHOP_CHECK(rhp_mp_settype(mp, RHP_MP_OPT));
     /* Add variant with objvar  */
     RESHOP_CHECK(rhp_mp_setobjequ(mp, objequ));
     RESHOP_CHECK(rhp_mp_addvars(mp, v_fit));
@@ -483,7 +481,6 @@ static int add_v3(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
   RESHOP_CHECK(rhp_equ_addnewlvar(mdl, objequ, ovfvar, 1.));
 
   if (mp) {
-    RESHOP_CHECK(rhp_mp_settype(mp, RHP_MP_OPT));
     /* Add variant with objvar  */
     RESHOP_CHECK(rhp_mp_setobjequ(mp, objequ));
     RESHOP_CHECK(rhp_mp_addvars(mp, v_fit));
@@ -551,7 +548,6 @@ static int add_v4(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
   RESHOP_CHECK(rhp_equ_addnewlvar(mdl, objequ, ovfvar, 1.));
 
   if (mp) {
-    RESHOP_CHECK(rhp_mp_settype(mp, RHP_MP_OPT));
     /* Add variant with objvar  */
     RESHOP_CHECK(rhp_mp_setobjequ(mp, objequ));
     RESHOP_CHECK(rhp_mp_addvars(mp, v_fit));
@@ -662,7 +658,6 @@ static int add_v5(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
   RESHOP_CHECK(rhp_equ_addnewlvar(mdl, objequ, ovfvar, 1.));
 
   if (mp) {
-    RESHOP_CHECK(rhp_mp_settype(mp, RHP_MP_OPT));
     /* Add variant with objvar  */
     RESHOP_CHECK(rhp_mp_setobjequ(mp, objequ));
     RESHOP_CHECK(rhp_mp_addvars(mp, v_fit));

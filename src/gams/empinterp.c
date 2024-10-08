@@ -4,8 +4,8 @@
 #include "ctrdat_gams.h"
 #include "empinfo.h"
 #include "empinterp.h"
-#include "empinterp_edgebuilder.h"
-#include "empinterp_edgeresolver.h"
+#include "empinterp_linkbuilder.h"
+#include "empinterp_linkresolver.h"
 #include "empinterp_priv.h"
 #include "empinterp_vm_compiler.h"
 #include "empparser_priv.h"
@@ -86,7 +86,6 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    daglabels2arcs_init(&interp->labels2arcs);
    daglabel2arc_init(&interp->label2arc);
    dual_labels_init(&interp->dual_label);
-   fooc_labels_init(&interp->fooc_label);
 
    gdxreaders_init(&interp->gdx_readers);
    namedints_init(&interp->globals.sets);

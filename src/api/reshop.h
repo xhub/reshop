@@ -403,8 +403,6 @@ RHP_PUBLIB
 int rhp_mp_setobjequ(struct rhp_mathprgm *mp, rhp_idx ei);
 RHP_PUBLIB
 int rhp_mp_setobjvar(struct rhp_mathprgm *mp, rhp_idx vi);
-RHP_PUBLIB
-int rhp_mp_settype(struct rhp_mathprgm *mp, unsigned type);
 
 /* -------------------------------------------------------------------------
  * EMPDAG MPE (MP Equilibrium) API

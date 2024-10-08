@@ -419,7 +419,7 @@ _end:
  *  knowing if it is already present in it and in which form.
  *
  *  The main point of this function is to return the type of variable, if it
- *  was already in that equation. Then the parent function can add this to the
+ *  was already in that equation. Then, the parent function can add this to the
  *  linear or expression tree.
  *
  *  @param         ctr    the container

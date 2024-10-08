@@ -55,12 +55,11 @@ static int ccflib_getcoeffs(OvfOpsData ovfd, double **coeffs)
    return OK;
 }
 
-static int ccflib_add_k(OvfOpsData ovfd, Model *mdl,
-                     Equ *e, Avar *y, unsigned n_args)
+static int ccflib_add_k(OvfOpsData ovfd, Model *mdl, Equ *e, Avar *y)
 {
    OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
 
-   return ovfgen_add_k(ovf, mdl, e, y, n_args);
+   return ovfgen_add_k(ovf, mdl, e, y);
 }
 
 static int ccflib_create_uvar(OvfOpsData ovfd, Container *ctr,
@@ -129,7 +128,7 @@ static int ccflib_get_mp_and_sense(UNUSED OvfOpsData dat, Model *mdl,
 
       mpid_dual = mp_->id;
       dat.ccfdat->mpid_dual = mpid_dual;
-      S_CHECK(empdag_subsitute_mp_arcs(empdag, mp_primal->id, mpid_dual));
+      S_CHECK(empdag_substitute_mp_arcs(empdag, mp_primal->id, mpid_dual));
       mp_hide(mp_primal);
 
    } else {

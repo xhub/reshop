@@ -2,6 +2,8 @@
 #ifndef RESHOP_CONFIG_H
 #define RESHOP_CONFIG_H
 
+// IWYU pragma: always_keep
+
 /* we want this for SNAN */
 #define __STDC_WANT_IEC_60559_BFP_EXT__
 

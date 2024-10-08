@@ -133,6 +133,7 @@ void empdag_init(EmpDag *empdag, Model *mdl)
 
    daguidarray_init(&empdag->roots);
    mpidarray_init(&empdag->mps2reformulate);
+   mpidarray_init(&empdag->mps2instantiate);
    mpidarray_init(&empdag->saddle_path_starts);
 
    dagmp_array_init(&empdag->mps);
@@ -151,8 +152,10 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    mpidarray_init(&empdag->fenchel_dual_subdag);
    mpidarray_init(&empdag->epi_dual_nodal);
    mpidarray_init(&empdag->epi_dual_subdag);
-   mpidarray_init(&empdag->fooc.orig);
+   mpidarray_init(&empdag->fooc.src);
    mpidarray_init(&empdag->fooc.vi);
+   mpidarray_init(&empdag->objfn.src);
+   mpidarray_init(&empdag->objfn.dst);
 
    empdag->mdl = mdl;
 }
@@ -292,17 +295,8 @@ int empdag_fini(EmpDag *empdag)
    }
 
    /* Outside of the empinfo file, need to do this*/
-   if (mp_len > 0 && empdag->roots.len == 0) {
-      UIntArray roots;
-      S_CHECK(empdag_collectroots(empdag, &roots));
-
-      if (roots.len == 1) {
-         daguid_t rootuid = roots.arr[0];
-         S_CHECK(empdag_setroot(empdag, rootuid));
-      } else if (roots.len == 0) {
-         errormsg("[empdag] ERROR: EMPDAG has no root. The EMPDAG must have one root\n");
-         return Error_EMPIncorrectInput;
-      } 
+   if (mp_len) {
+      S_CHECK(empdag_infer_roots(empdag));
    } else {
       //S_CHECK(empdag_checkroot());
    }
@@ -375,8 +369,6 @@ int empdag_fini(EmpDag *empdag)
       l.ident -= 2;
    }
 
-
-
    printstr(PO_INFO, "\n");
 
    return empdag_export(empdag->mdl);
@@ -387,14 +379,17 @@ void empdag_rel(EmpDag *empdag)
 
    daguidarray_empty(&empdag->roots);
    mpidarray_empty(&empdag->mps2reformulate);
+   mpidarray_empty(&empdag->mps2instantiate);
    mpidarray_empty(&empdag->saddle_path_starts);
 
    mpidarray_empty(&empdag->fenchel_dual_nodal);
    mpidarray_empty(&empdag->fenchel_dual_subdag);
    mpidarray_empty(&empdag->epi_dual_nodal);
    mpidarray_empty(&empdag->epi_dual_subdag);
-   mpidarray_empty(&empdag->fooc.orig);
+   mpidarray_empty(&empdag->fooc.src);
    mpidarray_empty(&empdag->fooc.vi);
+   mpidarray_empty(&empdag->objfn.src);
+   mpidarray_empty(&empdag->objfn.dst);
 
    /****************************************************************************
    * Free MP and Nash data structures
@@ -433,22 +428,13 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
       return Error_EMPRuntimeError;
    }
 
-   MpType mptype;
-
    ModelType mdltype;
    S_CHECK(mdl_gettype(mdl, &mdltype));
 
-   if (mdltype_isvi(mdltype)) {
-      mptype = MpTypeVi;
-   } else if (mdltype == MdlType_cns) {
+   if (mdltype == MdlType_cns) {
       error("%s ::  model \"%s\" (#%u): cannot init an empdag from modeltype %s",
             __func__,  mdl_getname(mdl), mdl->id, mdltype_name(mdltype));
       return Error_NotImplemented;
-   } else {
-      //TODO: if we end up here with mdl_probtype == MdlProbType_emp, it's okay
-      //But investigating when this happens (CCF/OVF comes to mind) and making
-      //sure that we are in one of these cases would be nice
-      mptype = MpTypeOpt;
    }
 
   /* ----------------------------------------------------------------------
@@ -470,8 +456,6 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
 
    char *mp_name = mdl->commondata.name ? mdl->commondata.name : "user model";
    A_CHECK(mp, empdag_newmpnamed(empdag, sense, mp_name));
-
-   S_CHECK(mp_settype(mp, mptype));
 
    if (valid_ei(objequ)) {
       S_CHECK(mp_setobjequ(mp, objequ));
@@ -600,6 +584,10 @@ int empdag_dup(EmpDag * restrict empdag, const EmpDag * restrict empdag_up, Mode
 
    S_CHECK(daguidarray_copy(&empdag->roots, &empdag_up->roots));
 
+   /* HACK: remove this */
+   S_CHECK(mpidarray_copy(&empdag->fooc.vi, &empdag_up->fooc.vi));
+   S_CHECK(mpidarray_copy(&empdag->fooc.src, &empdag_up->fooc.src));
+
    return OK;
 }
 
@@ -722,6 +710,9 @@ int empdag_setroot(EmpDag *empdag, daguid_t uid)
 
    empdag->uid_root = uid;
 
+   trace_empinterp("[empinterp] setting %s(%s) as EMPDAG root\n",
+                   daguid_type2str(uid), empdag_getname(empdag, uid));
+
    return OK;
 }
 
@@ -763,7 +754,7 @@ int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
    S_CHECK(daguidarray_adduniqsorted(&empdag->mps.rarcs[mpid], nashid2uid(nashid)));
 
    trace_empdag("[empdag] adding an edge of type %s from Nash(%s) to MP(%s)\n",
-                arctype_str(ArcNash), empdag_getnashname(empdag, nashid),
+                linktype2str(LinkArcNash), empdag_getnashname(empdag, nashid),
                 empdag_getmpname(empdag, mpid));
 
    empdag->finalized = false;
@@ -804,7 +795,7 @@ int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t id_parent, mpid_t id_child)
    S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.rarcs[id_child], rarcCTRLuid(mpid2uid(id_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
-                arctype_str(ArcCtrl), empdag_getmpname(empdag, id_parent),
+                linktype2str(LinkArcCtrl), empdag_getmpname(empdag, id_parent),
                 empdag_getmpname(empdag, id_child));
 
    empdag->finalized = false;
@@ -821,7 +812,7 @@ int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mp_id, nashid_t nashid)
    S_CHECK(rhp_uint_adduniqsorted(&empdag->nashs.rarcs[nashid], rarcCTRLuid(mpid2uid(mp_id))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to Nash(%s)\n",
-                arctype_str(ArcCtrl), empdag_getmpname(empdag, mp_id),
+                linktype2str(LinkArcCtrl), empdag_getmpname(empdag, mp_id),
                 empdag_getnashname(empdag, nashid));
 
    empdag->finalized = false;
@@ -859,10 +850,10 @@ int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
       if (uidisMP(uid_child)) {
          assert(id_parent != id_child);
 
-         if (arc->type == ArcVF) {
+         if (arc->type == LinkArcVF) {
             return empdag_mpVFmpbyid(empdag, id_parent, &arc->Varc);
          }
-         if (arc->type == ArcCtrl) {
+         if (arc->type == LinkArcCtrl) {
             return empdag_mpCTRLmpbyid(empdag, id_parent, id_child);
          }
 
@@ -871,7 +862,7 @@ int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
          return Error_RuntimeError;
       }
 
-      assert(arc->type == ArcCtrl);
+      assert(arc->type == LinkArcCtrl);
       return empdag_mpCTRLnashbyid(empdag, id_parent, id_child);
    }
 
@@ -1340,17 +1331,45 @@ int empdag_finalize(Model *mdl)
    return OK;
 }
 
-int empdag_collectroots(EmpDag *empdag, DagUidArray *roots)
+int empdag_check_hidable_roots(EmpDag *empdag)
 {
-   daguidarray_init(roots);
+   MathPrgm * restrict * mps = empdag->mps.arr;
+   UIntArray * restrict rarcs = empdag->mps.rarcs;
+
+   for (unsigned i = 0, n_mps = empdag->mps.len; i < n_mps; ++i) {
+      MathPrgm *mp = mps[i];
+
+      if (!mp || mp_ishidden(mp)) { continue; }
+
+      if (rarcs[i].len == 0) {
+         if (mp_ishidable(mp)) {
+            mp_hide(mp);
+         } 
+      }
+   }
+
+   return OK;
+}
+
+int empdag_infer_roots(EmpDag *empdag)
+{
+   DagUidArray *roots = &empdag->roots;
+   daguidarray_empty(roots);
    MathPrgm * restrict * mps =  empdag->mps.arr;
    UIntArray * restrict rarcs = empdag->mps.rarcs;
 
    for (unsigned i = 0, n_mps = empdag->mps.len; i < n_mps; ++i) {
-      const MathPrgm *mp = mps[i]; assert(mp);
+      MathPrgm *mp = mps[i];
 
-      if (rarcs[i].len == 0 && !mp_ishidden(mp)) {
-         S_CHECK(daguidarray_add(roots, mpid2uid(mp->id)));
+      if (!mp || mp_ishidden(mp)) { continue; }
+
+      if (rarcs[i].len == 0) {
+         if (mp_ishidable(mp)) {
+            mp_hide(mp);
+         } else {
+            assert(mp->id == i);
+            S_CHECK(daguidarray_add(roots, mpid2uid(mp->id)));
+         }
       }
    }
 
@@ -1361,6 +1380,14 @@ int empdag_collectroots(EmpDag *empdag, DagUidArray *roots)
       if (rarcs[i].len == 0) {
          S_CHECK(daguidarray_add(roots, nashid2uid(nashs[i]->id)));
       }
+   }
+
+   unsigned n_roots = roots->len;
+   if (n_roots == 1) {
+      empdag->uid_root = roots->arr[0];
+   } else if (n_roots == 0) {
+      errormsg("[empdag] ERROR: EMPDAG has no root. The EMPDAG must have one root\n");
+      return Error_EMPIncorrectInput;
    }
 
    return OK;
@@ -1464,7 +1491,7 @@ int empdag_substitute_mp_parents_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mp
    return OK;
 }
 
-int empdag_subsitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
+int empdag_substitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
 {
    DagMpArray *mps = &empdag->mps;
    DagNashArray *nashs = &empdag->nashs;
@@ -1526,9 +1553,9 @@ int empdag_subsitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_
    return OK;
 }
 
-int empdag_subsitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
+int empdag_substitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
 {
    S_CHECK(empdag_substitute_mp_parents_arcs(empdag, mpid_old, mpid_new));
-   return empdag_subsitute_mp_child_arcs(empdag, mpid_old, mpid_new);
+   return empdag_substitute_mp_child_arcs(empdag, mpid_old, mpid_new);
 }
 

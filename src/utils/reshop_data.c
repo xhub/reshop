@@ -525,7 +525,7 @@ int rhp_uint_addset(UIntArray *dat, const UIntArray *src)
    return OK;
 }
 
-unsigned rhp_uint_find(UIntArray *dat, unsigned v)
+unsigned rhp_uint_find(const UIntArray *dat, unsigned v)
 {
    for (unsigned i = 0, len = dat->len; i < len; ++i) {
       if (dat->arr[i] == v) return i;
@@ -568,8 +568,7 @@ int rhp_uint_adduniqnofail(UIntArray *dat, unsigned v)
 
    return rhp_uint_addsorted(dat, v);
 }
-int rhp_uint_copy(UIntArray * restrict dat,
-                 const UIntArray * restrict dat_src)
+int rhp_uint_copy(UIntArray * restrict dat, const UIntArray * restrict dat_src)
 {
    /* ---------------------------------------------------------------------
     * The semantics of this function is to overwrite, without reading,
@@ -594,6 +593,8 @@ int rhp_uint_copy(UIntArray * restrict dat,
 
 void rhp_uint_empty(UIntArray *dat)
 {
+   assert((dat->max == 0 && !dat->arr) || (dat->max > 0 && dat->arr));
+
    if (dat->max > 0) {
       FREE(dat->arr);
       dat->max = 0;

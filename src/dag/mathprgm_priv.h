@@ -100,5 +100,6 @@ static inline void mpvi_init(struct mp_vi *vi)
    vi->num_cons = 0;
    vi->num_zeros = 0;
    vi->num_matches = 0;
+   vi->has_kkt = false;
 }
 #endif

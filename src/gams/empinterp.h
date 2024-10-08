@@ -240,7 +240,7 @@ typedef struct dag_labels_list {
 typedef struct dag_labels {
    uint8_t dim;
    uint8_t num_var;
-   ArcType arc_type;
+   LinkType arc_type;
    uint16_t nodename_len;  /**< node name length */
    unsigned num_children;
    unsigned max_children;  /**< Max number of children  */
@@ -250,14 +250,14 @@ typedef struct dag_labels {
    int data[]; /* Layout: uels[dim] + pos[num_vars]*/
 } DagLabels;
 
-typedef struct dag_label {
+typedef struct linklabel {
    uint8_t dim;
-   ArcType arc_type;
+   LinkType linktype;
    uint16_t nodename_len;
    daguid_t daguid_parent;
    const char *nodename;
    int uels[] __counted_by(dim);
-} DagLabel;
+} LinkLabel;
 
 typedef struct dual_label {
    uint8_t dim;
@@ -266,14 +266,6 @@ typedef struct dual_label {
    const char *label;
    int uels[] __counted_by(dim);
 } DualLabel;
-
-typedef struct fooc_label {
-   uint8_t dim;
-   uint16_t label_len;
-   daguid_t daguid_fooc;
-   const char *label;
-   int uels[] __counted_by(dim);
-} FoocLabel;
 
 typedef struct DagLabels2Arcs {
    unsigned len;
@@ -284,7 +276,7 @@ typedef struct DagLabels2Arcs {
 typedef struct DagLabel2Arc {
    unsigned len;
    unsigned max;
-   DagLabel **arr;
+   LinkLabel **arr;
 } DagLabel2Arc;
 
 typedef struct DualLabelArray {
@@ -293,13 +285,7 @@ typedef struct DualLabelArray {
    DualLabel **arr;
 } DualLabelArray;
 
-typedef struct FoocLabelArray {
-   unsigned len;
-   unsigned max;
-   FoocLabel **arr;
-} FoocLabelArray;
-
-#include "empinterp_edgebuilder.h" /* For dag_labels_free */
+#include "empinterp_linkbuilder.h" /* For dag_labels_free */
 #define RHP_LOCAL_SCOPE
 #define RHP_ARRAY_PREFIX daglabels2arcs
 #define RHP_ARRAY_TYPE DagLabels2Arcs
@@ -312,7 +298,7 @@ typedef struct FoocLabelArray {
 #define RHP_ARRAY_PREFIX daglabel2arc
 #define RHP_ARRAY_TYPE DagLabel2Arc
 #define RHP_ELT_FREE FREE
-#define RHP_ELT_TYPE DagLabel*
+#define RHP_ELT_TYPE LinkLabel*
 #define RHP_ELT_INVALID NULL
 #include "array_generic.inc"
 
@@ -324,21 +310,13 @@ typedef struct FoocLabelArray {
 #define RHP_ELT_INVALID NULL
 #include "array_generic.inc"
 
-#define RHP_LOCAL_SCOPE
-#define RHP_ARRAY_PREFIX fooc_labels
-#define RHP_ARRAY_TYPE FoocLabelArray
-#define RHP_ELT_FREE FREE
-#define RHP_ELT_TYPE FoocLabel*
-#define RHP_ELT_INVALID NULL
-#include "array_generic.inc"
-
 /* ---------------------------------------------------------------------
  *  This is a registry of all labels that have been defined.
  *  If required, in the 2nd phase, the labels used in the EMP model are
  *  resolved to yield the edges of the DAG.
  * --------------------------------------------------------------------- */
 
-#define DagRegisterEntry DagLabel
+#define DagRegisterEntry LinkLabel
 
 typedef struct DagRegister {
    unsigned len;
@@ -405,13 +383,12 @@ typedef struct interpreter {
 
    /* EMPDAG register */
    DagRegisterEntry *regentry;
-   DagLabel *dag_root_label;
+   LinkLabel *dag_root_label;
    DagRegister dagregister;
 
    DagLabels2Arcs labels2arcs;
    DagLabel2Arc label2arc;
    DualLabelArray dual_label;
-   FoocLabelArray fooc_label;
 
    /* Other dynamic data */
    GdxReaders gdx_readers;
@@ -454,11 +431,10 @@ typedef struct parser_ops {
    int (*mp_setaschild)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_setobjvar)(Interpreter* restrict interp, MathPrgm *mp);
    int (*mp_setprobtype)(Interpreter* restrict interp, MathPrgm *mp, unsigned type);
-   int (*mp_settype)(Interpreter* restrict interp, MathPrgm *mp, unsigned type);
    int (*nash_addmp)(Interpreter* restrict interp, nashid_t nashid, MathPrgm *mp);
    int (*nash_finalize)(Interpreter* restrict interp, Nash *nash);
    int (*nash_new)(Interpreter* restrict interp, Nash **nash);
-   int (*identaslabels)(Interpreter * interp, unsigned * p, ArcType edge_type);
+   int (*identaslabels)(Interpreter * interp, unsigned * p, LinkType edge_type);
    int (*ovf_addbyname)(Interpreter* restrict interp, EmpInfo *empinfo, const char *name, void ** ovfdef_data);
 //   int (*ovf_args_init)(Parser* restrict parser, void *ovfdef_data);
    int (*ovf_addarg)(Interpreter* restrict interp, void *ovfdef_data);

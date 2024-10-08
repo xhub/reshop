@@ -1,12 +1,11 @@
 #include "asprintf.h"
 
 #include "ccflib_reformulations.h"
+#include "ccflib_utils.h"
 #include "cmat.h"
 #include "ctr_rhp.h"
 #include "empdag.h"
 #include "empinfo.h"
-#include "equ_modif.h"
-#include "equil_common.h"
 #include "nltree.h"
 #include "nltree_priv.h"
 #include "macros.h"
@@ -15,7 +14,6 @@
 #include "mdl.h"
 #include "ctrdat_rhp.h"
 #include "ovf_common.h"
-#include "ovf_equil.h"
 #include "printout.h"
 #include "rhp_LA.h"
 #include "rmdl_priv.h"
@@ -44,15 +42,6 @@ typedef struct {
    EmpDag *empdag;
    Model *mdl;
 } DfsData;
-
-typedef struct {
-   Avar y;                     /**< Variable of the active dual MP */
-   union ovf_ops_data ovfd;
-   const struct ovf_ops *ops;
-   Equ *eobj;
-   SpMat B;
-   double *b;
-} DualData;
 
 static int ccflib_equil_dfs_dual(dagid_t mpid, DfsData *dfsdat, DagMpArray *mps,
                                  const DagMpArray *mps_old);
@@ -106,14 +95,12 @@ static void* ws_getmem(DfsWorkspace *ws, size_t size)
  *
  * @return         the error code
  */
-static int mp_ccflib_instantiate(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat, DualData *dualdat)
+static int ccflib_instantiate_mp(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat,
+                                 CcflibInstanceData *dualdat)
 {
   /* ----------------------------------------------------------------------
    * IMPORTANT: we must guarantee that the objequ only has the -k(y) term
    * ---------------------------------------------------------------------- */
-
-   Model *mdl = empdag->mdl;
-   RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
 
    const DagMpArray *mps_old = &empdag->empdag_up->mps;
    MathPrgm *mp_ovf_old = mps_old->arr[mpid];
@@ -122,11 +109,10 @@ static int mp_ccflib_instantiate(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat, D
 
    unsigned n_children = mps_old->Varcs[mpid].len;
    OvfDef *ovf_def = mp_ovf_old->ccflib.ccf;
-   union ovf_ops_data ovfd = {.ovf = ovf_def};
+   OvfOpsData ovfd = {.ovf = ovf_def};
    const OvfOps *ops = &ovfdef_ops;
 
    ovf_def->num_empdag_children = n_children;
-   unsigned n_args = n_children + ovf_def->args->size;
 
    /* Change the MP to an OPT one */
    MathPrgm *mp_ovf = empdag->mps.arr[mpid];
@@ -146,70 +132,10 @@ static int mp_ccflib_instantiate(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat, D
       S_CHECK(empdag_nashaddmpbyid(empdag, dfsdat->mpeid, mp_ovf->id));
    }
 
-  /* ----------------------------------------------------------------------
-   * Instantiate the MP: var + equations BUT NOT any of the <y, Bu+b> term
-   * ---------------------------------------------------------------------- */
-
-   char *y_name;
-   /* TODO GAMS NAMING: do better and use MP name */
-   IO_CALL(asprintf(&y_name, "ccflib_y_%u", mpid));
-
-   Avar y;
-   S_CHECK(ops->create_uvar(ovfd, &mdl->ctr, y_name, &y));
-
-
-   S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
-
-   rhp_idx objequ = IdxNA;
-   /* TODO(xhub) improve naming */
-   char *ovf_objequ;
-   Equ *eobj;
-   IO_CALL(asprintf(&ovf_objequ, "ccfObj(%u)", mpid));
-   S_CHECK(cdat_equname_start(cdat, ovf_objequ));
-   S_CHECK(rctr_add_equ_empty(&mdl->ctr, &objequ, &eobj, ConeInclusion, CONE_0));
-   S_CHECK(cdat_equname_end(cdat));
-
-   /*  Add -k(y) */
-   ops->add_k(ovfd, mdl, eobj, &y, n_args);
-
-   S_CHECK(mp_settype(mp_ovf, RHP_MP_OPT));
-
-   S_CHECK(mp_setobjequ(mp_ovf, objequ));
-
-   S_CHECK(mp_addvars(mp_ovf, &y));
-
-   SpMat A;
-   rhpmat_null(&A);
-
-   double *s = NULL;
-   S_CHECK(ops->get_set_nonbox(ovfd, &A, &s, false));
-
-   /* Last, add the (non-box) constraints on u */
-   if (A.ppty) {
-      S_CHECK(ovf_add_polycons(mdl, ovfd, &y, ops, &A, s, mp_ovf, "ccflib"));
-   }
-
-   dualdat->y = y;
    dualdat->ops = ops;
    dualdat->ovfd = ovfd;
-   dualdat->eobj = eobj;
 
-   unsigned nargs_maps = ovf_def->args->size;
-
-   rhpmat_null(&dualdat->B);
-   dualdat->b = NULL;
-
-   S_CHECK(ops->get_lin_transformation(ovfd, &dualdat->B, &dualdat->b));
-
-   if (nargs_maps > 0) {
-      CcflibData ccfdat = {.mp = mp_ovf_old, .mpid_dual = MpId_NA};
-      OvfOpsData ovfd_mp = {.ccfdat = &ccfdat};
-      S_CHECK(reformulation_equil_compute_inner_product(OvfType_Ccflib, ovfd_mp, mdl,
-                                                        &dualdat->B, dualdat->b,
-                                                        &eobj, &y, NULL));
-   }
-   return OK;
-
+   return mp_ccflib_instantiate(mp_ovf, mp_ovf_old, dualdat);
 }
 
 NONNULL static inline
@@ -286,7 +212,7 @@ int primal_check_ei_dst(Model *mdl, ArcVFData *edgeVF, mpid_t mpid)
 }
 
 NONNULL static inline
-int primal_add_minus_ky(Model *mdl, ArcVFData *edgeVF, rhp_idx ky_idx)
+int primal_add_minus_ky(Model *mdl, ArcVFData *arcVFdat, rhp_idx ky_idx)
 {
   /* ----------------------------------------------------------------------
    * This copies -k(y), contained in the equation ky_idx, multiplied by the
@@ -298,13 +224,13 @@ int primal_add_minus_ky(Model *mdl, ArcVFData *edgeVF, rhp_idx ky_idx)
    double coeff;
    rhp_idx vi, ei_dst;
 
-   switch (edgeVF->type) {
+   switch (arcVFdat->type) {
    case ArcVFBasic:
-      vi = edgeVF->basic_dat.vi;
-      ei_dst = edgeVF->basic_dat.ei;
-      coeff = edgeVF->basic_dat.cst;
+      vi = arcVFdat->basic_dat.vi;
+      ei_dst = arcVFdat->basic_dat.ei;
+      coeff = arcVFdat->basic_dat.cst;
       break;
-   default: TO_IMPLEMENT("primal_add_minus_ky not implement for given edgeVF");
+   default: TO_IMPLEMENT("primal_add_minus_ky not implement for given arcVF");
    }
 
    Equ *e_dst = rmdl_getequ(mdl, ei_dst);
@@ -631,8 +557,8 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
 
    MathPrgm *mp_dual = mps->arr[mpid_dual];
 
-   DualData dualdat;
-   S_CHECK(mp_ccflib_instantiate(dfsdat->empdag, mpid_dual, dfsdat, &dualdat));
+   CcflibInstanceData dualdat;
+   S_CHECK(ccflib_instantiate_mp(dfsdat->empdag, mpid_dual, dfsdat, &dualdat));
 
    /* Add - w * k(y) to the primal MP equation(s) */
    rhp_idx objequ_dual = mp_getobjequ(mp_dual);
@@ -771,7 +697,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
       * This 
       * ---------------------------------------------------------------------- */
 
-      //union ovf_ops_data ovfd = {.mp = mp_ccflib};
+      //OvfOpsData ovfd = {.mp = mp_ccflib};
 
 
 

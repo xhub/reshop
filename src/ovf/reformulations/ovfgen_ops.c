@@ -8,14 +8,14 @@
 #include "printout.h"
 #include "status.h"
 
-int ovfgen_add_k(OvfDef *ovf, Model *mdl, Equ *e, Avar *y, unsigned n_args)
+int ovfgen_add_k(OvfDef *ovf, Model *mdl, Equ *e, Avar *y)
 {
    int status = OK;
 
    if (ovf->generator->M) {
       SpMat M;
       rhpmat_null(&M);
-      status = ovf->generator->M(n_args, (void*)&ovf->params, &M);
+      status = ovf->generator->M(ovf_argsize(ovf), (void*)&ovf->params, &M);
       if (status == OK) {
          status = rctr_equ_add_quadratic(&mdl->ctr, e, &M, y, -1.0);
       }

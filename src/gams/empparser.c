@@ -13,7 +13,7 @@
 #include "empinfo.h"
 #include "empinterp.h"
 #include "empinterp_checks.h"
-#include "empinterp_edgebuilder.h"
+#include "empinterp_linkbuilder.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
 #include "empinterp_vm_compiler.h"
@@ -1528,6 +1528,11 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
       if (len == 8) _chk_kw("mplicit", &buf[pos_+1], 7, tok, TOK_IMPLICIT);
       break;
 
+   case 'k': /* kkt */
+   case 'K':
+      if (len == 3) _chk_kw("kt", &buf[pos_+1], 2, tok, TOK_KKT);
+      break;
+
    case 'l': /* lp, load, loop */
    case 'L':
       if (len == 2) _chk_kw("p", &buf[pos_+1], 1, tok, TOK_LP);
@@ -1591,8 +1596,9 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
          }
       }
       break;
-   case 'o': /* or, ovf */
+   case 'o': /* objfn, or, ovf */
    case 'O':
+      if (len == 5) _chk_kw("bjfn", &buf[pos_+1], 4, tok, TOK_OBJFN);
       if (len == 2) _chk_kw("r", &buf[pos_+1], 1, tok, TOK_OR);
       if (len == 3) _chk_kw("vf", &buf[pos_+1], 2, tok, TOK_OVF);
       break;
@@ -1610,7 +1616,7 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
          default: ;
          }
       }
-      else if (len == 3) _chk_kw("um", &buf[pos_+1], 2, tok, TOK_SUM);
+      else if (len == 3) { _chk_kw("um", &buf[pos_+1], 2, tok, TOK_SUM); }
       break;
    case 'v': /* valfn, vi, visol */
    case 'V':
@@ -1838,7 +1844,7 @@ int tok_err(const Token *tok, TokenType type_expected, const char *msg)
       error("while parsing '%.*s': expecting %s, got %s.\n",
             tok->len, tok->start, toktype2str(type_expected), toktype2str(type));
    } else {
-      error("got unexpected %s '%.*s'\n", toktype2str(type),
+      error("got unexpected token %s from string '%.*s'\n", toktype2str(type),
             tok->len, tok->start);
    }
 
@@ -2047,13 +2053,13 @@ static int imm_set_dagrootlabel(Interpreter * restrict interp, const char *ident
     * - IdentLoopIterator, but these needs to be queried
     * --------------------------------------------------------------------- */
 
-   A_CHECK(interp->dag_root_label, dag_label_new(identname, identname_len, gmsindices_nargs(indices)));
-   DagLabel *root_label = interp->dag_root_label;
+   A_CHECK(interp->dag_root_label, linklabel_new(identname, identname_len, gmsindices_nargs(indices)));
+   LinkLabel *root_label = interp->dag_root_label;
 
    return assign_uels(root_label->uels, indices, interp->linenr);
 }
 
-static int imm_add_daglabel(Interpreter * restrict interp, ArcType arc_type,
+static int imm_add_linklabel(Interpreter * restrict interp, LinkType linktype,
                             const char *identname, unsigned identname_len,
                             GmsIndicesData *gmsindices)
 {
@@ -2063,9 +2069,9 @@ static int imm_add_daglabel(Interpreter * restrict interp, ArcType arc_type,
     * - IdentLoopIterator, but these needs to be queried
     * --------------------------------------------------------------------- */
 
-   DagLabel *dagl;
-   A_CHECK(dagl, dag_label_new(identname, identname_len, gmsindices_nargs(gmsindices)));
-   dagl->arc_type = arc_type;
+   LinkLabel *dagl;
+   A_CHECK(dagl, linklabel_new(identname, identname_len, gmsindices_nargs(gmsindices)));
+   dagl->linktype = linktype;
 
    DagRegister *dagreg = &interp->dagregister;
    unsigned dagreg_len = dagreg->len;
@@ -2081,7 +2087,7 @@ static int imm_add_daglabel(Interpreter * restrict interp, ArcType arc_type,
 
    S_CHECK(assign_uels(dagl->uels, gmsindices, interp->linenr));
 
-   trace_empinterp("[empinterp] Adding edge between %s and %.*s\n",
+   trace_empinterp("[empinterp] Adding link of type %s between %s and %.*s\n", linktype2str(linktype),
                    empdag_getname(&interp->mdl->empinfo.empdag, interp->daguid_parent),
                    gmsindices_nargs(gmsindices) > 0 ? ((int)(gmsindices->idents[gmsindices->nargs-1].lexeme.start - identname))
                    +  gmsindices->idents[gmsindices->nargs-1].lexeme.len : identname_len, identname);
@@ -2132,43 +2138,6 @@ int imm_add_duallabel(Interpreter * restrict interp, MathPrgm *mp,
    return OK;
 }
 
-UNUSED static int imm_add_fooclabel(Interpreter * restrict interp,
-                             const char *identname, unsigned identname_len,
-                             GmsIndicesData *indices)
-{
-   /* ---------------------------------------------------------------------
-    * This function creates the GMS filter and set the constant values in it:
-    * - IdentUEL and IdentUniversalSet
-    * - IdentLoopIterator, but these needs to be queried
-    * --------------------------------------------------------------------- */
-
-   FoocLabel *fooc;
-   A_CHECK(fooc, fooc_label_new(identname, identname_len, indices->nargs, interp->daguid_child));
-
-   DagRegister *dagreg = &interp->dagregister;
-   unsigned dagreg_len = dagreg->len;
-
-   if (dagreg_len == 0) {
-      error("[empinterp] ERROR line %u: while parsing the label '%.*s', no label"
-            " have been registered in the EMPDAG\n", interp->linenr,
-            identname_len, identname);
-      return Error_EMPRuntimeError;
-   }
-
-   S_CHECK(assign_uels(fooc->uels, indices, interp->linenr));
-
-   trace_empinterp("[empinterp] Marking %s as the first-order optimality conditions of %.*s\n",
-                   empdag_getname(&interp->mdl->empinfo.empdag, interp->daguid_child),
-                   indices->nargs > 0 ? ((int)(indices->idents[indices->nargs-1].lexeme.start - identname))
-                   +  indices->idents[indices->nargs-1].lexeme.len : identname_len, identname);
-
-   S_CHECK(fooc_labels_add(&interp->fooc_label, fooc));
-
-   interp->daguid_child = EMPDAG_UID_NONE;
-
-   return OK;
-}
-
 typedef int (*vm_fn_label2resolve)(Interpreter * interp, unsigned * restrict p,
                                    const char* argname, unsigned argname_len,
                                    GmsIndicesData* gmsindices);
@@ -2177,16 +2146,34 @@ typedef int (*vm_fn_label2resolve)(Interpreter * interp, unsigned * restrict p,
 typedef int (*imm_fn_label2resolve)(Interpreter * interp, const char* argname,
                                     unsigned argname_len, GmsIndicesData* gmsindices);
 
-static int imm_add_Nash_edge(Interpreter * interp, const char* identname,
+static int imm_add_Nash_arc(Interpreter * interp, const char* identname,
                              unsigned identname_len, GmsIndicesData* gmsindices)
 {
-   return imm_add_daglabel(interp, ArcNash, identname, identname_len, gmsindices);
+   return imm_add_linklabel(interp, LinkArcNash, identname, identname_len, gmsindices);
 }
 
 static int imm_add_VFobjSimple_arc(Interpreter * interp, const char* identname,
                                    unsigned identname_len, GmsIndicesData* gmsindices)
 {
-   return imm_add_daglabel(interp, ArcVF, identname, identname_len, gmsindices);
+   return imm_add_linklabel(interp, LinkArcVF, identname, identname_len, gmsindices);
+}
+
+static int imm_add_ObjFn_arc(Interpreter * interp, UNUSED unsigned *p)
+{
+   assert(parser_getpretoktype(interp) == TOK_IDENT);
+   const char *identname = emptok_getstrstart(&interp->pre);
+   unsigned identname_len = emptok_getstrlen(&interp->pre);
+
+   return imm_add_linklabel(interp, LinkVFObjFn, identname, identname_len, &interp->gmsindices);
+}
+
+static int imm_add_vi_kkt_link(Interpreter * interp, UNUSED unsigned *p)
+{
+   assert(parser_getpretoktype(interp) == TOK_IDENT);
+   const char *identname = emptok_getstrstart(&interp->pre);
+   unsigned identname_len = emptok_getstrlen(&interp->pre);
+
+   return imm_add_linklabel(interp, LinkViKkt, identname, identname_len, &interp->gmsindices);
 }
 
 static int imm_add_VFobjSimple_arc_dual(Interpreter * interp, UNUSED unsigned *p)
@@ -2218,7 +2205,7 @@ static int imm_add_VFobjSimple_arc_dual(Interpreter * interp, UNUSED unsigned *p
    }
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
-   EmpDagArc arc = { .type = ArcVF };
+   EmpDagArc arc = { .type = LinkArcVF };
 
    mpid_t mpid_child = uid2id(uid_child);
    mpid_t mpid_parent = uid2id(uid_parent);
@@ -2250,7 +2237,7 @@ static int imm_add_VFobjSimple_arc_dual(Interpreter * interp, UNUSED unsigned *p
 static int imm_add_Ctrl_edge(Interpreter * interp, const char* identname,
                              unsigned identname_len, GmsIndicesData* gmsindices)
 {
-   return imm_add_daglabel(interp, ArcCtrl, identname, identname_len, gmsindices);
+   return imm_add_linklabel(interp, LinkArcCtrl, identname, identname_len, gmsindices);
 }
 
 static int imm_set_dagroot(Interpreter * interp, const char* identname,
@@ -2646,7 +2633,7 @@ static int parse_dual_operator(Interpreter *interp, unsigned *p)
  *
  * @return        the error code
  */
-NONNULL static int parse_valfnObj(Interpreter *interp, unsigned *p)
+NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
 {
      /* -------------------------------------------------------------------
       * If we are called, the just parsed a potential node name
@@ -2654,6 +2641,7 @@ NONNULL static int parse_valfnObj(Interpreter *interp, unsigned *p)
       *
       *    v                                   current position
       *
+      *  - n.objfn
       *  - n.valfn
       *  - n.dual(kwargs).valfn
       * ------------------------------------------------------------------- */
@@ -2667,7 +2655,10 @@ NONNULL static int parse_valfnObj(Interpreter *interp, unsigned *p)
    if (toktype == TOK_LPAREN) {
       S_CHECK(parse_gmsindices(interp, p, &interp->gmsindices));
       S_CHECK(advance(interp, p, &toktype));
+   } else {
+      gmsindices_init(&interp->gmsindices);
    }
+
    S_CHECK(parser_expect(interp, "operator or attribute expected after node label", TOK_DOT));
 
    unsigned p2 = *p;
@@ -2682,13 +2673,25 @@ NONNULL static int parse_valfnObj(Interpreter *interp, unsigned *p)
 
    S_CHECK(advance(interp, p, &toktype));
 
-   S_CHECK(parser_expect(interp, "valfn keyword expected after '.'", TOK_VALFN));
+   PARSER_EXPECTS(interp, "valfn keyword expected after '.'", TOK_OBJFN, TOK_VALFN);
 
-   if (has_dual) {
-      S_CHECK(empinterp_ops_dispatch(interp, p, imm_add_VFobjSimple_arc_dual,
-                                  fn_to_implement_noargs, fn_noop_noargs));
-   } else {
-      S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_arc, vm_add_VFobjSimple_arc))
+   if (toktype == TOK_OBJFN) {
+      if (has_dual) {
+         error("[empinterp] ERROR line %u: the dual keyword and objfn cannot be used together\n",
+               interp->linenr);
+         return Error_EMPIncorrectInput;
+      }
+      S_CHECK(empinterp_ops_dispatch(interp, p, imm_add_ObjFn_arc,
+                                     fn_to_implement_noargs, fn_noop_noargs));
+
+   } else { /* TOK_VALFN */
+
+      if (has_dual) {
+         S_CHECK(empinterp_ops_dispatch(interp, p, imm_add_VFobjSimple_arc_dual,
+                                        fn_to_implement_noargs, fn_noop_noargs));
+      } else {
+         S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_arc, vm_add_VFobjSimple_arc))
+      }
    }
 
    p2 = *p;
@@ -2697,6 +2700,43 @@ NONNULL static int parse_valfnObj(Interpreter *interp, unsigned *p)
    if (toktype == TOK_STAR) {
       TO_IMPLEMENT("'node.valFn *' is not yet supported");
    }
+
+   return OK;
+}
+
+/**
+ * @brief Parse ".kkt" after a node name in a VI statement
+ *
+ * @param interp  the Interpreter
+ * @param p       the current position
+ *
+ * @return        the error code
+ */
+NONNULL static int parse_vi_kkt(Interpreter *interp, unsigned *p)
+{
+     /* -------------------------------------------------------------------
+      * If we are called, the just parsed a potential node name
+      * and we should get a value function. We Look for the following
+      *
+      *              v                                   current position
+      *
+      *  -      n.kkt()
+      *  - n(...).kkt()
+      * ------------------------------------------------------------------- */
+
+   assert(interp->pre.type == TOK_IDENT);
+
+   TokenType toktype;
+   S_CHECK(advance(interp, p, &toktype));
+
+   S_CHECK(parser_expect(interp, "kkt is an operator: a '(' is expected", TOK_LPAREN));
+   
+   S_CHECK(advance(interp, p, &toktype));
+   S_CHECK(parser_expect(interp, "the kkt operator has no argument: a ')' is expected", TOK_RPAREN));
+ 
+
+   S_CHECK(empinterp_ops_dispatch(interp, p, imm_add_vi_kkt_link,
+                                  fn_to_implement_noargs, fn_noop_noargs));
 
    return OK;
 }
@@ -3047,7 +3087,7 @@ int parse_Nash(Interpreter *interp, unsigned *p)
       S_CHECK(parser_expect(interp, "Node label for as Nash keyword argument", TOK_IDENT));
 
       interp_save_tok(interp);
-      S_CHECK(add_edge4label(interp, p, imm_add_Nash_edge, vm_nash));
+      S_CHECK(add_edge4label(interp, p, imm_add_Nash_arc, vm_nash));
 
       advance(interp, p, &toktype);
    } while (toktype == TOK_COMMA);
@@ -3106,8 +3146,6 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
    /* Save the keyword info in case we parse another keyword */
    KeywordLexemeInfo opt_kw_info = interp->last_kw_info;
 
-   S_CHECK(interp->ops->mp_settype(interp, mp, MpTypeOpt));
-
    /* TODO(urg) An analysis should yield the problem type */
 //   mp->probtype = MdlProbType_nlp;
 
@@ -3144,11 +3182,12 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
 
      /* -------------------------------------------------------------------
       * This is potentially a node label. We accept:
+      *  - n.objfn
       *  - n.valfn
       *  - n.dual(kwargs).valfn
       * ------------------------------------------------------------------- */
 
-      S_CHECK(parse_valfnObj(interp, p));
+      S_CHECK(parse_VF_attr(interp, p));
       S_CHECK(advance(interp, p, &toktype))
    }
 
@@ -3185,7 +3224,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
          S_CHECK(parse_sum(interp, p));
 
       } else if (toktype == TOK_IDENT) {          // Expecting label.valfn
-         S_CHECK(parse_valfnObj(interp, p));
+         S_CHECK(parse_VF_attr(interp, p));
 
       } else if (toktype == TOK_MP) {             // Expecting MP.valfn('name', ...)
 
@@ -3308,8 +3347,8 @@ _exit:
    return status;
 }
 
-static int parse_vi(MathPrgm * restrict mp, 
-                    Interpreter * restrict interp, unsigned * restrict p)
+static int parse_vi(MathPrgm * restrict mp, Interpreter * restrict interp,
+                    unsigned * restrict p)
 {
    /* ------------------------------------------------------------------
     * A VI statement has the form 
@@ -3327,8 +3366,6 @@ static int parse_vi(MathPrgm * restrict mp,
    /* Save the keyword info in case we parse another keyword */
    KeywordLexemeInfo vi_kw_info = interp->last_kw_info;
 
-   S_CHECK(interp->ops->mp_settype(interp, mp, RHP_MP_VI));
-
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
 
@@ -3343,10 +3380,11 @@ static int parse_vi(MathPrgm * restrict mp,
    }
 
    /* ------------------------------------------------------------------
-    * Read equations/label belonging to this mp
+    * Read equations/label belonging to this VI mp
     * ------------------------------------------------------------------ */
 
-   while (toktype == TOK_GMS_EQU || toktype == TOK_REAL || toktype == TOK_MINUS) {
+   while (toktype == TOK_GMS_EQU || toktype == TOK_REAL || toktype == TOK_MINUS ||
+          toktype == TOK_IDENT) {
       is_empty = false;
 
       bool zerofunc = false, is_flipped = false;
@@ -3366,6 +3404,44 @@ static int parse_vi(MathPrgm * restrict mp,
          S_CHECK(advance(interp, p, &toktype));
          S_CHECK_EXIT(parser_expect(interp, "In the mapping part of a VI, "
                                "an equation is expected after '-'", TOK_GMS_EQU));
+      } else if (toktype == TOK_IDENT) {
+         /* ----------------------------------------------------------------
+          * We have a node label 'n'. TWo possibilities
+          *
+          *  - MP or Nash in the constraints
+          *  - n.kkt() or n(...).kkt()
+          * ---------------------------------------------------------------- */
+         interp_save_tok(interp);
+
+         unsigned p2 = *p;
+         S_CHECK(peek(interp, &p2, &toktype));
+
+         if (toktype == TOK_LPAREN) {
+            S_CHECK(parse_gmsindices(interp, &p2, &interp->gmsindices));
+            S_CHECK(peek(interp, &p2, &toktype));
+         } else {
+            gmsindices_init(&interp->gmsindices);
+         }
+
+         if (toktype == TOK_DOT) {
+            *p = p2;
+            S_CHECK(advance(interp, p, &toktype));
+            S_CHECK(parser_expect(interp, "kkt operator after node label", TOK_KKT));
+
+            S_CHECK(parse_vi_kkt(interp, p));
+
+            if (mp) {
+               mp->vi.has_kkt = true;
+            }
+
+         } else if (toktype == TOK_COLON) {
+            /* The next token is a label definition */
+            return OK;
+         } else {
+
+            TO_IMPLEMENT("VI with labels");
+         }
+         goto _advance;
       }
 
       interp_save_tok(interp);
@@ -3388,13 +3464,6 @@ static int parse_vi(MathPrgm * restrict mp,
          }
          break;
       }
-      case TOK_IDENT:
-         /* ----------------------------------------------------------------
-          * We have a MP or Nash in the constraints
-          * TODO: TOK_REAL case
-          * ---------------------------------------------------------------- */
-         TO_IMPLEMENT("VI with labels");
-         break;
       default: {
          /* ----------------------------------------------------------------
           * We are done parsing the equ.var part, we add a constraint
@@ -3411,6 +3480,7 @@ static int parse_vi(MathPrgm * restrict mp,
       }
       }
 
+_advance:
       S_CHECK(advance(interp, p, &toktype));
    }
 
@@ -3440,7 +3510,6 @@ _constraints:
       if (is_flipped) {
          S_CHECK(interp->ops->ctr_markequasflipped(interp));
       }
-
       S_CHECK(advance(interp, p, &toktype));
    }
 
@@ -3508,7 +3577,7 @@ int parse_mp(Interpreter *interp, unsigned *p)
     * --------------------------------------------------------------------- */
 
 
-   MathPrgm *mp;
+   MathPrgm *mp = NULL;
    TokenType toktype = interp->cur.type;
    switch (toktype) {
    case TOK_MIN:
@@ -4374,7 +4443,8 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
 
-   GmsIndicesData gmsindices = {.nargs = 0};
+   GmsIndicesData gmsindices;
+   gmsindices_init(&gmsindices);
 
    if (toktype == TOK_LPAREN) {
       S_CHECK(parse_gmsindices(interp, p, &gmsindices));
@@ -4627,7 +4697,6 @@ static int parse_dualequ_equvar(Interpreter * restrict interp,
 
    MathPrgm *mp;
    S_CHECK(interp->ops->mp_new(interp, RhpFeasibility, &mp));
-   S_CHECK(interp->ops->mp_settype(interp, mp, RHP_MP_VI));
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))

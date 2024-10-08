@@ -188,7 +188,7 @@ int ctr_prepare_export(Container *ctr_src, Container *ctr_dst) NONNULL;
 
 int ctr_markequasflipped(Container *ctr, Aequ *e) NONNULL;
 
-NONNULL static inline bool ctr_needreformulation(Container *ctr) {
+NONNULL static inline bool ctr_needtransformations(Container *ctr) {
    return ctr->transformations.flipped_equs.size > 0;
 }
 

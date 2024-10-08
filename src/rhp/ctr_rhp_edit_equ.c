@@ -172,8 +172,7 @@ int rctr_equ_addnewlin_coeff(Container *ctr, Equ *e, Avar *v,
  */
 int rctr_equ_addlinvars(Container *ctr, Equ *e, Avar *v, const double *vals)
 {
-   Lequ *lequ = e->lequ;
-   assert(lequ);
+   Lequ *lequ = e->lequ; assert(lequ);
 
    /*  TODO(Xhub) this sounds super slow for the quadratic case from Julia:
     *  - the quadratic parts of the equation are added first
@@ -184,31 +183,40 @@ int rctr_equ_addlinvars(Container *ctr, Equ *e, Avar *v, const double *vals)
     * Pre-allocate memory to be on the safe side
     * ---------------------------------------------------------------------- */
 
-   S_CHECK(lequ_reserve(lequ, lequ->len + v->size));
+   unsigned len = v->size;
+   NlTree *tree = e->tree;
+   rhp_idx ei = e->idx;
+
+   S_CHECK(lequ_reserve(lequ, len));
 
    switch (v->type) {
    case EquVar_Compact:
-      for (unsigned i = v->start, j = 0; j < v->size; ++i, ++j) {
+      for (unsigned i = v->start, j = 0; j < len; ++i, ++j) {
          bool isNL = false;
          double val = vals[j];
-         S_CHECK(cmat_equ_add_lvar(ctr, e->idx, i, val, &isNL));
+
+         S_CHECK(cmat_equ_add_lvar(ctr, ei, i, val, &isNL));
          if (!isNL) {
             S_CHECK(lequ_add_unique(lequ, i, val));
          } else {
-            S_CHECK(nltree_add_var_tree(ctr, e->tree, i, val));
+            assert(tree);
+            S_CHECK(nltree_add_var_tree(ctr, tree, i, val));
          }
       }
       break;
+
    case EquVar_List:
-      for (size_t i = 0; i < v->size; ++i) {
+      for (unsigned i = 0; i < len; ++i) {
+
          bool isNL = false;
          double val = vals[i];
-         double vidx = v->list[i];
-         S_CHECK(cmat_equ_add_lvar(ctr, e->idx, vidx, val, &isNL));
+         rhp_idx vi = v->list[i];
+
+         S_CHECK(cmat_equ_add_lvar(ctr, ei, vi, val, &isNL));
          if (!isNL) {
-            S_CHECK(lequ_add_unique(lequ, vidx, val));
+            S_CHECK(lequ_add_unique(lequ, vi, val));
          } else {
-            S_CHECK(nltree_add_var_tree(ctr, e->tree, vidx, val));
+            S_CHECK(nltree_add_var_tree(ctr, e->tree, vi, val));
          }
       }
       break;
@@ -251,31 +259,42 @@ int rctr_equ_addlinvars_coeff(Container *ctr, Equ *e, Avar *v, const double *val
     * Pre-allocate memory to be on the safe side
     * ---------------------------------------------------------------------- */
 
-   S_CHECK(lequ_reserve(lequ, lequ->len + v->size));
+   unsigned len = v->size;
+   NlTree *tree = e->tree;
+   rhp_idx ei = e->idx;
+
+   S_CHECK(lequ_reserve(lequ, len));
 
    switch (v->type) {
    case EquVar_Compact:
-      for (unsigned i = v->start, j = 0; j < v->size; ++i, ++j) {
+      for (unsigned vi = v->start, j = 0; j < len; ++vi, ++j) {
          bool isNL = false;
          double val = c*vals[j];
-         S_CHECK(cmat_equ_add_lvar(ctr, e->idx, i, val, &isNL));
+
+         S_CHECK(cmat_equ_add_lvar(ctr, ei, vi, val, &isNL));
+
          if (!isNL) {
-            S_CHECK(lequ_add_unique(lequ, i, val));
+            S_CHECK(lequ_add_unique(lequ, vi, val));
          } else {
-            S_CHECK(nltree_add_var_tree(ctr, e->tree, i, val));
+            assert(tree);
+            S_CHECK(nltree_add_var_tree(ctr, tree, vi, val));
          }
       }
       break;
    case EquVar_List:
-      for (size_t i = 0; i < v->size; ++i) {
+
+      for (unsigned i = 0; i < len; ++i) {
          bool isNL = false;
-         double val = vals[i];
-         double vidx = c*v->list[i];
-         S_CHECK(cmat_equ_add_lvar(ctr, e->idx, vidx, val, &isNL));
+         double val = c*vals[i];
+         rhp_idx vi = v->list[i];
+
+         S_CHECK(cmat_equ_add_lvar(ctr, ei, vi, val, &isNL));
+
          if (!isNL) {
-            S_CHECK(lequ_add_unique(lequ, vidx, val));
+            S_CHECK(lequ_add_unique(lequ, vi, val));
          } else {
-            S_CHECK(nltree_add_var_tree(ctr, e->tree, vidx, val));
+            assert(tree);
+            S_CHECK(nltree_add_var_tree(ctr, tree, vi, val));
          }
       }
       break;
@@ -428,14 +447,15 @@ int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, d
 {
    assert(valid_ei_(edst->idx, rctr_totalm(ctr), __func__));
    assert(rctr_chk_map(ctr, ei, vi_map));
-   Lequ *lequ = ctr->equs[ei].lequ;
+   assert(ei != edst->idx);
+   Lequ *le_src = ctr->equs[ei].lequ;
 
    /* --------------------------------------------------------------------
     * If coeff is not given, it is -coeff(vi_map)
     * -------------------------------------------------------------------- */
    if (!isfinite(coeff)) {
       unsigned pos_dummy;
-      S_CHECK(lequ_find(lequ, vi_map, &coeff, &pos_dummy));
+      S_CHECK(lequ_find(le_src, vi_map, &coeff, &pos_dummy));
 
       if (pos_dummy == UINT_MAX) {
          error("[container] ERROR: could not find variable '%s' in equation '%s'",
@@ -450,7 +470,10 @@ int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, d
     * Deal with the linear part
     * -------------------------------------------------------------------- */
 
-   Lequ *le   = edst->lequ;
+   Lequ *le_dst = edst->lequ;
+
+   unsigned len = le_src->len;
+   S_CHECK(lequ_reserve(le_dst, len));
 
    double cst = equ_get_cst(&ctr->equs[ei]);
    equ_add_cst(edst, cst*coeff);
@@ -461,46 +484,150 @@ int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, d
     * If the coefficient is 1., it is easier
     * ---------------------------------------------------------------- */
 
+   double * restrict coeffs = le_src->coeffs;
+   rhp_idx * restrict vis = le_src->vis;
+   unsigned k = le_dst->len;
+
    if (fabs(coeff - 1.) < DBL_EPSILON) {
       /* Could use memcpy or BLAS if we know where the argument is */
-      for (unsigned l = 0, k = le->len; l < lequ->len; ++l) {
-         if (lequ->vis[l] == vi_map || !isfinite(lequ->coeffs[l])) continue;
-         assert(!lequ_debug_hasvar(le, lequ->vis[l]));
-         le->coeffs[k] = lequ->coeffs[l];
-         le->vis[k] = lequ->vis[l];
+      for (unsigned l = 0; l < len; ++l) {
+         if (vis[l] == vi_map || !isfinite(coeffs[l])) continue;
+
+         assert(!lequ_debug_hasvar(le_dst, le_src->vis[l]));
+
+         le_dst->coeffs[k] = coeffs[l];
+         le_dst->vis[k] = vis[l];
          k++;
       }
    } else {
-      printout(PO_DEBUG, "[PerfWarn] %s :: Suboptimal specification for equation %d\n"
-            , __func__, ei);
       if (fabs(coeff) < DBL_EPSILON) {
          error("%s ERROR: the coefficient of variable '%s' in equation '%s' "
                "is too small : %e\n", __func__, ctr_printvarname(ctr, vi_map),
                ctr_printequname(ctr, ei), coeff);
       }
 
-      if (le->max < lequ->len-1 + le->len) {
-         S_CHECK(lequ_reserve(le, lequ->len - 1 - le->max + le->len));
-      }
-
       /* \TODO(xhub) option to use BLAS */
-      for (unsigned l = 0, k = le->len; l < lequ->len; ++l) {
+      for (unsigned l = 0; l < len; ++l) {
          /*  Do not use the placeholder variable */
-         if (lequ->vis[l] == vi_map || !isfinite(lequ->coeffs[l])) continue;
-         assert(!lequ_debug_hasvar(le, lequ->vis[l]));
-         le->coeffs[k] = coeff*lequ->coeffs[l];
-         le->vis[k] = lequ->vis[l];
+         if (vis[l] == vi_map || !isfinite(coeffs[l])) continue;
+         assert(!lequ_debug_hasvar(le_dst, vis[l]));
+
+         le_dst->coeffs[k] = coeff*coeffs[l];
+         le_dst->vis[k] = vis[l];
 
          k++;
       }
    }
 
-   le->len += lequ->len - 1;
+   le_dst->len = k;
 
    /* -----------------------------------------------------------------
     * Now the nonlinear part of F
     * ----------------------------------------------------------------- */
 
+   /* \TODO(xhub) analyze if we really need to copy the tree */
+   S_CHECK(_equ_add_nl_part(ctr, edst, &ctr->equs[ei], coeff));
+
+   return OK;
+}
+
+/**
+ * @brief Add the map f(x) to an equation
+ *
+ * The source equation either contains f(x) or z =E= f(x), where z is given
+ * by the vi_map argument
+ *
+ * @ingroup EquSafeEditing
+ *
+ * @param ctr     the container
+ * @param edst    the destination equation
+ * @param ei      the source equation/map
+ * @param vi_map  If valid, the variable defining the map in the equation
+ * @param coeff   If finite, the coefficient to apply on the map.
+ *
+ * @return        The error code
+ */
+int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, double coeff)
+{
+   assert(valid_ei_(edst->idx, rctr_totalm(ctr), __func__));
+   assert(rctr_chk_map(ctr, ei, vi_map));
+
+   Lequ *lequ_src = ctr->equs[ei].lequ;
+
+   /* --------------------------------------------------------------------
+    * If coeff is not given, it is -coeff(vi_map)
+    * -------------------------------------------------------------------- */
+   if (!isfinite(coeff)) {
+      unsigned pos_dummy;
+      S_CHECK(lequ_find(lequ_src, vi_map, &coeff, &pos_dummy));
+
+      if (pos_dummy == UINT_MAX) {
+         error("[container] ERROR: could not find variable '%s' in equation '%s'",
+               ctr_printvarname(ctr, vi_map), ctr_printequname(ctr, ei));
+         return Error_RuntimeError;
+      }
+
+      coeff = -1./coeff;
+   }
+
+   /* --------------------------------------------------------------------
+    * Deal with the linear part
+    * -------------------------------------------------------------------- */
+
+   double cst = equ_get_cst(&ctr->equs[ei]);
+   equ_add_cst(edst, cst*coeff);
+
+   /* ----------------------------------------------------------------
+    * Copy the linear part of F(X)
+    *
+    * If the coefficient is 1., it is easier
+    * ---------------------------------------------------------------- */
+
+   unsigned len = lequ_src->len;
+
+   if (len == 0) { goto _NL_copy; }
+
+   Lequ *lequ_dst = edst->lequ;
+   S_CHECK(lequ_reserve(lequ_dst, len-1));
+
+   if (fabs(coeff - 1.) < DBL_EPSILON) {
+      /* Could use memcpy or BLAS if we know where the argument is */
+      double * restrict coeffs = lequ_src->coeffs;
+      rhp_idx * restrict vis = lequ_src->vis;
+
+      for (unsigned i = 0; i < len; ++i) {
+         if (lequ_src->vis[i] == vi_map || !isfinite(coeffs[i])) continue;
+
+         S_CHECK(rctr_equ_addlvar(ctr, edst, vis[i],  coeffs[i]));
+      }
+
+   } else {
+
+      if (fabs(coeff) < DBL_EPSILON) {
+         error("%s ERROR: the coefficient of variable '%s' in equation '%s' "
+               "is too small : %e\n", __func__, ctr_printvarname(ctr, vi_map),
+               ctr_printequname(ctr, ei), coeff);
+         return Error_RuntimeError;
+      }
+
+      double * restrict coeffs = lequ_src->coeffs;
+      rhp_idx * restrict vis = lequ_src->vis;
+
+      /* \TODO(xhub) option to use BLAS */
+      for (unsigned i = 0; i < len; ++i) {
+
+         /*  Do not use the placeholder variable */
+         if (vis[i] == vi_map || !isfinite(coeffs[i])) continue;
+
+         S_CHECK(rctr_equ_addlvar(ctr, edst, vis[i], coeff*coeffs[i]));
+      }
+   }
+
+   /* -----------------------------------------------------------------
+    * Now the nonlinear part of F
+    * ----------------------------------------------------------------- */
+
+_NL_copy:
    /* \TODO(xhub) analyze if we really need to copy the tree */
    S_CHECK(_equ_add_nl_part(ctr, edst, &ctr->equs[ei], coeff));
 

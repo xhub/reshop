@@ -894,7 +894,6 @@ int gnep_tragedy_common(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
     }
 
     struct rhp_mathprgm *mp = rhp_empdag_newmp(mdl, RHP_MAX);
-    RESHOP_CHECK(rhp_mp_settype(mp, RHP_MP_OPT));
     RESHOP_CHECK(rhp_mp_addvar(mp, var));
 
     rhp_idx objequ;
@@ -969,7 +968,6 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
 
   struct rhp_mathprgm *mp_ag = rhp_empdag_newmp(mdl, RHP_MAX);
-  RESHOP_CHECK(rhp_mp_settype(mp_ag, RHP_MP_OPT));
   RESHOP_CHECK(rhp_mp_addvars(mp_ag, x));
 
   /* Constraint is <x, p> - <p, b> <= 0 */
@@ -984,7 +982,6 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_ag));
 
   struct rhp_mathprgm *mp_mkt = rhp_empdag_newmp(mdl, RHP_FEAS);
-  RESHOP_CHECK(rhp_mp_settype(mp_mkt, RHP_MP_VI));
 
   rhp_idx yi;
   rhp_avar_get(y, 0, &yi);

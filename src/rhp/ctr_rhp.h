@@ -115,6 +115,8 @@ int rctr_equ_addnewvar(Container *ctr, Equ *e, rhp_idx vi, double val) NONNULL;
 int rctr_equ_addlvar(Container *ctr, Equ *e, rhp_idx vi, double val) NONNULL;
 
 
+NONNULL int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map,
+                             double coeff);
 int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map,
                         double coeff) NONNULL;
 int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node,
@@ -157,7 +159,7 @@ int rctr_var_in_equ(const Container *ctr, rhp_idx vi, rhp_idx ei, bool *res) NON
  * Reformulation of container data
  * ---------------------------------------------------------------------- */
 
-int rmdl_ctr_reformulate(Model *mdl) NONNULL;
+int rmdl_ctr_transform(Model *mdl) NONNULL;
 
 static inline rhp_idx rctr_maxn(const Container *ctr) {
   assert(ctr_is_rhp(ctr));

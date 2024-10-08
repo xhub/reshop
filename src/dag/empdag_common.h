@@ -24,10 +24,12 @@ typedef enum {
 
 /** Type of arc */
 typedef enum {
-   ArcVF,
-   ArcCtrl,
-   ArcNash,
-} ArcType;
+   LinkArcVF,
+   LinkArcCtrl,
+   LinkArcNash,
+   LinkVFObjFn,
+   LinkViKkt,
+} LinkType;
 
 /** Type of VF arc  */
 typedef enum {
@@ -85,7 +87,7 @@ typedef struct rhp_empdag_arcVF {
 
 /** Generic EMPDAG arc */
 typedef struct empdag_arc {
-   ArcType type;
+   LinkType type;
    union {
       ArcVFData Varc;
    };
@@ -316,7 +318,7 @@ int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double *vals)
    }
 }
 
-const char *arctype_str(ArcType type);
+const char *linktype2str(LinkType type);
 
 unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl);
 

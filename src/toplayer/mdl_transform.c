@@ -3,6 +3,7 @@
 #include <assert.h>
 
 
+#include "empdag.h"
 #include "filter_ops.h"
 #include "fooc.h"
 #include "fooc_priv.h"
@@ -25,15 +26,21 @@
  * @param mdl       the source model
  * @param mdl_fooc  the destination model (first-order)
  *
- * @return         the error code
+ * @return          the error code
  */
 static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc) 
 {
    int status = OK;
 
-   const EmpInfo *empinfo = &mdl->empinfo;
-   assert(empinfo_hasempdag(empinfo));
-   const EmpDag *empdag = &empinfo->empdag;
+   EmpDag *empdag = &mdl->empinfo.empdag;
+   
+   /* TODO: test this code */
+   if (!empinfo_hasempdag(&mdl->empinfo) && !valid_uid(empdag->uid_root)) {
+      mdl_linkmodels(mdl, mdl_fooc);
+
+      return OK;
+   }
+
    Model *mdl4fooc = mdl;
 
    if (empdag->roots.len > 1) {
@@ -50,8 +57,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
       S_CHECK(mdl_check(mdl4fooc));
       S_CHECK(mdl_checkmetadata(mdl));
 
-      empinfo = &mdl4fooc->empinfo;
-      empdag = &empinfo->empdag;
+      empdag = &mdl->empinfo.empdag;
    }
 
    daguid_t root = empdag->uid_root;
@@ -72,7 +78,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
    }
 
    if (nash) {
-      UIntArray mps;
+      MpIdArray mps;
       S_CHECK(empdag_nash_getchildren(empdag, nash->id, &mps));
       unsigned nb_mp = mps.len;
       if (nb_mp == 0) {
@@ -95,6 +101,45 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
       }
 
       if (!childless_mp(empdag, mp->id)) { status = Error_OperationNotAllowed; }
+
+      /* HACK: rework this for the general case */
+
+      if (mp->type == MpTypeVi && mp->vi.has_kkt) {
+         A_CHECK(nash, empdag_newnashnamed(empdag, strdup("nash_vi_kkt")));
+         nashid_t nashid = nash->id;
+
+         mpid_t mpid_vi = mp->id;
+
+         FoocMpInfo *fooc = &empdag->fooc;
+         assert(fooc->vi.len == fooc->src.len);
+
+         for (unsigned  i = 0, len = fooc->src.len; i < len ; ++i) {
+            mpid_t mpid_vi_ = fooc->vi.arr[i];
+
+            if (mpid_vi_ != mpid_vi) {
+               TO_IMPLEMENT("Multiple VI MPs with kkt");
+            }
+
+            mpid_t mpid_child = fooc->src.arr[i];
+            MathPrgm *mp_child;
+            S_CHECK(empdag_getmpbyid(empdag, mpid_child, &mp_child));
+
+            if (mp_child->type == MpTypeCcflib && mp_child->ccflib.mp_instance) {
+               mp_child = mp_child->ccflib.mp_instance;
+               mpid_child = mp_child->id;
+            }
+
+            mp_unhide(mp_child);
+
+            S_CHECK(empdag_nashaddmpbyid(empdag, nashid, mpid_child));
+         }
+
+         mp_hide(mp);
+         S_CHECK(empdag_infer_roots(empdag));
+         empdag->finalized = false;
+         mdl_unsetfinalized(mdl4fooc);
+         S_CHECK(mdl_finalize(mdl4fooc));
+      }
    }
 
    if (status != OK) {
@@ -138,6 +183,7 @@ static int mdl_create_fooc(Model *mdl, Model *mdl_mcp)
   case MdlType_lp:
   case MdlType_qcp:
   case MdlType_nlp:
+  case MdlType_vi:
   case MdlType_emp:
     break;
 
@@ -146,7 +192,7 @@ static int mdl_create_fooc(Model *mdl, Model *mdl_mcp)
     return Error_NotImplemented;
 
   case MdlType_cns:
-    error("%s :: ERROR: constraints systems are not supported\n", __func__);
+    error("%s :: ERROR: constraint systems are not supported\n", __func__);
     return Error_NotImplemented;
 
   case MdlType_mip:

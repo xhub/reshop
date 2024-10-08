@@ -5,7 +5,7 @@
 #include "printout.h"
 #include "status.h"
 
-static rhp_idx ovfdef_varidx(union ovf_ops_data ovfd)
+static rhp_idx ovfdef_varidx(OvfOpsData ovfd)
 {
    OvfDef *ovf = ovfd.ovf;
    rhp_idx vi_ovf = ovf->vi_ovf;
@@ -17,7 +17,7 @@ static rhp_idx ovfdef_varidx(union ovf_ops_data ovfd)
    return vi_ovf;
 }
 
-static int ovfdef_getarg(union ovf_ops_data ovfd, Avar **v)
+static int ovfdef_getarg(OvfOpsData ovfd, Avar **v)
 {
    OvfDef *ovf = ovfd.ovf;
 
@@ -26,7 +26,7 @@ static int ovfdef_getarg(union ovf_ops_data ovfd, Avar **v)
    return OK;
 }
 
-static int ovfdef_getnarg(union ovf_ops_data ovfd, unsigned *nargs)
+static int ovfdef_getnarg(OvfOpsData ovfd, unsigned *nargs)
 {
    OvfDef *ovf = ovfd.ovf;
 
@@ -35,7 +35,7 @@ static int ovfdef_getnarg(union ovf_ops_data ovfd, unsigned *nargs)
    return OK;
 }
 
-static int ovfdef_getmappings(union ovf_ops_data ovfd, rhp_idx **eis)
+static int ovfdef_getmappings(OvfOpsData ovfd, rhp_idx **eis)
 {
    OvfDef *ovf = ovfd.ovf;
 
@@ -44,7 +44,7 @@ static int ovfdef_getmappings(union ovf_ops_data ovfd, rhp_idx **eis)
    return OK;
 }
 
-static int ovfdef_getcoeffs(union ovf_ops_data ovfd, double **coeffs)
+static int ovfdef_getcoeffs(OvfOpsData ovfd, double **coeffs)
 {
    OvfDef *ovf = ovfd.ovf;
 
@@ -53,15 +53,14 @@ static int ovfdef_getcoeffs(union ovf_ops_data ovfd, double **coeffs)
    return OK;
 }
 
-static int ovfdef_add_k(union ovf_ops_data ovfd, Model *mdl,
-                     Equ *e, Avar *y, unsigned n_args)
+static int ovfdef_add_k(OvfOpsData ovfd, Model *mdl, Equ *e, Avar *y)
 {
    OvfDef *ovf = ovfd.ovf;
 
-   return ovfgen_add_k(ovf, mdl, e, y, n_args);
+   return ovfgen_add_k(ovf, mdl, e, y);
 }
 
-static int ovfdef_create_uvar(union ovf_ops_data ovfd, Container *ctr,
+static int ovfdef_create_uvar(OvfOpsData ovfd, Container *ctr,
                            char* name, Avar *uvar)
 {
    OvfDef *ovf = ovfd.ovf;
@@ -69,21 +68,21 @@ static int ovfdef_create_uvar(union ovf_ops_data ovfd, Container *ctr,
    return ovfgen_create_uvar(ovf, ctr, name, uvar);
 }
 
-static int ovfdef_get_D(union ovf_ops_data ovfd, SpMat *D, SpMat *J)
+static int ovfdef_get_D(OvfOpsData ovfd, SpMat *D, SpMat *J)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_D(ovf, D, J);
 }
 
-static int ovfdef_get_lin_transformation(union ovf_ops_data ovfd, SpMat *B, double** b)
+static int ovfdef_get_lin_transformation(OvfOpsData ovfd, SpMat *B, double** b)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_lin_transformation(ovf, B, b);
 }
 
-static int ovfdef_get_M(union ovf_ops_data ovfd, SpMat *M)
+static int ovfdef_get_M(OvfOpsData ovfd, SpMat *M)
 {
    OvfDef *ovf = ovfd.ovf;
 
@@ -97,42 +96,42 @@ static int ovfdef_get_mp_and_sense(UNUSED OvfOpsData dat, Model *mdl,
    return ovf_get_mp_and_sense(mdl, vi_ovf, mp_dual, sense);
 }
 
-static int ovfdef_get_set(union ovf_ops_data ovfd, SpMat *A, double** b, bool trans)
+static int ovfdef_get_set(OvfOpsData ovfd, SpMat *A, double** b, bool trans)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_set(ovf, A, b, trans);
 }
 
-static int ovfdef_get_set_nonbox(union ovf_ops_data ovfd, SpMat *A, double** b, bool trans)
+static int ovfdef_get_set_nonbox(OvfOpsData ovfd, SpMat *A, double** b, bool trans)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_set_nonbox(ovf, A, b, trans);
 }
 
-static int ovfdef_get_set_0(union ovf_ops_data ovfd, SpMat *A_0, double **b_0, double **shift_u)
+static int ovfdef_get_set_0(OvfOpsData ovfd, SpMat *A_0, double **b_0, double **shift_u)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_set_0(ovf, A_0, b_0, shift_u);
 }
 
-static void ovfdef_get_ppty(union ovf_ops_data ovfd, struct ovf_ppty *ovf_ppty)
+static void ovfdef_get_ppty(OvfOpsData ovfd, struct ovf_ppty *ovf_ppty)
 {
    OvfDef *ovf = ovfd.ovf;
 
    ovfgen_get_ppty(ovf, ovf_ppty);
 }
 
-static int ovfdef_get_cone(union ovf_ops_data ovfd, unsigned idx, enum cone *cone, void **cone_data)
+static int ovfdef_get_cone(OvfOpsData ovfd, unsigned idx, enum cone *cone, void **cone_data)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_cone(ovf, idx, cone, cone_data);
 }
 
-static int ovfdef_get_cone_nonbox(union ovf_ops_data ovfd, unsigned idx, enum cone *cone, void **cone_data)
+static int ovfdef_get_cone_nonbox(OvfOpsData ovfd, unsigned idx, enum cone *cone, void **cone_data)
 {
    OvfDef *ovf = ovfd.ovf;
 
@@ -146,35 +145,35 @@ static int ovfdef_get_equ(UNUSED OvfOpsData ovfd, Model *mdl, void **iterator,
    return ovf_replace_var(mdl, vi_ovf, iterator, ovf_coeff, ei_new, n_z);
 }
 
-static size_t ovfdef_size_u(union ovf_ops_data ovfd, size_t n_args)
+static size_t ovfdef_size_u(OvfOpsData ovfd, size_t n_args)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_size_u(ovf, n_args);
 }
 
-static double ovfdef_get_var_lb(union ovf_ops_data ovfd, size_t vidx)
+static double ovfdef_get_var_lb(OvfOpsData ovfd, size_t vidx)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_var_lb(ovf, vidx);
 }
 
-static double ovfdef_get_var_ub(union ovf_ops_data ovfd, size_t vidx)
+static double ovfdef_get_var_ub(OvfOpsData ovfd, size_t vidx)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovfgen_get_var_ub(ovf, vidx);
 }
 
-static const char* ovfdef_get_name(union ovf_ops_data ovfd)
+static const char* ovfdef_get_name(OvfOpsData ovfd)
 {
    OvfDef *ovf = ovfd.ovf;
 
    return ovf_getname(ovf);
 }
 
-static void ovf_trimmem(union ovf_ops_data ovfd)
+static void ovf_trimmem(OvfOpsData ovfd)
 {
    OvfDef *ovf = ovfd.ovf;
 

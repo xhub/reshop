@@ -130,9 +130,14 @@ typedef struct {
 } DualMpInfo;
 
 typedef struct {
-   MpIdArray orig;
+   MpIdArray src;
    MpIdArray vi;
 } FoocMpInfo;
+
+typedef struct {
+   MpIdArray src;
+   MpIdArray dst;
+} MpObjFnInfo;
 
 /** @brief Main EMP DAG structure */
 typedef struct empdag {
@@ -151,12 +156,14 @@ typedef struct empdag {
 
    MpIdArray mps2reformulate;
    MpIdArray saddle_path_starts;
+   MpIdArray mps2instantiate;
 
    MpIdArray fenchel_dual_nodal;
    MpIdArray fenchel_dual_subdag;
    MpIdArray epi_dual_nodal;
    MpIdArray epi_dual_subdag;
    FoocMpInfo fooc;
+   MpObjFnInfo objfn;
 
    struct {
       RhpSense sense;
@@ -278,7 +285,8 @@ int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
  * -------------------------------------------------------------------------- */
 
 int empdag_setroot(EmpDag *empdag, daguid_t uid) NONNULL;
-int empdag_collectroots(EmpDag *empdag, UIntArray *roots) NONNULL;
+int empdag_infer_roots(EmpDag *empdag) NONNULL;
+int empdag_check_hidable_roots(EmpDag *empdag) NONNULL;
 
 int empdag_getmpparents(const EmpDag *empdag, const MathPrgm *mp,
                         const UIntArray **parents_uid) NONNULL;
@@ -318,7 +326,7 @@ const struct rhp_empdag_arcVF* empdag_find_edgeVF(const EmpDag *empdag, mpid_t m
 
 int empdag_check(EmpDag *empdag);
 bool empdag_mp_hasname(const EmpDag *empdag, mpid_t mpid);
-bool empdag_mp_hasobjVFchildren(const EmpDag *empdag, mpid_t mpid);
+bool empdag_mp_hasobjfn_modifiers(const EmpDag *empdag, mpid_t mpid);
 
 
 static inline bool empdag_mphaschild(const EmpDag *empdag, mpid_t mpid) {
@@ -352,8 +360,14 @@ int empdag_simple_setobjvar(EmpDag *empdag, rhp_idx objvar);
 
 int empdag_single_MP_to_Nash(EmpDag* empdag) NONNULL;
 int empdag_substitute_mp_parents_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
-int empdag_subsitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
-int empdag_subsitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
+int empdag_substitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
+int empdag_substitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
+
+NONNULL static inline 
+int empdag_mp_needs_instantiation(EmpDag *empdag, mpid_t mpid)
+{
+   return mpidarray_add(&empdag->mps2instantiate, mpid);
+}
 
 /* --------------------------------------------------------------------------
  * Misc (printing and exporting)
@@ -482,7 +496,8 @@ static inline bool empdag_needs_transformations(const EmpDag *empdag) {
            empdag->epi_dual_nodal.len      > 0 ||
            empdag->epi_dual_subdag.len     > 0)
 
-          || empdag->mps2reformulate.len > 0;
+          || empdag->mps2reformulate.len > 0
+          || empdag->mps2instantiate.len > 0;
 }
 
 

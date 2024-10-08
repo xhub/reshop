@@ -54,10 +54,12 @@ struct mp_vi {
    unsigned num_cons;    /**< number of constraints in the VI             */
    unsigned num_zeros;   /**< number of VI zero func (\f$ F_i(x) \equiv 0 \f$) */
    unsigned num_matches; /**< number of matches*/
+   bool has_kkt;         /**< True of the MP contains the KKT of another MP    */
 };
 
 struct mp_ccflib {
    OvfDef *ccf;
+   MathPrgm *mp_instance;
 };
 
 struct mp_dual {
@@ -66,9 +68,15 @@ struct mp_dual {
 };
 
 typedef enum {
-   MpFinalized = 0x1,  /**< MP has been finalized                            */
-   MpIsHidden  = 0x2,  /**< Hidden MP                                        */
+   MpFinalized                    = 0x1,  /**< MP has been finalized                    */
+   MpIsHidden                     = 0x2,  /**< Hidden MP                                */
+   MpIsHidableAsDual              = 0x4,  /**< Hiddable MP: is used as dual             */
+   MpIsHidableAsKkt               = 0x8,  /**< Hiddable MP: is used as kkt              */
+   MpIsHidableAsInstance          = 0x10,  /**< Hiddable MP: is used as kkt              */
+   MpCcflibNeedsFullInstantiation = 0x20,
 } MpStatus;
+
+#define MpIsHidable  (MpIsHidableAsDual | MpIsHidableAsKkt | MpIsHidableAsInstance)
 
 /** @struct mathprgm
  *
@@ -116,7 +124,6 @@ rhp_idx mp_getobjvar(const MathPrgm *mp);
 ModelType mp_getprobtype(const MathPrgm *mp) NONNULL;
 RhpSense mp_getsense(const MathPrgm *mp) NONNULL;
 void mp_print(MathPrgm *mp, const Model *mdl);
-int mp_settype(MathPrgm *mp, unsigned type);
 int mp_setobjequ(MathPrgm *mp, rhp_idx ei);
 int mp_setobjvar(MathPrgm *mp, rhp_idx vi);
 int mp_setprobtype(MathPrgm *mp, unsigned probtype);
@@ -150,10 +157,15 @@ int mp_rm_cons(MathPrgm *mp, rhp_idx ei) NONNULL;
 int mp_rm_var(MathPrgm *mp, rhp_idx vi) NONNULL;
 
 int mp_instantiate_fenchel_dual(MathPrgm *mp) NONNULL;
+int mp_instantiate(MathPrgm *mp) NONNULL;
+int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src) NONNULL;
+int mp_operator_kkt(MathPrgm *mp) NONNULL;
 
 void mp_err_noobjdata(const MathPrgm *mp) NONNULL;
 
 const char* mp_getname_(const MathPrgm * mp, mpid_t mp_id) NONNULL;
+
+const char* mptype2str(unsigned type);
 
 NONNULL static inline MpType mp_gettype(const MathPrgm *mp)
 {
@@ -210,6 +222,10 @@ NONNULL static inline bool mp_isfooc(const MathPrgm *mp) {
    return type == MpTypeFooc;
 }
 
+NONNULL static inline bool mp_ishidable(const MathPrgm *mp) {
+   return mp->status & MpIsHidable;
+}
+
 NONNULL static inline bool mp_ishidden(const MathPrgm *mp) {
    return mp->status & MpIsHidden;
 }
@@ -220,6 +236,25 @@ NONNULL static inline bool mp_isfinalized(const MathPrgm *mp) {
 
 NONNULL static inline void mp_hide(MathPrgm *mp) {
    mp->status |= MpIsHidden;
+}
+
+NONNULL static inline void mp_hidable_asdual(MathPrgm *mp) {
+
+   mp->status |= MpIsHidableAsDual;
+}
+
+NONNULL static inline void mp_hidable_askkt(MathPrgm *mp) {
+
+   mp->status |= MpIsHidableAsKkt;
+}
+
+
+NONNULL static inline void mp_unfinalized(MathPrgm *mp) {
+   mp->status &= ~MpFinalized;
+}
+
+NONNULL static inline void mp_unhide(MathPrgm *mp) {
+   mp->status &= ~(MpIsHidden | MpIsHidable);
 }
 
 NONNULL static inline int mp_reserve(MathPrgm *mp, unsigned nvars, unsigned nequs)
@@ -235,8 +270,6 @@ NONNULL static inline int mp_reserve(MathPrgm *mp, unsigned nvars, unsigned nequ
 
    return OK;
 }
-
-const char* mptype2str(unsigned type);
 
 NONNULL static inline bool mp_isvalid(const MathPrgm *mp) {
    return (mp->mdl && mpid_regularmp(mp->id));

@@ -1,12 +1,10 @@
-#include "gamsapi_utils.h"
-#include "macros.h"
 #include "reshop_config.h"
 
 #include <stdarg.h>
 
 #include "empinfo.h"
 #include "empinterp.h"
-#include "empinterp_edgebuilder.h"
+#include "empinterp_linkbuilder.h"
 #include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
@@ -15,6 +13,7 @@
 #include "empinterp_vm_utils.h"
 #include "empparser_priv.h"
 #include "empparser_utils.h"
+#include "macros.h"
 #include "mathprgm.h"
 #include "ovf_parameter.h"
 #include "printout.h"
@@ -771,7 +770,7 @@ static int vm_regentry_alloc(Compiler* restrict c, const char *basename,
 static int vm_daglabels_alloc(Compiler* restrict c, DagLabels **dagc,
                               const char* nodename, unsigned nodename_len,
                               uint8_t dim, uint8_t num_vars, unsigned size,
-                              ArcType arc_type, unsigned *gidx)
+                              LinkType arc_type, unsigned *gidx)
 {
    DagLabels *ldagc;
    A_CHECK(ldagc, dag_labels_new(nodename, nodename_len, dim, num_vars, size));
@@ -886,7 +885,7 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
 
 static int arcobj_init(Interpreter * restrict interp, Tape * restrict tape,
                         const char* nodename, unsigned nodename_len,
-                        ArcType arc_type, GmsIndicesData *indices,
+                        LinkType arc_type, GmsIndicesData *indices,
                         LoopIterators *iterators, unsigned *edgeobj_gidx)
 {
    Compiler *c = interp->compiler;
@@ -1377,7 +1376,7 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
  * @return                the error code
  */
 static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *nodename,
-                               unsigned nodename_len, ArcType arc_type,
+                               unsigned nodename_len, LinkType arc_type,
                                GmsIndicesData *gmsindices)
 {
    Compiler *c = interp->compiler;
@@ -1472,7 +1471,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
 }
 
 NONNULL static
-int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
+int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, LinkType edge_type)
 {
    const char* nodename = emptok_getstrstart(&interp->cur);
    unsigned nodename_len = emptok_getstrlen(&interp->cur);
@@ -2136,7 +2135,7 @@ int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
  * @param gmsindices   the indices for the basename
  * @return 
  */
-static int vm_add_arcs(Interpreter * interp, unsigned * restrict p, ArcType arctype,
+static int vm_add_arcs(Interpreter * interp, unsigned * restrict p, LinkType arctype,
                         const char* argname, unsigned argname_len, GmsIndicesData* gmsindices)
 {
    assert(gmsindices->nargs > 0);
@@ -2166,19 +2165,19 @@ static int vm_add_arcs(Interpreter * interp, unsigned * restrict p, ArcType arct
 int vm_nash(Interpreter * interp, unsigned * restrict p, const char* argname,
             unsigned argname_len, GmsIndicesData* gmsindices)
 {
-   return vm_add_arcs(interp, p, ArcNash, argname, argname_len, gmsindices);
+   return vm_add_arcs(interp, p, LinkArcNash, argname, argname_len, gmsindices);
 }
 
 int vm_add_VFobjSimple_arc(Interpreter * interp, unsigned * restrict p, const char* argname,
             unsigned argname_len, GmsIndicesData* gmsindices)
 {
-   return vm_add_arcs(interp, p, ArcVF, argname, argname_len, gmsindices);
+   return vm_add_arcs(interp, p, LinkArcVF, argname, argname_len, gmsindices);
 }
 
 int vm_add_Ctrl_edge(Interpreter * interp, unsigned * restrict p, const char* argname,
                      unsigned argname_len, GmsIndicesData* gmsindices)
 {
-   return vm_add_arcs(interp, p, ArcCtrl, argname, argname_len, gmsindices);
+   return vm_add_arcs(interp, p, LinkArcCtrl, argname, argname_len, gmsindices);
 }
 
 NONNULL static
@@ -2854,19 +2853,6 @@ static int c_mp_setprobtype(UNUSED Interpreter *interp, UNUSED MathPrgm *mp, uns
    return OK;
 }
 
-static int c_mp_settype(UNUSED Interpreter *interp, UNUSED MathPrgm *mp, unsigned type)
-{
-   assert(type < UINT8_MAX);
-   Compiler *c = interp->compiler;
-   EmpVm * restrict vm = c->vm;
-   Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
-   Tape * const tape = &tape_;
-
-   S_CHECK(emit_bytes(tape, OP_PUSH_BYTE, type, OP_CALL_API, FN_MP_SETTYPE));
-
-   return OK;
-}
-
 static int c_nash_new(Interpreter *interp, UNUSED Nash **nash)
 {
    Compiler *c = interp->compiler;
@@ -2942,7 +2928,6 @@ const struct parser_ops parser_ops_compiler = {
    .mp_setaschild        = c_mp_setaschild,
    .mp_setobjvar = c_mp_setobjvar,
    .mp_setprobtype = c_mp_setprobtype,
-   .mp_settype = c_mp_settype,
    .nash_addmp = c_nash_addmp,
    .nash_new = c_nash_new,
    .nash_finalize = c_nash_finalize,

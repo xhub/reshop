@@ -4,7 +4,7 @@
 #include "empdag_common.h"
 #include "empinfo.h"
 #include "empinterp.h"
-#include "empinterp_edgeresolver.h"
+#include "empinterp_linkresolver.h"
 #include "empinterp_priv.h"
 #include "empinterp_symbol_resolver.h"
 #include "mathprgm.h"
@@ -17,50 +17,50 @@
 
 typedef struct label_dat {
    uint8_t dim;
-   uint16_t basename_len;
-   const char *basename;
+   uint16_t labelname_len;
+   const char *labelname;
    int uels[GMS_MAX_INDEX_DIM];
 } LabelDat;
 
 typedef struct arc_dat {
    LabelDat labeldat;
-   ArcType type;
+   LinkType type;
 } ArcDat;
 
 
-static void labeldat_print(LabelDat *label, dctHandle_t dct, unsigned mode)
+static void labeldat_print(LabelDat *labeldat, dctHandle_t dct, unsigned mode)
 {
-   printout(mode, "%.*s", label->basename_len, label->basename);
-   unsigned dim = label->dim;
+   printout(mode, "%.*s", labeldat->labelname_len, labeldat->labelname);
+   unsigned dim = labeldat->dim;
 
    if (dim == 0) return;
 
    printstr(mode, "(");
    int dummyoffset;
-   dct_printuel(dct, label->uels[0], mode, &dummyoffset);
+   dct_printuel(dct, labeldat->uels[0], mode, &dummyoffset);
 
 
    for (unsigned i = 1; i < dim; ++i) {
       printstr(mode, ", ");
-      dct_printuel(dct, label->uels[i], mode, &dummyoffset);
+      dct_printuel(dct, labeldat->uels[i], mode, &dummyoffset);
    }
 
    printstr(mode, ")");
 }
 
-static daguid_t dagregister_find(const DagRegister *dagreg, LabelDat *label)
+static daguid_t dagregister_find(const DagRegister *dagreg, LabelDat *labeldat)
 {
-   const char * restrict basename = label->basename;
-   uint16_t basename_len = label->basename_len;
-   uint8_t edge_dim = label->dim;
-   int *uels = label->uels;
+   const char * restrict labelname = labeldat->labelname;
+   uint16_t labelname_len = labeldat->labelname_len;
+   uint8_t edge_dim = labeldat->dim;
+   int *uels = labeldat->uels;
 
    for (unsigned i = 0, len = dagreg->len; i < len; ++i) {
       const DagRegisterEntry *entry = dagreg->list[i];
 
-      if (entry->nodename_len != basename_len ||
+      if (entry->nodename_len != labelname_len ||
           entry->dim != edge_dim ||
-          strncasecmp(basename, entry->nodename, basename_len) != 0) {
+          strncasecmp(labelname, entry->nodename, labelname_len) != 0) {
          goto _loop;
       }
 
@@ -82,7 +82,7 @@ static int add_dualize_operation(EmpDag *empdag, mpid_t mpid_primal, mpid_t mpid
 
    MathPrgm *mp_primal, *mp_dual;
    S_CHECK(empdag_getmpbyuid(empdag, mpid_primal, &mp_primal));
-   mp_hide(mp_primal);
+   mp_hidable_asdual(mp_primal);
 
    const char *name_primal = empdag_getmpname(empdag, mpid_primal);
    IO_CALL(asprintf(&name_dual, "%s_dual", name_primal));
@@ -96,8 +96,6 @@ static int add_dualize_operation(EmpDag *empdag, mpid_t mpid_primal, mpid_t mpid
    mp_dual->sense = mp_primal->sense == RhpMin ? RhpMax : RhpMin;
 
    DualOperatorData *dualdat = &mp_dual->dual.dualdat;
-
-
 
    bool nodal_dom;
 
@@ -137,24 +135,36 @@ static int add_dualize_operation(EmpDag *empdag, mpid_t mpid_primal, mpid_t mpid
 //   return OK;
 //}
 
+static int err_wrong_node_type(Interpreter *interp, daguid_t uid_parent,
+                               ArcDat *arcdat, const char *errmsg)
+{
+   EmpDag *empdag = &interp->mdl->empinfo.empdag;
+   error("[empinterp] ERROR: %s. This error happened while processing the label '",
+         errmsg);
+   labeldat_print(&arcdat->labeldat, interp->dct, PO_ERROR);
+   error("' within the parent %s(%s)\n", daguid_type2str(uid_parent),
+         empdag_getname(empdag, uid_parent));
+   return Error_EMPIncorrectInput;
+}
+
 static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
                    ArcDat *arcdat)
 {
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
    trace_empdag("[empinterp] Adding edge of type %s from %s to %s\n",
-                arctype_str(arcdat->type), empdag_getname(empdag, uid_parent),
+                linktype2str(arcdat->type), empdag_getname(empdag, uid_parent),
                 empdag_getname(empdag, uid_child));
 
-   EmpDagArc arc = { .type = arcdat->type };
-   if (arcdat->type == ArcVF) {
+   LinkType linktype = arcdat->type;
+   EmpDagArc arc = { .type = linktype };
+
+   switch (linktype) {
+   case LinkArcVF: {
 
       if (!uidisMP(uid_parent) || !uidisMP(uid_child)) {
-         errormsg("[empinterp] ERROR: a VF edge can only point to an MP node. "
-                  "This error happened while processing the label '");
-         labeldat_print(&arcdat->labeldat, interp->dct, PO_ERROR);
-         error("' with parent '%s'\n", empdag_getname(empdag, uid_parent));
-         return Error_EMPIncorrectSyntax;
+         const char errmsg[] = "a VF arc must point to an MP node";
+         return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
       }
 
       mpid_t child_mpid = uid2id(uid_child);
@@ -163,11 +173,8 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
 
       RhpSense sense = mp_getsense(mp_child);
       if (sense != RhpMin && sense != RhpMax) {
-         errormsg("[empinterp] ERROR: a VF edge can only point to an OPT MP node. "
-                  "This error happened while processing the label '");
-         labeldat_print(&arcdat->labeldat, interp->dct, PO_ERROR);
-         error("' with parent '%s'\n", empdag_getname(empdag, uid_parent));
-         return Error_EMPIncorrectSyntax;
+         const char errmsg[] = "a VF arc must point to an OPT MP node";
+         return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
       }
 
       mpid_t parent_mpid = uid2id(uid_parent);
@@ -190,20 +197,72 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
       arc.Varc.basic_dat.cst = 1.;
       arc.Varc.basic_dat.vi = IdxNA;
 
-   } else if (arcdat->type == ArcNash) {
+      break;
+   }
+
+   case LinkArcNash:
 
       assert(uidisNash(uid_parent));
       if (!uidisMP(uid_child)) {
-         errormsg("[empinterp] ERROR: a Nash edge can only point to an MP node. "
-                  "This error happened while processing the label '");
-         labeldat_print(&arcdat->labeldat, interp->dct, PO_ERROR);
-         error("' with parent '%s'\n", empdag_getname(empdag, uid_parent));
-         return Error_EMPIncorrectSyntax;
+         const char *errmsg = "a Nash arc can only point to an MP node";
+         return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
       }
 
-   } else if (arcdat->type == ArcCtrl) {
+      break;
+
+   case LinkArcCtrl:
       /* Do nothing, we allow any MP, including VI, to have a lower level */
-   } else {
+      break;
+   case LinkVFObjFn: {
+      assert(uidisMP(uid_parent));
+
+      if (!uidisMP(uid_child)) {
+         const char errmsg[] = "the 'objfn' attribute is only valid for an MP node";
+         return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
+      }
+
+      mpid_t mpid_src = uid2id(uid_child), mpid_dst = uid2id(uid_parent);
+
+      MathPrgm *mp_src;
+      S_CHECK(empdag_getmpbyid(empdag, mpid_src, &mp_src));
+
+      if (!(mp_isopt(mp_src) || mp_isccflib(mp_src))) {
+         const char *errmsg = "the 'objfn' attribute is only valid for an OPT MP node";
+         return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
+      }
+
+      S_CHECK(mpidarray_add(&empdag->objfn.src, mpid_src));
+      S_CHECK(mpidarray_add(&empdag->objfn.dst, mpid_dst));
+
+      return OK;
+   }
+
+   case LinkViKkt: {
+      assert(uidisMP(uid_parent));
+
+      if (!uidisMP(uid_child)) {
+         const char errmsg[] = "the 'kkt' operator is only valid for an MP node";
+         return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
+      }
+
+      mpid_t mpid_src = uid2id(uid_child), mpid_vi = uid2id(uid_parent);
+
+      MathPrgm *mp_src;
+      S_CHECK(empdag_getmpbyid(empdag, mpid_src, &mp_src));
+
+      if (!(mp_isopt(mp_src) || mp_isccflib(mp_src))) {
+         const char errmsg[] = "the 'kkt' operator is only valid for an OPT MP node";
+         return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
+      }
+
+      S_CHECK(mpidarray_add(&empdag->fooc.src, mpid_src));
+      S_CHECK(mpidarray_add(&empdag->fooc.vi, mpid_vi));
+
+      mp_operator_kkt(mp_src);
+
+      return OK;
+   }
+   default:
       TO_IMPLEMENT("VF edge Type not implemented");
    }
 
@@ -279,7 +338,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
 
       ArcDat arcdat = {.type = dagl->arc_type, 
          .labeldat = {.dim = dagl->dim,
-         .basename_len = dagl->nodename_len, .basename = dagl->nodename} };
+         .labelname_len = dagl->nodename_len, .labelname = dagl->nodename} };
       memcpy(arcdat.labeldat.uels, dagl->data, sizeof(int)*dim);
 
       /* Reserve the space for the edges */
@@ -331,7 +390,7 @@ static int dag_resolve_arc_label(Interpreter *interp)
    // TODO: DELETE?
 
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
-      DagLabel *dagl = label2resolve->arr[i];
+      LinkLabel *dagl = label2resolve->arr[i];
 
       const char *basename = dagl->nodename;
       uint16_t basename_len = dagl->nodename_len;
@@ -359,13 +418,13 @@ static int dag_resolve_arc_label(Interpreter *interp)
    }
 
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
-      DagLabel *dagl = label2resolve->arr[i];
+      LinkLabel *dagl = label2resolve->arr[i];
       uint8_t dim = dagl->dim;
       daguid_t daguid = dagl->daguid_parent;
 
 
-      ArcDat arcdat = {.type = dagl->arc_type,  .labeldat = {.dim = dagl->dim,
-         .basename_len = dagl->nodename_len, .basename = dagl->nodename} };
+      ArcDat arcdat = {.type = dagl->linktype,  .labeldat = {.dim = dagl->dim,
+         .labelname_len = dagl->nodename_len, .labelname = dagl->nodename} };
 
       memcpy(arcdat.labeldat.uels, dagl->uels, dim*sizeof(int));
 
@@ -439,7 +498,7 @@ static int dag_resolve_dual_label(Interpreter *interp)
       mpid_t mpid_dual = dual->mpid_dual;
 
 
-      LabelDat labeldat = {.dim = dim, .basename_len = dual->label_len, .basename = dual->label};
+      LabelDat labeldat = {.dim = dim, .labelname_len = dual->label_len, .labelname = dual->label};
 
       memcpy(labeldat.uels, dual->uels, dim*sizeof(int));
 
@@ -482,7 +541,6 @@ static int dag_resolve_dual_label(Interpreter *interp)
 
 int empinterp_set_empdag_root(Interpreter *interp)
 {
-   int status = OK;
    daguid_t root_daguid = UINT_MAX; /* silence a (buggy?) compiler warning */
    EmpDag * restrict empdag = &interp->mdl->empinfo.empdag;
 
@@ -493,41 +551,36 @@ int empinterp_set_empdag_root(Interpreter *interp)
    }
 
    /* TODO CHECK that this makes sense */
-   unsigned n_mps = empdag->mps.len, n_mpes = empdag->nashs.len;
+   unsigned n_mps = empdag->mps.len;
    if (n_mps == 0) { return OK; }
 
-   UIntArray roots;
-   S_CHECK_EXIT(empdag_collectroots(empdag, &roots));
-
-   unsigned n_roots = roots.len;
-   if (roots.len == 1) {
-      root_daguid = roots.arr[0];
-      goto _add_root;
-   }
-
    if (!interp->dag_root_label) {
-      if (n_roots == 0) {
-         error("[empinterp] ERROR: no root node found but EMPDAG has %u MPs "
-               "and %u MPEs\n", n_mps, n_mpes);
-      } else {
+      S_CHECK(empdag_infer_roots(empdag));
+
+      unsigned n_roots = empdag->roots.len;
+      if (n_roots > 1) {
          error("[empinterp] ERROR: %u root nodes found but EMPDAG expects "
                "only 1! List of root nodes:\n", n_roots);
+
+         daguid_t *roots_arr = empdag->roots.arr;
          for (unsigned i = 0; i < n_roots; ++i) {
-            daguid_t uid = roots.arr[i];
-            const char *nodetype = uidisMP(uid) ? "MP" : "MPE";
-            error("%*c %s(%s)\n", 12, ' ', nodetype, empdag_getname(empdag, uid));
+            daguid_t uid = roots_arr[i];
+            error("%*c%s(%s)\n", 12, ' ', daguid_type2str(uid),
+                  empdag_getname(empdag, uid));
          }
+
+         errormsg("[empinterp] The specification of the root node is done via the 'DAG' keyword\n");
+         return Error_EMPIncorrectInput;
       }
-      errormsg("[empinterp] The specification of the root node is done via the 'DAG' keyword\n");
-      status = Error_EMPIncorrectInput;
-      goto _exit;
+
+      return OK;
    }
 
    const DagRegister * restrict dagregister = &interp->dagregister;
-   DagLabel *dagl = interp->dag_root_label;
+   LinkLabel *dagl = interp->dag_root_label;
 
-   ArcDat arcdat = {.type = dagl->arc_type,  .labeldat = {.dim = dagl->dim,
-      .basename_len = dagl->nodename_len, .basename = dagl->nodename} };
+   ArcDat arcdat = {.type = dagl->linktype,  .labeldat = {.dim = dagl->dim,
+      .labelname_len = dagl->nodename_len, .labelname = dagl->nodename} };
 
    root_daguid = dagregister_find(dagregister, &arcdat.labeldat);
 
@@ -536,20 +589,8 @@ int empinterp_set_empdag_root(Interpreter *interp)
                "resolve the label '");
       labeldat_print(&arcdat.labeldat, interp->dct, PO_ERROR);
       errormsg("'\n");
-      status = Error_EMPIncorrectInput;
+      return Error_EMPIncorrectInput;
    }
-
-_exit:
-   rhp_uint_empty(&roots);
-
-   if (status != OK) { return status; }
-
-_add_root:
-   rhp_uint_empty(&roots);
-
-   trace_empinterp("[empinterp] setting %s(%s) as EMPDAG root\n",
-                   daguid_type2str(root_daguid),
-                   empdag_getname(empdag, root_daguid));
 
    return empdag_setroot(empdag, root_daguid);
 }

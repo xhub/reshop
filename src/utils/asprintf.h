@@ -1,6 +1,8 @@
 #ifndef ASPRINTF_H
 #define ASPRINTF_H
 
+// IWYU pragma: always_keep
+
 /* needed for (v)asprintf, affects '#include <stdio.h>' */
 #include "reshop_config.h"
 

@@ -83,7 +83,7 @@ int rhp_uint_addseq(UIntArray *dat, unsigned start, unsigned len) NONNULL;
 int rhp_uint_addset(UIntArray *dat, const UIntArray *src) NONNULL;
 int rhp_uint_adduniqsorted(UIntArray *dat, unsigned v) NONNULL;
 int rhp_uint_adduniqnofail(UIntArray *dat, unsigned v) NONNULL;
-unsigned rhp_uint_find(UIntArray *dat, unsigned v) NONNULL;
+unsigned rhp_uint_find(const UIntArray *dat, unsigned v) NONNULL;
 unsigned rhp_uint_findsorted(const UIntArray *dat, unsigned val) NONNULL;
 int rhp_uint_copy(UIntArray * restrict dat,
                  const UIntArray * restrict dat_src) NONNULL;

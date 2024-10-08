@@ -110,12 +110,10 @@ int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, Equ *eobj, rhp_idx vi_ov
    }
 
    /*  Add -k(y) */
-   op->add_k(ovfd, mdl, eobj, uvar, n_args);
+   op->add_k(ovfd, mdl, eobj, uvar);
 
    /*  TODO(xhub) URG remove this HACK */
    mp_ovf->probtype = eobj->tree ? MdlType_nlp : MdlType_lp;
-
-   S_CHECK(mp_settype(mp_ovf, RHP_MP_OPT));
 
    /* Add objvar to the equation */
    S_CHECK(equ_add_newlvar(eobj, vi_ovf, -1.));

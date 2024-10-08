@@ -189,7 +189,7 @@ static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
 }
 
 NONNULL static
-int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
+int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, LinkType edge_type)
 {
    UNUSED const char* basename = emptok_getstrstart(&interp->cur);
    UNUSED unsigned basename_len = emptok_getstrlen(&interp->cur);
@@ -308,11 +308,6 @@ static int imm_mp_setprobtype(UNUSED Interpreter *interp, MathPrgm *mp, unsigned
    return mp_setprobtype(mp, type);
 }
 
-static int imm_mp_settype(UNUSED Interpreter *interp, MathPrgm *mp, unsigned type)
-{
-   return mp_settype(mp, type);
-}
-
 static int imm_nash_new(Interpreter *interp, Nash **nash)
 {
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
@@ -338,13 +333,13 @@ static int imm_nash_new(Interpreter *interp, Nash **nash)
    return OK;
 }
 
-static int imm_nash_addmp(UNUSED Interpreter *interp, nashid_t nashid, MathPrgm *mp)
+static int imm_nash_addmp(Interpreter *interp, nashid_t nashid, MathPrgm *mp)
 {
    return empdag_nashaddmpbyid(&interp->mdl->empinfo.empdag, nashid, mp->id);
 
 }
 
-static int imm_nash_finalize(UNUSED Interpreter *interp, Nash *mpe)
+static int imm_nash_finalize(Interpreter *interp, UNUSED Nash *nash)
 {
    return imm_common_nodefini(interp);
 }
@@ -620,7 +615,7 @@ const ParserOps parser_ops_imm = {
    .ctr_markequasflipped  = imm_ctr_markequasflipped,
    .gms_get_uelidx        = get_uelidx_via_dct,
    .gms_get_uelstr        = get_uelstr_via_dct,
-   .gms_resolve_sym             = imm_gms_resolve,
+   .gms_resolve_sym       = imm_gms_resolve,
    .identaslabels         = imm_identaslabels,
    .mp_addcons            = imm_mp_addcons,
    .mp_addvars            = imm_mp_addvars,
@@ -631,10 +626,9 @@ const ParserOps parser_ops_imm = {
    .mp_setaschild         = imm_mp_setaschild,
    .mp_setobjvar          = imm_mp_setobjvar,
    .mp_setprobtype        = imm_mp_setprobtype,
-   .mp_settype            = imm_mp_settype,
-   .nash_finalize          = imm_nash_finalize,
-   .nash_new               = imm_nash_new,
-   .nash_addmp             = imm_nash_addmp,
+   .nash_finalize         = imm_nash_finalize,
+   .nash_new              = imm_nash_new,
+   .nash_addmp            = imm_nash_addmp,
    .ovf_addbyname         = imm_ovf_addbyname,
    .ovf_addarg            = imm_ovf_addarg,
    .ovf_paramsdefstart    = imm_ovf_getparamsdef,

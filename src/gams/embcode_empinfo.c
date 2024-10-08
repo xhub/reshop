@@ -192,7 +192,7 @@ static int emb_gms_resolve(Interpreter* restrict interp, UNUSED unsigned * p)
 
 
 NONNULL static
-int emb_identaslabels(Interpreter * restrict interp, unsigned * restrict p, ArcType edge_type)
+int emb_identaslabels(Interpreter * restrict interp, unsigned * restrict p, LinkType edge_type)
 {
    UNUSED const char* basename = emptok_getstrstart(&interp->cur);
    UNUSED unsigned basename_len = emptok_getstrlen(&interp->cur);
@@ -277,17 +277,7 @@ static int emb_mp_setprobtype(UNUSED Interpreter *interp, MathPrgm *mp, unsigned
    return OK;
 }
 
-static int emb_mp_settype(UNUSED Interpreter *interp, MathPrgm *mp, unsigned type)
-{
-  if (type > MpTypeLast) {
-      error("[embcode] ERROR MP type %u is above the limit %d\n", type, MpTypeLast);
-      return Error_InvalidValue;
-   }
-
-   return OK;
-}
-
-static int emb_mpe_new(Interpreter *interp, Nash **mpe)
+static int emb_nash_new(Interpreter *interp, Nash **nash)
 {
    /* ---------------------------------------------------------------------
     * If we had a label, then use it!
@@ -304,16 +294,18 @@ static int emb_mpe_new(Interpreter *interp, Nash **mpe)
 
    trace_empinterp("[embcode] line %u: new Nash\n", interp->linenr);
 
+   *nash = NULL;
+
    return OK;
 }
 
-static int emb_mpe_addmp(UNUSED Interpreter *interp, UNUSED unsigned mpe_id,
+static int emb_nash_addmp(UNUSED Interpreter *interp, UNUSED unsigned nash_id,
                          UNUSED MathPrgm *mp)
 {
    return OK;
 }
 
-static int emb_mpe_finalize(UNUSED Interpreter *interp, UNUSED Nash *mpe)
+static int emb_nash_finalize(UNUSED Interpreter *interp, UNUSED Nash *nash)
 {
    return OK;
 }
@@ -455,10 +447,9 @@ const ParserOps parser_ops_emb = {
    .mp_setaschild         = emb_mp_setaschild,
    .mp_setobjvar          = emb_mp_setobjvar,
    .mp_setprobtype        = emb_mp_setprobtype,
-   .mp_settype            = emb_mp_settype,
-   .nash_finalize          = emb_mpe_finalize,
-   .nash_new               = emb_mpe_new,
-   .nash_addmp             = emb_mpe_addmp,
+   .nash_finalize          = emb_nash_finalize,
+   .nash_new               = emb_nash_new,
+   .nash_addmp             = emb_nash_addmp,
    .ovf_addbyname         = emb_ovf_addbyname,
    .ovf_addarg            = emb_ovf_addarg,
    .ovf_paramsdefstart    = emb_ovf_getparamsdef,
@@ -628,7 +619,8 @@ int embcode_process_empinfo(void *gmdobj, const char *scrdir, const char *fname)
    toktype = parser_getcurtoktype(&interp);
    if (toktype != TOK_EOF) {
       status = parser_err(&interp,
-                          "unexpected superfluous token, no further token were expected.");
+                          "At the end of the file: unexpected superfluous token, "
+                          "no further token were expected.");
       goto _exit;
 
    }

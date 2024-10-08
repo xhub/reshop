@@ -103,6 +103,9 @@ $onecho > conopt.opt
 RTREDG=1e-12
 $offecho
 
+$macro reset(x) x.l(j) = 0.; x.m(j) = 0.;
+
+
 model superquantile /all/;
 
 solve superquantile min obj using emp;
@@ -133,6 +136,7 @@ endEmbeddedCode
 * defobj is not needed
 model superquantile_EC /superquantile-defobj/;
 
+reset(x)
 solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
@@ -145,6 +149,7 @@ h0: MP("cvarup", phi(i), tail=tail)
 main: min h0.valfn x(j)
 endEmbeddedCode
 
+reset(x)
 solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
@@ -157,6 +162,7 @@ h0: MP("cvarup", phi(i), tail=tail)
 root: min h0.dual().valfn x(j)
 endEmbeddedCode
 
+reset(x)
 solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
@@ -169,7 +175,11 @@ primal: min h0.objfn x(j)
 equil: vi primal.kkt() h0.kkt()
 endEmbeddedCode
 
-$exit
+reset(x)
+solve superquantile_EC using emp;
+
+abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
+abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
 
 $onecho > %solver%.op2
 ovf_reformulation=equilibrium
@@ -191,5 +201,5 @@ superquantile.optfile=2
 solve superquantile min obj using emp;
 
 
-loop(iter,
-param)
+* loop(iter,
+* param)

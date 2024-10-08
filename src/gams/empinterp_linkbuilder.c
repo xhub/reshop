@@ -1,5 +1,5 @@
 
-#include "empinterp_edgebuilder.h"
+#include "empinterp_linkbuilder.h"
 
 #include <stddef.h>
 #include "empdag_uid.h"
@@ -49,12 +49,12 @@ _exit:
    return NULL;
 }
 
-DagLabel * dag_labels_dupaslabel(const DagLabels * dagl_src)
+LinkLabel * dag_labels_dupaslabel(const DagLabels * dagl_src)
 {
-   DagLabel *dagc;
+   LinkLabel *dagc;
    uint8_t dim = dagl_src->dim;
    assert(dagl_src->num_children <= 1);
-   MALLOCBYTES_NULL(dagc, DagLabel, sizeof(DagLabel) + sizeof(int) * dim);
+   MALLOCBYTES_NULL(dagc, LinkLabel, sizeof(LinkLabel) + sizeof(int) * dim);
 
    dagc->dim = dim;
    dagc->nodename_len = dagl_src->nodename_len;
@@ -92,20 +92,20 @@ void dag_labels_free(DagLabels *dagl)
    FREE(dagl);
 }
 
-DagLabel* dag_label_new(const char *identname, unsigned identname_len, uint8_t dim)
+LinkLabel* linklabel_new(const char *label, unsigned label_len, uint8_t dim)
 {
-   DagLabel *dagl;
-   MALLOCBYTES_NULL(dagl, DagLabel, sizeof(DagLabel) + sizeof(int) * dim);
+   LinkLabel *link;
+   MALLOCBYTES_NULL(link, LinkLabel, sizeof(LinkLabel) + sizeof(int) * dim);
 
-   dagl->dim = dim;
-   dagl->nodename_len = identname_len;
-   dagl->daguid_parent = EMPDAG_UID_NONE;
-   dagl->nodename = identname;
+   link->dim = dim;
+   link->nodename_len = label_len;
+   link->daguid_parent = EMPDAG_UID_NONE;
+   link->nodename = label;
 
-   return dagl;
+   return link;
 }
 
-void dag_label_free(DagLabel *dagl)
+void linklabel_free(LinkLabel *dagl)
 {
    FREE(dagl);
 }
@@ -127,23 +127,3 @@ void dual_label_free(DualLabel *dual)
 {
    free(dual);
 }
-
-FoocLabel* fooc_label_new(const char *identname, unsigned identname_len, uint8_t dim, daguid_t uid)
-{
-   FoocLabel *fooc;
-   MALLOCBYTES_NULL(fooc, FoocLabel, sizeof(FoocLabel) + sizeof(int) * dim);
-
-   fooc->dim = dim;
-   fooc->label_len = identname_len;
-   fooc->daguid_fooc = uid;
-   fooc->label = identname;
-
-   return fooc;
-}
-
-void fooc_label_free(FoocLabel *fooc)
-{
-   free(fooc);
-}
-
-

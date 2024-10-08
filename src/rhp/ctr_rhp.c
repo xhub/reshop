@@ -634,12 +634,12 @@ static int process_flipped(Model *mdl)
    return OK;
 }
 
-int rmdl_ctr_reformulate(Model *mdl)
+int rmdl_ctr_transform(Model *mdl)
 {
    assert(mdl_is_rhp(mdl));
 
    if (!mdl->mdl_up || !mdl->ctr.ctr_up) {
-      error("[container] ERROR: empty upstream model when reformulating "
+      error("[container] ERROR: empty upstream model when transforming "
             "%s model '%.*s' #%u!\n", mdl_fmtargs(mdl));
       return Error_RuntimeError;
    }
@@ -652,11 +652,9 @@ int rmdl_ctr_reformulate(Model *mdl)
    }
 
    if (!reformulated) {
-      error("[container] ERROR: no reformulation to be performed in %s model"
+      error("[container] ERROR: no transformation to be performed in %s model"
             "'%.*s' #%u\n", mdl_fmtargs(mdl->mdl_up));
    }
-
-   
 
    return OK;
 }

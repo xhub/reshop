@@ -1150,7 +1150,8 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
    * If the EMPDAG was edited, we allow for NULL mps
    * ---------------------------------------------------------------------- */
 
-   if (!mp) { return OK; }
+   /* See GG #9 */
+   if (!mp || mp_ishidden(mp)) { return OK; }
 
    DagMpPpty * restrict mp_ppty = &dfsdata->mp_ppty[mp_id];
    const IdxArray * restrict equs = &mp->equs;
@@ -1580,20 +1581,38 @@ int empdag_analysis(EmpDag * restrict empdag)
          MathPrgm *mp = mps[i];
          if (!mp) { num_mps_null++; continue; }
 
-         if (mp_ishidden(mp)) { num_mps_hidden++; }
+         if (mp_ishidden(mp)) { num_mps_hidden++; assert(dfsdata.nodes_stat[i] != Processed); }
       }
 
-      if (dfsdata.num_visited + num_mps_null + num_mps_hidden != dfsdata.num_nodes) {
+      unsigned num_seen_nodes = dfsdata.num_visited + num_mps_null + num_mps_hidden;
+      if (num_seen_nodes != dfsdata.num_nodes) {
 
-         errormsg("[empdag:check] ERROR: some problems are not present in the graph:\n");
-         unsigned missing_nodes = dfsdata.num_nodes - dfsdata.num_visited;
+         if (num_seen_nodes > dfsdata.num_nodes) {
+            error("[empdag:check] ERROR: %u nodes have been seens, but only %u were expected\n",
+                  num_seen_nodes, dfsdata.num_nodes);
+            return Error_RuntimeError;
+         }
+
+         unsigned missing_nodes = num_seen_nodes - dfsdata.num_visited;
+         error("[empdag:check] ERROR: %u problems are not present in the graph:\n",
+               missing_nodes);
          unsigned num_visited = 0;
    
          do {
             missing_nodes--;
    
-            while (dfsdata.nodes_stat[num_visited] == Processed) { num_visited++; }
+            while (num_visited < dfsdata.num_nodes &&
+                   (dfsdata.nodes_stat[num_visited] == Processed || 
+                   ((num_visited < num_mps) && (!mps[num_visited] || mp_ishidden(mps[num_visited])))))
+            {
+               num_visited++;
+            }
    
+            if (num_visited >= dfsdata.num_nodes) {
+                  errormsg("[empdag] ERROR: couldnt find all missing nodes\n");
+                  return Error_RuntimeError;
+            }
+
             switch (dfsdata.nodes_stat[num_visited]) {
             case NotExplored: break;
             default:
@@ -1604,6 +1623,7 @@ int empdag_analysis(EmpDag * restrict empdag)
                   nidx_getname(num_visited, &dfsdata));
 
             num_visited++;
+
    
          } while (missing_nodes > 0);
    

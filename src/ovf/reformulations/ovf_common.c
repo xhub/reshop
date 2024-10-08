@@ -149,7 +149,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
    EmpInfo *empinfo = &mdl->empinfo;
    EmpDag *empdag = &empinfo->empdag;
 
-   MathPrgm *lmp_ovf, *mp = NULL; /* init just to silence compiler */
+   MathPrgm *mp_ovf_, *mp = NULL; /* init just to silence compiler */
    Nash *nash;
 
    const DagUidArray *mp_parents = NULL;
@@ -257,12 +257,11 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
     * Create the new MP and add it to the equilibrium
     * ---------------------------------------------------------------------- */
 
-   A_CHECK(lmp_ovf, empdag_newmpnamed(empdag, ovf_data->sense, ovf_data->name));
+   A_CHECK(mp_ovf_, empdag_newmpnamed(empdag, ovf_data->sense, ovf_data->name));
 
-   S_CHECK(mp_settype(lmp_ovf, MpTypeOpt));
-   S_CHECK(empdag_nashaddmpbyid(empdag, nash->id, lmp_ovf->id));
+   S_CHECK(empdag_nashaddmpbyid(empdag, nash->id, mp_ovf_->id));
 
-   *mp_ovf = lmp_ovf;
+   *mp_ovf = mp_ovf_;
 
 
    return OK;

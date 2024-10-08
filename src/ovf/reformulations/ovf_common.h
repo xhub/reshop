@@ -71,33 +71,32 @@ if (M.ppty & EMPMAT_EYE) { size += 1; } else { \
    for (RHP_INT j = M.csr->p[i], k = 0; j < M.csr->p[i+1]; ++j, ++k) { indx[offset+k] = M.csr->i[j] + offset_var; } } }
 
 typedef struct ovf_ops {
-   int (*add_k)(union ovf_ops_data ovfd, Model *mdl, Equ *e,
-                Avar *y, unsigned n_args);
-   int (*get_args)(union ovf_ops_data ovfd, Avar **v);
-   int (*get_nargs)(union ovf_ops_data ovfd, unsigned *nargs);
-   int (*get_mappings)(union ovf_ops_data ovfd, rhp_idx **eis);
-   int (*get_coeffs)(union ovf_ops_data ovfd, double **coeffs);
-   int (*get_cone)(union ovf_ops_data ovfd, unsigned idx, enum cone *cone, void **cone_data);
-   int (*get_cone_nonbox)(union ovf_ops_data ovfd, unsigned idx, enum cone *cone,
+   int (*add_k)(OvfOpsData ovfd, Model *mdl, Equ *e, Avar *y);
+   int (*get_args)(OvfOpsData ovfd, Avar **v);
+   int (*get_nargs)(OvfOpsData ovfd, unsigned *nargs);
+   int (*get_mappings)(OvfOpsData ovfd, rhp_idx **eis);
+   int (*get_coeffs)(OvfOpsData ovfd, double **coeffs);
+   int (*get_cone)(OvfOpsData ovfd, unsigned idx, enum cone *cone, void **cone_data);
+   int (*get_cone_nonbox)(OvfOpsData ovfd, unsigned idx, Cone *cone,
                    void **cone_data);
-   int (*get_D)(union ovf_ops_data ovfd, SpMat *D, SpMat *J);
+   int (*get_D)(OvfOpsData ovfd, SpMat *D, SpMat *J);
    int (*get_equ)(OvfOpsData ovfd, Model *mdl, void **iterator, rhp_idx vi_ovf,
                   double *ovf_coeff, rhp_idx *ei_new, unsigned n_z);
-   int (*get_lin_transformation)(union ovf_ops_data ovfd,  SpMat *B, double **b);
-   int (*get_M)(union ovf_ops_data ovfd, SpMat *M);
+   int (*get_lin_transformation)(OvfOpsData ovfd,  SpMat *B, double **b);
+   int (*get_M)(OvfOpsData ovfd, SpMat *M);
    int (*get_mp_and_sense)(OvfOpsData ovfd, Model *mdl, rhp_idx vi_ovf, MathPrgm **mp, RhpSense *sense);
-   const char* (*get_name)(union ovf_ops_data ovfd);
-   rhp_idx (*get_ovf_vidx)(union ovf_ops_data ovfd);
-   int (*get_set)(union ovf_ops_data ovfd, SpMat *At, double** b, bool trans);
-   int (*get_set_nonbox)(union ovf_ops_data ovfd, SpMat *A, double** b, bool trans);
-   int (*get_set_0)(union ovf_ops_data ovfd, SpMat *At, double** b, double ** u_shift);
-   int (*create_uvar)(union ovf_ops_data ovfd, Container *ctr,
+   const char* (*get_name)(OvfOpsData ovfd);
+   rhp_idx (*get_ovf_vidx)(OvfOpsData ovfd);
+   int (*get_set)(OvfOpsData ovfd, SpMat *At, double** b, bool trans);
+   int (*get_set_nonbox)(OvfOpsData ovfd, SpMat *A, double** b, bool trans);
+   int (*get_set_0)(OvfOpsData ovfd, SpMat *At, double** b, double ** u_shift);
+   int (*create_uvar)(OvfOpsData ovfd, Container *ctr,
                    char *name, Avar *uvar);
-   double (*get_var_lb)(union ovf_ops_data ovfd, size_t vidx);
-   double (*get_var_ub)(union ovf_ops_data ovfd, size_t vidx);
-   void   (*get_ppty)(union ovf_ops_data ovfd, struct ovf_ppty *ovf_ppty);
-   size_t (*size_u)(union ovf_ops_data ovfd, size_t n_args);
-   void (*trimmem)(union ovf_ops_data ovfd);
+   double (*get_var_lb)(OvfOpsData ovfd, size_t vidx);
+   double (*get_var_ub)(OvfOpsData ovfd, size_t vidx);
+   void   (*get_ppty)(OvfOpsData ovfd, struct ovf_ppty *ovf_ppty);
+   size_t (*size_u)(OvfOpsData ovfd, size_t n_args);
+   void (*trimmem)(OvfOpsData ovfd);
 } OvfOps;
 
 extern const OvfOps ovfdef_ops;

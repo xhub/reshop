@@ -318,7 +318,6 @@ static int _DFS_dag(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
    RESHOP_CHECK(rhp_aequ_get(tree->defState, n, &defState_n));
 
    struct rhp_mathprgm *mp = rhp_empdag_newmp(mdl, RHP_MIN);
-   RESHOP_CHECK(rhp_mp_settype(mp, RHP_MP_OPT));
 
    RESHOP_CHECK(rhp_mp_addvar(mp, x_n));
    RESHOP_CHECK(rhp_mp_addvar(mp, h_n));
@@ -345,7 +344,6 @@ static int _DFS_dag(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
     * --------------------------------------------------------------------- */
    rhp_idx objequCRM_n;
    struct rhp_mathprgm *crm = rhp_empdag_newmp(mdl, RHP_MIN);
-   RESHOP_CHECK(rhp_mp_settype(crm, RHP_MP_OPT));
 
    RESHOP_CHECK(rhp_aequ_get(tree->objequCRM, n, &objequCRM_n));
    RESHOP_CHECK(rhp_mp_setobjequ(crm, objequCRM_n));

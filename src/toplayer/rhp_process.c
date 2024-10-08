@@ -31,7 +31,7 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
    * - Then, any OVF/CCF
    * ---------------------------------------------------------------------- */
 
-   if (ctr_needreformulation(&mdl_orig->ctr)) {
+   if (ctr_needtransformations(&mdl_orig->ctr)) {
       double start = get_thrdtime();
       trace_process("[process] %s model %.*s #%u: container will be transformed:\n"
                     "          - %u flipped equations\n",
@@ -43,7 +43,7 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
 
       empinfo = &mdl_reform->empinfo;
 
-      S_CHECK(rmdl_ctr_reformulate(mdl_reform));
+      S_CHECK(rmdl_ctr_transform(mdl_reform));
       mdl_orig->timings->reformulation.container.total = get_thrdtime() - start;
    }
 

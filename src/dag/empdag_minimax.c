@@ -80,13 +80,17 @@ int rmdl_empdag_transform(Model *mdl_reform)
 
    assert(empdag_up);
 
-   unsigned len = empdag_up->fenchel_dual_nodal.len;
-   const mpid_t * restrict mpid_arr = empdag_up->fenchel_dual_nodal.arr;
-
    trace_process("[model] %s model '%.*s' #%u: transforming EMPDAG\n",
                  mdl_fmtargs(mdl_reform->mdl_up));
 
    empdag->finalized = false;
+
+  /* ----------------------------------------------------------------------
+   * Instantiate MP created via the dual() operator
+   * ---------------------------------------------------------------------- */
+
+   unsigned len = empdag_up->fenchel_dual_nodal.len;
+   const mpid_t * restrict mpid_arr = empdag_up->fenchel_dual_nodal.arr;
 
    for (unsigned i = 0; i < len; ++i) {
 
@@ -96,6 +100,40 @@ int rmdl_empdag_transform(Model *mdl_reform)
       S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));
 
       S_CHECK(mp_instantiate_fenchel_dual(mp));
+   }
+
+  /* ----------------------------------------------------------------------
+   * Instantiate MP that are required to be so
+   * ---------------------------------------------------------------------- */
+
+   len = empdag_up->mps2instantiate.len;
+   mpid_arr = empdag_up->mps2instantiate.arr;
+
+   for (unsigned i = 0; i < len; ++i) {
+      mpid_t mpid = mpid_arr[i];
+      MathPrgm *mp;
+
+      S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));
+
+      S_CHECK(mp_instantiate(mp));
+   }
+
+  /* ----------------------------------------------------------------------
+   * Add the "objfn" terms. This does not change the EMPDAG.
+   * ---------------------------------------------------------------------- */
+   len = empdag_up->objfn.dst.len;
+   assert(len == empdag_up->objfn.src.len);
+   const mpid_t * restrict mpid_src_arr = empdag_up->objfn.src.arr;
+   const mpid_t * restrict mpid_dst_arr = empdag_up->objfn.dst.arr;
+
+   for (unsigned i = 0; i < len; ++i) {
+      mpid_t mpid_src = mpid_src_arr[i], mpid_dst = mpid_dst_arr[i];
+
+      MathPrgm *mp_src, *mp_dst;
+      S_CHECK(empdag_getmpbyid(empdag, mpid_src, &mp_src));
+      S_CHECK(empdag_getmpbyid(empdag, mpid_dst, &mp_dst));
+
+      S_CHECK(mp_add_objfn_mp(mp_dst, mp_src));
    }
 
    if (empdag_has_adversarial_mps(empdag)) {

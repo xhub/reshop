@@ -98,7 +98,7 @@ int lequ_add(Lequ *lequ, rhp_idx vi, double value)
 {
    assert(!lequ_debug_hasvar(lequ, vi) && isfinite(value));
 
-   S_CHECK(lequ_reserve(lequ, lequ->len + 1));
+   S_CHECK(lequ_reserve(lequ, 1));
 
    lequ->vis[lequ->len] = vi;
    lequ->coeffs[lequ->len] = value;
@@ -118,7 +118,7 @@ int lequ_add_unique(Lequ *lequ, rhp_idx vi, double value)
       }
    }
 
-   S_CHECK(lequ_reserve(lequ, lequ->len + 1));
+   S_CHECK(lequ_reserve(lequ, 1));
 
    lequ->vis[lequ->len] = vi;
    lequ->coeffs[lequ->len] = value;
@@ -140,7 +140,7 @@ int lequ_adds(Lequ * restrict lequ, Avar * restrict v, const double * restrict v
 {
    unsigned len = v->size;
    unsigned old_len = lequ->len;
-   S_CHECK(lequ_reserve(lequ, old_len + len));
+   S_CHECK(lequ_reserve(lequ, len));
 
    assert(lequ_chk_idxs(lequ, v) && _all_finite(len, values));
 
@@ -306,15 +306,15 @@ void lequ_print(const Lequ *lequ, unsigned mode)
  *  @brief  ensure that object can store at least a certain number
  *
  *  @param lequ    the linear equation
- *  @param maxlen  the number of element that should be stored
+ *  @param len     the number of element that should be stored
  *
  *  @return        the error code
  */
-int lequ_reserve(Lequ *lequ, unsigned maxlen)
+int lequ_reserve(Lequ *lequ, unsigned len)
 {
-   if (lequ->max < maxlen) {
-      lequ->max = MAX(2*lequ->max, maxlen);
-      REALLOC_(lequ->vis, int, lequ->max);
+   if (lequ->max - lequ->len < len) {
+      lequ->max = MAX(2*lequ->max, len + lequ->len);
+      REALLOC_(lequ->vis, rhp_idx, lequ->max);
       REALLOC_(lequ->coeffs, double, lequ->max);
    }
 

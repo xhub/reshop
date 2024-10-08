@@ -216,7 +216,7 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
 
    len = data->label2edge->len;
    if (!has_child && len > 0) { 
-      DagLabel *daglabel_last = data->label2edge->arr[len-1];
+      LinkLabel *daglabel_last = data->label2edge->arr[len-1];
       has_child = daglabel_last->daguid_parent == ccflib_uid;
       if (has_child) { num_children = 1; }
    }
@@ -355,17 +355,6 @@ static int vm_mp_finalize(UNUSED VmData *data, unsigned argc, const VmValue *val
    }
 
    return vm_common_nodefini(data);
-}
-
-static int vm_mp_settype(UNUSED VmData *data, unsigned argc, const VmValue *values)
-{
-   S_CHECK(_argcnt(argc, 2, __func__));
-   MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
-   unsigned type = AS_UINT(values[1]);
-
-   return mp_settype(mp, type);
 }
 
 static int vm_mp_setprobtype(UNUSED VmData *data, unsigned argc, const VmValue *values)
@@ -590,7 +579,6 @@ const EmpApiCall empapis[] = {
    [FN_MP_FINALIZE]           = { .fn = vm_mp_finalize, .argc = 1 },
    [FN_MP_SETOBJVAR]          = { .fn = vm_mp_setobjvar, .argc = 1 },
    [FN_MP_SETPROBTYPE]        = { .fn = vm_mp_setprobtype, .argc = 2 },
-   [FN_MP_SETTYPE]            = { .fn = vm_mp_settype, .argc = 2 },
    [FN_NASH_ADDMPBYID]        = { .fn = vm_mpe_addmpbyid, .argc = 2 },
    [FN_NASH_FINALIZE]         = { .fn = vm_mpe_finalize, .argc = 1 },
    [FN_OVF_ADDARG]            = { .fn = vm_ovf_addarg, .argc = 1 },
@@ -612,7 +600,6 @@ const char * const empapis_names[] = {
    [FN_MP_FINALIZE]           =  "mp_finalize",
    [FN_MP_SETOBJVAR]          =  "mp_setobjvar",
    [FN_MP_SETPROBTYPE]        =  "mp_setprobtype",
-   [FN_MP_SETTYPE]            =  "mp_settype",
    [FN_NASH_ADDMPBYID]        =  "nash_addmpbyid",
    [FN_OVF_ADDARG]            =  "ovf_addarg",
    [FN_OVF_FINALIZE]          =  "ovf_finalize",

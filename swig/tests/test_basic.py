@@ -420,7 +420,6 @@ def test_tragedy_common():
         var = v[i]
 
         mp = rhp.empdag_newmp(mdl, rhp.RHP_MAX)
-        rhp.mp_settype(mp, rhp.RHP_MP_OPT)
         rhp.mp_addvar(mp, var)
 
         objequ = rhp.add_func(mdl)

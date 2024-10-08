@@ -56,7 +56,7 @@ bool empdag_mp_hasname(const EmpDag *empdag, unsigned mpid)
    return ((mpid < empdag->mps.len) && empdag->mps.names[mpid]);
 }
 
-bool empdag_mp_hasobjVFchildren(const EmpDag *empdag, mpid_t mpid)
+bool empdag_mp_hasobjfn_modifiers(const EmpDag *empdag, mpid_t mpid)
 {
    assert(mpid < empdag->mps.len);
    if (mpid >= empdag->mps.len) { 
@@ -70,7 +70,10 @@ bool empdag_mp_hasobjVFchildren(const EmpDag *empdag, mpid_t mpid)
       if (arcVF_in_objfunc(&arr[i], empdag->mdl)) { return true; }
    }
 
-   return false;
+   /* There could be an objfn added */
+   unsigned idx = mpidarray_find(&empdag->objfn.dst, mpid);
+
+   return idx < UINT_MAX;
 }
 
 const char* empdag_getmpname(const EmpDag *empdag, mpid_t mpid)

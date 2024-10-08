@@ -26,7 +26,7 @@
 
 #include "dctmcc.h"
 #include "empdag.h"
-#include "empinterp_edgebuilder.h"
+#include "empinterp_linkbuilder.h"
 #include "empinterp_priv.h"
 #include "empinterp_symbol_resolver.h"
 #include "empinterp_utils.h"
@@ -1131,7 +1131,7 @@ int empvm_run(struct empvm *vm)
          assert(IS_ARCOBJ(vm->globals.arr[gidx]));
 
          DagLabels *dagl_src = AS_ARCOBJ(vm->globals.arr[gidx]);
-         DagLabel *dagl_cpy;
+         LinkLabel *dagl_cpy;
          A_CHECK(dagl_cpy, dag_labels_dupaslabel(dagl_src));
          dagl_cpy->daguid_parent = vm->data.uid_parent;
 

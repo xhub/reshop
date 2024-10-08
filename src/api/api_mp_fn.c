@@ -113,9 +113,3 @@ int rhp_mp_setname(MathPrgm *mp, const char* name)
 
    return empdag_setmpname(&mdl->empinfo.empdag, mp->id, name);
 }
-
-int rhp_mp_settype(MathPrgm *mp, unsigned type)
-{
-   S_CHECK(chk_mp(mp, __func__));
-   return mp_settype(mp, type);
-}

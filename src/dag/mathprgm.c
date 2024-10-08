@@ -1,11 +1,11 @@
-#include "ovf_fenchel.h"
-#include "reshop_config.h"
+#include "asprintf.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
 /* TODO(xhub) this is just for printing, move elsewhere */
+#include "ccflib_utils.h"
 #include "cmat.h"
 #include "container.h"
 #include "ctr_rhp.h"
@@ -18,7 +18,9 @@
 #include "mathprgm_priv.h"
 #include "mdl.h"
 #include "ctrdat_rhp.h"
+#include "ovf_common.h"
 #include "ovfinfo.h"
+#include "ovf_fenchel.h"
 #include "printout.h"
 #include "status.h"
 #include "toplayer_utils.h"
@@ -262,10 +264,12 @@ MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl)
    switch (sense) {
    case RhpFeasibility:
       mpvi_init(&mp->vi);
-      mp->type = MpTypeVi;  break;
+      mp->type = MpTypeVi;
+      break;
    case RhpMin: case RhpMax:
       mpopt_init(&mp->opt);
-      mp->type = MpTypeOpt; break;
+      mp->type = MpTypeOpt;
+      break;
    case RhpDualSense:
       mpopt_init(&mp->opt);
       mp->type = MpTypeDual;
@@ -353,34 +357,15 @@ void mp_free(MathPrgm *mp)
  *
  * @return            the error code
  */
-int mp_from_ccflib(MathPrgm *mp, unsigned ccflib_idx) {
+int mp_from_ccflib(MathPrgm *mp, unsigned ccflib_idx)
+{
    assert(mp->sense == RhpNoSense && mp->type == MpTypeUndef);
 
    A_CHECK(mp->ccflib.ccf, ovfdef_new(ccflib_idx));
+   mp->ccflib.mp_instance = NULL;
 
    mp->sense = mp->ccflib.ccf->sense;
-   mp_settype(mp, MpTypeCcflib);
-
-   return OK;
-}
-
-int mp_settype(MathPrgm *mp, unsigned type) {
-   if (type > MpTypeLast) {
-      error( "%s :: MP type %u is above the limit %d\n", __func__,
-            type, MpTypeLast);
-      return Error_InvalidValue;
-   }
-
-   RhpSense sense = mp->sense;
-   // Add MpTypeMcp? See GITLAB #83
-   if (((sense == RhpMax || sense == RhpMin) && (type == MpTypeVi))
-   || ((sense == RhpFeasibility) && (type != MpTypeVi))) {
-         error("%s :: MP %.*s #%u: type '%s' incompatible with sense '%s'.\n",
-               __func__, mp_getnamelen(mp), mp_getname(mp), mp->id,
-               mptype2str(type), sense2str(mp->sense));
-   }
-
-   mp->type = type;
+   mp->type = MpTypeCcflib;
 
    return OK;
 }
@@ -754,24 +739,27 @@ int mp_finalize(MathPrgm *mp)
 
    MP_DEBUG("Finalizing MP '%s'\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
 
-   if (mp->type == MpTypeCcflib) {
+   switch (mp->type) {
+   case MpTypeCcflib:
       S_CHECK(mp_ccflib_finalize(mp));
       goto _finalize;
-   }
-
-   if (mp->type == MpTypeDual) {
+      break;
+   case MpTypeDual:
       goto _finalize;
-   }
-
-   if (mp->vars.len == 0) {
-      error("[MP] ERROR: MP(%s) has no variable assigned to it\n",
-            empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
+      break;
+   case MpTypeOpt:
+   case MpTypeVi:
+      break;
+   case MpTypeUndef:
+   default:
+      error("[MP] ERROR: MP(%s) (ID #%u) has no type set\n",
+            empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id), mp->id);
       return Error_EMPRuntimeError;
    }
 
-   if (mp->type == MpTypeUndef) {
-      error("[MP] ERROR: MP(%s) (ID #%u) has no type set\n",
-            empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id), mp->id);
+   if (mp->vars.len == 0 && (mp->type != MpTypeVi || !mp->vi.has_kkt)) {
+      error("[MP] ERROR: MP(%s) has no variable assigned to it\n",
+            empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
       return Error_EMPRuntimeError;
    }
 
@@ -788,7 +776,7 @@ int mp_finalize(MathPrgm *mp)
          const EmpDag *empdag = &mp->mdl->empinfo.empdag;
          if (!empdag->has_resolved_arcs) { return OK; }
 
-         if (!empdag_mp_hasobjVFchildren(empdag, mp->id)) {
+         if (!empdag_mp_hasobjfn_modifiers(empdag, mp->id)) {
             mp_err_noobjdata(mp);
             return Error_IncompleteModelMetadata;
          }
@@ -873,7 +861,7 @@ void mp_err_noobjdata(const MathPrgm *mp)
    const EmpDag *empdag = &mp->mdl->empinfo.empdag;
    error("[MP] ERROR: the optimization MP(%s) has neither an objective "
          "variable or an objective function. This is unsupported, the MP must "
-         "have have exactly one of these\n", empdag_getmpname(empdag, mp->id));
+         "have have exactly one of these.\n", empdag_getmpname(empdag, mp->id));
 }
 
 
@@ -1150,4 +1138,108 @@ int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
    }
 
    return OK;
+}
+
+int mp_operator_kkt(MathPrgm *mp)
+{
+   MpType mptype = mp->type;
+
+   switch (mptype) {
+   case MpTypeCcflib:
+      mp->status |= MpCcflibNeedsFullInstantiation;
+      S_CHECK(empdag_mp_needs_instantiation(&mp->mdl->empinfo.empdag, mp->id));
+      break;
+   case MpTypeOpt:
+      break;
+   default:
+      error("[MP] ERROR: MP(%s) has type %s. Cannot apply kkt operator\n",
+            mp_getname(mp), mptype2str(mp->type));
+      return Error_EMPIncorrectInput;
+   }
+
+   mp_hidable_askkt(mp);
+
+   return OK;
+}
+
+int mp_instantiate(MathPrgm *mp)
+{
+   if (mp->type != MpTypeCcflib) {
+      error("[MP] ERROR: MP(%s) has type %s, should be %s\n", mp_getname(mp),
+            mptype2str(mp->type), mptype2str(MpTypeCcflib));
+      return Error_RuntimeError;
+   }
+
+   if (mp->ccflib.mp_instance) {
+      error("[MP] ERROR: MP(%s) is already instantiated\n", mp_getname(mp));
+      return Error_RuntimeError;
+   }
+
+   EmpDag *empdag = &mp->mdl->empinfo.empdag;
+
+   OvfDef *ovf_def = mp->ccflib.ccf; assert(ovf_def);
+   RhpSense sense = ovf_def->sense;
+
+   char *name;
+   asprintf(&name, "%s_instance", mp_getname(mp));
+   /* TODO: NAMING */
+   A_CHECK(mp->ccflib.mp_instance, empdag_newmpnamed(empdag, sense, name));
+
+   MathPrgm *mp_instance = mp->ccflib.mp_instance;
+
+   mp_instance->status |= MpIsHidableAsInstance;
+
+   CcflibData  ccfdat = {.mp = mp, .mpid_dual = MpId_NA};
+   OvfOpsData ovfd = {.ccfdat = &ccfdat};
+
+   CcflibInstanceData instancedat = {.ops = &ccflib_ops, .ovfd = ovfd};
+
+
+   return mp_ccflib_instantiate(mp_instance, mp, &instancedat);
+}
+
+int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src)
+{
+   if (mp_src->type == MpTypeCcflib) {
+      if (!mp_src->ccflib.mp_instance) {
+         error("[MP] ERROR: MP(%s) should have been instantiated\n", mp_getname(mp_src));
+         return Error_RuntimeError;
+      }
+
+      mp_src = mp_src->ccflib.mp_instance;
+   }
+   assert(mp_isopt(mp_dst) && mp_isopt(mp_src));
+
+   trace_process("[MP] Adding the objective function of MP(%s) to MP(%s)\n",
+                 mp_getname(mp_src), mp_getname(mp_dst));
+
+   mp_unfinalized(mp_dst);
+
+   Container *ctr = &mp_dst->mdl->ctr;
+
+   rhp_idx objfn_dst;
+   S_CHECK(mp_ensure_objfunc(mp_dst, &objfn_dst));
+   Equ *eobj_dst = &ctr->equs[objfn_dst];
+
+   if (eobj_dst->object != Mapping) {
+      TO_IMPLEMENT("Destination objective is not a mapping");
+   }
+
+   rhp_idx objfn_src = mp_getobjequ(mp_src);
+   rhp_idx objvar_src = mp_getobjvar(mp_src);
+
+   bool valid_objvar = valid_vi(objvar_src), valid_objequ = valid_ei(objfn_src);
+
+   if (!valid_objequ && !valid_objvar) {
+      error("[MP] ERROR: MP(%s) has no valid objective variable or equation\n",
+            mp_getname(mp_src));
+      return Error_RuntimeError;
+   }
+ 
+   if (valid_objequ) {
+      return rctr_equ_add_map(ctr, eobj_dst, objfn_src, objvar_src, valid_objvar ? NAN : 1.);
+   }
+
+   /* We only have an objvar */
+   return rctr_equ_addnewvar(ctr, eobj_dst, objvar_src, 1.);
 }
