@@ -15,7 +15,7 @@ LinkLabel * dag_labels_dupaslabel(const DagLabels * dagl_src) NONNULL;
 int dag_labels_add(DagLabels * dagl, int *uels) NONNULL;
 
 void linklabel_free(LinkLabel *dagl);
-MALLOC_ATTR(dag_label_free, 1) NONNULL
+MALLOC_ATTR(linklabel_free, 1) NONNULL
 LinkLabel* linklabel_new(const char *identname, unsigned identname_len, uint8_t dim);
 
 void dual_label_free(DualLabel *dual);
