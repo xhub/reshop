@@ -34,7 +34,8 @@ tlsvar const char* libpath_fname = NULL;
 static const char *path_libnames[] = {
    DLL_FROM_NAME("path47"),
    DLL_FROM_NAME("path50"),
-   DLL_FROM_NAME("path51")
+   DLL_FROM_NAME("path51"),
+   DLL_FROM_NAME("path52"),
 };
 
 #if defined(_WIN32) && defined(_MSC_VER)
