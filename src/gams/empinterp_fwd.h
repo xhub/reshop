@@ -10,7 +10,7 @@ typedef struct linklabel DagRegisterEntry;
 typedef struct gms_sym_iterator GmsSymIterator;
 typedef struct emptok Token;
 
-typedef struct dag_labels DagLabels;
+typedef struct linklabels LinkLabels;
 typedef struct linklabel LinkLabel;
 typedef struct dual_label DualLabel;
 

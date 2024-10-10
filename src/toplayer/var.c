@@ -230,6 +230,7 @@ void avar_empty(Avar *v)
 void avar_reset(Avar *v)
 {
    v->size = 0;
+
    switch (v->type) {
    case EquVar_Compact:
       v->start = IdxInvalid;

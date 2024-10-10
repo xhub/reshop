@@ -163,7 +163,7 @@ static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
                "unsupported ident '%.*s' of type %s at the %u location",
                interp->linenr, emptok_getstrlen(&interp->cur),
                emptok_getstrstart(&interp->cur), ident->lexeme.len,
-               ident->lexeme.start, identtype_str(ident->type), i);
+               ident->lexeme.start, identtype2str(ident->type), i);
          return Error_EMPRuntimeError;
       }
 
@@ -608,8 +608,13 @@ static int imm_read_elt_vector(Interpreter *interp, const char *identstr,
    return Error_EMPIncorrectInput;
 }
 
-const ParserOps parser_ops_imm = {
-   .type = ParserOpsImm,
+static int imm_resolve_tokasident(Interpreter * restrict interp, IdentData * restrict ident)
+{
+   return resolve_tokasident(interp, ident);
+}
+
+const InterpreterOps interp_ops_imm = {
+   .type = InterpreterOpsImm,
    .ccflib_new            = imm_mp_ccflib_new,
    .ccflib_finalize       = imm_mp_ccflib_finalize,
    .ctr_markequasflipped  = imm_ctr_markequasflipped,
@@ -639,5 +644,6 @@ const ParserOps parser_ops_imm = {
    .ovf_getname           = imm_ovf_getname,
    .read_param            = imm_read_param,
    .read_elt_vector       = imm_read_elt_vector,
+   .resolve_tokasident    = imm_resolve_tokasident,
    .resolve_lexeme_as_gmssymb = dct_findlexeme,
 };

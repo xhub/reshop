@@ -79,12 +79,12 @@ typedef struct empvm_tape {
    unsigned linenr;
 } Tape;
 
-const char * identtype_str(IdentType type)
+const char * identtype2str(IdentType type)
 {
    const char *identtype_str_[IdentTypeMaxValue] = {
    [IdentNotFound]        = "not found",
    [IdentLoopIterator]    = "loop iterator",
-   [IdentSet]          = "GAMS set",
+   [IdentSet]             = "GAMS set",
    [IdentLocalSet]        = "local GAMS set",
    [IdentMultiSet]        = "multidimensional GAMS set",
    [IdentLocalMultiSet]   = "local GAMS multiset",
@@ -168,7 +168,7 @@ _exit:
 NONNULL static Compiler* ensure_vm_mode(Interpreter *interp)
 {
    if (!embmode(interp)) {
-      interp->ops = &parser_ops_compiler;
+      interp->ops = &interp_ops_compiler;
    }
 
    Compiler *c = interp->compiler;
@@ -270,7 +270,7 @@ static inline int end_scope(Interpreter *interp, UNUSED Tape* tape) {
          lvar = &c->locals[i];
          trace_empparser("[empcompiler] locals: removing '%.*s' of type %s\n",
                          lvar->lexeme.len, lvar->lexeme.start,
-                         identtype_str(lvar->type));
+                         identtype2str(lvar->type));
       }
 
       if (c->local_count > 0) {
@@ -279,7 +279,7 @@ static inline int end_scope(Interpreter *interp, UNUSED Tape* tape) {
             lvar = &c->locals[i];
             trace_empparser("[%5u] '%.*s' of type %s\n", i,
                             lvar->lexeme.len, lvar->lexeme.start,
-                            identtype_str(lvar->type));
+                            identtype2str(lvar->type));
          }
       }
    }
@@ -298,8 +298,8 @@ static inline int end_scope(Interpreter *interp, UNUSED Tape* tape) {
 
       c->vm->code.len = 0;
 
-      if (interp->ops->type == ParserOpsCompiler) {
-         interp->ops = &parser_ops_imm;
+      if (interp->ops->type == InterpreterOpsCompiler) {
+         interp->ops = &interp_ops_imm;
       }
    }
 
@@ -346,7 +346,7 @@ bool resolve_local(Compiler* c, IdentData *ident)
             ident->dim = 1;
             break;
          default:
-            error("%s :: case '%s' not handled", __func__, identtype_str(ident->type));
+            error("%s :: case '%s' not handled", __func__, identtype2str(ident->type));
             return false;
          }
          ident->origin = IdentOriginLocal;
@@ -375,7 +375,7 @@ static int add_localvar(Compiler *c, Lexeme lexeme, LIDX_TYPE *lidx, IdentType t
 
    trace_empparser("[empcompiler] locals: Adding '%.*s' of type %s\n",
                    local->lexeme.len, local->lexeme.start,
-                   identtype_str(local->type));
+                   identtype2str(local->type));
 
    return OK;
 }
@@ -594,7 +594,7 @@ int loop_initandstart(Interpreter * restrict interp, Tape * restrict tape,
       } else if (IS_REGENTRY(v)) {
          opcode_expected = OP_REGENTRY_SETFROM_LOOPVAR;
       } else if (IS_ARCOBJ(v)) {
-         opcode_expected = OP_EDGEOBJ_SETFROM_LOOPVAR;
+         opcode_expected = OP_LINKLABELS_SETFROM_LOOPVAR;
       } else {
          error("[empcompiler] ERROR: global object at index %u has invalid type "
                "%s\n", loopobj_gidx, vmval_typename(v));
@@ -689,7 +689,7 @@ int loop_increment(Tape * restrict tape, LoopIterators* restrict iterators)
          S_CHECK(emit_bytes(tape, OP_PUSH_LIDX, iter->idxmax_lidx));
          break;
       default:
-         error("%s :: unsupported loop index %s", __func__, identtype_str(ident->type));
+         error("%s :: unsupported loop index %s", __func__, identtype2str(ident->type));
          return Error_NotImplemented;
       }
       S_CHECK(emit_byte(tape, OP_EQUAL));
@@ -735,7 +735,7 @@ static int vm_gmssymiter_alloc(Compiler* restrict c, const IdentData *ident,
 {
    unsigned dim = ident->dim;
    VmGmsSymIterator *symiter;
-   MALLOCBYTES_(symiter, VmGmsSymIterator, sizeof(VmGmsSymIterator) + dim*sizeof(int));
+   MALLOCBYTES_(symiter, VmGmsSymIterator, sizeof(VmGmsSymIterator) + (dim*sizeof(int)));
    *f = symiter;
 
    symiter->ident = *ident;
@@ -767,18 +767,18 @@ static int vm_regentry_alloc(Compiler* restrict c, const char *basename,
    return OK;
 }
 
-static int vm_daglabels_alloc(Compiler* restrict c, DagLabels **dagc,
+static int vm_linklabels_alloc(Compiler* restrict c, LinkLabels **link,
                               const char* nodename, unsigned nodename_len,
                               uint8_t dim, uint8_t num_vars, unsigned size,
-                              LinkType arc_type, unsigned *gidx)
+                              LinkType linktype, unsigned *gidx)
 {
-   DagLabels *ldagc;
-   A_CHECK(ldagc, dag_labels_new(nodename, nodename_len, dim, num_vars, size));
-   ldagc->arc_type = arc_type;
+   LinkLabels *link_;
+   A_CHECK(link_, linklabels_new(nodename, nodename_len, dim, num_vars, size));
+   link_->linktype = linktype;
 
-   S_CHECK(vmvals_add(&c->vm->globals, ARCOBJ_VAL(ldagc)));
+   S_CHECK(vmvals_add(&c->vm->globals, ARCOBJ_VAL(link_)));
 
-   *dagc = ldagc;
+   *link = link_;
    *gidx = c->vm->globals.len - 1;
 
    return OK;
@@ -835,7 +835,7 @@ static int gmsindices_process(GmsIndicesData *indices, LoopIterators *iterators,
          break;
       default:
          error("[empcompiler] ERROR: unexpected failure: got ident type '%s' "
-               "for lexeme '%*s' at position %u.\n", identtype_str(idxident->type),
+               "for lexeme '%*s' at position %u.\n", identtype2str(idxident->type),
                idxident->lexeme.len, idxident->lexeme.start, i);
          return Error_RuntimeError;
       }
@@ -883,20 +883,20 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
 }
 
 
-static int arcobj_init(Interpreter * restrict interp, Tape * restrict tape,
-                        const char* nodename, unsigned nodename_len,
-                        LinkType arc_type, GmsIndicesData *indices,
-                        LoopIterators *iterators, unsigned *edgeobj_gidx)
+static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
+                           const char* nodename, unsigned nodename_len,
+                           LinkType linktype, GmsIndicesData *indices,
+                           LoopIterators *iterators, unsigned *linklabels_gidx)
 {
    Compiler *c = interp->compiler;
 
-   DagLabels *dagc;
+   LinkLabels *linklabels;
    uint8_t dim = indices->nargs;
    uint8_t num_vars = indices->num_sets + indices->num_localsets;
-   unsigned dagl_template_gidx;
-   S_CHECK(vm_daglabels_alloc(c, &dagc, nodename, nodename_len, dim,
-                              num_vars, 0, arc_type, &dagl_template_gidx));
-   *edgeobj_gidx = dagl_template_gidx;
+   unsigned gidx;
+   S_CHECK(vm_linklabels_alloc(c, &linklabels, nodename, nodename_len, dim,
+                              num_vars, 0, linktype, &gidx));
+   *linklabels_gidx = gidx;
 
    if (indices->nargs == 0) {
       iterators->size = 0;
@@ -904,14 +904,14 @@ static int arcobj_init(Interpreter * restrict interp, Tape * restrict tape,
       return OK;
    }
 
-   iterators->loopobj_gidx = *edgeobj_gidx;
-   iterators->loopobj_opcode = OP_EDGEOBJ_SETFROM_LOOPVAR;
+   iterators->loopobj_gidx = *linklabels_gidx;
+   iterators->loopobj_opcode = OP_LINKLABELS_SETFROM_LOOPVAR;
 
    bool dummy;
-   S_CHECK(gmsindices_process(indices, iterators, tape, dagc->data, &dummy));
+   S_CHECK(gmsindices_process(indices, iterators, tape, linklabels->data, &dummy));
 
    // TODO: document why we need to duplicate this
-   memcpy(&dagc->data[dim], iterators->iteridx2dim, iterators->size * sizeof(int));
+   memcpy(&linklabels->data[dim], iterators->iteridx2dim, iterators->size * sizeof(int));
 
    return OK;
 }
@@ -952,7 +952,7 @@ static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
    TokenType toktype;
 
    trace_empparser("[empcompiler] membership test with type '%s' and dimension %u\n",
-                  identtype_str(ident_gmsarray.type), ident_gmsarray.dim);
+                  identtype2str(ident_gmsarray.type), ident_gmsarray.dim);
 
    /* WARNING: This operates on the current token */
    GmsIndicesData *indices = &interp->indices_membership_test;
@@ -1386,11 +1386,11 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
 
    /* This defines the loop iterators and the edgeobj*/
    LoopIterators loopiters = {.size = 0};
-   unsigned edge_gidx;
-   S_CHECK(arcobj_init(interp, tape, nodename, nodename_len, arc_type,
-                        gmsindices, &loopiters, &edge_gidx));
+   unsigned linklabels_gidx;
+   S_CHECK(linklabels_init(interp, tape, nodename, nodename_len, arc_type,
+                        gmsindices, &loopiters, &linklabels_gidx));
 
-   assert(vmval_is_arcobj(&vm->globals, edge_gidx) == OK);
+   assert(vmval_is_arcobj(&vm->globals, linklabels_gidx) == OK);
 
    /* ---------------------------------------------------------------------
     * If there is no (local) set, then we can just duplicate the value
@@ -1404,14 +1404,14 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
    uint8_t num_vars = gmsindices->num_localsets + gmsindices->num_sets;
    if (num_vars == 0) {
       assert(gmsindices->num_iterators > 0);
-      S_CHECK(emit_bytes(tape, OP_EDGE_DUP_DAGL));
-      S_CHECK(EMIT_GIDX(tape, edge_gidx));
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_DUP));
+      S_CHECK(EMIT_GIDX(tape, linklabels_gidx));
 
       return OK;
    }
 
-   S_CHECK(emit_bytes(tape, OP_EDGE_INIT));
-   S_CHECK(EMIT_GIDX(tape, edge_gidx));
+   S_CHECK(emit_bytes(tape, OP_LINKLABELS_INIT));
+   S_CHECK(EMIT_GIDX(tape, linklabels_gidx));
 
 
    /* ---------------------------------------------------------------------
@@ -1440,7 +1440,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
     * This will duplicate the DagLabels and put it on the stack.
     * --------------------------------------------------------------------- */
 
-   S_CHECK(emit_bytes(tape, OP_DAGL_STORE, num_vars));
+   S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_vars));
 
    for (unsigned i = 0; i < num_vars; ++i) {
       S_CHECK(emit_byte(tape, loopiters.iters[i].iter_lidx));
@@ -1465,7 +1465,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
    assert(no_outstanding_jump(&c->truey_jumps, c->scope_depth));
    assert(no_outstanding_jump(&c->falsey_jumps, c->scope_depth));
 
-   S_CHECK(emit_bytes(tape, OP_DAGL_FINALIZE));
+   S_CHECK(emit_bytes(tape, OP_LINKLABELS_FINALIZE));
 
    return end_scope(interp, tape);
 }
@@ -1781,10 +1781,20 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
     * Step 2: parse the expression. We accept cst * valfn * variables
     * --------------------------------------------------------------------- */
    S_CHECK(advance(interp, p, &toktype));
-   PARSER_EXPECTS(interp, "A delimiter '(' or '[')", TOK_GMS_VAR, TOK_GMS_PARAM,
-                  TOK_VALFN);
+   PARSER_EXPECTS(interp, "a GAMS variable or parameter or a value function",
+                  TOK_GMS_VAR, TOK_GMS_PARAM, TOK_IDENT);
+
+//   bool has_var = false, has_param = false, has_valfn = false;
 
 
+//   do {
+//   switch (toktype) {
+//   case TOK_GMS_VAR:
+//   }
+//}
+   //
+   // WE need to ensure that all parameters / variables only resolve to scalar quantities
+   
    /* Consume the delimiter_endloop token */
    S_CHECK(parser_expect(interp, "end delimiter of loop", delimiter_endloop));
 
@@ -2249,8 +2259,8 @@ static int c_ccflib_finalize(Interpreter* restrict interp, UNUSED MathPrgm *mp)
    Tape * const tape = &tape_;
 
    /* Update the params object, finalize the ovf and pop it */
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_CCFLIB_UPDATEPARAMS,
-                            OP_CALL_API, FN_CCFLIB_FINALIZE,
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_CCFLIB_UPDATEPARAMS,
+                            OP_EMPAPI_CALL, FN_CCFLIB_FINALIZE,
                             OP_POP));
 
    assert(c->vmstack_depth >= 2);
@@ -2395,7 +2405,7 @@ static int c_ovf_setrhovar(Interpreter* restrict interp, UNUSED void *ovfdef_dat
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_OVF_SETRHO));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_OVF_SETRHO));
 
    return OK;
 }
@@ -2409,7 +2419,7 @@ static int c_ovf_addarg(Interpreter* restrict interp, UNUSED void *ovfdef_data)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_OVF_ADDARG));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_OVF_ADDARG));
 
    return OK;
 }
@@ -2519,7 +2529,7 @@ static int c_ovf_setparam(Interpreter* restrict interp, UNUSED void *ovfdef_data
 
    UPDATE_STACK_MAX(c, empapis[FN_OVFPARAM_UPDATE].argc-1);
 
-   return emit_bytes(tape, OP_CALL_API, FN_OVFPARAM_UPDATE);
+   return emit_bytes(tape, OP_EMPAPI_CALL, FN_OVFPARAM_UPDATE);
 }
 
 static int c_ovf_check(Interpreter* restrict interp, UNUSED void *ovfdef_data)
@@ -2532,8 +2542,8 @@ static int c_ovf_check(Interpreter* restrict interp, UNUSED void *ovfdef_data)
    Tape * const tape = &tape_;
 
    /* Update the params object, finalize the ovf and pop it */
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_OVF_UPDATEPARAMS,
-                            OP_CALL_API, FN_OVF_FINALIZE,
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_OVF_UPDATEPARAMS,
+                            OP_EMPAPI_CALL, FN_OVF_FINALIZE,
                             OP_POP));
 
    assert(c->vmstack_depth >= 2);
@@ -2767,7 +2777,7 @@ static int c_mp_addcons(Interpreter *interp, UNUSED MathPrgm *mp)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_MP_ADDCONS));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_MP_ADDCONS));
 
    return OK;
 }
@@ -2779,7 +2789,7 @@ static int c_mp_addvars(Interpreter *interp, UNUSED MathPrgm *mp)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_MP_ADDVARS));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_MP_ADDVARS));
 
    return OK;
 }
@@ -2791,7 +2801,7 @@ static int c_mp_addvipairs(Interpreter *interp, UNUSED MathPrgm *mp)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_MP_ADDVIPAIRS));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_MP_ADDVIPAIRS));
 
    return OK;
 }
@@ -2803,7 +2813,7 @@ static int c_mp_addzerofunc(Interpreter *interp, UNUSED MathPrgm *mp)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_MP_ADDZEROFUNC));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_MP_ADDZEROFUNC));
 
    return OK;
 }
@@ -2815,7 +2825,7 @@ static int c_mp_finalize(UNUSED Interpreter *interp, UNUSED MathPrgm *mp)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_MP_FINALIZE, OP_POP));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_MP_FINALIZE, OP_POP));
 
    assert(c->vmstack_depth >= 1);
    c->vmstack_depth -= 1;
@@ -2835,7 +2845,7 @@ static int c_mp_setobjvar(Interpreter *interp, UNUSED MathPrgm *mp)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_MP_SETOBJVAR));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_MP_SETOBJVAR));
 
    return OK;
 }
@@ -2848,7 +2858,7 @@ static int c_mp_setprobtype(UNUSED Interpreter *interp, UNUSED MathPrgm *mp, uns
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_PUSH_BYTE, probtype, OP_CALL_API, FN_MP_SETPROBTYPE));
+   S_CHECK(emit_bytes(tape, OP_PUSH_BYTE, probtype, OP_EMPAPI_CALL, FN_MP_SETPROBTYPE));
 
    return OK;
 }
@@ -2874,7 +2884,7 @@ static int c_nash_addmp(Interpreter *interp, nashid_t nashid, UNUSED MathPrgm *m
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_PUSH_BYTE, nashid, OP_CALL_API, FN_NASH_ADDMPBYID));
+   S_CHECK(emit_bytes(tape, OP_PUSH_BYTE, nashid, OP_EMPAPI_CALL, FN_NASH_ADDMPBYID));
 
    return OK;
 }
@@ -2886,7 +2896,7 @@ static int c_nash_finalize(UNUSED Interpreter *interp, UNUSED Nash *mpe)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_NASH_FINALIZE, OP_POP));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_NASH_FINALIZE, OP_POP));
 
    assert(c->vmstack_depth >= 1);
    c->vmstack_depth -= 1;
@@ -2905,13 +2915,18 @@ static int c_ctr_markequasflipped(Interpreter *interp)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   S_CHECK(emit_bytes(tape, OP_CALL_API, FN_CTR_MARKEQUASFLIPPED));
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_CTR_MARKEQUASFLIPPED));
 
    return OK;
 }
 
-const struct parser_ops parser_ops_compiler = {
-   .type = ParserOpsCompiler,
+static int c_resolve_tokasident(Interpreter * restrict interp, IdentData * restrict ident)
+{
+   return resolve_tokasident(interp, ident);
+}
+
+const struct interp_ops interp_ops_compiler = {
+   .type = InterpreterOpsCompiler,
    .ccflib_new = c_ccflib_new,
    .ccflib_finalize = c_ccflib_finalize,
    .ctr_markequasflipped = c_ctr_markequasflipped,
@@ -2941,6 +2956,7 @@ const struct parser_ops parser_ops_compiler = {
    .ovf_getname = c_ovf_getname,
    .read_param = c_read_param,
    .resolve_lexeme_as_gmssymb = dct_findlexeme,
+   .resolve_tokasident = c_resolve_tokasident,
 };
 
 
@@ -2981,7 +2997,7 @@ int empvm_finalize(Interpreter *interp)
  */
 int c_switch_to_compmode(Interpreter *interp, bool *switched)
 {
-   if (interp->ops->type != ParserOpsCompiler && !embmode(interp)) {
+   if (interp->ops->type != InterpreterOpsCompiler && !embmode(interp)) {
       *switched = true;
 
       if (!interp->compiler) {
@@ -2993,7 +3009,7 @@ int c_switch_to_compmode(Interpreter *interp, bool *switched)
          TO_IMPLEMENT("temporary switch to vmmode with existing bytecode");
       }
 
-      interp->ops = &parser_ops_compiler;
+      interp->ops = &interp_ops_compiler;
       vm->data.uid_parent = interp->daguid_parent;
       vm->data.uid_grandparent = interp->daguid_grandparent;
 
@@ -3010,7 +3026,7 @@ int c_switch_to_immmode(Interpreter *interp)
    S_CHECK(empvm_finalize(interp));
 
    if (!embmode(interp)) {
-      interp->ops = &parser_ops_imm;
+      interp->ops = &interp_ops_imm;
    }
 
    EmpVm *vm = interp->compiler->vm;

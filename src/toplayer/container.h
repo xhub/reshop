@@ -192,6 +192,9 @@ NONNULL static inline bool ctr_needtransformations(Container *ctr) {
    return ctr->transformations.flipped_equs.size > 0;
 }
 
+NONNULL
+int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei);
+
 /* ----------------------------------------------------------------------
  * Container memory management
  * ---------------------------------------------------------------------- */

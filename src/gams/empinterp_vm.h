@@ -46,7 +46,6 @@ typedef enum OpCode {
    OP_TRUE,
    OP_FALSE,
    OP_GMSSYMITER_SETFROM_LOOPVAR,  // 2 arg: local idx and gmd filter idx
-   OP_EDGEOBJ_SETFROM_LOOPVAR,
    OP_REGENTRY_SETFROM_LOOPVAR,  // 2 arg: local idx and gmd filter idx
    OP_LOCAL_COPYFROM_GIDX,
    OP_LOCAL_COPYOBJLEN,
@@ -80,12 +79,13 @@ typedef enum OpCode {
    OP_GMSSYM_RESOLVE,        // 1 arg: a global idx
    OP_GMS_RESOLVE_EXTEND,    // 1 arg: a global idx
    OP_GMS_MEMBERSHIP_TEST,   // 1 arg: a global idx; PUSH a BOOL on the stack
-   OP_CALL_API,              // 2 args: api_idx in enum EmpApi and argc
+   OP_EMPAPI_CALL,           // 2 args: api_idx in enum EmpApi and argc
    OP_NEW_OBJ,               // 1 arg is in enum EmpNewObj
-   OP_EDGE_DUP_DAGL,
-   OP_EDGE_INIT,
-   OP_DAGL_STORE,
-   OP_DAGL_FINALIZE,
+   OP_LINKLABELS_INIT,
+   OP_LINKLABELS_DUP,
+   OP_LINKLABELS_SETFROM_LOOPVAR,
+   OP_LINKLABELS_STORE,
+   OP_LINKLABELS_FINALIZE,
    OP_SET_DAGUID_FROM_REGENTRY,
    OP_END,
    OP_MAXCODE,
@@ -141,6 +141,7 @@ enum EmpApi {
    FN_MP_ADDVARS,
    FN_MP_ADDVIPAIRS,
    FN_MP_ADDZEROFUNC,
+   FN_MP_ADD_MAP_OBJFN,
    FN_MP_FINALIZE,
    FN_MP_SETOBJVAR,
    FN_MP_SETPROBTYPE,
@@ -203,10 +204,10 @@ typedef struct {
    Interpreter *interp;
    CompilerGlobals *globals;
    DagRegister *dagregister;
-   DagLabels *daglabels;
-   int *daglabels_ws;
-   DagLabels2Arcs *labels2edges;
-   DagLabel2Arc *label2edge;
+   LinkLabels *linklabels;
+   int *linklabel_ws;
+   LinkLabels2Arcs *linklabels2arcs;
+   LinkLabel2Arc *linklabel2arc;
 } VmData;
 
 typedef int (*empapi)(VmData *data, unsigned argc, const VmValue *values);

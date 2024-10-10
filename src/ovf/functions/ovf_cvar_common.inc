@@ -1,5 +1,9 @@
 #include "asnan.h"
 #include "ovf_fn_helpers.h"
+#include "ovf_parameter.h"
+#include "ovfinfo.h"
+#include "printout.h"
+#include "status.h"
 
 #ifndef OVF_NAME
 #error "OVF_NAME must be defined before including this file"

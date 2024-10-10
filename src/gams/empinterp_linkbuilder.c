@@ -7,11 +7,11 @@
 #include "macros.h"
 #include "printout.h"
 
-DagLabels * dag_labels_new(const char *basename, unsigned basename_len,
+LinkLabels * linklabels_new(const char *basename, unsigned basename_len,
                            uint8_t dim, uint8_t num_vars, unsigned size)
 {
-   DagLabels *dagl = NULL;
-   MALLOCBYTES_EXIT_NULL(dagl, DagLabels, sizeof(DagLabels) + sizeof(int) * (dim+num_vars));
+   LinkLabels *dagl = NULL;
+   MALLOCBYTES_EXIT_NULL(dagl, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
    MALLOC_EXIT_NULL(dagl->uels_var, int, (size_t)size*num_vars); 
 
    dagl->dim = dim;
@@ -29,17 +29,17 @@ _exit:
    return NULL;
 }
 
-DagLabels * dag_labels_dup(const DagLabels * dagl_src)
+LinkLabels * linklabels_dup(const LinkLabels * dagl_src)
 {
-   DagLabels *dagc_cpy = NULL;
+   LinkLabels *dagc_cpy = NULL;
    uint8_t dim = dagl_src->dim;
    uint8_t num_var = dagl_src->num_var;
    unsigned max_children = dagl_src->max_children;
 
    size_t data_size = sizeof(int) * (dim + num_var);
-   MALLOCBYTES_NULL(dagc_cpy, DagLabels, sizeof(DagLabels) + data_size);
+   MALLOCBYTES_NULL(dagc_cpy, LinkLabels, sizeof(LinkLabels) + data_size);
 
-   memcpy(dagc_cpy, dagl_src, sizeof(DagLabels) + data_size);
+   memcpy(dagc_cpy, dagl_src, sizeof(LinkLabels) + data_size);
 
    MALLOC_EXIT_NULL(dagc_cpy->uels_var, int, (size_t)num_var*max_children);
 
@@ -49,7 +49,7 @@ _exit:
    return NULL;
 }
 
-LinkLabel * dag_labels_dupaslabel(const DagLabels * dagl_src)
+LinkLabel * linklabels_dupaslabel(const LinkLabels * dagl_src)
 {
    LinkLabel *dagc;
    uint8_t dim = dagl_src->dim;
@@ -66,7 +66,7 @@ LinkLabel * dag_labels_dupaslabel(const DagLabels * dagl_src)
    return dagc;
 }
 
-int dag_labels_add(DagLabels *dagl, int *uels)
+int linklabels_add(LinkLabels *dagl, int *uels)
 {
    uint8_t num_var = dagl->num_var;
    unsigned num_children = dagl->num_children;
@@ -84,7 +84,7 @@ int dag_labels_add(DagLabels *dagl, int *uels)
    return OK;
 }
 
-void dag_labels_free(DagLabels *dagl)
+void linklabels_free(LinkLabels *dagl)
 {
    if (!dagl) return;
 

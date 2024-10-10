@@ -215,16 +215,16 @@ typedef struct edge_weight {
    rhp_idx vi[] __counted_by(nvars);
 } EdgeWeight;
 
-typedef struct dag_labels_list {
+typedef struct linklabels_list {
    unsigned len;
    unsigned max;
-   struct dag_labels **list;
-} DagLabelsList;
+   struct linklabels **list;
+} LinkLabelsList;
 
 #define RHP_LOCAL_SCOPE
-#define RHP_LIST_PREFIX dag_labels_list
-#define RHP_LIST_TYPE dag_labels_list
-#define RHP_ELT_TYPE struct dag_labels*
+#define RHP_LIST_PREFIX linklabels_list
+#define RHP_LIST_TYPE linklabels_list
+#define RHP_ELT_TYPE struct linklabels*
 #define RHP_ELT_INVALID NULL
 #include "list_generic.inc"
 #define valid_problem_edge(obj)  ((obj) && (obj).dagid < UINT_MAX)
@@ -237,18 +237,18 @@ typedef struct dag_labels_list {
  * can't store all runtime allocated 
  * --------------------------------------------------------------------- */
 
-typedef struct dag_labels {
+typedef struct linklabels {
    uint8_t dim;
    uint8_t num_var;
-   LinkType arc_type;
+   LinkType linktype;
    uint16_t nodename_len;  /**< node name length */
    unsigned num_children;
    unsigned max_children;  /**< Max number of children  */
    daguid_t daguid_parent; /**< daguid ot the parent */
    const char *nodename;   /**< Basename of the parent */
-   int *uels_var; /* uel_var[num_var] */
+   int *uels_var; /* uel_var[num_var] per child */
    int data[]; /* Layout: uels[dim] + pos[num_vars]*/
-} DagLabels;
+} LinkLabels;
 
 typedef struct linklabel {
    uint8_t dim;
@@ -267,17 +267,17 @@ typedef struct dual_label {
    int uels[] __counted_by(dim);
 } DualLabel;
 
-typedef struct DagLabels2Arcs {
+typedef struct LinkLabels2Arcs {
    unsigned len;
    unsigned max;
-   DagLabels **arr;
-} DagLabels2Arcs;
+   LinkLabels **arr;
+} LinkLabels2Arcs;
 
-typedef struct DagLabel2Arc {
+typedef struct linklabel2arc {
    unsigned len;
    unsigned max;
    LinkLabel **arr;
-} DagLabel2Arc;
+} LinkLabel2Arc;
 
 typedef struct DualLabelArray {
    unsigned len;
@@ -285,18 +285,18 @@ typedef struct DualLabelArray {
    DualLabel **arr;
 } DualLabelArray;
 
-#include "empinterp_linkbuilder.h" /* For dag_labels_free */
+#include "empinterp_linkbuilder.h" /* For linklabels_free */
 #define RHP_LOCAL_SCOPE
-#define RHP_ARRAY_PREFIX daglabels2arcs
-#define RHP_ARRAY_TYPE DagLabels2Arcs
-#define RHP_ELT_FREE dag_labels_free
-#define RHP_ELT_TYPE DagLabels*
+#define RHP_ARRAY_PREFIX linklabels2arcs
+#define RHP_ARRAY_TYPE LinkLabels2Arcs
+#define RHP_ELT_FREE linklabels_free
+#define RHP_ELT_TYPE LinkLabels*
 #define RHP_ELT_INVALID NULL
 #include "array_generic.inc"
 
 #define RHP_LOCAL_SCOPE
-#define RHP_ARRAY_PREFIX daglabel2arc
-#define RHP_ARRAY_TYPE DagLabel2Arc
+#define RHP_ARRAY_PREFIX linklabel2arc
+#define RHP_ARRAY_TYPE linklabel2arc
 #define RHP_ELT_FREE FREE
 #define RHP_ELT_TYPE LinkLabel*
 #define RHP_ELT_INVALID NULL
@@ -377,7 +377,7 @@ typedef struct interpreter {
    InterpFinalization finalize;
 
    /* Parser state info */
-   const struct parser_ops *ops;
+   const struct interp_ops *ops;
 
    struct empvm_compiler *compiler;
 
@@ -386,8 +386,8 @@ typedef struct interpreter {
    LinkLabel *dag_root_label;
    DagRegister dagregister;
 
-   DagLabels2Arcs labels2arcs;
-   DagLabel2Arc label2arc;
+   LinkLabels2Arcs linklabels2arcs;
+   LinkLabel2Arc linklabel2arc;
    DualLabelArray dual_label;
 
    /* Other dynamic data */
@@ -407,16 +407,17 @@ typedef struct interpreter {
 
 
 typedef enum {
-   ParserOpsImm,
-   ParserOpsCompiler,
-   ParserOpsEmb,
-} ParserOptType;
+   InterpreterOpsImm,
+   InterpreterOpsCompiler,
+   InterpreterOpsEmb,
+} InterpreterOpsType;
 
-typedef struct parser_ops {
-   ParserOptType type;
+typedef struct interp_ops {
+   InterpreterOpsType type;
    int (*ccflib_new)(Interpreter* restrict interp, unsigned ccf_idx, MathPrgm **mp);
    int (*ccflib_finalize)(Interpreter* restrict interp, MathPrgm *mp);
    int (*ctr_markequasflipped)(Interpreter* restrict interp);
+   int (*identaslabels)(Interpreter * interp, unsigned * p, LinkType edge_type);
    int (*gms_resolve_sym)(Interpreter* restrict interp, unsigned *p); 
    int (*gms_add_uel)(Interpreter* restrict interp, const Token *tok, unsigned i); 
    int (*gms_get_uelidx)(Interpreter *interp, const char *uelstr, int *uelidx);
@@ -434,7 +435,6 @@ typedef struct parser_ops {
    int (*nash_addmp)(Interpreter* restrict interp, nashid_t nashid, MathPrgm *mp);
    int (*nash_finalize)(Interpreter* restrict interp, Nash *nash);
    int (*nash_new)(Interpreter* restrict interp, Nash **nash);
-   int (*identaslabels)(Interpreter * interp, unsigned * p, LinkType edge_type);
    int (*ovf_addbyname)(Interpreter* restrict interp, EmpInfo *empinfo, const char *name, void ** ovfdef_data);
 //   int (*ovf_args_init)(Parser* restrict parser, void *ovfdef_data);
    int (*ovf_addarg)(Interpreter* restrict interp, void *ovfdef_data);
@@ -452,11 +452,12 @@ typedef struct parser_ops {
                           double *val);
    int (*read_param)(Interpreter *interp, unsigned *p, IdentData *data,
                       const char *ident_str, unsigned *param_gidx);
+   int (*resolve_tokasident)(Interpreter *interp, IdentData *ident);
    int (*resolve_lexeme_as_gmssymb)(Interpreter *interp, Token *tok);
-} ParserOps;
+} InterpreterOps;
 
-extern const struct parser_ops parser_ops_imm;
-extern const struct parser_ops parser_ops_compiler;
+extern const struct interp_ops interp_ops_imm;
+extern const struct interp_ops interp_ops_compiler;
 
 int gmssym_iterator_init(Interpreter* restrict interp) NONNULL;
 int parser_filter_set(Interpreter* restrict interp, unsigned i, int val) NONNULL;

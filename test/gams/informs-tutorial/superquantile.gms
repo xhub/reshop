@@ -145,8 +145,8 @@ abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
 * This is the EC of Listing 2 
 EmbeddedCode ReSHOP:
 deffn phi(i) defphi(i)
-h0: MP("cvarup", phi(i), tail=tail)
-main: min h0.valfn x(j)
+cvar: MP("cvarup", phi(i), tail=tail)
+main: min cvar.valfn x(j)
 endEmbeddedCode
 
 reset(x)
@@ -158,8 +158,8 @@ abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
 * This is the EC of Listing 2 
 EmbeddedCode ReSHOP:
 deffn phi(i) defphi(i)
-h0: MP("cvarup", phi(i), tail=tail)
-root: min h0.dual().valfn x(j)
+cvar: MP("cvarup", phi(i), tail=tail)
+main: min cvar.dual().valfn x(j)
 endEmbeddedCode
 
 reset(x)
@@ -170,9 +170,9 @@ abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
 
 EmbeddedCode ReSHOP:
 deffn phi(i) defphi(i)
-h0: MP("cvarup", phi(i), tail=tail)
-primal: min h0.objfn x(j)
-equil: vi primal.kkt() h0.kkt()
+cvar: MP("cvarup", phi(i), tail=tail)
+main: min cvar.objfn x(j)
+equil: vi main.kkt() cvar.kkt()
 endEmbeddedCode
 
 reset(x)
@@ -180,6 +180,8 @@ solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
 abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
+
+$exit
 
 $onecho > %solver%.op2
 ovf_reformulation=equilibrium

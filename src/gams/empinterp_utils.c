@@ -130,7 +130,7 @@ int runtime_error(unsigned linenr)
 int interp_ops_is_imm(Interpreter *interp)
 {
 
-   if (interp->ops->type != ParserOpsImm) {
+   if (interp->ops->type != InterpreterOpsImm) {
       error("[empinterp] RUNTIME ERROR at line %u: while parsing the %s "
             "keyword the empinfo interpreter is in the VM mode. In the old-style"
             "empinfo syntax, one cannot use loop or any EMPDAG features.\n",

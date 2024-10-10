@@ -1889,6 +1889,8 @@ static int parse_gmssym(Interpreter * restrict interp, unsigned * restrict p)
       S_CHECK(parse_gmsindices(interp, p, indices));
    }
 
+   trace_empinterp("[empinterp] resolving %s ident %.*s\n",
+                   ident_fmtargs(&interp->gms_sym_iterator.ident));
    // TODO: check for conditional and switch to VM if needed
    // See code for labeldef
    S_CHECK(interp->ops->gms_resolve_sym(interp, p));
@@ -2010,13 +2012,13 @@ NONNULL static inline int assign_uels(int * restrict uels,
       case IdentSet:
       case IdentLocalSet:
          error("[empinterp] ERROR line %u: %s '%.*s' not allowed in label\n",
-               linenr, identtype_str(idxident->type), idxident->lexeme.len,
+               linenr, identtype2str(idxident->type), idxident->lexeme.len,
                idxident->lexeme.start);
          return Error_EMPIncorrectSyntax;
 
       default:
          error("%s :: unexpected ERROR: got ident '%s' at position %u.\n",
-               __func__, identtype_str(idxident->type), i);
+               __func__, identtype2str(idxident->type), i);
          return Error_RuntimeError;
       }
    }
@@ -2091,7 +2093,7 @@ static int imm_add_linklabel(Interpreter * restrict interp, LinkType linktype,
                    empdag_getname(&interp->mdl->empinfo.empdag, interp->daguid_parent),
                    gmsindices_nargs(gmsindices) > 0 ? ((int)(gmsindices->idents[gmsindices->nargs-1].lexeme.start - identname))
                    +  gmsindices->idents[gmsindices->nargs-1].lexeme.len : identname_len, identname);
-   S_CHECK(daglabel2arc_add(&interp->label2arc, dagl));
+   S_CHECK(linklabel2arc_add(&interp->linklabel2arc, dagl));
 
    return OK;
 }
@@ -2315,7 +2317,7 @@ static int add_edge4label(Interpreter *interp, unsigned *p,
           * If we are past this point, we are in the immediate mode
           * --------------------------------------------------------------------- */
 
-      if (interp->ops->type != ParserOpsImm && !embmode(interp)) {
+      if (interp->ops->type != InterpreterOpsImm && !embmode(interp)) {
          int offset;
          error("[empinterp] runtime ERROR on line %u: %n no GAMS set to iterate over, "
                "but the interpreter is in Compiler mode.\n", interp->linenr, &offset);
@@ -2530,7 +2532,7 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
    case IdentVector: {
       unsigned p2 = *p;
       S_CHECK_EXIT(peek(interp, &p2, &toktype));
-      if (interp->ops->type == ParserOpsImm && toktype != TOK_LPAREN && toktype != TOK_CONDITION) {
+      if (interp->ops->type == InterpreterOpsImm && toktype != TOK_LPAREN && toktype != TOK_CONDITION) {
 
             // TODO: what happens in immMode and with TOK_LPAREN or TOK_CONDITION???
          unsigned idx;
@@ -2605,14 +2607,14 @@ static int parse_dual_operator(Interpreter *interp, unsigned *p)
    MathPrgm *mp = NULL;
    S_CHECK(interp->ops->mp_new(interp, RhpDualSense, &mp));
 
-   ParserOptType type = interp->ops->type;
+   InterpreterOpsType type = interp->ops->type;
 
    switch (type) {
-   case ParserOpsImm:
+   case InterpreterOpsImm:
       S_CHECK(imm_add_duallabel(interp, mp, interp->pre.start, interp->pre.len,
                                 &interp->gmsindices, &dualdat));
       break;
-   case ParserOpsEmb:
+   case InterpreterOpsEmb:
       break;
    default:
       TO_IMPLEMENT("Compiler mode")
@@ -2745,7 +2747,7 @@ NONNULL static
 int parse_MPargs_gmsvars_list(Interpreter * restrict interp, unsigned * restrict p,
                               void *ovfdef)
 {
-   if (interp->ops->type != ParserOpsImm) {
+   if (interp->ops->type != InterpreterOpsImm) {
       TO_IMPLEMENT("OVF/CCF with empparser in VM mode");
    }
 
@@ -2780,8 +2782,8 @@ NONNULL_AT(1,2) static
 int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p, 
                         OvfDef *ovfdef)
 {
-   unsigned idx1 = interp->label2arc.len;
-   unsigned idx2 = interp->labels2arcs.len;
+   unsigned idx1 = interp->linklabel2arc.len;
+   unsigned idx2 = interp->linklabels2arcs.len;
 
    assert(interp->cur.type == TOK_IDENT);
    interp_save_tok(interp);
@@ -2797,11 +2799,11 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
    * ---------------------------------------------------------------------- */
 
    if (ovfdef) {
-      for (unsigned i = idx1, len = interp->label2arc.len; i < len; ++i) {
+      for (unsigned i = idx1, len = interp->linklabel2arc.len; i < len; ++i) {
          ovfdef->num_empdag_children++;
       }
-      for (unsigned i = idx2, len = interp->labels2arcs.len; i < len; ++i) {
-         ovfdef->num_empdag_children += interp->labels2arcs.arr[i]->num_children;
+      for (unsigned i = idx2, len = interp->linklabels2arcs.len; i < len; ++i) {
+         ovfdef->num_empdag_children += interp->linklabels2arcs.arr[i]->num_children;
       }
    }
 
@@ -3589,7 +3591,7 @@ int parse_mp(Interpreter *interp, unsigned *p)
       S_CHECK(parse_opt(mp, interp, p));
 
       /* The old empinfo syntax doesn't have name, try to be better here*/
-      if (interp->ops->type == ParserOpsImm ) {
+      if (interp->ops->type == InterpreterOpsImm ) {
          S_CHECK(mp_opt_add_name(mp))
       }
       break;
@@ -4465,7 +4467,7 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
     * If we are past this point, we are in the immediate mode
     * --------------------------------------------------------------------- */
 
-   if (interp->ops->type != ParserOpsImm && !embmode(interp)) {
+   if (interp->ops->type != InterpreterOpsImm && !embmode(interp)) {
       error("[empinterp] line %u: runtime error: no GAMS set to iterate over, "
             "but the interpreter is in VM mode. Review the model to make sure "
             "that any loop involves Please report this as a bug.\n",
@@ -4915,6 +4917,9 @@ static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * res
       Avar *v = &interp->pre.payload.v;
       Aequ *e = &interp->cur.payload.e;
 
+      unsigned nvars = ctr_nvars(ctr);
+      unsigned nequs = ctr_nequs(ctr);
+
       if (v->size != e->size) {
          error("[empinterp] ERROR line %u: the deffn/implicit keyword expects the "
                "variable and equation to be of the same size. Here we have %u "
@@ -4925,8 +4930,20 @@ static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * res
       for (unsigned i = 0, len = v->size; i < len; ++i) {
          rhp_idx vi = avar_fget(v, i);
          rhp_idx ei = aequ_fget(e, i);
-         assert(valid_vi_(vi, ctr_nvars(ctr), __func__));
-         assert(valid_ei_(vi, ctr_nequs(ctr), __func__));
+
+         if (!chk_vi_(vi, nvars)) {
+            error("[empinterp] ERROR line %u: the index %u of variable "
+                  "%.*s is outside of the range [0,%u). Position is %u.\n",
+                  interp->linenr, vi, token_fmtargs(&interp->pre), nvars, i);
+            return Error_EMPRuntimeError;
+         }
+
+         if (!chk_ei_(ei, nequs)) {
+            error("[empinterp] ERROR line %u: the index %u of equation %.*s "
+                  "is outside of the range [0,%u). Position is %u\n",
+                  interp->linenr, ei, token_fmtargs(&interp->cur), nequs, i);
+            return Error_EMPRuntimeError;
+         }
 
 
          double dummy;

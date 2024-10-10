@@ -1,11 +1,9 @@
-#include "macros.h"
 #include "ovf_cvar_common.h"
 #include "ovf_ecvarup.h"
+#include "ovf_functions_common.h"
 #include "ovf_generator.h"
 #include "ovf_parameter.h"
 #include "ovf_risk_measure_common.h"
-#include "printout.h"
-#include "status.h"
 
 #define OVF_NAME ecvarup
 #define TAIL_VAL(X) (1. - X)
@@ -47,7 +45,7 @@ const struct ovf_genops OVF_ecvarup_datagen = {
    .set_b_0 = ecvarup_gen_b_0,
    .set_cones = cvar_gen_set_cones,
    .set_cones_nonbox = cvar_gen_set_cones_nonbox,
-   .size_u = risk_measure_u_size,
+   .size_u = u_size_same,
    .u_shift = cvar_u_shift,
    .var = ecvarup_gen_var,
    .var_ppty = &ecvarup_varfill,

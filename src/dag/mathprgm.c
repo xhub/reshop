@@ -1243,3 +1243,43 @@ int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src)
    /* We only have an objvar */
    return rctr_equ_addnewvar(ctr, eobj_dst, objvar_src, 1.);
 }
+
+int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le)
+{
+   if (!mp_isopt(mp)) {
+      error("[MP] ERROR: MP(%s) has type %s, should be %s", mp_getname(mp),
+            mptype2str(mp->type), mptype2str(MpTypeOpt));
+      return Error_RuntimeError;
+   }
+
+   Model *mdl = mp->mdl; assert(mdl);
+   Container *ctr = &mdl->ctr;
+
+   rhp_idx objfn;
+   S_CHECK(mp_ensure_objfunc(mp, &objfn));
+   Equ *eobj = &ctr->equs[objfn];
+
+   if (eobj->object != Mapping) {
+      TO_IMPLEMENT("Destination objective is not a mapping");
+   }
+
+   rhp_idx * restrict vis = le->vis;
+   double * restrict coeffs = le->coeffs;
+   for (unsigned i = 0, len = le->len; i < len; ++i) {
+      rhp_idx vi = vis[i], ei;
+      double c = coeffs[i];
+
+      S_CHECK(ctr_get_defined_mapping_by_var(ctr, vi, &ei));
+      
+      trace_process("[MP] Adding the mapping defined by '%s' in equation '%s' to "
+                    "the objective function of MP(%s) with coefficient %e\n",
+                    mdl_printvarname(mdl, vi), mdl_printequname(mdl, objfn),
+                    mp_getname(mp), c);
+
+      S_CHECK(rctr_equ_add_map(ctr, eobj, ei, vi, NAN));
+   }
+
+   mp_unfinalized(mp);
+
+   return OK;
+}

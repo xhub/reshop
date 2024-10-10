@@ -28,7 +28,7 @@ typedef struct ovf_param_list {
 extern const unsigned ovf_numbers;
 extern const char* const ovf_names[];
 extern const char* const ovf_synonyms[][2];
-extern const char* const ovf_always_compat[];
+extern const char* const ovf_always_compatible[];
 
 /** @brief type of arguments  */
 typedef enum ovf_argtype {

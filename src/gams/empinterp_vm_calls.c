@@ -142,7 +142,7 @@ static void* mp_newobj(VmData *data, unsigned argc, const VmValue *values)
    return mp;
 }
 
-static void* mpe_newobj(VmData *data, unsigned argc, const VmValue *values)
+static void* nash_newobj(VmData *data, unsigned argc, const VmValue *values)
 {
    SN_CHECK(_argcnt(argc, 1, __func__));
    EmpDag *empdag = &data->mdl->empinfo.empdag;
@@ -164,12 +164,12 @@ static void* mpe_newobj(VmData *data, unsigned argc, const VmValue *values)
       return NULL;
    }
 
-   Nash *mpe;
-   AA_CHECK(mpe, empdag_newnashnamed(empdag, label));
+   Nash *nash;
+   AA_CHECK(nash, empdag_newnashnamed(empdag, label));
 
-   SN_CHECK(vm_common_nodeinit(data, nashid2uid(mpe->id), regentry));
+   SN_CHECK(vm_common_nodeinit(data, nashid2uid(nash->id), regentry));
 
-   return mpe;
+   return nash;
 }
 
 static void* ovf_newobj(VmData *data, unsigned argc, const VmValue *values)
@@ -202,22 +202,22 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
     * --------------------------------------------------------------------- */
 
    EmpDag *empdag = &data->mdl->empinfo.empdag;
-   unsigned len = data->labels2edges->len;
+   unsigned len = data->linklabels2arcs->len;
    daguid_t ccflib_uid = mpid2uid(mp->id);
    bool has_child = false;
    unsigned num_children = 0;
 
    if (len > 0) {
-      DagLabels *dagl = data->labels2edges->arr[len-1];
-      assert(dagl->num_children > 0);
-      has_child = dagl->daguid_parent == ccflib_uid;
-      if (has_child) { num_children = dagl->num_children; }
+      LinkLabels *linklabels = data->linklabels2arcs->arr[len-1];
+      assert(linklabels->num_children > 0);
+      has_child = linklabels->daguid_parent == ccflib_uid;
+      if (has_child) { num_children = linklabels->num_children; }
    }
 
-   len = data->label2edge->len;
+   len = data->linklabel2arc->len;
    if (!has_child && len > 0) { 
-      LinkLabel *daglabel_last = data->label2edge->arr[len-1];
-      has_child = daglabel_last->daguid_parent == ccflib_uid;
+      LinkLabel *linklabel_last = data->linklabel2arc->arr[len-1];
+      has_child = linklabel_last->daguid_parent == ccflib_uid;
       if (has_child) { num_children = 1; }
    }
 
@@ -387,7 +387,7 @@ static int vm_mp_setobjvar(UNUSED VmData *data, unsigned argc, const VmValue *va
    return mp_setobjvar(mp, avar_fget(v, 0));
 }
 
-static int vm_mpe_addmpbyid(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_nash_addmpbyid(UNUSED VmData *data, unsigned argc, const VmValue *values)
 {
    S_CHECK(_argcnt(argc, 2, __func__));
    MathPrgm *mp;
@@ -400,7 +400,7 @@ static int vm_mpe_addmpbyid(UNUSED VmData *data, unsigned argc, const VmValue *v
    return empdag_nashaddmpbyid(&data->mdl->empinfo.empdag, equil_id, mp->id);
 }
 
-static int vm_mpe_finalize(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_nash_finalize(UNUSED VmData *data, unsigned argc, const VmValue *values)
 {
    assert(_argcnt(argc, 1, __func__) == OK);
    assert(IS_NASHOBJ(values[0]));
@@ -558,6 +558,18 @@ static int vm_ovfparam_update(UNUSED VmData *data, unsigned argc, const VmValue 
  *  Misc functions
  * ------------------------------------------------------------------------ */
 
+static int vm_chk_scalar_var(Avar *v)
+{
+   unsigned dim = avar_size(v);
+
+   if (dim != 1) {
+      error("[empvm_run] ERROR: expecting a scalar variable, got dim = %u.\n", dim);
+      return Error_EMPIncorrectInput;
+   }
+
+   return OK;
+}
+
 static int vm_mark_equ_as_flipped(VmData *data, unsigned argc, UNUSED const VmValue *values)
 {
    S_CHECK(_argcnt(argc, 0, __func__));
@@ -566,6 +578,22 @@ static int vm_mark_equ_as_flipped(VmData *data, unsigned argc, UNUSED const VmVa
    return ctr_markequasflipped(&data->mdl->ctr, e);
 }
 
+static int vm_mp_add_map_objfn(VmData *data, unsigned argc, UNUSED const VmValue *values)
+{
+   S_CHECK(_argcnt(argc, 1, __func__));
+   MathPrgm *mp;
+   assert(IS_MPOBJ(values[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+
+   Avar *v = data->v_current;
+
+   S_CHECK(vm_chk_scalar_var(v));
+
+//   S_CHECK(empdag_add_map_objfn(&data->mdl->empinfo.empdag, mpid, vi, cst));
+
+   return OK;
+
+}
 
 
 const EmpApiCall empapis[] = {
@@ -576,11 +604,12 @@ const EmpApiCall empapis[] = {
    [FN_MP_ADDVARS]            = { .fn = vm_mp_addvars, .argc = 1 },
    [FN_MP_ADDVIPAIRS]         = { .fn = vm_mp_addvipairs, .argc = 1 },
    [FN_MP_ADDZEROFUNC]        = { .fn = vm_mp_addzerofunc, .argc = 1 },
+   [FN_MP_ADD_MAP_OBJFN]      = { .fn = vm_mp_add_map_objfn, .argc = 1},
    [FN_MP_FINALIZE]           = { .fn = vm_mp_finalize, .argc = 1 },
    [FN_MP_SETOBJVAR]          = { .fn = vm_mp_setobjvar, .argc = 1 },
    [FN_MP_SETPROBTYPE]        = { .fn = vm_mp_setprobtype, .argc = 2 },
-   [FN_NASH_ADDMPBYID]        = { .fn = vm_mpe_addmpbyid, .argc = 2 },
-   [FN_NASH_FINALIZE]         = { .fn = vm_mpe_finalize, .argc = 1 },
+   [FN_NASH_ADDMPBYID]        = { .fn = vm_nash_addmpbyid, .argc = 2 },
+   [FN_NASH_FINALIZE]         = { .fn = vm_nash_finalize, .argc = 1 },
    [FN_OVF_ADDARG]            = { .fn = vm_ovf_addarg, .argc = 1 },
    [FN_OVF_FINALIZE]          = { .fn = vm_ovf_finalize, .argc = 1 },
    [FN_OVF_SETRHO]            = { .fn = vm_ovf_setrho, .argc = 1 },
@@ -597,6 +626,7 @@ const char * const empapis_names[] = {
    [FN_MP_ADDVARS]            =  "mp_addvars",
    [FN_MP_ADDVIPAIRS]         =  "mp_addvipairs",
    [FN_MP_ADDZEROFUNC]        =  "mp_addzerofunc",
+   [FN_MP_ADD_MAP_OBJFN]      =  "mp_add_map_objfn",
    [FN_MP_FINALIZE]           =  "mp_finalize",
    [FN_MP_SETOBJVAR]          =  "mp_setobjvar",
    [FN_MP_SETPROBTYPE]        =  "mp_setprobtype",
@@ -612,17 +642,17 @@ const char * const empapis_names[] = {
 const unsigned empapis_len = sizeof(empapis)/sizeof(empapis[0]);
 
 
-static VmValue as_mp(void *obj)  { return MPOBJ_VAL(obj);  }
-static VmValue as_mpe(void *obj) { return NASHOBJ_VAL(obj); }
-static VmValue as_ovf(void *obj) { return OVFOBJ_VAL(obj); }
+static VmValue as_mp(void *obj)   { return MPOBJ_VAL(obj);  }
+static VmValue as_nash(void *obj) { return NASHOBJ_VAL(obj); }
+static VmValue as_ovf(void *obj)  { return OVFOBJ_VAL(obj); }
 
-static unsigned mp_getuid(void *o) { return mpid2uid(((MathPrgm*)o)->id); }
-static unsigned mpe_getuid(void *o) { return nashid2uid(((Nash*)o)->id); }
+static unsigned mp_getuid(void *o)   { return mpid2uid(((MathPrgm*)o)->id); }
+static unsigned nash_getuid(void *o) { return nashid2uid(((Nash*)o)->id); }
 
 const EmpNewObjCall empnewobjs[] = {
    [FN_CCFLIB_NEW]  = { .fn = ccflib_newobj, .obj2vmval = as_mp,  .argc = 2, .get_uid = mp_getuid},
    [FN_MP_NEW]      = { .fn = mp_newobj,     .obj2vmval = as_mp,  .argc = 2, .get_uid = mp_getuid },
-   [FN_NASH_NEW]     = { .fn = mpe_newobj,    .obj2vmval = as_mpe, .argc = 1, .get_uid = mpe_getuid },
+   [FN_NASH_NEW]     = { .fn = nash_newobj,    .obj2vmval = as_nash, .argc = 1, .get_uid = nash_getuid },
    [FN_OVF_NEW]     = { .fn = ovf_newobj,    .obj2vmval = as_ovf, .argc = 1, .get_uid = NULL },
 };
 

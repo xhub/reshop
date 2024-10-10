@@ -9,4 +9,6 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
 int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
                           GmsIndicesData * restrict idxdata);
 
+int resolve_tokasident(Interpreter *interp, IdentData *ident) NONNULL;
+
 #endif

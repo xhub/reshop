@@ -136,6 +136,18 @@ int rmdl_empdag_transform(Model *mdl_reform)
       S_CHECK(mp_add_objfn_mp(mp_dst, mp_src));
    }
 
+   len = empdag_up->objfn_maps.mps.len;
+   mpid_arr = empdag_up->objfn_maps.mps.arr;
+
+   for (unsigned i = 0; i < len; ++i) {
+      mpid_t mpid = mpid_arr[i];
+      Lequ *le = empdag_up->objfn_maps.lequs[i]; assert(le);
+      MathPrgm *mp;
+
+      S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));
+      S_CHECK(mp_add_objfn_map(mp, le));
+   }
+
    if (empdag_has_adversarial_mps(empdag)) {
       double start = get_thrdtime();
 

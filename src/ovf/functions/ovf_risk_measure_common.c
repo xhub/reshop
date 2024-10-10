@@ -91,9 +91,4 @@ int risk_measure_u_shift(unsigned n, const struct ovf_param *prob, double **u_sh
    return OK;
 }
 
-size_t risk_measure_u_size(size_t n_args)
-{
-   return n_args;
-}
-
 

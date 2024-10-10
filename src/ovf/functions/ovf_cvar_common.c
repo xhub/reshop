@@ -8,8 +8,6 @@
 #include "printout.h"
 #include "status.h"
 
-#define SIZE_U(n) n
-
 int cvar_gen_A(unsigned n, const void *env, SpMat *mat)
 {
 

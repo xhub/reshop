@@ -1,4 +1,5 @@
 #include "macros.h"
+#include "ovf_functions_common.h"
 #include "printout.h"
 #include "ovf_expectation.h"
 #include "ovf_fn_helpers.h"
@@ -106,7 +107,7 @@ const struct ovf_genops OVF_expectation_datagen = {
    .set_b_0 = NULL,
    .set_cones = expectation_gen_set_cones,
    .set_cones_nonbox = expectation_gen_set_cones,
-   .size_u = risk_measure_u_size,
+   .size_u = u_size_same,
    .u_shift = expectation_u_shift,
    .var = expectation_gen_var,
    .var_ppty = &expectation_varfill,

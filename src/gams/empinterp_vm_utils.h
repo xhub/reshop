@@ -198,7 +198,7 @@ static inline VmGmsSymIterator * getgmssymiter(VmValueArray * globals, unsigned 
    return AS_GMSSYMITER(globals->arr[gidx]);
 }
 
-static inline DagLabels* getdaglabels(VmValueArray * globals, unsigned gidx)
+static inline LinkLabels* getlinklabels(VmValueArray * globals, unsigned gidx)
 {
    assert(gidx < globals->len);
    assert(IS_ARCOBJ(globals->arr[gidx]));

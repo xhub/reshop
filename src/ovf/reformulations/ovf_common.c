@@ -295,8 +295,8 @@ int ovf_compat_types(const char *ovf_name, const char *ovf_varname, RhpSense mp_
        * Nothing actually needs to be done, but that's another story ...
        * ------------------------------------------------------------------- */
 
-      while (ovf_always_compat[i]) {
-         if (!strcasecmp(ovf_name, ovf_always_compat[i])) {
+      while (ovf_always_compatible[i]) {
+         if (!strcasecmp(ovf_name, ovf_always_compatible[i])) {
             return OK;
          }
          ++i;

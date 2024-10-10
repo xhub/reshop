@@ -17,10 +17,11 @@ const char * const ovf_synonyms[][2] = {
    /* Synonym, OVF name */
    { "expectedvalue", "expectation" },
    { "sumpospart", "sum_pos_part"  },
+   { "plus", "sum_pos_part"  },
    { NULL, NULL },
 };
 
-const char * const ovf_always_compat[] = {
+const char * const ovf_always_compatible[] = {
    "expectation",
    NULL,
 };

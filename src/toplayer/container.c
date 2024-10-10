@@ -774,3 +774,51 @@ int ctr_ensure_pool(Container *ctr)
 
    return OK;
 }
+
+int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei)
+{
+   void *iter = NULL;
+   int nlflag;
+   UNUSED double val = SNAN;
+   rhp_idx ei_ = IdxNA;
+   do {
+      double val_;
+      S_CHECK(ctr_var_iterequs(ctr, vi, &iter, &val_, ei, &nlflag));
+      ei_ = *ei;
+
+      /* We've seen this variable in more than one equation of this MP */
+      if (ei_ != IdxNA) {
+         error("[container] ERROR: the variable %s appears in more than one equation."
+               "It cannot define a mapping.\n", ctr_printvarname(ctr, vi));
+         return Error_EMPIncorrectInput;
+      }
+      /* If the variable appears nonlinearly, can't substitute */
+      if (nlflag) {
+         error("[container] ERROR: the variable %s appears nonlinearly in "
+               "equation %s, this is not allowed in a mapping definition",
+               ctr_printvarname(ctr, vi), ctr_printequname(ctr, *ei));
+         return Error_EMPIncorrectInput;
+      }
+
+      val = val_;
+
+   } while (iter);
+
+      /* If this variable appears in another MP, can't substitute*/
+//   mpid_t mpid = ctr->varmeta ? ctr->equmeta[vi].mp_id : MpId_NA;
+//      if (valid_mpid(mpid) && ctr->equmeta[ei_].mp_id != mpid) {
+//         error("[container] ERROR: the variable %s belongs to MP(%s), but the "
+//               "equation %")
+//      }
+
+   if (ei_ != IdxNA && ctr->equs[ei_].object == ConeInclusion &&
+      ctr->equs[ei_].cone == CONE_0) {
+
+      /* The objequ is a mapping */
+      ctr->equs[ei_].object = DefinedMapping;
+      ctr->equs[ei_].cone  = CONE_NONE;
+
+    }
+
+   return valid_ei(ei_) ? OK : Error_EMPRuntimeError;
+}

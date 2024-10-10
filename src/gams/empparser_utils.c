@@ -1,6 +1,7 @@
 #include "empinterp.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
+#include "empinterp_vm_compiler.h"
 #include "empparser.h"
 #include "empparser_priv.h"
 #include "empparser_utils.h"
@@ -200,3 +201,94 @@ int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
    return OK;
 }
 
+int resolve_tokasident(Interpreter *interp, IdentData *ident)
+{
+   /* ---------------------------------------------------------------------
+    * Strategy here for resolution:
+    * 1. Look for a local variable
+    * 2. Look for a global variable (todo)
+    * 3. Look for an alias
+    * 4. Look for a GAMS set / multiset / scalar / vector / param
+    *
+    * --------------------------------------------------------------------- */
+
+   const char *identstr = NULL;
+   struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
+   ident_init(ident, tok);
+
+   if (resolve_local(interp->compiler, ident)) {
+      return OK;
+   }
+
+   /* 2: global TODO */
+
+   /* Set this here, so that we don't copy this line over and over */
+   ident->origin = IdentOriginGdx;
+
+   /* 3. alias */
+   A_CHECK(identstr, tok_dupident(tok));
+   AliasArray *aliases = &interp->globals.aliases;
+   unsigned aliasidx = aliases_findbyname_nocase(aliases, identstr);
+
+   if (aliasidx != UINT_MAX) {
+      GdxAlias alias = aliases_at(aliases, aliasidx);
+      ident->idx = alias.index;
+      ident->type = alias.type;
+      ident->dim = alias.dim;
+      goto _exit;
+   }
+
+    /* 4. Look for a GAMS set / multiset / scalar / vector / param */
+   NamedIntsArray *sets = &interp->globals.sets;
+   unsigned idx = namedints_findbyname_nocase(sets, identstr);
+
+   if (idx != UINT_MAX) {
+      ident->idx = idx;
+      ident->type = IdentSet;
+      ident->dim = 1;
+      ident->ptr = &sets->list[idx];
+      goto _exit;
+   }
+
+   NamedMultiSets *multisets = &interp->globals.multisets;
+   idx = multisets_findbyname_nocase(multisets, identstr);
+
+   if (idx != UINT_MAX) {
+      GdxMultiSet ms = multisets_at(multisets, idx);
+      ident->idx = ms.idx;
+      ident->type = IdentMultiSet;
+      ident->dim = ms.dim;
+      ident->ptr = ms.gdxreader;
+      goto _exit;
+   }
+
+   NamedScalarArray *scalars = &interp->globals.scalars;
+   idx = namedscalar_findbyname_nocase(scalars, identstr);
+
+   if (idx != UINT_MAX) {
+      ident->idx = idx;
+      ident->type = IdentScalar;
+      ident->dim = 0;
+      ident->ptr = &scalars->list[idx];
+      goto _exit;
+   }
+
+   NamedVecArray *vectors = &interp->globals.vectors;
+   idx = namedvec_findbyname_nocase(vectors, identstr);
+
+   if (idx != UINT_MAX) {
+      ident->idx = idx;
+      ident->type = IdentVector;
+      ident->dim = 1;
+      ident->ptr = &vectors->list[idx];
+      goto _exit;
+   }
+
+   /* TODO: Params */
+   ident->origin = IdentOriginUnknown;
+
+_exit:
+   FREE(identstr);
+
+   return OK;
+}

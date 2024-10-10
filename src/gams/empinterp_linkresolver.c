@@ -273,7 +273,7 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
 static int dag_resolve_arc_labels(Interpreter *interp)
 {
    const DagRegister * restrict dagregister = &interp->dagregister;
-   const DagLabels2Arcs * restrict labels2resolve = &interp->labels2arcs;
+   const LinkLabels2Arcs * restrict labels2resolve = &interp->linklabels2arcs;
    EmpDag * restrict empdag = &interp->mdl->empinfo.empdag;
 
    unsigned num_err = 0;
@@ -288,7 +288,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
    unsigned dagreg_len = dagregister->len;
 
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
-      DagLabels *dagl = labels2resolve->arr[i];
+      LinkLabels *dagl = labels2resolve->arr[i];
 
       unsigned num_children = dagl->num_children;
 
@@ -325,7 +325,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
    }
 
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
-      DagLabels *dagl = labels2resolve->arr[i];
+      LinkLabels *dagl = labels2resolve->arr[i];
       int * restrict child = dagl->uels_var;
       uint8_t num_vars = dagl->num_var;
       uint8_t dim = dagl->dim;
@@ -336,7 +336,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
 
       unsigned num_children = dagl->num_children;
 
-      ArcDat arcdat = {.type = dagl->arc_type, 
+      ArcDat arcdat = {.type = dagl->linktype, 
          .labeldat = {.dim = dagl->dim,
          .labelname_len = dagl->nodename_len, .labelname = dagl->nodename} };
       memcpy(arcdat.labeldat.uels, dagl->data, sizeof(int)*dim);
@@ -380,7 +380,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
 static int dag_resolve_arc_label(Interpreter *interp)
 {
    const DagRegister * restrict dagregister = &interp->dagregister;
-   const DagLabel2Arc * restrict label2resolve = &interp->label2arc;
+   const LinkLabel2Arc * restrict label2resolve = &interp->linklabel2arc;
 
    unsigned num_err = 0;
 

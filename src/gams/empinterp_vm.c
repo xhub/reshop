@@ -197,7 +197,7 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       break;
    }
    case SIGNATURE_ARCOBJ: {
-      DagLabels *arcobj = AS_ARCOBJ(val_);
+      LinkLabels *arcobj = AS_ARCOBJ(val_);
       trace_empinterp("%*s: %.*s\n", pad, "ArcObj", arcobj->nodename_len, arcobj->nodename);
       break;
    }
@@ -290,7 +290,7 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
       break;
    }
    case SIGNATURE_ARCOBJ: {
-      DagLabels *arcobj = AS_ARCOBJ(v);
+      LinkLabels *arcobj = AS_ARCOBJ(v);
       printout(mode, "%20.*s", arcobj->nodename_len, arcobj->nodename);
       break;
    }
@@ -422,7 +422,7 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
       data.dscratch = &vmdata->dscratch;
       break;
    default:
-      error("%s :: unsupported token '%s'", __func__, identtype_str(type));
+      error("%s :: unsupported token '%s'", __func__, identtype2str(type));
       return Error_EMPRuntimeError;
    }
 
@@ -441,7 +441,7 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
       status = gmd_resolve(vmdata->gmd, &data);
       break;
    default:
-      error("%s :: unsupported token '%s'", __func__, identtype_str(type));
+      error("%s :: unsupported token '%s'", __func__, identtype2str(type));
       return Error_EMPRuntimeError;
    }
 
@@ -474,7 +474,7 @@ static int gms_resolve_extend_symb(VmData *vmdata, VmGmsSymIterator *filter)
    case IdentEqu:
       return aequ_extendandown(&vmdata->e_extend, &vmdata->e);
    default:
-      error("%s :: unsupported token '%s'", __func__, identtype_str(type));
+      error("%s :: unsupported token '%s'", __func__, identtype2str(type));
       return Error_EMPRuntimeError;
    }
 }
@@ -491,7 +491,7 @@ static int gms_extend_init(VmData *vmdata, IdentType type)
       aequ_reset(&vmdata->e_extend);
       break;
    default:
-      error("%s :: unsupported token '%s'", __func__, identtype_str(type));
+      error("%s :: unsupported token '%s'", __func__, identtype2str(type));
       return Error_EMPRuntimeError;
    }
 
@@ -512,7 +512,7 @@ static int gms_extend_sync(VmData *vmdata, IdentType type)
       DEBUGVMRUN_EXEC(aequ_printnames(vmdata->e_current, PO_TRACE_EMPINTERP, vmdata->mdl));
       break;
    default:
-      error("%s :: unsupported token '%s'", __func__, identtype_str(type));
+      error("%s :: unsupported token '%s'", __func__, identtype2str(type));
       return Error_EMPRuntimeError;
    }
 
@@ -539,7 +539,7 @@ static int vm_membership_test(UNUSED VmData *vmdata, VmGmsSymIterator *symiter,
    }
    default:
       error("[empvm_run] unexpected runtime error: no membership test for ident '%s'",
-            identtype_str(type));
+            identtype2str(type));
       return Error_EMPRuntimeError;
    }
 
@@ -581,10 +581,10 @@ struct empvm* empvm_new(Interpreter *interp)
    vm->data.mdl = interp->mdl;
    vm->data.globals = &interp->globals;
    vm->data.dagregister = &interp->dagregister;
-   vm->data.daglabels = NULL;
-   vm->data.daglabels_ws = NULL;
-   vm->data.labels2edges = &interp->labels2arcs;
-   vm->data.label2edge = &interp->label2arc;
+   vm->data.linklabels = NULL;
+   vm->data.linklabel_ws = NULL;
+   vm->data.linklabels2arcs = &interp->linklabels2arcs;
+   vm->data.linklabel2arc = &interp->linklabel2arc;
 
    vmvals_add(&vm->globals, UINT_VAL(0));
    vmvals_add(&vm->globals, INT_VAL(0));
@@ -720,7 +720,7 @@ int empvm_run(struct empvm *vm)
          }
          default:
             error("[empvm_run] in %s: unexpected ident type %s", opcodes_name(instr),
-                  identtype_str(type));
+                  identtype2str(type));
             goto _exit;
          }
 
@@ -760,7 +760,7 @@ int empvm_run(struct empvm *vm)
          }
          default:
             error("[empvm_run] in %s: unexpected ident type %s", opcodes_name(instr),
-                  identtype_str(type));
+                  identtype2str(type));
             goto _exit;
          }
          vm->locals[slot] = UINT_VAL(len);
@@ -793,22 +793,22 @@ int empvm_run(struct empvm *vm)
 
          break;
       }
-      case OP_EDGEOBJ_SETFROM_LOOPVAR: {
+      case OP_LINKLABELS_SETFROM_LOOPVAR: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          uint8_t idx = READ_BYTE(vm);
          uint8_t lidx = READ_BYTE(vm);
 
-         DagLabels *dagl;
-         N_CHECK_EXIT(dagl, getdaglabels(&vm->globals, gidx));
+         LinkLabels *linklabels;
+         N_CHECK_EXIT(linklabels, getlinklabels(&vm->globals, gidx));
 
-         assert(idx < dagl->dim);
+         assert(idx < linklabels->dim);
          assert(IS_LOOPVAR(vm->locals[lidx]));
 
          int uel = AS_LOOPVAR(vm->locals[lidx]);
-         dagl->data[idx] = uel;
+         linklabels->data[idx] = uel;
 
          DBGUSED int offset1, offset2;
-         DEBUGVMRUN("%.*s[%u] <- %n", dagl->nodename_len, dagl->nodename, idx, &offset1);
+         DEBUGVMRUN("%.*s[%u] <- %n", linklabels->nodename_len, linklabels->nodename, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
@@ -935,7 +935,7 @@ int empvm_run(struct empvm *vm)
          if (pos == UINT_MAX || !isfinite(dscratch->data[len])) {
             char buf[GMS_SSSIZE] = " ";
             char quote = ' ';
-            
+
             dctUelLabel(vm->data.dct, vecidx, &quote, buf, sizeof(buf));
             error("[empvm_run] runtime error: in '%.*s', no UEL %c%s%c (#%u)\n",
                   vmvec->lexeme.len, vmvec->lexeme.start, quote, buf, quote, vecidx);
@@ -943,12 +943,14 @@ int empvm_run(struct empvm *vm)
             status = Error_EMPIncorrectInput;
             goto _exit;
          }
+
          DEBUGVMRUN("vec[%u] <- %e = %.*s(", len, dscratch->data[len],
                     vmvec->lexeme.len, vmvec->lexeme.start);
          DEBUGVMRUN_EXEC({
                int dummyoffset;
                dct_printuel(vm->data.dct, (vecidx), PO_TRACE_EMPINTERP, &dummyoffset);
                trace_empinterpmsg(")\n");});
+
          vmvec->len++;
          break;
       }
@@ -1078,7 +1080,7 @@ int empvm_run(struct empvm *vm)
          push(vm, BOOL_VAL(res));
          break;
       }
-      case OP_CALL_API: {
+      case OP_EMPAPI_CALL: {
          uint8_t api_idx = READ_BYTE(vm);
          assert(api_idx < empapis_len);
          const EmpApiCall callobj = empapis[api_idx];
@@ -1125,70 +1127,70 @@ int empvm_run(struct empvm *vm)
          }
          break;
       }
-      case OP_EDGE_DUP_DAGL: {
+      case OP_LINKLABELS_DUP: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          assert(gidx < vm->globals.len);
          assert(IS_ARCOBJ(vm->globals.arr[gidx]));
 
-         DagLabels *dagl_src = AS_ARCOBJ(vm->globals.arr[gidx]);
-         LinkLabel *dagl_cpy;
-         A_CHECK(dagl_cpy, dag_labels_dupaslabel(dagl_src));
-         dagl_cpy->daguid_parent = vm->data.uid_parent;
+         LinkLabels *linklabels_src = AS_ARCOBJ(vm->globals.arr[gidx]);
+         LinkLabel *linklabel_cpy;
+         A_CHECK(linklabel_cpy, linklabels_dupaslabel(linklabels_src));
+         linklabel_cpy->daguid_parent = vm->data.uid_parent;
 
-         S_CHECK(daglabel2arc_add(vm->data.label2edge, dagl_cpy));
+         S_CHECK(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
 
          break;
       }
-      case OP_EDGE_INIT: {
+      case OP_LINKLABELS_INIT: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          assert(gidx < vm->globals.len);
          assert(IS_ARCOBJ(vm->globals.arr[gidx]));
 
-         DagLabels *dagl_src = AS_ARCOBJ(vm->globals.arr[gidx]);
-         DagLabels *dagl_cpy;
-         A_CHECK(dagl_cpy, dag_labels_dup(dagl_src));
-         dagl_cpy->daguid_parent = vm->data.uid_parent;
+         LinkLabels *linklabels = AS_ARCOBJ(vm->globals.arr[gidx]);
+         LinkLabels *linklabels_cpy;
+         A_CHECK(linklabels_cpy, linklabels_dup(linklabels));
+         linklabels_cpy->daguid_parent = vm->data.uid_parent;
 
-         S_CHECK(daglabels2arcs_add(vm->data.labels2edges, dagl_cpy));
+         S_CHECK(linklabels2arcs_add(vm->data.linklabels2arcs, linklabels_cpy));
 
-         vm->data.daglabels = dagl_cpy;
-         REALLOC_(vm->data.daglabels_ws, int, dagl_cpy->num_var);
+         vm->data.linklabels = linklabels_cpy;
+         REALLOC_(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
          break;
       }
-      case OP_DAGL_STORE: {
-         assert(vm->data.daglabels);
-         assert(vm->data.daglabels_ws);
-         DagLabels *dagl = vm->data.daglabels;
+      case OP_LINKLABELS_STORE: {
+         assert(vm->data.linklabels);
+         assert(vm->data.linklabel_ws);
+         LinkLabels *linklabels = vm->data.linklabels;
 
          /* This is a dummy read. Otherwise the VM dissassembler is lost */
          uint8_t nargs = READ_BYTE(vm);
-         assert(dagl->num_var == nargs);
+         assert(linklabels->num_var == nargs);
 
          S_CHECK(scratchint_ensure(&vm->data.e_data, nargs));
          IntScratch *iscratch = &vm->data.e_data;
 
-         for (unsigned i = 0; i < dagl->num_var; ++i) {
+         for (unsigned i = 0; i < linklabels->num_var; ++i) {
             uint8_t slot = READ_BYTE(vm);
             int uel_lidx = AS_INT(vm->locals[slot]);
             iscratch->data[i] = uel_lidx;
          }
 
-         S_CHECK(dag_labels_add(dagl, iscratch->data));
+         S_CHECK(linklabels_add(linklabels, iscratch->data));
          break;
       }
-      case OP_DAGL_FINALIZE: {
-         assert(vm->data.daglabels);
-         assert(vm->data.daglabels_ws);
-         DagLabels *dagl = vm->data.daglabels;
+      case OP_LINKLABELS_FINALIZE: {
+         assert(vm->data.linklabels);
+         assert(vm->data.linklabel_ws);
+         LinkLabels *linklabels = vm->data.linklabels;
 
          /* ---------------------------------------------------------------
           * If there are no child, then delete the label
           * --------------------------------------------------------------- */
 
-         if (dagl->num_children == 0) {
-            vm->data.labels2edges->len--;
+         if (linklabels->num_children == 0) {
+            vm->data.linklabels2arcs->len--;
          }
-         vm->data.daglabels = NULL;
+         vm->data.linklabels = NULL;
          break;
       }
          // TODO: Delete?

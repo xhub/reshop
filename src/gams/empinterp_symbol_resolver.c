@@ -44,15 +44,16 @@ int dct_resolve(dctHandle_t dct, GmsResolveData * restrict data)
       if (dctSymName(dct, symidx, buf, sizeof(buf))) {
          strcpy(buf, "ERROR resolving symbol");
       }
-      trace_empparser("[empinterp] resolving GAMS symbol '%s' #%d of type %s and dim %u.\n",
+      trace_empinterp("[empinterp] DCT resolution of GAMS symbol '%s' #%d of type %s and dim %u.\n",
                       buf, symidx, toktype2str(toktype), dim);
+
       if (dim > 1 || (dim == 1 && uels[0] > 0)) {
-         trace_empparsermsg("[empinterp] UELs values are:\n");
+         trace_empinterp("[empinterp] UELs values are:\n");
          for (unsigned i = 0; i < dim; ++i) {
             int uel = uels[i];
             if (uel > 0) { dctUelLabel(dct, uels[i], &quote, buf, sizeof(buf));
             } else { strcpy(buf, "'*'"); }
-            trace_empparser("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
+            trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
       }
    }
@@ -105,6 +106,8 @@ int dct_resolve(dctHandle_t dct, GmsResolveData * restrict data)
          } else { /* toktype == TOK_GMS_EQU */
             aequ_setcompact(data->payload.e, size, idx);
          }
+
+         trace_empinterp("[empinterp] Read %u entries for compact symbol, starting at %u\n", size, idx);
       } else {
          rhp_idx i = 0;
          S_CHECK(scratchint_ensure(data->iscratch, size));
@@ -122,6 +125,8 @@ int dct_resolve(dctHandle_t dct, GmsResolveData * restrict data)
          } else { /* toktype == TOK_GMS_EQU */
             aequ_setlist(data->payload.e, i, idxs);
          }
+
+         trace_empinterp("[empinterp] Read %u entries for symbol\n", i);
       }
       break;
    }

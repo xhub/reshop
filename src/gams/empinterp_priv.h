@@ -19,7 +19,7 @@ void interp_showerr(Interpreter *interp) NONNULL;
 int process_statements(Interpreter * restrict interp, unsigned * restrict p,
                         TokenType toktype) NONNULL;
 
-const char * identtype_str(IdentType type);
+const char * identtype2str(IdentType type);
 
 /* ---------------------------------------------------------------------
  * Misc functions
@@ -119,15 +119,14 @@ void interp_switch_tok(Interpreter *interp)
    memcpy(&interp->pre, &tmp, sizeof(Token));
 }
 
-NONNULL static inline void identdata_init(IdentData *data, unsigned linenr,
-                                          const Token * restrict tok)
+NONNULL static inline void ident_init(IdentData *ident, const Token * restrict tok)
 {
-   data->lexeme.linenr = linenr;
-   data->lexeme.len = tok->len;
-   data->lexeme.start = tok->start;
-   data->type = IdentNotFound;
-   data->idx = UINT_MAX;
-   data->dim = UINT8_MAX;
+   ident->lexeme.linenr = tok->linenr;
+   ident->lexeme.len = tok->len;
+   ident->lexeme.start = tok->start;
+   ident->type = IdentNotFound;
+   ident->idx = UINT_MAX;
+   ident->dim = UINT8_MAX;
 }
 
 static inline void gmsindices_init(GmsIndicesData *indices)
@@ -261,19 +260,19 @@ static inline bool _has_no_parent(Interpreter *interp)
 
 static inline bool embmode(Interpreter *interp)
 {
-   return interp->ops && interp->ops->type == ParserOpsEmb;
+   return interp->ops && interp->ops->type == InterpreterOpsEmb;
 }
 
 static inline bool immmode(Interpreter *interp)
 {
    assert(interp->ops);
-   return interp->ops->type == ParserOpsImm;
+   return interp->ops->type == InterpreterOpsImm;
 }
 
 static inline bool compmode(Interpreter *interp)
 {
    assert(interp->ops);
-   return interp->ops->type == ParserOpsCompiler;
+   return interp->ops->type == InterpreterOpsCompiler;
 }
 
 typedef int (*interp_ops_generic)(Interpreter * interp, unsigned *p);
@@ -284,14 +283,18 @@ static inline int empinterp_ops_dispatch(Interpreter *interp, unsigned *p,
                                          interp_ops_generic fn_emb)
 {
    switch (interp->ops->type) {
-   case ParserOpsImm: return fn_imm(interp, p);
-   case ParserOpsCompiler: return fn_vm(interp, p);
-   case ParserOpsEmb: return fn_emb(interp, p);
+   case InterpreterOpsImm: return fn_imm(interp, p);
+   case InterpreterOpsCompiler: return fn_vm(interp, p);
+   case InterpreterOpsEmb: return fn_emb(interp, p);
    default: error("[empinterp] ERROR line %u: dispatch not implemented for ops"
                   "type %d", interp->linenr, interp->ops->type);
       return Error_NotImplemented;
    }
 }
+
+#define lexeme_fmtargs(lexeme) (lexeme).len, (lexeme).start
+#define ident_fmtargs(ident)   identtype2str((ident)->type), lexeme_fmtargs((ident)->lexeme)
+#define token_fmtargs(tok)     (tok)->len, (tok)->start
 
 #endif // !EMPINTERP_PRIV_H
 

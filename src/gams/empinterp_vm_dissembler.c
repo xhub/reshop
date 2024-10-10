@@ -28,7 +28,7 @@ enum OpCodeArgType {
    OPARG_JUMP_FWD,
    OPARG_IDENT_TYPE,
    OPARG_IDENT_IDX,
-   OPARG_DAGL_SYNCANDSTORE,
+   OPARG_LINKLABELS_SYNCANDSTORE,
    OPARG_GMSSYMITER,
    OPARG_ARCOBJ,
    OPARG_REGENTRY,
@@ -57,7 +57,6 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_FALSE] = {{OPARG_NONE},},
    [OP_LOCAL_COPYFROM_GIDX] = {{OPARG_LIDX_ASSIGN}, {OPARG_GIDX},},
    [OP_GMSSYMITER_SETFROM_LOOPVAR] = {{OPARG_GMSSYMITER}, {OPARG_IDX}, {OPARG_LIDX}},
-   [OP_EDGEOBJ_SETFROM_LOOPVAR] = {{OPARG_ARCOBJ}, {OPARG_IDX}, {OPARG_LIDX}},
    [OP_REGENTRY_SETFROM_LOOPVAR] = {{OPARG_REGENTRY}, {OPARG_IDX}, {OPARG_LIDX}},
    [OP_LOCAL_COPYTO_LOCAL] = {{OPARG_LIDX}, {OPARG_LIDX}},
    [OP_LOCAL_COPYOBJLEN] = {{OPARG_LIDX}, {OPARG_IDENT_TYPE}, {OPARG_IDENT_IDX}},
@@ -90,12 +89,13 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_GMSSYM_RESOLVE] = {{OPARG_GIDX},},
    [OP_GMS_RESOLVE_EXTEND] = {{OPARG_GIDX},},
    [OP_GMS_MEMBERSHIP_TEST] = {{OPARG_GIDX},},
-   [OP_CALL_API] = {{OPARG_APICALL},},
+   [OP_EMPAPI_CALL] = {{OPARG_APICALL},},
    [OP_NEW_OBJ] = {{OPARG_NEWOBJ},},
-   [OP_EDGE_DUP_DAGL] = {{OPARG_GIDX},},
-   [OP_EDGE_INIT] = {{OPARG_GIDX},},
-   [OP_DAGL_STORE] = {{OPARG_DAGL_SYNCANDSTORE},},
-   [OP_DAGL_FINALIZE] = {{OPARG_NONE},},
+   [OP_LINKLABELS_INIT] = {{OPARG_GIDX},},
+   [OP_LINKLABELS_DUP] = {{OPARG_GIDX},},
+   [OP_LINKLABELS_SETFROM_LOOPVAR] = {{OPARG_ARCOBJ}, {OPARG_IDX}, {OPARG_LIDX}},
+   [OP_LINKLABELS_STORE] = {{OPARG_LINKLABELS_SYNCANDSTORE},},
+   [OP_LINKLABELS_FINALIZE] = {{OPARG_NONE},},
    [OP_SET_DAGUID_FROM_REGENTRY] = {{OPARG_NONE},},
    [OP_END] = {{OPARG_NONE},},
 };
@@ -113,7 +113,6 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_FALSE] = 0,
    [OP_LOCAL_COPYFROM_GIDX] = 2,
    [OP_GMSSYMITER_SETFROM_LOOPVAR] = 3,
-   [OP_EDGEOBJ_SETFROM_LOOPVAR] = 3,
    [OP_REGENTRY_SETFROM_LOOPVAR] = 3,
    [OP_LOCAL_COPYTO_LOCAL] = 2,
    [OP_LOCAL_COPYOBJLEN] = 3,
@@ -146,12 +145,13 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_GMSSYM_RESOLVE] = 1,
    [OP_GMS_RESOLVE_EXTEND] = 1,
    [OP_GMS_MEMBERSHIP_TEST] = 1,
-   [OP_CALL_API] = 1,
+   [OP_EMPAPI_CALL] = 1,
    [OP_NEW_OBJ] = 1,
-   [OP_EDGE_DUP_DAGL] = 1,
-   [OP_EDGE_INIT] = 1,
-   [OP_DAGL_STORE] = 1,
-   [OP_DAGL_FINALIZE] = 0,
+   [OP_LINKLABELS_INIT] = 1,
+   [OP_LINKLABELS_DUP] = 1,
+   [OP_LINKLABELS_SETFROM_LOOPVAR] = 3,
+   [OP_LINKLABELS_STORE] = 1,
+   [OP_LINKLABELS_FINALIZE] = 0,
    [OP_SET_DAGUID_FROM_REGENTRY] = 0,
    [OP_END] = 0,
 };
@@ -168,7 +168,6 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_TRUE,"TRUE") \
  DEFSTR(OP_FALSE,"FALSE") \
  DEFSTR(OP_GMSSYMITER_SETFROM_LOOPVAR,"GMSSYMITER_SETFROM_LOOPVAR") \
- DEFSTR(OP_EDGEOBJ_SETFROM_LOOPVAR,"EDGEOBJ_SETFROM_LOOPVAR") \
  DEFSTR(OP_REGENTRY_SETFROM_LOOPVAR,"REGENTRY_SETFROM_LOOPVAR") \
  DEFSTR(OP_LOCAL_COPYFROM_GIDX,"LOCAL_COPYFROM_GIDX") \
  DEFSTR(OP_LOCAL_COPYOBJLEN,"LOCAL_COPYOBJLEN") \
@@ -204,10 +203,11 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_GMS_MEMBERSHIP_TEST,"GMS_MEMBERSHIP_TEST") \
  DEFSTR(OP_CALL_API,"CALL_API") \
  DEFSTR(OP_NEW_OBJ,"NEW_OBJ") \
- DEFSTR(OP_EDGE_DUP_DAGL,"EDGE_DUP_DAGL") \
- DEFSTR(OP_EDGE_INIT,"EDGE_INIT") \
- DEFSTR(OP_DAGL_STORE,"DAGL_STORE") \
- DEFSTR(OP_DAGL_FINALIZE,"DAGL_FINALIZE") \
+ DEFSTR(OP_LINKLABELS_INIT,"LINKLABELS_INIT") \
+ DEFSTR(OP_LINKLABELS_DUP,"LINKLABELS_DUP_LINKLABELS") \
+ DEFSTR(OP_LINKLABELS_SETFROM_LOOPVAR,"LINKLABELS_SETFROM_LOOPVAR") \
+ DEFSTR(OP_LINKLABELS_STORE,"LINKLABELS_STORE") \
+ DEFSTR(OP_LINKLABELS_FINALIZE,"LINKLABELS_FINALIZE") \
  DEFSTR(OP_SET_DAGUID_FROM_REGENTRY, "SET_DAGUID_FROM_REGENTRY") \
  DEFSTR(OP_END,"END")
 
@@ -273,8 +273,8 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          DagRegisterEntry *regentry = AS_REGENTRY(v);
          printout(mode, "%30.*s\n", regentry->nodename_len, regentry->nodename);
       } else if (IS_ARCOBJ(v)) {
-         DagLabels *dagl = AS_ARCOBJ(v);
-         printout(mode, "%30.*s\n", dagl->nodename_len, dagl->nodename);
+         LinkLabels *linklabel = AS_ARCOBJ(v);
+         printout(mode, "%30.*s\n", linklabel->nodename_len, linklabel->nodename);
       } else if (IS_GMSSYMITER(v)) {
          VmGmsSymIterator *symiter = AS_GMSSYMITER(v);
          IdentData *sym = &symiter->ident;
@@ -420,7 +420,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                error("Ident Type value %u unknown\n", val8);
                status = Error_EMPRuntimeError;
             } 
-            printout(mode, "%20s ", identtype_str(val8));
+            printout(mode, "%20s ", identtype2str(val8));
             break;
          case OPARG_IDENT_IDX:
             val = READ_GIDX(vm);
@@ -442,11 +442,11 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                printstr(mode, vm->data.globals->vectors.names[val]);
                break;
             default:
-               error("[empvm] unexpected ident type %s", identtype_str(val8));
+               error("[empvm] unexpected ident type %s", identtype2str(val8));
                status = Error_EMPRuntimeError;
             }
             break;
-         case OPARG_DAGL_SYNCANDSTORE: {
+         case OPARG_LINKLABELS_SYNCANDSTORE: {
             uint8_t nargs = READ_BYTE(vm);
             assert(nargs < GMS_MAX_INDEX_DIM);
 

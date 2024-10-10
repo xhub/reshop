@@ -16,6 +16,7 @@ DECLARE_OVF_FUNCTION(ecvarup) \
 DECLARE_OVF_FUNCTION(ecvarlo) \
 DECLARE_OVF_FUNCTION(cvarlo) \
 DECLARE_OVF_FUNCTION(expectation) \
+DECLARE_OVF_FUNCTION(smax) \
 
 
 #include "ovf_huber.h"
@@ -27,6 +28,7 @@ DECLARE_OVF_FUNCTION(expectation) \
 #include "ovf_soft_hinge.h"
 #include "ovf_hubnik.h"
 #include "ovf_elastic_net.h"
+
 #include "ovf_huber_scaled.h"
 #include "ovf_soft_hinge_scaled.h"
 #include "ovf_hubnik_scaled.h"
@@ -36,3 +38,5 @@ DECLARE_OVF_FUNCTION(expectation) \
 #include "ovf_ecvarlo.h"
 #include "ovf_cvarlo.h"
 #include "ovf_expectation.h"
+
+#include "ovf_smax.h"

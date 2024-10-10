@@ -266,7 +266,7 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
    }
 
    if (hidden_mps) {
-      IO_CALL(fprintf(f, " subgraph cluster_mps_hidden { \n label = \"Hidden MPs\"\n%s}\n",
+      IO_CALL(fprintf(f, " subgraph cluster_mps_hidden { \n label = \"Defining MPs\"\n%s}\n",
                       hidden_mps));
       free(hidden_mps);
    }

@@ -76,15 +76,15 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    parsedkwds_init(&interp->state);
    interp->last_kw_info.type = TOK_UNSET;
    finalization_init(&interp->finalize);
-   interp->ops = &parser_ops_imm;
+   interp->ops = &interp_ops_imm;
    interp->compiler = compiler_init(interp);
 
    interp->regentry = NULL;
    interp->dag_root_label = NULL;
    dagregister_init(&interp->dagregister);
 
-   daglabels2arcs_init(&interp->labels2arcs);
-   daglabel2arc_init(&interp->label2arc);
+   linklabels2arcs_init(&interp->linklabels2arcs);
+   linklabel2arc_init(&interp->linklabel2arc);
    dual_labels_init(&interp->dual_label);
 
    gdxreaders_init(&interp->gdx_readers);
@@ -147,8 +147,8 @@ NONNULL void interp_free(Interpreter *interp)
 
    FREE(interp->regentry);
 
-   daglabel2arc_freeall(&interp->label2arc);
-   daglabels2arcs_freeall(&interp->labels2arcs);
+   linklabel2arc_freeall(&interp->linklabel2arc);
+   linklabels2arcs_freeall(&interp->linklabels2arcs);
 
    assert(interp->health != PARSER_OK || !gmsindices_isactive(&interp->gmsindices));
 }
@@ -451,97 +451,6 @@ _exit:
    return status;
 }
 
-static int resolve_ident(Interpreter * restrict interp, IdentData * restrict ident)
-{
-   /* ---------------------------------------------------------------------
-    * Strategy here for resolution:
-    * 1. Look for a local variable
-    * 2. Look for a global variable (todo)
-    * 3. Look for an alias
-    * 4. Look for a GAMS set / multiset / scalar / vector / param
-    *
-    * --------------------------------------------------------------------- */
-
-   const char *identstr = NULL;
-   struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
-   identdata_init(ident, interp->linenr, tok);
-
-   if (resolve_local(interp->compiler, ident)) {
-      return OK;
-   }
-
-   /* 2: global TODO */
-
-   /* Set this here, so that we don't copy this line over and over */
-   ident->origin = IdentOriginGdx;
-
-   /* 3. alias */
-   A_CHECK(identstr, tok_dupident(tok));
-   AliasArray *aliases = &interp->globals.aliases;
-   unsigned aliasidx = aliases_findbyname_nocase(aliases, identstr);
-
-   if (aliasidx != UINT_MAX) {
-      GdxAlias alias = aliases_at(aliases, aliasidx);
-      ident->idx = alias.index;
-      ident->type = alias.type;
-      ident->dim = alias.dim;
-      goto _exit;
-   }
-
-    /* 4. Look for a GAMS set / multiset / scalar / vector / param */
-   NamedIntsArray *sets = &interp->globals.sets;
-   unsigned idx = namedints_findbyname_nocase(sets, identstr);
-
-   if (idx != UINT_MAX) {
-      ident->idx = idx;
-      ident->type = IdentSet;
-      ident->dim = 1;
-      ident->ptr = &sets->list[idx];
-      goto _exit;
-   }
-
-   NamedMultiSets *multisets = &interp->globals.multisets;
-   idx = multisets_findbyname_nocase(multisets, identstr);
-
-   if (idx != UINT_MAX) {
-      GdxMultiSet ms = multisets_at(multisets, idx);
-      ident->idx = ms.idx;
-      ident->type = IdentMultiSet;
-      ident->dim = ms.dim;
-      ident->ptr = ms.gdxreader;
-      goto _exit;
-   }
-
-   NamedScalarArray *scalars = &interp->globals.scalars;
-   idx = namedscalar_findbyname_nocase(scalars, identstr);
-
-   if (idx != UINT_MAX) {
-      ident->idx = idx;
-      ident->type = IdentScalar;
-      ident->dim = 0;
-      ident->ptr = &scalars->list[idx];
-      goto _exit;
-   }
-
-   NamedVecArray *vectors = &interp->globals.vectors;
-   idx = namedvec_findbyname_nocase(vectors, identstr);
-
-   if (idx != UINT_MAX) {
-      ident->idx = idx;
-      ident->type = IdentVector;
-      ident->dim = 1;
-      ident->ptr = &vectors->list[idx];
-      goto _exit;
-   }
-
-   /* TODO: Params */
-   ident->origin = IdentOriginUnknown;
-
-_exit:
-   FREE(identstr);
-
-   return OK;
-}
 
 int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
                             const char *msg, unsigned argc, ...)
@@ -552,7 +461,7 @@ int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
    va_start(ap, argc);
    va_copy(ap_copy, ap);
 
-   S_CHECK_EXIT(resolve_ident(interp, ident));
+   S_CHECK_EXIT(interp->ops->resolve_tokasident(interp, ident));
 
    IdentType type = ident->type;
    for (unsigned i = 0; i < argc; ++i) {
@@ -574,7 +483,7 @@ int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
    status = Error_EMPIncorrectSyntax;
    error("[empinterp] ERROR line %u: ident '%.*s' has type '%s', but expected any of ",
          interp->linenr, emptok_getstrlen(&interp->cur),
-         emptok_getstrstart(&interp->cur), identtype_str(type));
+         emptok_getstrstart(&interp->cur), identtype2str(type));
 
    bool first = true;
    for (size_t i = 0; i < argc; ++i) {
@@ -585,7 +494,7 @@ int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
          first = false;
       }
 
-      error("'%s'", identtype_str(type_));
+      error("'%s'", identtype2str(type_));
    }
 
    error(".\n[empinterp] error msg is: %s\n", msg);

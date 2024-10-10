@@ -1,4 +1,5 @@
 #include "asprintf.h"
+#include "lequ.h"
 #include "reshop_config.h"
 
 #include <limits.h>
@@ -156,6 +157,9 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    mpidarray_init(&empdag->fooc.vi);
    mpidarray_init(&empdag->objfn.src);
    mpidarray_init(&empdag->objfn.dst);
+   mpidarray_init(&empdag->objfn_maps.mps);
+
+   empdag->objfn_maps.lequs = NULL;
 
    empdag->mdl = mdl;
 }
@@ -390,6 +394,15 @@ void empdag_rel(EmpDag *empdag)
    mpidarray_empty(&empdag->fooc.vi);
    mpidarray_empty(&empdag->objfn.src);
    mpidarray_empty(&empdag->objfn.dst);
+
+   unsigned len = empdag->objfn_maps.mps.len;
+   mpidarray_empty(&empdag->objfn_maps.mps);
+
+   for (unsigned i = 0; i <len; ++i) {
+      lequ_dealloc(empdag->objfn_maps.lequs[i]);
+   }
+
+   FREE(empdag->objfn_maps.lequs);
 
    /****************************************************************************
    * Free MP and Nash data structures

@@ -1,4 +1,8 @@
 #include "ovf_fn_helpers.h"
+#include "ovf_parameter.h"
+#include "ovf_risk_measure_common.h"
+#include "printout.h"
+#include "rhp_LA.h"
 
 #ifndef OVF_NAME
 #error "OVF_NAME must be defined before including this file"

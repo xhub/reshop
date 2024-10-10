@@ -139,6 +139,11 @@ typedef struct {
    MpIdArray dst;
 } MpObjFnInfo;
 
+typedef struct {
+   MpIdArray mps;
+   Lequ **lequs;
+} MpObjFnAdditionalMapping;
+
 /** @brief Main EMP DAG structure */
 typedef struct empdag {
    EmpDagType type;
@@ -164,6 +169,8 @@ typedef struct empdag {
    MpIdArray epi_dual_subdag;
    FoocMpInfo fooc;
    MpObjFnInfo objfn;
+   MpObjFnAdditionalMapping objfn_maps;
+
 
    struct {
       RhpSense sense;

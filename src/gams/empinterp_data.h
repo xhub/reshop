@@ -110,7 +110,7 @@ typedef struct gdx_multiset {
    struct gdx_reader * gdxreader; /**< struct where this array has been found */
 } GdxMultiSet;
 
-static inline int symtype_gdx2rhp(enum gdxSyType gdxtype, GamsSymData *symdat, Token *tok)
+static inline int symtype2toktype(enum gdxSyType gdxtype, GamsSymData *symdat, Token *tok)
 {
    int dim = symdat->dim;
    assert(dim <= GMS_MAX_INDEX_DIM);
@@ -138,6 +138,38 @@ static inline int symtype_gdx2rhp(enum gdxSyType gdxtype, GamsSymData *symdat, T
       case dt_equ:
       tok->type = TOK_GMS_EQU;
       symdat->type = IdentEqu;
+      return OK;
+   default:
+      error("[empinterp] ERROR: gdx type %d not support. Please file a bug report\n", gdxtype);
+      return Error_NotImplemented;
+   }
+
+}
+
+static inline int symtype2identtype(enum gdxSyType gdxtype, IdentData *ident)
+{
+   int dim = ident->dim;
+   assert(dim <= GMS_MAX_INDEX_DIM);
+   assert(ident->origin == IdentOriginGdx || ident->origin == IdentOriginGmd);
+
+   switch (gdxtype) {
+   case dt_set:
+      if (dim == 1) { ident->type = IdentSet; }
+      else { ident->type = IdentMultiSet; };
+      return OK;
+   case dt_par:
+      if (dim == 0) { ident->type = IdentScalar; }
+      if (dim == 1) { ident->type = IdentVector; }
+      else { ident->type = IdentParam; }
+      return OK;
+   case dt_alias:
+      ident->type = IdentAlias;
+      return OK;
+   case dt_var:
+      ident->type = IdentVar;
+      return OK;
+      case dt_equ:
+      ident->type = IdentEqu;
       return OK;
    default:
       error("[empinterp] ERROR: gdx type %d not support. Please file a bug report\n", gdxtype);

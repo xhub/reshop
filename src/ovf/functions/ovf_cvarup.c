@@ -1,5 +1,6 @@
 #include "asnan.h"
 #include "macros.h"
+#include "ovf_functions_common.h"
 #include "printout.h"
 #include "ovf_cvar_common.h"
 #include "ovf_cvarup.h"
@@ -43,7 +44,7 @@ const struct ovf_genops OVF_cvarup_datagen = {
    .set_b_0 = NULL,
    .set_cones = cvar_gen_set_cones,
    .set_cones_nonbox = cvar_gen_set_cones_nonbox,
-   .size_u = risk_measure_u_size,
+   .size_u = u_size_same,
    .u_shift = cvar_u_shift,
    .var = cvarup_gen_var,
    .var_ppty = &cvarup_varfill,

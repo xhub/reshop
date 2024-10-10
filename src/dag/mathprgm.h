@@ -159,6 +159,7 @@ int mp_rm_var(MathPrgm *mp, rhp_idx vi) NONNULL;
 int mp_instantiate_fenchel_dual(MathPrgm *mp) NONNULL;
 int mp_instantiate(MathPrgm *mp) NONNULL;
 int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src) NONNULL;
+int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le) NONNULL;
 int mp_operator_kkt(MathPrgm *mp) NONNULL;
 
 void mp_err_noobjdata(const MathPrgm *mp) NONNULL;
