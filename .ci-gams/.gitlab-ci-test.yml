@@ -34,7 +34,7 @@ test-debug-leg:
 
 test-deg:
   stage: test
-  tags: [macos]
+  tags: [clarus]
   needs: [fetch-ci-scripts,build-deg]
   script:
     - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure

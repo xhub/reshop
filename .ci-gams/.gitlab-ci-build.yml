@@ -42,7 +42,7 @@ build-debug-leg:
 
 build-deg:
   stage: build
-  tags: [macos]
+  tags: [clarus]
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-deg]
