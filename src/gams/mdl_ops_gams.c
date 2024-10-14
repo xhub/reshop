@@ -156,7 +156,7 @@ static int gams_allocdata(Model *mdl)
    }
 
    mdldat->last_solverid = -1;
-   mdldat->delete_scratch = true;
+   mdldat->delete_scratch = false; /* TODO: should we change this? GG #12 */
    mdldat->slvptr = NULL;
 
    return OK;
@@ -178,11 +178,13 @@ static void gams_deallocdata(Model *mdl)
    if (!keep) {
       char buffer[GMS_SSSIZE];
       gevGetStrOpt(gms->gev, gevNameScrDir, buffer);
+
       /*  \TODO(xhub) check that we are not trying to remove the current directory ...*/
-      if (mdldat->delete_scratch && buffer[0] != '\0') {
+      if (mdldat->delete_scratch && buffer[0] == '\0') {
          printout(PO_INFO, "%s :: scr directory is empty!\n", __func__);
          mdldat->delete_scratch = false;
       }
+
       if (mdldat->delete_scratch) {
 
          int rc = rmfn(buffer);
@@ -199,7 +201,7 @@ static void gams_deallocdata(Model *mdl)
       cfgAlgFree(gms->cfg, mdldat->last_solverid, &mdldat->slvptr);
    }
 
-   mdl->ctr.ops->deallocdata(&mdl->ctr);
+   //mdl->ctr.ops->deallocdata(&mdl->ctr);
 
    FREE(mdl->data);
 }
@@ -460,6 +462,20 @@ skip:
          gmoOptFileSet(gms->gmo, 0);
       }
 
+      int solvelink;
+      switch (gms->solvelink) {
+      default:
+         solvelink = gevSolveLinkLoadLibrary;
+         break;
+      case gevSolveLinkCallScript:
+      case gevSolveLinkCallModule:
+      case gevSolveLinkAsyncGrid:
+      case gevSolveLinkAsyncSimulate:
+      case gevSolveLinkLoadLibrary:
+         solvelink = gms->solvelink;
+         break;
+      }
+
       trace_stack("[GAMS] Solving %s model '%.*s' #%u with solver=\"%s\", "
                   "gamsdir=\"%s\", gamscntr=\"%s\"\n", mdl_fmtargs(mdl),
                   mdldat->solvername, mdldat->gamsdir, mdldat->gamscntr);
@@ -469,8 +485,7 @@ skip:
                             gms->gmo,
                             "",                      /* name of control file   */
                             mdldat->solvername,         /* name of solver         */
-//                            gevSolveLinkCallModule, /* solvelink option       */
-                            gevSolveLinkLoadLibrary, /*  solvelink option       */
+                            solvelink, /*  solvelink option       */
                             solverlog,               /* log option             */
                             mdldat->logname,            /* log file name          */
                             mdldat->statusname,         /* status file name       */

@@ -47,7 +47,7 @@ UNUSED static bool lequ_chk_idxs(Lequ *le, Avar *v) {
    return true;
 }
 
-Lequ *lequ_alloc(int maxlen)
+Lequ *lequ_new(int maxlen)
 {
    Lequ *lequ;
 
@@ -69,7 +69,31 @@ _exit:
    return NULL;
 }
 
-void lequ_dealloc(Lequ *lequ)
+Lequ *lequ_new_from_data(unsigned len, const rhp_idx *vis, const double *coeffs)
+{
+   Lequ *lequ;
+
+   MALLOC_NULL(lequ, Lequ, 1);
+
+   lequ->max = len;
+   lequ->len = len;
+   lequ->coeffs = NULL; /* Just in case the first alloc fails  */
+
+   MALLOC_EXIT_NULL(lequ->vis, rhp_idx, len);
+   MALLOC_EXIT_NULL(lequ->coeffs, double, len);
+
+   memcpy(lequ->vis, vis, sizeof(*vis)*len);
+   memcpy(lequ->coeffs, coeffs, sizeof(*coeffs)*len);
+
+   return lequ;
+
+_exit:
+   FREE(lequ->vis);
+   FREE(lequ->coeffs);
+   FREE(lequ);
+   return NULL;
+}
+void lequ_free(Lequ *lequ)
 {
    if (!lequ) return;
 
@@ -251,7 +275,7 @@ Lequ* lequ_dup_rosetta(const Lequ * restrict src, const rhp_idx * restrict roset
 
    unsigned len = src->len;
    Lequ *dst;
-   AA_CHECK(dst, lequ_alloc(len));
+   AA_CHECK(dst, lequ_new(len));
 
    memcpy(dst->coeffs, src->coeffs, len*sizeof(double));
 

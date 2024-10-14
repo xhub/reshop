@@ -12,8 +12,10 @@
 #include "equ_data.h"
 #include "rhp_fwd.h"
 
-void lequ_dealloc(Lequ *lequ);
-Lequ *lequ_alloc(int maxlen) MALLOC_ATTR(lequ_dealloc,1);
+void lequ_free(Lequ *lequ);
+Lequ *lequ_new(int maxlen) MALLOC_ATTR(lequ_free,1);
+Lequ *lequ_new_from_data(unsigned len, const rhp_idx *vis, const double *coeffs)
+MALLOC_ATTR(lequ_free,1);
 
 void lequ_empty(Lequ *lequ);
 void lequ_init(Lequ *lequ) NONNULL;

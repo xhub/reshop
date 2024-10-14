@@ -111,25 +111,25 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 
    rhpRec_t *jh = (rhpRec_t *)Cptr;
    if (!jh) {
-      fprintf(stderr, "*** ERROR: private structure is NULL\n");
+      (void)fprintf(stderr, "*** ERROR: private structure is NULL\n");
       rc = 1; goto _exit;
    }
 
    if (!gh) {
-      fprintf(stderr, "*** ERROR: ReSHOP link expects non-NULL GMO handle\n");
+      (void)fprintf(stderr, "*** ERROR: ReSHOP link expects non-NULL GMO handle\n");
       rc = 1; goto _exit;
    }
 
    /* TODO(GAMS review): the following 2 GAMS call make no sense */
 
    if (!gmoGetReady(msg, sizeof(msg))) {
-      fprintf(stdout, "%s\n", msg);
+      (void)fprintf(stdout, "%s\n", msg);
       rc = 1; goto _exit;
    }
    jh->gh = gh;
 
    if (!gevGetReady(msg, sizeof(msg))) {
-      fprintf(stdout, "%s\n", msg);
+      (void)fprintf(stdout, "%s\n", msg);
       rc = 1; goto _exit;
    }
    jh->eh = gmoEnvironment(gh);
@@ -247,7 +247,7 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 
    rc = opt_process(jh, opt_need_init, sysdir);
    if (rc) {
-      snprintf(msg, sizeof msg, "*** ReSHOP ERROR: Could not process options (rc=%d)", rc);
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: Could not process options (rc=%d)", rc);
       gevLogStat(jh->eh, msg);
       rc = 1; goto _exit;
    }
@@ -313,7 +313,7 @@ DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
 
    rc = opt_pushtosolver(jh);
    if (rc) {
-      snprintf(msg, sizeof msg, "*** ReSHOP ERROR: reading options failed! Error message is %s (%d)\n",
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: reading options failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc);
       gevLogStatPChar(jh->eh, msg);
       goto _exit;
@@ -325,7 +325,7 @@ DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
    /* Process the EMPINFO  */
    rc = rhp_gms_readempinfo(jh->mdl, NULL);
    if (rc) {
-      snprintf(msg, sizeof msg, "*** ReSHOP ERROR: Reading EMPINFO failed! Error message is %s (%d)\n",
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: Reading EMPINFO failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc);
       gevLogStatPChar(jh->eh, msg);
       goto _exit;
@@ -333,7 +333,7 @@ DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
 
    mdl_solver = rhp_getsolvermdl(jh->mdl);
    if (!mdl_solver) {
-      snprintf(msg, sizeof msg, "*** ReSHOP ERROR: couldn't create solver model object\n");
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: couldn't create solver model object\n");
       gevLogStatPChar(jh->eh, msg);
       goto _exit;
    }
@@ -341,7 +341,7 @@ DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
    /* Process the solver model (reformulations, ...) */
    rc = rhp_process(jh->mdl, mdl_solver);
    if (rc) {
-      snprintf(msg, sizeof msg, "*** ReSHOP ERROR: EMP transformation failed! Error message is %s (%d)\n",
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: EMP transformation failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc);
       gevLogStatPChar(jh->eh, msg);
       goto _exit;
@@ -350,7 +350,7 @@ DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
    /* Process the solver model  */
    rc = rhp_solve(mdl_solver);
    if (rc) {
-      snprintf(msg, sizeof msg, "*** ReSHOP ERROR: solve failed! Error message is %s (%d)\n",
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: solve failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc);
       gevLogStatPChar(jh->eh, msg);
       goto _exit;
@@ -359,7 +359,7 @@ DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
    /* Perform the postprocessing  */
    rc = rhp_postprocess(mdl_solver);
    if (rc) {
-      snprintf(msg, sizeof msg, "*** ReSHOP ERROR: postprocessing failed! Error message is %s (%d)\n",
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: postprocessing failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc);
       gevLogStatPChar(jh->eh, msg);
       goto _exit;

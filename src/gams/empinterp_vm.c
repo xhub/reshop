@@ -193,12 +193,12 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       break;
    case SIGNATURE_REGENTRY: {
       DagRegisterEntry *regentry = AS_REGENTRY(val_);
-      trace_empinterp("%*s: %.*s\n", pad, "RegEntry", regentry->nodename_len, regentry->nodename);
+      trace_empinterp("%*s: %.*s\n", pad, "RegEntry", regentry->label_len, regentry->label);
       break;
    }
    case SIGNATURE_ARCOBJ: {
       LinkLabels *arcobj = AS_ARCOBJ(val_);
-      trace_empinterp("%*s: %.*s\n", pad, "ArcObj", arcobj->nodename_len, arcobj->nodename);
+      trace_empinterp("%*s: %.*s\n", pad, "ArcObj", arcobj->label_len, arcobj->label);
       break;
    }
    case SIGNATURE_GMSSYMITER: {
@@ -286,12 +286,12 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
       break;
    case SIGNATURE_REGENTRY: {
       DagRegisterEntry *regentry = AS_REGENTRY(v);
-      printout(mode, "%20.*s", regentry->nodename_len, regentry->nodename);
+      printout(mode, "%20.*s", regentry->label_len, regentry->label);
       break;
    }
    case SIGNATURE_ARCOBJ: {
       LinkLabels *arcobj = AS_ARCOBJ(v);
-      printout(mode, "%20.*s", arcobj->nodename_len, arcobj->nodename);
+      printout(mode, "%20.*s", arcobj->label_len, arcobj->label);
       break;
    }
    case SIGNATURE_GMSSYMITER: {
@@ -328,6 +328,44 @@ DBGUSED static void print_symiter(VmGmsSymIterator *symiter, EmpVm *vm)
       }
       DEBUGVMRUN("%s", ")");
    }
+}
+NONNULL static int vmdata_consume_scalardata(VmData *data, double *coeff)
+{
+   unsigned dnrecs = data->dnrecs;
+
+   if (dnrecs == UINT_MAX) {
+      *coeff = 1;
+      return OK;
+   }
+
+   if (dnrecs > 1) {
+      error("[empmv] ERROR: expecting at most one data value, got %u\n", dnrecs);
+      return Error_EMPIncorrectInput;
+   }
+
+   *coeff = dnrecs == 0 ? 1. : data->dval; assert(isfinite(*coeff));
+
+   data->dnrecs = UINT_MAX;
+
+   data->dval = NAN;
+   return OK;
+}
+
+NONNULL static int vmdata_consume_scalarvar(VmData *data, rhp_idx *vi)
+{
+   unsigned var_len = data->v.size;
+
+   if (var_len > 1) {
+      error("[empvm] ERROR: expecting a variable of size at most 1, got %u\n",
+            var_len);
+      return Error_EMPIncorrectInput;
+   }
+
+   *vi = var_len == 0 ? IdxNA : avar_fget(&data->v, 0);
+
+   avar_reset(&data->v);
+
+   return OK;
 }
 
 /* ----------------------------------------------------------------------
@@ -390,10 +428,10 @@ static void _print_uels(dctHandle_t dct, unsigned mode, int *uels, unsigned nuel
 }
 #endif
 
-static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
+static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
 {
    IdentType type = symiter->ident.type;
-   assert(identisequvar(type));
+   assert(identisequvar(type) || type == IdentVector);
 
    GmsResolveData data;
 
@@ -432,14 +470,25 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
    switch (type) {
    case IdentVar:
    case IdentEqu:
-      status = dct_resolve(dct, &data);
+      status = dct_read_equvar(dct, &data);
       break;
    case IdentSet:
    case IdentScalar:
    case IdentVector:
-   case IdentParam:
-      status = gmd_resolve(vmdata->gmd, &data);
+   case IdentParam: {
+      char symname[GMS_SSSIZE];
+      memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
+      symname[symiter->ident.lexeme.len] = 0;
+      status = gmd_read(vmdata->gmd, &data, symname);
+      if (type == IdentSet) {
+         vmdata->inrecs = data.nrecs;
+         vmdata->ival = data.itmp;
+      } else { //data
+         vmdata->dnrecs = data.nrecs;
+         vmdata->dval = data.dtmp;
+      }
       break;
+      }
    default:
       error("%s :: unsupported token '%s'", __func__, identtype2str(type));
       return Error_EMPRuntimeError;
@@ -461,12 +510,12 @@ static int gms_resolve_symb(VmData *vmdata, VmGmsSymIterator *symiter)
    return status;
 }
 
-static int gms_resolve_extend_symb(VmData *vmdata, VmGmsSymIterator *filter)
+static int gms_read_extend_symb(VmData *vmdata, VmGmsSymIterator *filter)
 {
    IdentType type = filter->ident.type;
    assert(identisequvar(type));
 
-   S_CHECK(gms_resolve_symb(vmdata, filter));
+   S_CHECK(gms_read_symbol(vmdata, filter));
 
    switch (type) {
    case IdentVar:
@@ -498,7 +547,7 @@ static int gms_extend_init(VmData *vmdata, IdentType type)
    return OK;
 }
 
-static int gms_extend_sync(VmData *vmdata, IdentType type)
+static int gms_equvar_sync(VmData *vmdata, IdentType type)
 {
    assert(identisequvar(type));
 
@@ -546,14 +595,45 @@ static int vm_membership_test(UNUSED VmData *vmdata, VmGmsSymIterator *symiter,
 
 }
 
+NONNULL static int vmdata_init(VmData *data)
+{
+   data->uid_grandparent = EMPDAG_UID_NONE;
+   data->uid_parent = EMPDAG_UID_NONE;
+
+   aequ_init(&data->e);
+   avar_init(&data->v);
+   scratchint_init(&data->e_data);
+   scratchint_init(&data->v_data);
+   scratchint_init(&data->iscratch);
+   scratchdbl_init(&data->dscratch);
+ 
+   S_CHECK(aequ_setblock(&data->e_extend, 3));
+   S_CHECK(avar_setblock(&data->v_extend, 3));
+   S_CHECK(scratchint_ensure(&data->iscratch, 10));
+   S_CHECK(scratchdbl_ensure(&data->dscratch, 10));
+
+   data->e_current = NULL;
+   data->v_current = NULL;
+
+   arcvfobjs_init(&data->arcvfobjs);
+
+   data->linklabels = NULL;
+   data->linklabel_ws = NULL;
+
+   data->dval = NAN;
+   data->ival = UINT_MAX;
+   data->inrecs = UINT_MAX;
+   data->dnrecs = UINT_MAX;
+
+   return OK;
+}
+
 struct empvm* empvm_new(Interpreter *interp)
 {
    struct empvm* vm;
-   MALLOC_NULL(vm, struct empvm, 1);
+   CALLOC_NULL(vm, struct empvm, 1);
 
    vm->stack_top = vm->stack;
-   vmvals_resize(&vm->globals, 10);
-   vmcode_resize(&vm->code, 100);
 
    vmobjs_init(&vm->newobjs);
    vmobjs_init(&vm->objs);
@@ -561,41 +641,29 @@ struct empvm* empvm_new(Interpreter *interp)
    rhp_uint_init(&vm->uints);
    rhp_int_init(&vm->ints);
 
-   vm->data.uid_grandparent = EMPDAG_UID_NONE;
-   vm->data.uid_parent = EMPDAG_UID_NONE;
-   aequ_init(&vm->data.e);
-   avar_init(&vm->data.v);
-   aequ_setblock(&vm->data.e_extend, 3);
-   avar_setblock(&vm->data.v_extend, 3);
-   scratchint_init(&vm->data.e_data);
-   scratchint_init(&vm->data.v_data);
-   scratchint_init(&vm->data.iscratch);
-   scratchint_ensure(&vm->data.iscratch, 10);
-   scratchdbl_init(&vm->data.dscratch);
-   scratchdbl_ensure(&vm->data.dscratch, 10);
-   vm->data.e_current = NULL;
-   vm->data.v_current = NULL;
+   SN_CHECK_EXIT(vmdata_init(&vm->data));
 
-   arcvfobjs_init(&vm->data.arcvfobjs);
-
-   vm->data.mdl = interp->mdl;
-   vm->data.globals = &interp->globals;
-   vm->data.dagregister = &interp->dagregister;
-   vm->data.linklabels = NULL;
-   vm->data.linklabel_ws = NULL;
-   vm->data.linklabels2arcs = &interp->linklabels2arcs;
-   vm->data.linklabel2arc = &interp->linklabel2arc;
-
-   vmvals_add(&vm->globals, UINT_VAL(0));
-   vmvals_add(&vm->globals, INT_VAL(0));
-
-   vm->data.dct = interp->dct;
-   vm->data.gmd = interp->gmd;
+   SN_CHECK_EXIT(vmvals_resize(&vm->globals, 10));
+   SN_CHECK_EXIT(vmcode_resize(&vm->code, 100));
+   SN_CHECK_EXIT(vmvals_add(&vm->globals, UINT_VAL(0)));
+   SN_CHECK_EXIT(vmvals_add(&vm->globals, INT_VAL(0)));
 
    /* genlabelname needs interpreter for the ops */
    vm->data.interp = interp;
 
+   vm->data.dct = interp->dct;
+   vm->data.gmd = interp->gmd;
+   vm->data.mdl = interp->mdl;
+   vm->data.globals = &interp->globals;
+   vm->data.dagregister = &interp->dagregister;
+   vm->data.linklabels2arcs = &interp->linklabels2arcs;
+   vm->data.linklabel2arc = &interp->linklabel2arc;
+
    return vm;
+
+_exit:
+   empvm_free(vm);
+   return NULL;
 }
 
 void empvm_free(EmpVm *vm)
@@ -610,7 +678,7 @@ void empvm_free(EmpVm *vm)
       VmValue val = vm->globals.arr[i];
       if (IS_PTR(val)) {
          void *obj = AS_PTR(val);
-         FREE(obj);
+         free(obj);
       }
    }
 
@@ -621,16 +689,19 @@ void empvm_free(EmpVm *vm)
    rhp_uint_empty(&vm->uints);
    rhp_int_empty(&vm->ints);
 
-   aequ_empty(&vm->data.e);
-   avar_empty(&vm->data.v);
-   aequ_empty(&vm->data.e_extend);
-   avar_empty(&vm->data.v_extend);
-   scratchint_empty(&vm->data.e_data);
-   scratchint_empty(&vm->data.v_data);
-   scratchint_empty(&vm->data.iscratch);
-   scratchdbl_empty(&vm->data.dscratch);
+   VmData * restrict vmdata = &vm->data;
+   aequ_empty(&vmdata->e);
+   avar_empty(&vmdata->v);
+   aequ_empty(&vmdata->e_extend);
+   avar_empty(&vmdata->v_extend);
+   scratchint_empty(&vmdata->e_data);
+   scratchint_empty(&vmdata->v_data);
+   scratchint_empty(&vmdata->iscratch);
+   scratchdbl_empty(&vmdata->dscratch);
+   free(vmdata->linklabel_ws);
+   arcvfobjs_free(&vmdata->arcvfobjs);
 
-   FREE(vm);
+   free(vm);
 }
 
 int empvm_run(struct empvm *vm)
@@ -808,7 +879,7 @@ int empvm_run(struct empvm *vm)
          linklabels->data[idx] = uel;
 
          DBGUSED int offset1, offset2;
-         DEBUGVMRUN("%.*s[%u] <- %n", linklabels->nodename_len, linklabels->nodename, idx, &offset1);
+         DEBUGVMRUN("%.*s[%u] <- %n", linklabels->label_len, linklabels->label, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
@@ -829,8 +900,8 @@ int empvm_run(struct empvm *vm)
          regentry->uels[idx] = uel;
 
          DBGUSED int offset1, offset2; 
-         DEBUGVMRUN("%.*s[%u] <- %n", regentry->nodename_len,
-                    regentry->nodename, idx, &offset1);
+         DEBUGVMRUN("%.*s[%u] <- %n", regentry->label_len,
+                    regentry->label, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
@@ -1026,7 +1097,7 @@ int empvm_run(struct empvm *vm)
          DEBUGVMRUN("\n");
          break;
       }
-      case OP_GMSSYM_RESOLVE: {
+      case OP_GMS_SYMBOL_READ_SIMPLE: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          VmGmsSymIterator *symiter;
 
@@ -1034,12 +1105,12 @@ int empvm_run(struct empvm *vm)
 
          DEBUGVMRUN_EXEC({print_symiter(symiter, vm); DEBUGVMRUN("%s", "\n"); })
 
-         status = gms_resolve_symb(&vm->data, symiter);
+         status = gms_read_symbol(&vm->data, symiter);
          if (status != OK) { goto _exit; }
 
          break;
       }
-      case OP_GMS_RESOLVE_EXTEND: {
+      case OP_GMS_SYMBOL_READ_EXTEND: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          VmGmsSymIterator *symiter;
 
@@ -1047,19 +1118,19 @@ int empvm_run(struct empvm *vm)
 
          DEBUGVMRUN_EXEC({print_symiter(symiter, vm); DEBUGVMRUN("%s", "\n"); })
 
-         status = gms_resolve_extend_symb(&vm->data, symiter);
+         status = gms_read_extend_symb(&vm->data, symiter);
          if (status != OK) { goto _exit; }
 
          break;
       }
-      case OP_GMS_EQUVAR_INIT: {
+      case OP_GMS_EQUVAR_READ_INIT: {
          uint8_t identtype = READ_BYTE(vm);
          S_CHECK(gms_extend_init(&vm->data, identtype));
          break;
       }
-      case OP_GMS_EQUVAR_SYNC: {
+      case OP_GMS_EQUVAR_READ_SYNC: {
          uint8_t identtype = READ_BYTE(vm);
-         S_CHECK(gms_extend_sync(&vm->data, identtype));
+         S_CHECK(gms_equvar_sync(&vm->data, identtype));
          break;
       }
       case OP_GMS_MEMBERSHIP_TEST: {
@@ -1154,33 +1225,44 @@ int empvm_run(struct empvm *vm)
          S_CHECK(linklabels2arcs_add(vm->data.linklabels2arcs, linklabels_cpy));
 
          vm->data.linklabels = linklabels_cpy;
-         REALLOC_(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
+         unsigned num_var = linklabels_cpy->num_var;
+         if (num_var > 0) {
+            REALLOC_(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
+         }
+
          break;
       }
       case OP_LINKLABELS_STORE: {
          assert(vm->data.linklabels);
-         assert(vm->data.linklabel_ws);
          LinkLabels *linklabels = vm->data.linklabels;
 
          /* This is a dummy read. Otherwise the VM dissassembler is lost */
          uint8_t nargs = READ_BYTE(vm);
          assert(linklabels->num_var == nargs);
 
-         S_CHECK(scratchint_ensure(&vm->data.e_data, nargs));
-         IntScratch *iscratch = &vm->data.e_data;
+         int *uels = NULL;
+         if (nargs > 0) {
+            S_CHECK(scratchint_ensure(&vm->data.e_data, nargs));
+            uels = vm->data.e_data.data;
 
-         for (unsigned i = 0; i < linklabels->num_var; ++i) {
-            uint8_t slot = READ_BYTE(vm);
-            int uel_lidx = AS_INT(vm->locals[slot]);
-            iscratch->data[i] = uel_lidx;
+            for (unsigned i = 0; i < linklabels->num_var; ++i) {
+               uint8_t slot = READ_BYTE(vm);
+               int uel_lidx = AS_INT(vm->locals[slot]);
+               uels[i] = uel_lidx;
+            }
          }
 
-         S_CHECK(linklabels_add(linklabels, iscratch->data));
+         double coeff;
+         rhp_idx vi;
+         S_CHECK(vmdata_consume_scalardata(&vm->data, &coeff));
+         S_CHECK(vmdata_consume_scalarvar(&vm->data, &vi));
+
+
+         S_CHECK(linklabels_add(linklabels, uels, coeff, vi));
          break;
       }
-      case OP_LINKLABELS_FINALIZE: {
+      case OP_LINKLABELS_FINI: {
          assert(vm->data.linklabels);
-         assert(vm->data.linklabel_ws);
          LinkLabels *linklabels = vm->data.linklabels;
 
          /* ---------------------------------------------------------------
@@ -1243,6 +1325,9 @@ _exit:
    error("%*s%.*s\n", poffset, "", (int)(end-start), start);
 
    vm->data.interp->err_shown = true;
+
+   /* Very important, reset ip, so that free happends at the right place */
+   vm->code.ip = vm->instr_start;
 
    return status;
 }

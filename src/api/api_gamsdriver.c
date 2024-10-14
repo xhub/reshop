@@ -190,8 +190,6 @@ int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
    gevGetStrOpt(gms->gev, gevNameSysDir, mdldat->gamsdir);
    gevGetStrOpt(gms->gev, gevNameScrDir, mdldat->scrdir);
 
-   mdldat->delete_scratch = false;
-
    gms->owning_handles = false;
    gms->owndct = false;
 

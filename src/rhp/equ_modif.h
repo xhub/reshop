@@ -49,7 +49,7 @@ int nltree_addlvars(Container *ctr, rhp_idx ei, double* vals, Avar *v, double co
 static inline NONNULL int equ_add_newlvars(Equ *e, Avar *v, const double* vals)
 {
    if (!e->lequ) {
-      A_CHECK(e->lequ, lequ_alloc(v->size));
+      A_CHECK(e->lequ, lequ_new(v->size));
    }
    Lequ *lequ = e->lequ;
 
@@ -72,7 +72,7 @@ static inline NONNULL int equ_add_newlvar(Equ *e, rhp_idx vi, double val)
 {
    assert(isfinite(val));
    if (!e->lequ) {
-      A_CHECK(e->lequ, lequ_alloc(1));
+      A_CHECK(e->lequ, lequ_new(1));
    }
 
    S_CHECK(lequ_add(e->lequ, vi, val));

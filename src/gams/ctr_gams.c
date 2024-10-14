@@ -162,6 +162,7 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict gm
 
    gms->owning_handles = true;
    gms->initialized = true;
+   gms->solvelink = 0; /* This is not a valid value */
 
    return OK;
 }
@@ -181,7 +182,6 @@ int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
 
    GAMS_CHECK1(dctCreate, &gms->dct, buffer);
    gms->owndct = true;
-
 
    trace_stack("[GAMS] Successful initialization GAMS model with "
                "gamsdir='%s'; gamscntr='%s'\n", gmdldat->gamsdir, gmdldat->gamscntr);
@@ -214,6 +214,7 @@ int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict gmdld
    trace_process("[GAMS] Loaded GMO model named '%s' with %u vars and %u equs "
                  "from %s\n", buf, gmoN(gms->gmo), gmoM(gms->gmo),
                  gmdldat->gamscntr);
+
 
    return OK;
 }

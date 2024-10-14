@@ -135,12 +135,12 @@ static inline int dagmp_array_copy(DagMpArray * restrict dat,
    MALLOC_(dat->rarcs, UIntArray, size);
 
    for (unsigned i = 0; i < size; i++) {
+
       if (dat_src->arr[i]) {
          A_CHECK(dat->arr[i], mp_dup(dat_src->arr[i], mdl));
  
          if (dat_src->names[i]) {
               A_CHECK(dat->names[i], strdup(dat_src->names[i]));
-
          } else {
             dat->names[i] = NULL;
          }

@@ -74,10 +74,10 @@ typedef enum OpCode {
    OP_JUMP_IF_FALSE_NOPOP,   // 1 arg: 16 bits offset
    OP_JUMP_BACK,             // 1 arg: 16 bits offset
    OP_JUMP_BACK_IF_FALSE,    // 1 arg: 16 bits offset
-   OP_GMS_EQUVAR_INIT,       // 1 arg: IdentType
-   OP_GMS_EQUVAR_SYNC,       // 1 arg: IdentType
-   OP_GMSSYM_RESOLVE,        // 1 arg: a global idx
-   OP_GMS_RESOLVE_EXTEND,    // 1 arg: a global idx
+   OP_GMS_EQUVAR_READ_INIT,       // 1 arg: IdentType
+   OP_GMS_EQUVAR_READ_SYNC,       // 1 arg: IdentType
+   OP_GMS_SYMBOL_READ_SIMPLE, // 1 arg: a global idx
+   OP_GMS_SYMBOL_READ_EXTEND,    // 1 arg: a global idx
    OP_GMS_MEMBERSHIP_TEST,   // 1 arg: a global idx; PUSH a BOOL on the stack
    OP_EMPAPI_CALL,           // 2 args: api_idx in enum EmpApi and argc
    OP_NEW_OBJ,               // 1 arg is in enum EmpNewObj
@@ -85,7 +85,7 @@ typedef enum OpCode {
    OP_LINKLABELS_DUP,
    OP_LINKLABELS_SETFROM_LOOPVAR,
    OP_LINKLABELS_STORE,
-   OP_LINKLABELS_FINALIZE,
+   OP_LINKLABELS_FINI,
    OP_SET_DAGUID_FROM_REGENTRY,
    OP_END,
    OP_MAXCODE,
@@ -190,14 +190,19 @@ typedef struct {
    IntScratch v_data;
    IntScratch iscratch;
    DblScratch dscratch;
-   int itmp;
-   double dtmp;
+   int ival;
+   double dval;
+   unsigned inrecs;
+   unsigned dnrecs;
    ArcVFObjArray arcvfobjs;
    daguid_t uid_grandparent;    /**< uid of the parent node                */
    daguid_t uid_parent;         /**< uid of the parent node                */
+   int *linklabel_ws;  /* why is this not iscratch ?*/
 
    Aequ *e_current;
    Avar *v_current;
+
+   /* Borrowed data follow */
    Model *mdl;
    void *dct;
    void *gmd;
@@ -205,7 +210,6 @@ typedef struct {
    CompilerGlobals *globals;
    DagRegister *dagregister;
    LinkLabels *linklabels;
-   int *linklabel_ws;
    LinkLabels2Arcs *linklabels2arcs;
    LinkLabel2Arc *linklabel2arc;
 } VmData;

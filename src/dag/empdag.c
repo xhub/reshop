@@ -398,11 +398,13 @@ void empdag_rel(EmpDag *empdag)
    unsigned len = empdag->objfn_maps.mps.len;
    mpidarray_empty(&empdag->objfn_maps.mps);
 
-   for (unsigned i = 0; i <len; ++i) {
-      lequ_dealloc(empdag->objfn_maps.lequs[i]);
+   if (empdag->objfn_maps.lequs) {
+      for (unsigned i = 0; i < len; ++i) {
+         lequ_free(empdag->objfn_maps.lequs[i]);
+      }
    }
 
-   FREE(empdag->objfn_maps.lequs);
+   free((void*)empdag->objfn_maps.lequs);
 
    /****************************************************************************
    * Free MP and Nash data structures

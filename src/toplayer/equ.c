@@ -514,7 +514,7 @@ Equ *equ_alloc(unsigned lin_maxlen)
    equ->idx = IdxInvalid;
    equ_basic_init(equ);
 
-   AA_CHECK_EXIT(equ->lequ, lequ_alloc(lin_maxlen));
+   AA_CHECK_EXIT(equ->lequ, lequ_new(lin_maxlen));
 
    equ->tree = NULL;
 
@@ -527,7 +527,7 @@ _exit:
 
 void equ_free(Equ *e)
 {
-   lequ_dealloc(e->lequ);
+   lequ_free(e->lequ);
    nltree_dealloc(e->tree);
 }
 
@@ -637,7 +637,7 @@ int equ_copy_to(Container *ctr, rhp_idx ei_src, Equ *edst,
    S_CHECK(equ_copymetadata(edst, esrc, ei_dst));
 
    if (!edst->lequ) {
-      A_CHECK(edst->lequ, lequ_alloc(esrc->lequ->len + lin_space));
+      A_CHECK(edst->lequ, lequ_new(esrc->lequ->len + lin_space));
    } else {
       if (edst->lequ->len != 0) {
          error("%s :: lequ already present!\n", __func__);
@@ -685,7 +685,7 @@ int equ_dup(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
    S_CHECK(equ_copymetadata(edst, esrc, ei_dst));
 
    if (!edst->lequ) {
-      A_CHECK(edst->lequ, lequ_alloc(esrc->lequ->len));
+      A_CHECK(edst->lequ, lequ_new(esrc->lequ->len));
    } else {
       if (edst->lequ->len != 0) {
          error("%s :: lequ already present!\n", __func__);

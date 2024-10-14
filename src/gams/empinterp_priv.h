@@ -119,14 +119,22 @@ void interp_switch_tok(Interpreter *interp)
    memcpy(&interp->pre, &tmp, sizeof(Token));
 }
 
+NONNULL static inline void lexeme_init(Lexeme *lexeme, const Token * restrict tok)
+{
+   lexeme->linenr = tok->linenr;
+   lexeme->len = tok->len;
+   lexeme->start = tok->start;
+
+}
+
 NONNULL static inline void ident_init(IdentData *ident, const Token * restrict tok)
 {
-   ident->lexeme.linenr = tok->linenr;
-   ident->lexeme.len = tok->len;
-   ident->lexeme.start = tok->start;
+   lexeme_init(&ident->lexeme, tok);
+
    ident->type = IdentNotFound;
    ident->idx = UINT_MAX;
    ident->dim = UINT8_MAX;
+   ident->ptr = NULL;
 }
 
 static inline void gmsindices_init(GmsIndicesData *indices)
@@ -294,7 +302,7 @@ static inline int empinterp_ops_dispatch(Interpreter *interp, unsigned *p,
 
 #define lexeme_fmtargs(lexeme) (lexeme).len, (lexeme).start
 #define ident_fmtargs(ident)   identtype2str((ident)->type), lexeme_fmtargs((ident)->lexeme)
-#define token_fmtargs(tok)     (tok)->len, (tok)->start
+#define tok_fmtargs(tok)       (tok)->len, (tok)->start
 
 #endif // !EMPINTERP_PRIV_H
 

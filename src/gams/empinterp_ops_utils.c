@@ -1,13 +1,15 @@
+
 #include "empinterp.h"
+#include "empinterp_ops_utils.h"
+#include "empinterp_priv.h"
+#include "gamsapi_utils.h"
 
 #include "dctmcc.h"
-#include "empinterp_utils.h"
-#include "gamsapi_utils.h"
-#include "empinterp_ops_utils.h"
+#include "gmdcc.h"
 
-static inline int symtype_dct2rhp(enum dcttypes dcttype, GamsSymData *symdat, Token *tok)
+static inline int symtype_dct2ident(enum dcttypes dcttype, IdentData *ident)
 {
-   symdat->origin = IdentOriginDct;
+   ident->origin = IdentOriginDct;
 
    switch (dcttype) {
    case dctfuncSymType:
@@ -16,20 +18,222 @@ static inline int symtype_dct2rhp(enum dcttypes dcttype, GamsSymData *symdat, To
    case dctacrSymType:
    default:
       error("[empinterp] ERROR: dct type %d not supported. Please file a bug report\n", dcttype);
-      return runtime_error(tok->linenr);
+      return Error_EMPRuntimeError;
    case dctaliasSymType:
-      symdat->type = IdentAlias;
-      tok->type = TOK_GMS_ALIAS;
+      ident->type = IdentAlias;
       return OK;
    case dctvarSymType:
-      symdat->type = IdentVar;
-      tok->type = TOK_GMS_VAR;
+      ident->type = IdentVar;
       return OK;
    case dcteqnSymType:
-      symdat->type = IdentEqu;
-      tok->type = TOK_GMS_EQU;
+      ident->type = IdentEqu;
       return OK;
    }
+}
+
+
+/**
+ * @brief Try to resolve a string as a gams symbol using GMD
+ *
+ * @param gmd        the GMD handle
+ * @param sym_name   the symbol name (as a nul-terminated string)
+ * @param symdat     the symbol data
+ * @param gmd_cpy    If non-null, the handle to a GMD where a set or parameter will be copied
+ *
+ * @return        the error code
+ */
+NONNULL_AT(1,3) static int
+gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ident,
+                gmdHandle_t gmdcpy, int *domindices)
+{
+
+   void *symptr;
+   if (!gmdFindSymbol(gmd, sym_name, &symptr)) { /* We do not fail here as it could be a UEL */
+      int uelidx;
+      if (!gmdFindUel(gmd, sym_name, &uelidx)) {
+         error("[GMD] ERROR while calling 'gmdFindUEL' for lexeme '%s'", sym_name);
+         return Error_GamsCallFailed;
+      }
+
+      if (uelidx <= 0) { return OK; }
+
+      ident->type = IdentUEL;
+      ident->idx = uelidx;
+
+      trace_empinterp("[GMD] Lexeme '%s' resolved as UEL #%d\n", sym_name, uelidx);
+      return OK;
+   }
+
+  /* ----------------------------------------------------------------------
+   * 2024.05.09: Note that gmdFindSymbol never return an alias symbol, but rather
+   * the aliased (or target) symbol. Therefore, we don't need to look for it,
+   * and we hard fail if we encounter an aliased symbol
+   * ---------------------------------------------------------------------- */
+
+   /* ---------------------------------------------------------------------
+    * Save the index of the symbol
+    * --------------------------------------------------------------------- */
+
+   int symnr;
+   if (!gmdSymbolInfo(gmd, symptr, GMD_NUMBER, &symnr, NULL, NULL)) {
+      error("[embcode] ERROR: could not query number of symbol '%s'\n", sym_name);
+      return Error_GamsCallFailed;
+   }
+
+   assert(symnr >= 0);
+   // TODO: this is a hack!
+   ident->idx = symnr;
+
+
+   /* ---------------------------------------------------------------------
+    * Save the dimension of the symbol index
+    * --------------------------------------------------------------------- */
+
+   int symdim;
+   if (!gmdSymbolInfo(gmd, symptr, GMD_DIM, &symdim, NULL, NULL)) {
+      error("[embcode] ERROR: could not query dimension of symbol '%s'\n", sym_name);
+      return Error_GamsCallFailed;
+   }
+   /* What does a negative value of symdim means? */
+   assert(symdim >= 0);
+
+   /* ---------------------------------------------------------------------
+    * Save the type of the symbol
+    * --------------------------------------------------------------------- */
+
+   int symtype;
+   if (!gmdSymbolInfo(gmd, symptr, GMD_TYPE, &symtype, NULL, NULL)) {
+      error("[embcode] ERROR: could not query type of symbol '%s'\n", sym_name);
+      return Error_GamsCallFailed;
+   }
+
+   if (symdim > 0 && domindices) {
+      char dom_names[GMS_MAX_INDEX_DIM][GMS_SSSIZE];
+      char *dom_names_ptrs[GMS_MAX_INDEX_DIM];
+      GDXSTRINDEXPTRS_INIT( dom_names, dom_names_ptrs );
+
+      void *dom_ptrs[GMS_MAX_INDEX_DIM];
+      if (!gmdGetDomain(gmd, symptr, symdim, dom_ptrs, dom_names_ptrs)) {
+          error("[embcode] ERROR: could not query the domains of symbol '%s'\n", sym_name);
+         return Error_GamsCallFailed;
+      }
+
+      for (int i = 0; i < symdim; ++i) {
+         // HACK: symnr should be >= 0, but not right now.
+         if (!gmdSymbolInfo(gmd, dom_ptrs[i], GMD_NUMBER, &symnr, NULL, NULL) || symnr < -1) {
+            error("[embcode] ERROR: could not query number of domain '%s' #%u "
+                  "of symbol '%s'\n", dom_names_ptrs[i], i, sym_name);
+            return Error_GamsCallFailed;
+         }
+
+         // HACK: symnr should be >= 0, but not right now.
+         domindices[i] = symnr >= 0 ? symnr : 0;
+      }
+   }
+
+   ident->dim = symdim;
+   ident->origin = IdentOriginGmd;
+   S_CHECK(gdxsymtype2ident(symtype, ident));
+
+   ident->ptr = symptr;
+
+   trace_empinterp("[GMD] Lexeme '%s' resolved as a %s\n", sym_name, identtype2str(ident->type));
+
+  /* ----------------------------------------------------------------------
+   * If gmdout is set, we copy sets and parameters (if this hasn't been done yet)
+   *
+   * TODO: gmdFindSymbol returning false when the symbol doesn't exists isn't great
+   * ---------------------------------------------------------------------- */
+
+   void *symptr2 = NULL;
+   if (gmdcpy && (symtype == GMS_DT_SET || symtype == GMS_DT_PAR) && 
+      !gmdFindSymbol(gmdcpy, sym_name, &symptr2)) {
+
+      GMD_CHK(gmdAddSymbol, gmdcpy, sym_name, symdim, symtype, 0, "", &symptr2);
+
+      GMD_CHK(gmdCopySymbol, gmdcpy, symptr2, symptr);
+   }
+
+   return OK;
+}
+
+/**
+ * @brief Try to resolve an identifier using GMD
+ *
+ * @param interp  the interpreter
+ * @param ident   the identifier
+ *
+ * @return        the error code
+ */
+int gmd_find_ident(Interpreter * restrict interp, IdentData * restrict ident)
+{
+   struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
+   ident_init(ident, tok);
+
+   size_t lexeme_len = ident->lexeme.len;
+   if (lexeme_len >= GMS_SSSIZE-1) { return OK; }
+
+   char lexeme[GMS_SSSIZE];
+   memcpy(lexeme, ident->lexeme.start, lexeme_len * sizeof(char));
+   lexeme[lexeme_len] = '\0';
+
+   gmdHandle_t gmd = interp->gmd; assert(gmd);
+
+   S_CHECK(gmd_find_symbol(gmd, lexeme, ident, interp->gmdcpy, NULL));
+
+   return OK;
+}
+
+NONNULL_AT(1,3) static int
+dct_find_symbol(dctHandle_t dct, const char sym_name[GMS_SSSIZE], IdentData *ident,
+                int *domindices)
+{
+
+   int symidx = dctSymIndex(dct, sym_name);
+   if (symidx <= 0) { /* We do not fail here as it could be a UEL */
+      int uelindex = dctUelIndex(dct, sym_name);
+      if (uelindex <= 0) { 
+         ident->type = IdentNotFound;
+         return OK;
+      }
+
+      ident->idx = uelindex;
+      ident->origin = IdentOriginDct;
+      ident->type = IdentUEL;
+
+      return OK;
+   }
+
+   ident->idx = symidx;
+
+   /* ---------------------------------------------------------------------
+    * Save the dimension of the symbol index
+    * --------------------------------------------------------------------- */
+
+   /* What does a negative value of symdim means? */
+   int symdim = dctSymDim(dct, symidx);
+   ident->dim = symdim;
+
+   /* ---------------------------------------------------------------------
+    * Save the indices of the domains
+    * --------------------------------------------------------------------- */
+
+   /* What does a negative value of symdim means? */
+   if (symdim > 0 && domindices) {
+      int dummy;
+      dctSymDomIdx(dct, symidx, domindices, &dummy);
+   }
+
+   /* ---------------------------------------------------------------------
+    * Save the type of the symbol
+    * --------------------------------------------------------------------- */
+
+   int symtype = dctSymType(dct, symidx);
+   S_CHECK(symtype_dct2ident(symtype, ident));
+
+   ident->ptr = NULL;
+
+   return OK;
 }
 
 /**
@@ -40,71 +244,43 @@ static inline int symtype_dct2rhp(enum dcttypes dcttype, GamsSymData *symdat, To
  *
  * @return        the error code
  */
-int dct_findlexeme(Interpreter * restrict interp, Token * restrict tok)
+int resolve_lexeme_as_gms_symbol(Interpreter * restrict interp, Token * restrict tok)
 {
    GamsSymData *symdat = &tok->symdat;
-   int symidx, uelindex;
+   ident_init(&symdat->ident, tok);
+   symdat->read = false;
 
    unsigned tok_len = emptok_getstrlen(tok);
-   if (tok_len >= GMS_SSSIZE) { goto _not_found; }
+   if (tok_len >= GMS_SSSIZE) {
+      tok->type = TOK_IDENT;
+      return OK;
+   }
 
    /* Copy string to end it with NUL */
    char sym_name[GMS_SSSIZE];
    strncpy(sym_name, tok->start, tok_len);
    sym_name[tok_len] = '\0';
 
+  /* ----------------------------------------------------------------------
+   * We first try to find the symbol name in the DCT, if it exists
+   * ---------------------------------------------------------------------- */
+
    dctHandle_t dct = interp->dct;
+   int *domindices = symdat->domindices;
+   IdentData *ident = &symdat->ident;
 
-   symidx = dctSymIndex(dct, sym_name);
-   if (symidx <= 0) { /* We do not fail here as it could be a UEL */
-      uelindex = dctUelIndex(dct, sym_name);
-      if (uelindex <= 0) goto _not_found;
-
-      tok->type = TOK_GMS_UEL;
-      symdat->idx = uelindex;
-      symdat->origin = IdentOriginDct;
-      symdat->type = IdentUEL;
-
-      return OK;
+   if (dct) {
+      S_CHECK(dct_find_symbol(dct, sym_name, ident, domindices));
    }
 
-   symdat->idx = symidx;
-
-   /* ---------------------------------------------------------------------
-    * Save the dimension of the symbol index
-    * --------------------------------------------------------------------- */
-
-   /* What does a negative value of symdim means? */
-   int symdim = dctSymDim(dct, symidx);
-   symdat->dim = symdim;
-
-   /* ---------------------------------------------------------------------
-    * Save the indices of the domains
-    * --------------------------------------------------------------------- */
-
-   /* What does a negative value of symdim means? */
-   if (symdim > 0) {
-      int dummy;
-      dctSymDomIdx(dct, symidx, symdat->domindices, &dummy);
+   gmdHandle_t gmd = interp->gmd;
+   if (symdat->ident.type == IdentNotFound && gmd) {
+      S_CHECK(gmd_find_symbol(gmd, sym_name, ident, interp->gmdcpy, domindices));
    }
 
-   /* ---------------------------------------------------------------------
-    * Save the type of the symbol
-    * --------------------------------------------------------------------- */
-
-   int symtype = dctSymType(dct, symidx);
-   S_CHECK(symtype_dct2rhp(symtype, symdat, tok));
-
-   symdat->read = false;
-   symdat->ptr = NULL;
-
+   tok->type = ident2toktype(symdat->ident.type);
    return OK;
 
-_not_found:
-   symdat->idx = IdxNotFound;
-   tok->type = TOK_IDENT;
-
-   return OK;
 }
 
 int get_uelidx_via_dct(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE], int * restrict uelidx)

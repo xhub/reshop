@@ -639,6 +639,8 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       }
    }
 
+   cpy_expr_free(&cpy_expr);
+
    S_CHECK(dagmp_array_trimmem(mps));
 
    return OK;
@@ -854,6 +856,7 @@ static int rmdl_contract_analyze(Model *mdl, VFContractions *contractions)
 
 _exit:
    FREE(objequs);
+   free(seen_uid);
    mpidarray_empty(&daguids);
 
    return status;

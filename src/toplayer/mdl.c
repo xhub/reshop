@@ -136,7 +136,6 @@ static void mdl_free(Model *mdl)
 {
    if (!mdl) return;
 
-   ctr_dealloc(&mdl->ctr);
    empinfo_dealloc(&mdl->empinfo);
    FREE(mdl->commondata.name);
 
@@ -150,6 +149,7 @@ static void mdl_free(Model *mdl)
    mdl_timings_rel(mdl->timings);
 
    mdl->ops->deallocdata(mdl);
+   ctr_dealloc(&mdl->ctr);
 
    if (mdl->mdl_up) {
       mdl_release(mdl->mdl_up);
@@ -470,6 +470,7 @@ int mdl_ensure_exportdir(Model *mdl)
    }
 
    mdl->commondata.exports_dir_parent = exports_dir_template;
+   mdl->commondata.own_exports_dir_parent = true;
 
 #elif defined(_WIN32)
 

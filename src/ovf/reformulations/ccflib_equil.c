@@ -33,7 +33,7 @@ typedef struct {
    RhpSense path_sense;
    mpid_t mpid_primal;           /* mpid of the active primal node */
    mpid_t mpid_dual;             /* mpid of the active dual node */
-   nashid_t mpeid;                /* ID of the MPE node, now at the root */
+   nashid_t nashid;              /* ID of the MPE node, now at the root */
    rhp_idx vi_dual;
    ArcVFData arcVFprimal;
    ArcVFData arcVFdual;
@@ -50,7 +50,7 @@ static int ccflib_equil_dfs_primal(dagid_t mpid, DfsData *dfsdat, DagMpArray *mp
 
 
 
-#if defined(RHP_DEV_MODE)
+#if defined(RHP_DEV_MODE) && 0
 #include "rhp_dot_exports.h"
 #define DEBUG_DISPLAY_OBJEQU(mdl, mp) { \
    rhp_idx eiobj = mp_getobjequ(mp); if (valid_ei(eiobj)) {\
@@ -116,6 +116,14 @@ static int ccflib_instantiate_mp(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat,
 
    /* Change the MP to an OPT one */
    MathPrgm *mp_ovf = empdag->mps.arr[mpid];
+   if (mp_ovf->type == MpTypeCcflib) {
+     ovfdef_free(mp_ovf->ccflib.ccf); 
+   } else {
+      error("[ccflib/equil] Unsupported type '%s' for MP(%s). Expected type %s\n",
+            mptype2str(mp_ovf->type), mp_getname(mp_ovf), mptype2str(MpTypeCcflib));
+      return Error_NotImplemented;
+   }
+
    mp_ovf->sense = ovf_def->sense;
    mp_ovf->type = MpTypeOpt;
    mpopt_init(&mp_ovf->opt);
@@ -129,7 +137,7 @@ static int ccflib_instantiate_mp(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat,
       dfsdat->arcVFdual.mpid_child = mp_ovf->id;
       S_CHECK(empdag_mpVFmpbyid(empdag, dfsdat->mpid_dual, &dfsdat->arcVFdual));
    } else {
-      S_CHECK(empdag_nashaddmpbyid(empdag, dfsdat->mpeid, mp_ovf->id));
+      S_CHECK(empdag_nashaddmpbyid(empdag, dfsdat->nashid, mp_ovf->id));
    }
 
    dualdat->ops = ops;
@@ -460,7 +468,7 @@ static int ccflib_equil_dfs_primal(mpid_t mpid_primal, DfsData *dfsdat, DagMpArr
       RhpSense child_sense = mp_getsense(mp_child);
       assert(child_sense == RhpMin || child_sense == RhpMax);
 
-      trace_process("[ccflib/equil:primal] taackling child MP(%s)\n", mps->names[child_id]);
+      trace_process("[ccflib/equil:primal] tackling child MP(%s)\n", mps->names[child_id]);
 
       /* ---------------------------------------------------------------------
        * Update/restore the primal MPID
@@ -724,6 +732,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
 
 _exit:
 
+   free((void*)child_nlnodes);
 
    FREE(workY);
 
@@ -795,11 +804,11 @@ int ccflib_equil(Model *mdl)
          }
 
          S_CHECK(empdag_nashaddmpbyid(empdag, equil->id, mpid));
-         dfsdat.mpeid = equil->id;
+         dfsdat.nashid = equil->id;
  
       } else if (uidisNash(primal_parents->arr[0])) {
 
-         dfsdat.mpeid = uid2id(primal_parents->arr[0]);
+         dfsdat.nashid = uid2id(primal_parents->arr[0]);
 
       } else {
 
@@ -812,7 +821,7 @@ int ccflib_equil(Model *mdl)
          A_CHECK(equil, empdag_newnashnamed(empdag, strdup("CCF equilibrium reformulation")));
 
          S_CHECK(empdag_nashaddmpbyid(empdag, equil->id, mpid));
-         dfsdat.mpeid = equil->id;
+         dfsdat.nashid = equil->id;
 
          daguid_t uid = primal_parents->arr[0];
 

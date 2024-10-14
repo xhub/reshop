@@ -28,7 +28,9 @@ typedef enum {
    LinkArcCtrl,
    LinkArcNash,
    LinkVFObjFn,
+   LinkObjAddMap, /**< Not a true arc, used to add maps to objfn */
    LinkViKkt,
+   LinkTypeLast = LinkViKkt,
 } LinkType;
 
 /** Type of VF arc  */
@@ -108,6 +110,11 @@ typedef struct {
 } CopyExprData;
 
 
+NONNULL static inline bool valid_linktype(LinkType type)
+{
+   return type <= LinkTypeLast;
+}
+
 NONNULL static inline bool valid_arcVF(const ArcVFData *arc)
 {
    return arc->type != ArcVFUnset;
@@ -131,7 +138,7 @@ NONNULL static inline bool valid_arcVF(const ArcVFData *arc)
  * @param arcVF the arc
  * @param ei     the equation where the arcVf appears
  */
-static inline void arcVFb_init(struct rhp_empdag_arcVF *arcVF, rhp_idx ei)
+static inline void arcVFb_init(ArcVFData *arcVF, rhp_idx ei)
 {
    arcVF->type = ArcVFBasic;
    arcVF->mpid_child = UINT_MAX;
@@ -141,22 +148,22 @@ static inline void arcVFb_init(struct rhp_empdag_arcVF *arcVF, rhp_idx ei)
 
 }
 
-NONNULL static inline void arcVFb_setvar(struct rhp_empdag_arcVF *arcVF, rhp_idx vi)
+NONNULL static inline void arcVFb_setvar(ArcVFData *arcVF, rhp_idx vi)
 {
    arcVF->basic_dat.vi = vi;
 }
 
-NONNULL static inline void arcVFb_setequ(struct rhp_empdag_arcVF *arcVF, rhp_idx ei)
+NONNULL static inline void arcVFb_setequ(ArcVFData *arcVF, rhp_idx ei)
 {
    arcVF->basic_dat.ei = ei;
 }
 
-NONNULL static inline void arcVFb_setcst(struct rhp_empdag_arcVF *arcVF, double cst)
+NONNULL static inline void arcVFb_setcst(ArcVFData *arcVF, double cst)
 {
    arcVF->basic_dat.cst = cst;
 }
 
-NONNULL static inline void arcVFb_setmp(struct rhp_empdag_arcVF *arcVF, unsigned mp_id)
+NONNULL static inline void arcVFb_setmp(ArcVFData *arcVF, unsigned mp_id)
 {
    arcVF->mpid_child = mp_id;
 }
@@ -167,7 +174,7 @@ NONNULL static inline rhp_idx arcVFb_getequ(const ArcVFData *arcVF)
    return arcVF->basic_dat.ei;
 }
 
-static inline void arcVF_empty(struct rhp_empdag_arcVF *arcVF)
+static inline void arcVF_empty(ArcVFData *arcVF)
 {
    arcVF->type = ArcVFUnset;
    arcVF->mpid_child = UINT_MAX;

@@ -14,6 +14,7 @@
 #include "empinterp.h"
 #include "empinterp_checks.h"
 #include "empinterp_linkbuilder.h"
+#include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
 #include "empinterp_vm_compiler.h"
@@ -1011,7 +1012,8 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
       return OK;
    }
 
-   GamsSymData *symdat = &tok->symdat;
+   IdentData *ident = &tok->symdat.ident;
+   ident_init(ident, tok);
 
    size_t tok_len = emptok_getstrlen(tok);
    if (tok_len >= GMS_SSSIZE) { goto _not_found; }
@@ -1040,12 +1042,12 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
    }
 
    *toktype = TOK_GMS_UEL;
-   symdat->idx = uelidx;
+   ident->idx = uelidx;
+   ident->type = IdentUEL;
 
    return OK;
 
 _not_found:
-   symdat->idx = IdxNotFound;
    *toktype = TOK_UNSET;
 
    return OK;
@@ -1053,8 +1055,6 @@ _not_found:
 
 int tok2ident(Token * restrict tok, IdentData * restrict ident) 
 {
-   GamsSymData *symdat = &tok->symdat;
-
    switch (tok->type) {
    case TOK_GMS_EQU:
    case TOK_GMS_MULTISET:
@@ -1067,11 +1067,7 @@ int tok2ident(Token * restrict tok, IdentData * restrict ident)
       return runtime_error(tok->linenr);
    }
 
-   ident->type = symdat->type;
-   ident->dim = symdat->dim;
-   ident->idx = symdat->idx;
-   ident->ptr = symdat->ptr;
-   ident->origin = symdat->origin;
+   memcpy(ident, &tok->symdat.ident, sizeof(*ident));
    ident->lexeme.start = tok->start;
    ident->lexeme.len = tok->len;
    ident->lexeme.linenr = tok->linenr;
@@ -1462,7 +1458,7 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
    emptok_settype(tok, TOK_IDENT);
 
    /* All keywords have at least 2 letters */
-   if (len == 1) goto is_gms_ident;
+   if (len == 1) goto resolve_as_gms_symbol;
 
    /* See https://craftinginterpreters.com/scanning-on-demand.html */
    switch (buf[pos_]) {
@@ -1643,7 +1639,7 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
    TokenType toktype = emptok_gettype(tok);
    if (toktype != TOK_IDENT) { goto _exit; }
 
-is_gms_ident:
+resolve_as_gms_symbol:
    /* TODO: if we support either gdxin or variable creation using ':=', we should
     * look this this up here. For variable creation, we need to have a concept
     * of scope. We want to inherit the variables in the previous scope, and
@@ -1658,7 +1654,7 @@ is_gms_ident:
    /* ---------------------------------------------------------------------
     * In this step, we determine if the token is a GAMS object
     * --------------------------------------------------------------------- */
-   S_CHECK(interp->ops->resolve_lexeme_as_gmssymb(interp, tok));
+   S_CHECK(resolve_lexeme_as_gms_symbol(interp, tok));
 
    if (tok->type != TOK_IDENT) goto _exit;
 
@@ -1778,6 +1774,13 @@ _exit:
       tok_payloadprint(tok, PO_TRACE_EMPPARSER, interp->mdl);
    }
 
+   // HACK: GG #10
+   if (!embmode(interp)) {
+      if (tok->type == TOK_GMS_SET || tok->type == TOK_GMS_PARAM) {
+         tok->type = TOK_IDENT;
+      }
+   }
+
    return status;
 }
 
@@ -1871,7 +1874,7 @@ static inline bool toktype_dagnode_kw(TokenType toktype)
  *
  * @return          the error code
  */
-static int parse_gmssym(Interpreter * restrict interp, unsigned * restrict p)
+static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
 {
    /* From the current token get all the symbol info */
    S_CHECK(tok2ident(&interp->cur, &interp->gms_sym_iterator.ident));
@@ -1882,6 +1885,7 @@ static int parse_gmssym(Interpreter * restrict interp, unsigned * restrict p)
 
    TokenType toktype;
    unsigned p2 = *p;
+
    S_CHECK(peek(interp, &p2, &toktype));
 
    if (toktype == TOK_LPAREN) {
@@ -1889,11 +1893,13 @@ static int parse_gmssym(Interpreter * restrict interp, unsigned * restrict p)
       S_CHECK(parse_gmsindices(interp, p, indices));
    }
 
-   trace_empinterp("[empinterp] resolving %s ident %.*s\n",
-                   ident_fmtargs(&interp->gms_sym_iterator.ident));
+   trace_empinterp("[empinterp] Reading symbol %.*s\n",
+                   (*p - (int)(interp->gms_sym_iterator.ident.lexeme.start - interp->buf)),
+                   interp->gms_sym_iterator.ident.lexeme.start);
+
    // TODO: check for conditional and switch to VM if needed
    // See code for labeldef
-   S_CHECK(interp->ops->gms_resolve_sym(interp, p));
+   S_CHECK(interp->ops->read_gms_symbol(interp, p));
 
    interp->gms_sym_iterator.active = false;
 
@@ -1925,11 +1931,14 @@ int advance(Interpreter * restrict interp, unsigned * restrict p,
     * WARNING: this can only be done in _advance, not in the _lexer!
     * --------------------------------------------------------------------- */
    switch (toktype_) {
-   case TOK_GMS_EQU:
-   case TOK_GMS_VAR:
+   // HACK: GG #10
    case TOK_GMS_SET:
    case TOK_GMS_PARAM:
-      return parse_gmssym(interp, p);
+      if (!embmode(interp)) {return runtime_error(interp->linenr);}
+   FALLTHRU
+   case TOK_GMS_EQU:
+   case TOK_GMS_VAR:
+      return read_gms_symbol(interp, p);
    default:
       return OK;
    }
@@ -2401,7 +2410,7 @@ static int parse_ovfparamscalar(Interpreter * interp, unsigned * restrict p,
    return OK;
 }
 
-static int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
+int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
                                double *val)
 {
    int status = OK;
@@ -2566,7 +2575,7 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
       }
       /* This is the generic way of reading the parameter; we only reach here
        * if the previous "if" condition isn't true */
-      S_CHECK_EXIT(interp->ops->read_param(interp, p, &ident, identstr, &param_gidx))
+      S_CHECK_EXIT(interp->ops->read_param(interp, p, &ident, &param_gidx))
       *type = ARG_TYPE_NESTED;
       payload->gidx = param_gidx;
       break;
@@ -2644,9 +2653,14 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
       *    v                                   current position
       *
       *  - n.objfn
+      *  - n(...).valfn
       *  - n.valfn
+      *  - n(...).valfn
       *  - n.dual(kwargs).valfn
+      *  - n(...).dual(kwargs).valfn
       * ------------------------------------------------------------------- */
+
+   // XXX write tests for all cases
 
    assert(interp->cur.type == TOK_IDENT);
    interp_save_tok(interp);
@@ -2679,7 +2693,7 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
 
    if (toktype == TOK_OBJFN) {
       if (has_dual) {
-         error("[empinterp] ERROR line %u: the dual keyword and objfn cannot be used together\n",
+         error("[empinterp] ERROR line %u: the keywords dual and objfn cannot be used together\n",
                interp->linenr);
          return Error_EMPIncorrectInput;
       }
@@ -2819,7 +2833,7 @@ static int interp_ovf_gmsparamcheck(UNUSED Interpreter* restrict interp,
 
    assert(param->type == TOK_GMS_PARAM);
 
-   int pdim = param->symdat.dim;
+   uint8_t pdim = param->symdat.ident.dim;
 
    switch (pdim) {
    case 0:
@@ -2957,6 +2971,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
          S_CHECK(parser_expect(interp, "Closing ')' missing for MP arguments", TOK_RPAREN));
          S_CHECK(advance(interp, p, &toktype));
       } else {
+            // XXX This is wrong
          S_CHECK(parse_MPargs_labels(interp, p, ovfdef));
          S_CHECK(advance(interp, p, &toktype));
       }
@@ -3339,6 +3354,8 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
       interp->finalize.mp_owns_remaining_equs = mp->id;
       S_CHECK(advance(interp, p, &toktype));
    }
+
+   // TODO: check that the MP is not empty (and make a test)
 
 exit_while:
 
@@ -3776,7 +3793,7 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
                memcpy(scratch->data, vec->coeffs, size_vector * sizeof(double));
                break;
             }
-            S_CHECK_EXIT(interp->ops->read_param(interp, p, &ident, identstr, &param_gidx))
+            S_CHECK_EXIT(interp->ops->read_param(interp, p, &ident, &param_gidx))
             break;
          case IdentParam: {
             FREE(identstr);
@@ -4934,14 +4951,14 @@ static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * res
          if (!chk_vi_(vi, nvars)) {
             error("[empinterp] ERROR line %u: the index %u of variable "
                   "%.*s is outside of the range [0,%u). Position is %u.\n",
-                  interp->linenr, vi, token_fmtargs(&interp->pre), nvars, i);
+                  interp->linenr, vi, tok_fmtargs(&interp->pre), nvars, i);
             return Error_EMPRuntimeError;
          }
 
          if (!chk_ei_(ei, nequs)) {
             error("[empinterp] ERROR line %u: the index %u of equation %.*s "
                   "is outside of the range [0,%u). Position is %u\n",
-                  interp->linenr, ei, token_fmtargs(&interp->cur), nequs, i);
+                  interp->linenr, ei, tok_fmtargs(&interp->cur), nequs, i);
             return Error_EMPRuntimeError;
          }
 

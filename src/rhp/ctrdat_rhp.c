@@ -255,7 +255,7 @@ int rctr_add_equ_empty(Container *ctr, rhp_idx *ei, Equ **e, EquObjectType type,
    e_->object = type;
    e_->cone = cone;
    e_->tree = NULL;
-   A_CHECK(e_->lequ, lequ_alloc(0));
+   A_CHECK(e_->lequ, lequ_new(0));
 
    /* \TODO(xhub) This has to be documented */
    cdat->total_m++;
@@ -298,7 +298,7 @@ int rctr_init_equ_empty(Container *ctr, rhp_idx ei, EquObjectType type,
    e->object = type;
    e->cone = cone;
    e->tree = NULL;
-   A_CHECK(e->lequ, lequ_alloc(0));
+   A_CHECK(e->lequ, lequ_new(0));
 
    /* \TODO(xhub) This has to be documented */
    ctr->m++;

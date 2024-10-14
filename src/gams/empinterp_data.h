@@ -46,33 +46,30 @@ typedef enum IdentType {
    IdentTypeMaxValue,
 } IdentType;
 
-// TODO: Replace GamsSymData with IdentData?
+/** Lexeme data */
+typedef struct lexeme {
+   unsigned linenr;    /**< line number of the lexeme   */
+   unsigned len;       /**< length of the lexeme */
+   const char* start;  /**< Start of the lexeme string  */
+} Lexeme;
+
+/** Data associated with an identifier */
+typedef struct ident_data {
+   IdentType type;      /**< Symbol type                   */
+   IdentOrigin origin;  /**< Symbol origin                 */
+   uint8_t dim;         /**< Dimension of the symbol       */
+   Lexeme lexeme;       
+   unsigned idx;        /**< 1-based index                 */
+   void *ptr;           /**< Pointer associated with symbol */ 
+} IdentData;
+
 /** Data associated with a GAMS symbol */
 typedef struct gams_symb_data {
-   int idx;                       /**< 1-based index     */
-   int dim;                       /**< Symbol dimension  */
-   void *ptr;                     /**< Pointer associated with symbol */
-   bool read;                     /**< true if the object was successfully read */
-   IdentType type;                /**< Symbol type       */
-   IdentOrigin origin;            /**< Symbol origin */
+   IdentData ident;             /**< Identifier data (symbol name)           */
+   bool read;                  /**< true if the object was successfully read */
    int domindices[GLOBAL_MAX_INDEX_DIM]; /**< Indices of the domains */
 } GamsSymData;
 
-typedef struct lexeme {
-   unsigned linenr;
-   unsigned len;
-   const char* start;
-} Lexeme;
-
-
-typedef struct ident_data {
-   IdentType type;
-   IdentOrigin origin;
-   uint8_t dim;
-   Lexeme lexeme;
-   unsigned idx;
-   void *ptr;
-} IdentData;
 
 typedef enum {
    LogSumExp = 0,
@@ -110,43 +107,7 @@ typedef struct gdx_multiset {
    struct gdx_reader * gdxreader; /**< struct where this array has been found */
 } GdxMultiSet;
 
-static inline int symtype2toktype(enum gdxSyType gdxtype, GamsSymData *symdat, Token *tok)
-{
-   int dim = symdat->dim;
-   assert(dim <= GMS_MAX_INDEX_DIM);
-   assert(symdat->origin == IdentOriginGdx || symdat->origin == IdentOriginGmd);
-
-   switch (gdxtype) {
-   case dt_set:
-      if (dim == 1) { symdat->type = IdentSet; tok->type = TOK_GMS_SET; }
-      else { symdat->type = IdentMultiSet; tok->type = TOK_GMS_MULTISET; };
-      return OK;
-   case dt_par:
-      tok->type = TOK_GMS_PARAM;
-      if (dim == 0) { symdat->type = IdentScalar; }
-      if (dim == 1) { symdat->type = IdentVector; }
-      else { symdat->type = IdentParam; }
-      return OK;
-   case dt_alias:
-      tok->type = TOK_GMS_ALIAS;
-      symdat->type = IdentAlias;
-      return OK;
-   case dt_var:
-      tok->type = TOK_GMS_VAR;
-      symdat->type = IdentVar;
-      return OK;
-      case dt_equ:
-      tok->type = TOK_GMS_EQU;
-      symdat->type = IdentEqu;
-      return OK;
-   default:
-      error("[empinterp] ERROR: gdx type %d not support. Please file a bug report\n", gdxtype);
-      return Error_NotImplemented;
-   }
-
-}
-
-static inline int symtype2identtype(enum gdxSyType gdxtype, IdentData *ident)
+static inline int gdxsymtype2ident(enum gdxSyType gdxtype, IdentData *ident)
 {
    int dim = ident->dim;
    assert(dim <= GMS_MAX_INDEX_DIM);
@@ -194,6 +155,8 @@ static inline TokenType ident2toktype(IdentType type)
    case IdentVector:
    case IdentParam:
       return TOK_GMS_PARAM;
+   case IdentNotFound:
+      return TOK_IDENT;
    default:
       return TOK_ERROR;
    }
@@ -220,5 +183,14 @@ UNUSED static inline IdentType toktype2ident(TokenType toktype, unsigned dim)
       return IdentNotFound;
    }
 }
+
+static inline void tok2lexeme(Token * restrict tok, Lexeme * restrict lexeme)
+{
+   lexeme->linenr = tok->linenr;
+   lexeme->len = tok->len;
+   lexeme->start = tok->start;
+}
+
+
 
 #endif // !EMPINTERP_DATA_H

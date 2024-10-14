@@ -21,14 +21,14 @@ typedef struct {
    int symidx;
    int uels[GMS_MAX_INDEX_DIM];
    GmsSymIterator *symiter;
-} GmsSymIteratorImm;
+} ImmGmsSymIterator;
 
 typedef struct vm_gms_sym_iterator VmGmsSymIterator;
 
 typedef struct {
    GmsResolveDataType type;
    union {
-      GmsSymIteratorImm imm;
+      ImmGmsSymIterator imm;
       VmGmsSymIterator *vm;
    } symiter;
    IntScratch *iscratch;
@@ -43,11 +43,11 @@ typedef struct {
    } payload;
 } GmsResolveData;
 
-int dct_resolve(dctHandle_t dct, GmsResolveData * restrict data) NONNULL;
+int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data) NONNULL;
 void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset);
 void dct_printuelwithidx(dctHandle_t dct, int uel, unsigned mode) NONNULL;
 
-int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data) NONNULL;
+int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symname) NONNULL;
 void gmd_printuel(gmdHandle_t gmd, int uel, unsigned mode, int *offset);
 void gmd_printuelwithidx(gmdHandle_t gmd, int uel, unsigned mode) NONNULL;
 

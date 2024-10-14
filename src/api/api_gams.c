@@ -305,7 +305,7 @@ int rhp_gms_fillmdl(Model *mdl)
 
    mdl->commondata.exports_dir_parent = exportdir_tmp;
    mdl->commondata.own_exports_dir_parent = true;
-   
+ 
    S_CHECK(mdl_settype(mdl, mdltype_from_gams(gmoModelType(gmo))));
 
    unsigned m = (unsigned)gmoM(gmo);
@@ -403,7 +403,7 @@ int rhp_gms_fillmdl(Model *mdl)
 
       Lequ *lequ;
       unsigned lsize = nz - nlnz;
-      A_CHECK(lequ, lequ_alloc(nz - nlnz));
+      A_CHECK(lequ, lequ_new(nz - nlnz));
       e->lequ = lequ;
 
       if (lsize == 0) { continue; }
@@ -608,4 +608,25 @@ const char* rhp_gms_getsysdir(struct rhp_mdl *mdl)
    GmsModelData *gmdldat = mdl->data;
 
    return gmdldat->gamsdir;
+}
+
+int rhp_gms_set_solvelink(struct rhp_mdl *mdl, unsigned solvelink)
+{
+   S_CHECK(gams_chk_mdlfull(mdl, __func__));
+   GmsContainerData *gms = mdl->ctr.data;
+
+   switch(solvelink) {
+   case gevSolveLinkCallScript:
+   case gevSolveLinkCallModule:
+   case gevSolveLinkAsyncGrid:
+   case gevSolveLinkAsyncSimulate:
+   case gevSolveLinkLoadLibrary:
+      break;
+   default:
+      error("[GAMS] ERROR: cannot set solvelink to value %u\n", solvelink);
+      return Error_InvalidArgument;
+   }
+
+   gms->solvelink = solvelink;
+   return OK;
 }

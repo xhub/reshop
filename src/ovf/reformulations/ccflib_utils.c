@@ -48,32 +48,40 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
 
    SpMat A;
    rhpmat_null(&A);
-
    double *s = NULL;
-   S_CHECK(ops->get_set_nonbox(ovfd, &A, &s, false));
-
-   /* Last, add the (non-box) constraints on u */
-   if (A.ppty) {
-      S_CHECK(ovf_add_polycons(mdl, ovfd, &y, ops, &A, s, mp_instance, "ccflib"));
-   }
-
-   unsigned nargs_maps;
-   S_CHECK(ops->get_nargs(ovfd, &nargs_maps));
-
    rhpmat_null(&instancedat->B);
    instancedat->b = NULL;
 
-   S_CHECK(ops->get_lin_transformation(ovfd, &instancedat->B, &instancedat->b));
+   int status = OK;
+
+   S_CHECK_EXIT(ops->get_set_nonbox(ovfd, &A, &s, false));
+
+   /* Last, add the (non-box) constraints on u */
+   if (A.ppty) {
+      S_CHECK_EXIT(ovf_add_polycons(mdl, ovfd, &y, ops, &A, s, mp_instance, "ccflib"));
+   }
+
+   unsigned nargs_maps;
+   S_CHECK_EXIT(ops->get_nargs(ovfd, &nargs_maps));
+
+
+   S_CHECK_EXIT(ops->get_lin_transformation(ovfd, &instancedat->B, &instancedat->b));
 
    if (nargs_maps > 0) {
       CcflibData ccfdat = {.mp = mp_ccflib, .mpid_dual = MpId_NA};
       OvfOpsData ovfd_mp = {.ccfdat = &ccfdat};
-      S_CHECK(reformulation_equil_compute_inner_product(OvfType_Ccflib, ovfd_mp, mdl,
+      S_CHECK_EXIT(reformulation_equil_compute_inner_product(OvfType_Ccflib, ovfd_mp, mdl,
                                                         &instancedat->B, instancedat->b,
                                                         &eobj, &y, NULL));
    }
 
-   return OK;
+_exit:
+   rhpmat_free(&A);
+   rhpmat_free(&instancedat->B);
+   free(s);
+   free(instancedat->b);
+
+   return status;
 }
 
 

@@ -179,7 +179,7 @@ static unsigned mp_getnamelen_(const MathPrgm * mp, unsigned mp_id)
 
 const char* mp_getname_(const MathPrgm * mp, mpid_t mp_id)
 {
-   assert(mp->mdl);
+   if (!mp->mdl) { return "no model"; }
 
    return empdag_getmpname(&mp->mdl->empinfo.empdag, mp_id);
 }
@@ -340,9 +340,12 @@ void mp_free(MathPrgm *mp)
       return;
    }
 
+   trace_refcnt("[MP] Freeing MP(%s)\n", mp_getname(mp));
+
    if (mp->type == MpTypeCcflib) {
       ovfdef_free(mp->ccflib.ccf);
    }
+
    rhp_idx_empty(&mp->equs);
    rhp_idx_empty(&mp->vars);
 
@@ -1184,6 +1187,7 @@ int mp_instantiate(MathPrgm *mp)
    IO_CALL(asprintf(&name, "%s_instance", mp_getname(mp)));
    /* TODO: NAMING */
    A_CHECK(mp->ccflib.mp_instance, empdag_newmpnamed(empdag, sense, name));
+   free(name);
 
    MathPrgm *mp_instance = mp->ccflib.mp_instance;
 
@@ -1193,7 +1197,6 @@ int mp_instantiate(MathPrgm *mp)
    OvfOpsData ovfd = {.ccfdat = &ccfdat};
 
    CcflibInstanceData instancedat = {.ops = &ccflib_ops, .ovfd = ovfd};
-
 
    return mp_ccflib_instantiate(mp_instance, mp, &instancedat);
 }
@@ -1237,7 +1240,7 @@ int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src)
    }
  
    if (valid_objequ) {
-      return rctr_equ_add_map(ctr, eobj_dst, objfn_src, objvar_src, valid_objvar ? NAN : 1.);
+      return rctr_equ_add_map(ctr, eobj_dst, objfn_src, objvar_src, 1.);
    }
 
    /* We only have an objvar */
@@ -1273,10 +1276,10 @@ int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le)
       
       trace_process("[MP] Adding the mapping defined by '%s' in equation '%s' to "
                     "the objective function of MP(%s) with coefficient %e\n",
-                    mdl_printvarname(mdl, vi), mdl_printequname(mdl, objfn),
+                    mdl_printvarname(mdl, vi), mdl_printequname(mdl, ei),
                     mp_getname(mp), c);
 
-      S_CHECK(rctr_equ_add_map(ctr, eobj, ei, vi, NAN));
+      S_CHECK(rctr_equ_add_map(ctr, eobj, ei, vi, c));
    }
 
    mp_unfinalized(mp);

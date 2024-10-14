@@ -77,7 +77,7 @@ int rctr_equ_addlvar(Container *ctr, Equ *e, rhp_idx vi, double val)
 
    if (!isNL) {
       if (!e->lequ) {
-         A_CHECK(e->lequ, lequ_alloc(1));
+         A_CHECK(e->lequ, lequ_new(1));
       }
 
       S_CHECK(lequ_add_unique(e->lequ, vi, val));
@@ -543,13 +543,13 @@ int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, d
  * @param edst    the destination equation
  * @param ei      the source equation/map
  * @param vi_map  If valid, the variable defining the map in the equation
- * @param coeff   If finite, the coefficient to apply on the map.
+ * @param coeff   The coefficient to apply on the map.
  *
  * @return        The error code
  */
 int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, double coeff)
 {
-   assert(valid_ei_(edst->idx, rctr_totalm(ctr), __func__));
+   assert(valid_ei_(edst->idx, rctr_totalm(ctr), __func__)); assert(isfinite(coeff));
    assert(rctr_chk_map(ctr, ei, vi_map));
 
    Lequ *lequ_src = ctr->equs[ei].lequ;
@@ -557,9 +557,10 @@ int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, doub
    /* --------------------------------------------------------------------
     * If coeff is not given, it is -coeff(vi_map)
     * -------------------------------------------------------------------- */
-   if (!isfinite(coeff)) {
+   if (valid_vi(vi_map)) {
       unsigned pos_dummy;
-      S_CHECK(lequ_find(lequ_src, vi_map, &coeff, &pos_dummy));
+      double vi_coeff;
+      S_CHECK(lequ_find(lequ_src, vi_map, &vi_coeff, &pos_dummy));
 
       if (pos_dummy == UINT_MAX) {
          error("[container] ERROR: could not find variable '%s' in equation '%s'",
@@ -567,7 +568,7 @@ int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, doub
          return Error_RuntimeError;
       }
 
-      coeff = -1./coeff;
+      coeff = -coeff/vi_coeff;
    }
 
    /* --------------------------------------------------------------------
@@ -675,7 +676,7 @@ int rctr_equ_add_equ_x(Container *ctr, Equ * restrict dst, Equ * restrict src,
    if (lin_len > 0) {
 
       if (!dst->lequ) {
-         A_CHECK(dst->lequ, lequ_alloc(lin_len));
+         A_CHECK(dst->lequ, lequ_new(lin_len));
       }
 
       rhp_idx * restrict svidx = src->lequ->vis;
@@ -802,7 +803,7 @@ int rctr_equ_addmulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
    if (nb_nodes == 0) {
       if (fabs(cst) > DBL_EPSILON) {
          if (!dst->lequ) {
-            A_CHECK(dst->lequ, lequ_alloc(3));
+            A_CHECK(dst->lequ, lequ_new(3));
          }
 
          assert(!lequ_debug_hasvar(dst->lequ, vi));

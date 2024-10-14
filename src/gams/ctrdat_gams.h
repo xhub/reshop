@@ -13,6 +13,7 @@
 
 struct gams_modeldata;
 
+/** GAMS-specific container data */
 typedef struct ctrdata_gams {
 
    bool owndct;                          /**< If true, owns the dct object   */
@@ -21,9 +22,10 @@ typedef struct ctrdata_gams {
 
    struct equvar_eval equvar_eval;      /**< Evaluation of variables by equations */
 
-   void *info;
    double *rhsdelta;
    int *sos_group;
+
+   enum gevCallSolverSolveLink solvelink;
 
    gmoHandle_t gmo;
    gevHandle_t gev;

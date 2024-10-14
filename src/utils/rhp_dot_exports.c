@@ -46,9 +46,10 @@ int dot2png(const char *fname)
 int view_png(const char *fname, Model *mdl)
 {
    bool free_png_viewer = false;
-   const char *png_viewer = optvals(mdl, Options_Png_Viewer);
+   char *png_viewer = optvals(mdl, Options_Png_Viewer);
 
   if (!png_viewer || png_viewer[0] == '\0') {
+      free(png_viewer); // optvals requires the callee to free
 #ifdef __apple__
       png_viewer = "open -f "
 #elif defined(__linux__)

@@ -495,7 +495,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       }
 
       Lequ *le;
-      A_CHECK_EXIT(les[i], lequ_alloc(size_new_lequ));
+      A_CHECK_EXIT(les[i], lequ_new(size_new_lequ));
       le = les[i];
 
       NlTree *tree;
@@ -707,7 +707,7 @@ _exit:
 
    if (les) {
      for (unsigned i = 0; i < n_u; ++i) {
-       lequ_dealloc(les[i]);
+       lequ_free(les[i]);
        /*  TODO(xhub) qequ */
      }
    }

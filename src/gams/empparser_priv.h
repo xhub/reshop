@@ -22,6 +22,9 @@
   STRNCPY(_tmpstr, _ident42, _ident_len42); \
   _tmpstr[_ident_len42] = '\0';
 
+NONNULL int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
+                        double *val);
+
  /* ---------------------------------------------------------------------
  * Low-level functions. Use with caution!
  * --------------------------------------------------------------------- */

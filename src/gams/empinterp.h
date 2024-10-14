@@ -86,10 +86,17 @@ typedef struct NamedIntsArray {
    const char **names;
 } NamedIntsArray;
 
+static inline void namedints_free_elt(IntArray arr)
+{
+   IntArray arr_ = arr;
+   rhp_int_empty(&arr_);
+}
+
 #define RHP_LOCAL_SCOPE
 #define RHP_LIST_PREFIX namedints
 #define RHP_LIST_TYPE NamedIntsArray
 #define RHP_ELT_TYPE IntArray
+#define RHP_ELT_FREE namedints_free_elt
 #define RHP_ELT_INVALID ((IntArray) {.len = 0, .max = 0, .arr = NULL})
 #include "namedlist_generic.inc"
 #define valid_set(obj)  ((obj).arr != NULL)
@@ -241,21 +248,25 @@ typedef struct linklabels {
    uint8_t dim;
    uint8_t num_var;
    LinkType linktype;
-   uint16_t nodename_len;  /**< node name length */
+   uint16_t label_len;  /**< node name length */
    unsigned num_children;
    unsigned max_children;  /**< Max number of children  */
    daguid_t daguid_parent; /**< daguid ot the parent */
-   const char *nodename;   /**< Basename of the parent */
-   int *uels_var; /* uel_var[num_var] per child */
+   const char *label;   /**< Basename of the parent */
+   int *uels_var;          /**< uel_var[num_var] per child */
+   rhp_idx *vi;            /**< Optional variable index    */
+   double *coeff;          /**< Optional coefficient       */
    int data[]; /* Layout: uels[dim] + pos[num_vars]*/
 } LinkLabels;
 
 typedef struct linklabel {
    uint8_t dim;
    LinkType linktype;
-   uint16_t nodename_len;
+   uint16_t label_len;
    daguid_t daguid_parent;
-   const char *nodename;
+   const char *label;
+   double coeff;
+   rhp_idx vi;
    int uels[] __counted_by(dim);
 } LinkLabel;
 
@@ -361,10 +372,12 @@ typedef struct interpreter {
    unsigned tmpstrlen;
 
    Model *mdl;
-   void *gmdout;
+   void *gmdcpy;
 
    void *dct;
    void *gmd;
+   bool gmd_fromgdx;
+   bool gmd_own;
 
    /* Tokens */
    Token cur;
@@ -418,7 +431,6 @@ typedef struct interp_ops {
    int (*ccflib_finalize)(Interpreter* restrict interp, MathPrgm *mp);
    int (*ctr_markequasflipped)(Interpreter* restrict interp);
    int (*identaslabels)(Interpreter * interp, unsigned * p, LinkType edge_type);
-   int (*gms_resolve_sym)(Interpreter* restrict interp, unsigned *p); 
    int (*gms_add_uel)(Interpreter* restrict interp, const Token *tok, unsigned i); 
    int (*gms_get_uelidx)(Interpreter *interp, const char *uelstr, int *uelidx);
    int (*gms_get_uelstr)(Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr);
@@ -450,10 +462,10 @@ typedef struct interp_ops {
    int (*read_elt_vector)(Interpreter *interp, const char *vectorname,
                           IdentData *ident, GmsIndicesData *gmsindices,
                           double *val);
+   int (*read_gms_symbol)(Interpreter* restrict interp, unsigned *p); 
    int (*read_param)(Interpreter *interp, unsigned *p, IdentData *data,
-                      const char *ident_str, unsigned *param_gidx);
+                      unsigned *param_gidx);
    int (*resolve_tokasident)(Interpreter *interp, IdentData *ident);
-   int (*resolve_lexeme_as_gmssymb)(Interpreter *interp, Token *tok);
 } InterpreterOps;
 
 extern const struct interp_ops interp_ops_imm;

@@ -10,7 +10,6 @@ $offtext
 
 * Allow to set another name for reshop
 * Useful when one has the solver provided by the GAMS distributions and a local development version 
-$if not set solver $set solver reshop
 $if not set reformulation $set reformulation fenchel
 $if not set nSamples $set nSamples 1000
 
@@ -80,16 +79,14 @@ file empinfo /'%emp.info%'/;
 empinfo.nd = 10;
 putclose empinfo /'OVF cvarup h0v phi ' tail;
 
-option emp = %solver%;
-
-$onecho > %solver%.op3
+$onecho > %gams.emp%.op3
 ovf_reformulation=%reformulation%
 subsolveropt=1
 output_subsolver_log=1
 empinfofile=empdag.txt
 $offecho
 
-$onecho > %solver%.opt
+$onecho > %gams.emp%.opt
 ovf_reformulation=%reformulation%
 subsolveropt=1
 output_subsolver_log=1
@@ -183,7 +180,9 @@ abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
 
 $exit
 
-$onecho > %solver%.op2
+
+* TODO: where is %gams.emp% explained?
+$onecho > %gams.emp%.op2
 ovf_reformulation=equilibrium
 subsolveropt=2
 output_subsolver_log=1

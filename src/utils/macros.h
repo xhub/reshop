@@ -93,11 +93,11 @@ static inline void *myrealloc(void *ptr, size_t size)
 #endif
 }
 
-#define REALLOC(ptr,type,n) { (ptr) = (type*)myrealloc(ptr, (n)*sizeof(type)); \
+#define REALLOC(ptr,type,n) { (ptr) = (type*)myrealloc((void*)(ptr), (n)*sizeof(type)); \
    assert(((ptr) || (n) == 0) && "Allocation error for object " #ptr); }
 
 #define REALLOC_(ptr,type,n)  REALLOC(ptr,type,n) \
-   if (RHP_UNLIKELY(!(ptr)) || (n) == 0) { return Error_InsufficientMemory; }
+   if (RHP_UNLIKELY(!(ptr) && (n) > 0)) { return Error_InsufficientMemory; }
 
 #define REALLOC_NULL(ptr,type,n)  REALLOC(ptr,type,n) \
    if (RHP_UNLIKELY(!(ptr))) { return NULL; }

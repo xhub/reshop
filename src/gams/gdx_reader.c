@@ -273,7 +273,7 @@ static int gdx_reader_readvector(GdxReader *reader, const char *symname)
    gdx_call_rc(gdxDataReadStrStart, gdxh, reader->symdat.idx, &nrecs);
    assert(nrecs >= 1);
 
-   A_CHECK(reader->vector, lequ_alloc(nrecs));
+   A_CHECK(reader->vector, lequ_new(nrecs));
 
    /* ---------------------------------------------------------------------
     * We use gdxDataReadStr to get the string representation of the UELs

@@ -64,7 +64,12 @@ RHP_PUBLIB
 const char* rhp_gms_getsysdir(struct rhp_mdl *mdl);
 
 RHP_PUBLIB
-int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir, unsigned char codelen, const char *code, unsigned char argslen, const char *args);
+int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir,
+                unsigned char codelen, const char *code, unsigned char argslen,
+                const char *args);
+
+RHP_PUBLIB
+int rhp_gms_set_solvelink(struct rhp_mdl *mdl, unsigned solvelink);
 
 #undef RHP_PUBLIB
 

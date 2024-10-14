@@ -277,7 +277,11 @@ static int vm_mp_addcons(VmData *data, unsigned argc, const VmValue *values)
    N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
    Aequ *e = data->e_current;
 
-   return mp_addconstraints(mp, e);
+   S_CHECK(mp_addconstraints(mp, e));
+
+   aequ_reset(e);
+
+   return OK;
 }
 
 static int vm_mp_addvars(VmData *data, unsigned argc, const VmValue *values)
@@ -288,7 +292,11 @@ static int vm_mp_addvars(VmData *data, unsigned argc, const VmValue *values)
    N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
    Avar *v = data->v_current;
 
-   return mp_addvars(mp, v);
+   S_CHECK(mp_addvars(mp, v));
+
+   avar_reset(v);
+
+   return OK;
 }
 
 static int vm_mp_addvipairs(VmData *data, unsigned argc, const VmValue *values)
@@ -300,7 +308,12 @@ static int vm_mp_addvipairs(VmData *data, unsigned argc, const VmValue *values)
    Avar *v = data->v_current;
    Aequ *e = data->e_current;
 
-   return mp_addvipairs(mp, e, v);
+   S_CHECK(mp_addvipairs(mp, e, v));
+
+   avar_reset(v);
+   aequ_reset(e);
+
+   return OK;
 }
 
 static int vm_mp_addzerofunc(VmData *data, unsigned argc, const VmValue *values)
@@ -311,7 +324,11 @@ static int vm_mp_addzerofunc(VmData *data, unsigned argc, const VmValue *values)
    N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
    Avar *v = data->v_current;
 
-   return mp_addvipairs(mp, NULL, v);
+   S_CHECK(mp_addvipairs(mp, NULL, v));
+
+   avar_reset(v);
+
+   return OK;
 }
 
 static int vm_mp_finalize(UNUSED VmData *data, unsigned argc, const VmValue *values)
@@ -351,6 +368,7 @@ static int vm_mp_finalize(UNUSED VmData *data, unsigned argc, const VmValue *val
          S_CHECK(empdag_mpVFmpbyid(empdag, mp_id, &arcvf));
 
       }
+
       data->arcvfobjs.len = 0;
    }
 

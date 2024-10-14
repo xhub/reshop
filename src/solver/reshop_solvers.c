@@ -69,6 +69,7 @@ UNUSED static void _output_equs(Model *mdl)
            return;
          }
          nltree_print_dot(ctr->equs[i].tree, fname, ctr);
+         free(fname);
       }
    }
 }

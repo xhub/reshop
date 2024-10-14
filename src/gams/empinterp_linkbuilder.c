@@ -7,113 +7,147 @@
 #include "macros.h"
 #include "printout.h"
 
-LinkLabels * linklabels_new(const char *basename, unsigned basename_len,
-                           uint8_t dim, uint8_t num_vars, unsigned size)
+LinkLabels * linklabels_new(const char *label, unsigned label_len,
+                           uint8_t dim, uint8_t num_vars, unsigned max_children)
 {
-   LinkLabels *dagl = NULL;
-   MALLOCBYTES_EXIT_NULL(dagl, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
-   MALLOC_EXIT_NULL(dagl->uels_var, int, (size_t)size*num_vars); 
+   LinkLabels *link = NULL;
+   MALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
 
-   dagl->dim = dim;
-   dagl->num_var = num_vars;
-   dagl->nodename_len = basename_len;
-
-   dagl->num_children = 0;
-   dagl->max_children = size;
-   dagl->daguid_parent = EMPDAG_UID_NONE;
-   dagl->nodename = basename;
-
-   return dagl;
-_exit:
-   FREE(dagl);
-   return NULL;
-}
-
-LinkLabels * linklabels_dup(const LinkLabels * dagl_src)
-{
-   LinkLabels *dagc_cpy = NULL;
-   uint8_t dim = dagl_src->dim;
-   uint8_t num_var = dagl_src->num_var;
-   unsigned max_children = dagl_src->max_children;
-
-   size_t data_size = sizeof(int) * (dim + num_var);
-   MALLOCBYTES_NULL(dagc_cpy, LinkLabels, sizeof(LinkLabels) + data_size);
-
-   memcpy(dagc_cpy, dagl_src, sizeof(LinkLabels) + data_size);
-
-   MALLOC_EXIT_NULL(dagc_cpy->uels_var, int, (size_t)num_var*max_children);
-
-   return dagc_cpy;
-_exit:
-   FREE(dagc_cpy);
-   return NULL;
-}
-
-LinkLabel * linklabels_dupaslabel(const LinkLabels * dagl_src)
-{
-   LinkLabel *dagc;
-   uint8_t dim = dagl_src->dim;
-   assert(dagl_src->num_children <= 1);
-   MALLOCBYTES_NULL(dagc, LinkLabel, sizeof(LinkLabel) + sizeof(int) * dim);
-
-   dagc->dim = dim;
-   dagc->nodename_len = dagl_src->nodename_len;
-   dagc->nodename = dagl_src->nodename;
-   memcpy(dagc->uels, dagl_src->data, sizeof(int) * dim);
-
-   dagc->daguid_parent = dagl_src->daguid_parent;
-
-   return dagc;
-}
-
-int linklabels_add(LinkLabels *dagl, int *uels)
-{
-   uint8_t num_var = dagl->num_var;
-   unsigned num_children = dagl->num_children;
-
-   if (num_children >= dagl->max_children) {
-      dagl->max_children = MAX(2*dagl->max_children, dagl->num_children + 10);
-      size_t size_data = (num_var*dagl->max_children);
-      REALLOC_(dagl->uels_var, int, size_data);
+   if (max_children > 0) {
+      MALLOC_EXIT_NULL(link->uels_var, int, (size_t)max_children*num_vars); 
+      MALLOC_EXIT_NULL(link->vi, rhp_idx, (size_t)max_children); 
+      MALLOC_EXIT_NULL(link->coeff, double, (size_t)max_children); 
+   } else {
+      link->uels_var = NULL;
+      link->vi = NULL;
+      link->coeff = NULL;
    }
 
-   memcpy(&dagl->uels_var[(size_t)num_var*num_children], uels, sizeof(int)*num_var);
+   link->dim = dim;
+   link->num_var = num_vars;
+   link->label_len = label_len;
 
-   dagl->num_children++;
+   link->num_children = 0;
+   link->max_children = max_children;
+   link->daguid_parent = EMPDAG_UID_NONE;
+   link->label = label;
+
+   return link;
+_exit:
+   FREE(link);
+   return NULL;
+}
+
+LinkLabels * linklabels_dup(const LinkLabels * link_src)
+{
+   LinkLabels *link_cpy = NULL;
+   uint8_t dim = link_src->dim;
+   uint8_t num_var = link_src->num_var;
+   unsigned max_children = link_src->max_children;
+
+   size_t data_size = sizeof(int) * (dim + num_var);
+   MALLOCBYTES_NULL(link_cpy, LinkLabels, sizeof(LinkLabels) + data_size);
+
+   memcpy(link_cpy, link_src, sizeof(LinkLabels) + data_size);
+
+   if (max_children > 0) {
+      MALLOC_EXIT_NULL(link_cpy->uels_var, int, (size_t)num_var*max_children);
+      MALLOC_EXIT_NULL(link_cpy->vi, rhp_idx, max_children);
+      MALLOC_EXIT_NULL(link_cpy->coeff, double, max_children);
+
+   } else {
+      link_cpy->uels_var = NULL;
+      link_cpy->vi = NULL;
+      link_cpy->coeff = NULL;
+   }
+
+   return link_cpy;
+_exit:
+   FREE(link_cpy);
+   return NULL;
+}
+
+LinkLabel * linklabels_dupaslabel(const LinkLabels * link_src)
+{
+   LinkLabel *link;
+   uint8_t dim = link_src->dim;
+   assert(link_src->num_children <= 1);
+   MALLOCBYTES_NULL(link, LinkLabel, sizeof(LinkLabel) + sizeof(int) * dim);
+
+   link->dim = dim;
+   link->label_len = link_src->label_len;
+   link->label = link_src->label;
+   memcpy(link->uels, link_src->data, sizeof(int) * dim);
+
+   link->daguid_parent = link_src->daguid_parent;
+   link->vi = IdxNA;
+   link->coeff = 1.;
+   link->linktype = link_src->linktype;
+
+   return link;
+}
+
+int linklabels_add(LinkLabels *link, int *uels, double coeff, rhp_idx vi)
+{
+   uint8_t num_var = link->num_var;
+   unsigned num_children = link->num_children, max_children = link->max_children;
+
+   if (num_children >= max_children) {
+      unsigned size = link->max_children = MAX(2*max_children, num_children + 10);
+      if (num_var > 0) {
+         size_t size_data = (num_var*size);
+         REALLOC_(link->uels_var, int, size_data);
+      }
+      REALLOC_(link->coeff, double, size);
+      REALLOC_(link->vi, rhp_idx, size);
+   }
+
+   if (uels) {
+      memcpy(&link->uels_var[(size_t)num_var*num_children], uels, sizeof(int)*num_var);
+   }
+
+   link->coeff[num_children] = coeff;
+   link->vi[num_children] = vi;
+
+   link->num_children++;
 
    return OK;
 }
 
-void linklabels_free(LinkLabels *dagl)
+void linklabels_free(LinkLabels *link)
 {
-   if (!dagl) return;
+   if (!link) return;
 
-   FREE(dagl->uels_var);
-   FREE(dagl);
+   FREE(link->uels_var);
+   FREE(link->vi);
+   FREE(link->coeff);
+   FREE(link);
 }
 
 LinkLabel* linklabel_new(const char *label, unsigned label_len, uint8_t dim)
 {
    LinkLabel *link;
-   MALLOCBYTES_NULL(link, LinkLabel, sizeof(LinkLabel) + sizeof(int) * dim);
+   MALLOCBYTES_NULL(link, LinkLabel, sizeof(LinkLabel) + (sizeof(int) * dim));
 
    link->dim = dim;
-   link->nodename_len = label_len;
+   link->label_len = label_len;
    link->daguid_parent = EMPDAG_UID_NONE;
-   link->nodename = label;
+   link->label = label;
+   link->vi = IdxNA;
+   link->coeff = 1;
 
    return link;
 }
 
-void linklabel_free(LinkLabel *dagl)
+void linklabel_free(LinkLabel *link)
 {
-   FREE(dagl);
+   FREE(link);
 }
 
 DualLabel* dual_label_new(const char *identname, unsigned identname_len, uint8_t dim, mpid_t mpid_dual)
 {
    DualLabel *dual;
-   MALLOCBYTES_NULL(dual, DualLabel, sizeof(DualLabel) + sizeof(int) * dim);
+   MALLOCBYTES_NULL(dual, DualLabel, sizeof(DualLabel) + (sizeof(int) * dim));
 
    dual->dim = dim;
    dual->label_len = identname_len;

@@ -23,18 +23,18 @@
 int genlabelname(DagRegisterEntry * restrict entry, Interpreter *interp,
                  char **labelname)
 {
-   assert(entry->nodename && (entry->nodename_len > 0));
+   assert(entry->label && (entry->label_len > 0));
 
    /* No UEL, just copy basename into labelname */
    if (entry->dim == 0) {
-      *labelname = strndup(entry->nodename, entry->nodename_len);
+      *labelname = strndup(entry->label, entry->label_len);
       return OK;
    }
 
    gdxStrIndex_t uels;
    unsigned uels_len[GMS_MAX_INDEX_DIM];
 
-   size_t strsize = entry->nodename_len;
+   size_t strsize = entry->label_len;
    size_t size = strsize;
 
    for (unsigned i = 0, len = entry->dim; i < len; ++i) {
@@ -47,7 +47,7 @@ int genlabelname(DagRegisterEntry * restrict entry, Interpreter *interp,
    char *lname;
    MALLOC_(lname, char, strsize);
 
-   memcpy(lname, entry->nodename, size);
+   memcpy(lname, entry->label, size);
    lname[size++] = '(';
 
    unsigned uel_len = uels_len[0];
@@ -77,14 +77,14 @@ DagRegisterEntry* regentry_new(const char *basename, unsigned basename_len,
    DagRegisterEntry *regentry;
    MALLOCBYTES_NULL(regentry, DagRegisterEntry, sizeof(DagRegisterEntry) + dim*sizeof(int));
 
-   regentry->nodename = basename;
+   regentry->label = basename;
    if (basename_len >= UINT16_MAX) {
       error("[empinterp] EMPDAG label '%s' must be smaller than %u\n", basename, UINT16_MAX);
       FREE(regentry);
       return NULL;
    }
 
-   regentry->nodename_len = basename_len;
+   regentry->label_len = basename_len;
    regentry->dim = dim;
 
    return regentry;

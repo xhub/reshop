@@ -11,7 +11,7 @@
 #include "gmdcc.h"
 #include "var.h"
 
-int dct_resolve(dctHandle_t dct, GmsResolveData * restrict data)
+int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
 {
    int symidx, *uels;
    unsigned dim;
@@ -167,8 +167,10 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
    }
 }
 
-int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
+int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symname)
 {
+   assert(gmd);
+
    int symnr, *uels;
    unsigned dim;
    TokenType toktype;
@@ -182,7 +184,6 @@ int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
       uels =  data->symiter.imm.symiter->uels;
       compact = data->symiter.imm.symiter->compact;
    } else if (data->type == GmsSymIteratorTypeVm) {
-      assert(data->type == GmsSymIteratorTypeVm);
       symnr = (int)data->symiter.vm->ident.idx;
       dim = data->symiter.vm->ident.dim;
       toktype = ident2toktype(data->symiter.vm->ident.type);
@@ -197,21 +198,25 @@ int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
   /* ----------------------------------------------------------------------
    * WARNING: this relies on symidx being GMD_NUMBER
    * ---------------------------------------------------------------------- */
-   void *symptr;
-   GMD_CHK(gmdGetSymbolByNumber, gmd, symnr+1, &symptr);
+   void *symptr = NULL;
+   if (data->type == GmsSymIteratorTypeVm) {
+       GMD_CHK(gmdFindSymbol, gmd, symname,  &symptr);
+   } else {
+      GMD_CHK(gmdGetSymbolByNumber, gmd, symnr, &symptr);
+   }
 
-   if (O_Output & PO_TRACE_EMPPARSER) {
+   if (O_Output & PO_TRACE_EMPINTERP) {
       char quote = '\'';
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, buf);
-      trace_empparser("[empinterp] resolving GAMS symbol '%s' of type %s and dim %u.\n",
+      trace_empinterp("[GMD] resolving GAMS symbol '%s' of type %s and dim %u.\n",
                       buf, toktype2str(toktype), dim);
       if (dim > 1 || (dim == 1 && uels[0] > 0)) {
-         trace_empparsermsg("[empinterp] UELs values are:\n");
+         trace_empinterp("[GMD] UELs values are:\n");
          for (unsigned i = 0; i < dim; ++i) {
             int uel = uels[i];
             if (uel > 0) { GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf);
             } else { strcpy(buf, "'*'"); }
-            trace_empparser("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
+            trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
       }
    }
@@ -232,7 +237,7 @@ int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
        * the returned handle.
        * ------------------------------------------------------------------ */
 
-      void *symiterptr;
+      void *symiterptr = NULL;
       bool single_record = true;
       data->allrecs = true;
       char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
@@ -263,6 +268,7 @@ int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
             data->dtmp = vals[GMS_VAL_LEVEL];
          }
 
+         data->nrecs = 1;
       } else { /* Not a single record */
 
          if (compact) {
@@ -316,16 +322,37 @@ int gmd_resolve(gmdHandle_t gmd, GmsResolveData * restrict data)
          }
 
          data->nrecs = i;
-         gmdFreeSymbolIterator(gmd, symiterptr);
 
       }
+
+      gmdFreeSymbolIterator(gmd, symiterptr);
       break;
    }
    default:
-      error("[empinterp] Unexpected token type '%s'\n",
-            toktype2str(toktype));
+      error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
       return Error_RuntimeError;
    }
+
+   if (O_Output & PO_TRACE_EMPINTERP) {
+      trace_empinterp("[GMD] Read %u records", data->nrecs);
+
+      if (toktype == TOK_GMS_PARAM) {
+         trace_empinterp(":");
+         unsigned nrecs = data->nrecs;
+         if (nrecs == 1) {
+            trace_empinterp(" %e\n", data->dtmp);
+         } else {
+            for (unsigned i = 0; i < nrecs; ++i) {
+               trace_empinterp(" %e", data->dscratch->data[i]);
+            }
+            trace_empinterp("\n");
+
+         }
+      } else {
+         trace_empinterp("\n");
+      }
+   }
+
    return OK;
 }
 

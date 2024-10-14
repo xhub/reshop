@@ -84,10 +84,10 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_JUMP_IF_FALSE_NOPOP] = {{OPARG_JUMP_FWD},},
    [OP_JUMP_BACK] = {{OPARG_JUMP_BCK},},
    [OP_JUMP_BACK_IF_FALSE] = {{OPARG_JUMP_BCK},},
-   [OP_GMS_EQUVAR_INIT] = {{OPARG_BYTE},},
-   [OP_GMS_EQUVAR_SYNC] = {{OPARG_BYTE},},
-   [OP_GMSSYM_RESOLVE] = {{OPARG_GIDX},},
-   [OP_GMS_RESOLVE_EXTEND] = {{OPARG_GIDX},},
+   [OP_GMS_EQUVAR_READ_INIT] = {{OPARG_BYTE},},
+   [OP_GMS_EQUVAR_READ_SYNC] = {{OPARG_BYTE},},
+   [OP_GMS_SYMBOL_READ_SIMPLE] = {{OPARG_GIDX},},
+   [OP_GMS_SYMBOL_READ_EXTEND] = {{OPARG_GIDX},},
    [OP_GMS_MEMBERSHIP_TEST] = {{OPARG_GIDX},},
    [OP_EMPAPI_CALL] = {{OPARG_APICALL},},
    [OP_NEW_OBJ] = {{OPARG_NEWOBJ},},
@@ -95,7 +95,7 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_LINKLABELS_DUP] = {{OPARG_GIDX},},
    [OP_LINKLABELS_SETFROM_LOOPVAR] = {{OPARG_ARCOBJ}, {OPARG_IDX}, {OPARG_LIDX}},
    [OP_LINKLABELS_STORE] = {{OPARG_LINKLABELS_SYNCANDSTORE},},
-   [OP_LINKLABELS_FINALIZE] = {{OPARG_NONE},},
+   [OP_LINKLABELS_FINI] = {{OPARG_NONE},},
    [OP_SET_DAGUID_FROM_REGENTRY] = {{OPARG_NONE},},
    [OP_END] = {{OPARG_NONE},},
 };
@@ -140,10 +140,10 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_JUMP_IF_FALSE_NOPOP] = 1,
    [OP_JUMP_BACK] = 1,
    [OP_JUMP_BACK_IF_FALSE] = 1,
-   [OP_GMS_EQUVAR_INIT] = 1,
-   [OP_GMS_EQUVAR_SYNC] = 1,
-   [OP_GMSSYM_RESOLVE] = 1,
-   [OP_GMS_RESOLVE_EXTEND] = 1,
+   [OP_GMS_EQUVAR_READ_INIT] = 1,
+   [OP_GMS_EQUVAR_READ_SYNC] = 1,
+   [OP_GMS_SYMBOL_READ_SIMPLE] = 1,
+   [OP_GMS_SYMBOL_READ_EXTEND] = 1,
    [OP_GMS_MEMBERSHIP_TEST] = 1,
    [OP_EMPAPI_CALL] = 1,
    [OP_NEW_OBJ] = 1,
@@ -151,7 +151,7 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_LINKLABELS_DUP] = 1,
    [OP_LINKLABELS_SETFROM_LOOPVAR] = 3,
    [OP_LINKLABELS_STORE] = 1,
-   [OP_LINKLABELS_FINALIZE] = 0,
+   [OP_LINKLABELS_FINI] = 0,
    [OP_SET_DAGUID_FROM_REGENTRY] = 0,
    [OP_END] = 0,
 };
@@ -196,10 +196,10 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_JUMP_IF_FALSE_NOPOP,"JUMP_IF_FALSE_NOPOP") \
  DEFSTR(OP_JUMP_BACK,"JUMP_BACK") \
  DEFSTR(OP_JUMP_BACK_IF_FALSE,"JUMP_BACK_IF_FALSE") \
- DEFSTR(OP_GMS_EQUVAR_INIT,"GMS_EQUVAR_INIT") \
- DEFSTR(OP_GMS_EQUVAR_SYNC,"GMS_EQUVAR_SYNC") \
- DEFSTR(OP_GMSSYM_RESOLVE,"GMSSYM_RESOLVE") \
- DEFSTR(OP_GMS_RESOLVE_EXTEND,"GMS_RESOLVE_EXTEND") \
+ DEFSTR(OP_GMS_EQUVAR_READ_INIT,"GMS_EQUVAR_INIT") \
+ DEFSTR(OP_GMS_EQUVAR_READ_SYNC,"GMS_EQUVAR_SYNC") \
+ DEFSTR(OP_GMS_SYMBOL_READ_SIMPLE,"GMSSYM_RESOLVE") \
+ DEFSTR(OP_GMS_SYMBOL_READ_EXTEND,"GMS_RESOLVE_EXTEND") \
  DEFSTR(OP_GMS_MEMBERSHIP_TEST,"GMS_MEMBERSHIP_TEST") \
  DEFSTR(OP_CALL_API,"CALL_API") \
  DEFSTR(OP_NEW_OBJ,"NEW_OBJ") \
@@ -207,7 +207,7 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_LINKLABELS_DUP,"LINKLABELS_DUP_LINKLABELS") \
  DEFSTR(OP_LINKLABELS_SETFROM_LOOPVAR,"LINKLABELS_SETFROM_LOOPVAR") \
  DEFSTR(OP_LINKLABELS_STORE,"LINKLABELS_STORE") \
- DEFSTR(OP_LINKLABELS_FINALIZE,"LINKLABELS_FINALIZE") \
+ DEFSTR(OP_LINKLABELS_FINI,"LINKLABELS_FINI") \
  DEFSTR(OP_SET_DAGUID_FROM_REGENTRY, "SET_DAGUID_FROM_REGENTRY") \
  DEFSTR(OP_END,"END")
 
@@ -250,9 +250,11 @@ const char * opcodes_name(enum OpCode op)
 static inline int valid_vmidx(unsigned idx, unsigned len, const char* setname)
 {
    if (idx >= len) {
-      error("\n[empvm] argument %u outside of set %s range [0,%u)\n", idx, setname, len);
+      error("\n[empvm] ERROR: argument %u is outside of array '%s' with range [0,%u)\n",
+            idx, setname, len);
       return Error_EMPRuntimeError;
    }
+
    return OK;
 }
 
@@ -271,10 +273,10 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
       if (IS_STR(v)) { printout(mode, "%30s\n", AS_STR(v));
       } else if (IS_REGENTRY(v)) {
          DagRegisterEntry *regentry = AS_REGENTRY(v);
-         printout(mode, "%30.*s\n", regentry->nodename_len, regentry->nodename);
+         printout(mode, "%30.*s\n", regentry->label_len, regentry->label);
       } else if (IS_ARCOBJ(v)) {
          LinkLabels *linklabel = AS_ARCOBJ(v);
-         printout(mode, "%30.*s\n", linklabel->nodename_len, linklabel->nodename);
+         printout(mode, "%30.*s\n", linklabel->label_len, linklabel->label);
       } else if (IS_GMSSYMITER(v)) {
          VmGmsSymIterator *symiter = AS_GMSSYMITER(v);
          IdentData *sym = &symiter->ident;
@@ -506,6 +508,9 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
 
    vm->code.ip = instr_start;
 
+   if (status != OK) {
+      errormsg("[empvm] ERROR: bytecode is not correct, see the above error message(s)\n");
+   }
 
    return status;
 }

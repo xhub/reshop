@@ -32,14 +32,14 @@ int gmssym_iterator_init(Interpreter* restrict interp)
 {
    GmsSymIterator * restrict iterator = &interp->gms_sym_iterator;
    assert(!iterator->active);
-   assert(interp->cur.symdat.dim < GMS_MAX_INDEX_DIM);
+   assert(interp->cur.symdat.ident.dim < GMS_MAX_INDEX_DIM);
 
    iterator->active = true;
    iterator->compact = true;
    iterator->loop_needed = false;
 
 
-   memset(&iterator->uels, 0, sizeof(int)*interp->cur.symdat.dim);
+   memset(&iterator->uels, 0, sizeof(int)*interp->cur.symdat.ident.dim);
 
    gmsindices_init(&iterator->indices);
 
@@ -113,7 +113,7 @@ NONNULL static int imm_common_nodefini(Interpreter *interp)
    return OK;
 }
 
-static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
+static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
 {
    assert(interp->gms_sym_iterator.active && !interp->gms_sym_iterator.loop_needed);
    TokenType toktype = parser_getcurtoktype(interp);
@@ -121,7 +121,7 @@ static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
 
    data.type = GmsSymIteratorTypeImm;
    data.symiter.imm.toktype = toktype;
-   data.symiter.imm.symidx = interp->cur.symdat.idx;
+   data.symiter.imm.symidx = interp->cur.symdat.ident.idx;
    data.symiter.imm.symiter = &interp->gms_sym_iterator;
    data.iscratch = &interp->cur.iscratch;
 
@@ -148,6 +148,7 @@ static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
          break;
       case IdentSet: {
          char domstr[GMS_SSSIZE];
+         // HACK: domindices come from GMD ...
          dctDomName(dct, domindices[i], domstr, sizeof(domstr));
          if (!strncasecmp(domstr, ident->lexeme.start, ident->lexeme.len)) {
             uels[i] = 0;
@@ -160,7 +161,7 @@ static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
          break;
       default:
          error("[empinterp] ERROR line %u: while resolving symbol '%.*s', "
-               "unsupported ident '%.*s' of type %s at the %u location",
+               "unsupported ident '%.*s' of type %s at the %u location\n",
                interp->linenr, emptok_getstrlen(&interp->cur),
                emptok_getstrstart(&interp->cur), ident->lexeme.len,
                ident->lexeme.start, identtype2str(ident->type), i);
@@ -169,6 +170,8 @@ static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
 
       }
    }
+
+   interp->gms_sym_iterator.active = false;
 
    switch (toktype) {
    case TOK_GMS_VAR:
@@ -182,10 +185,8 @@ static int imm_gms_resolve(Interpreter* restrict interp, UNUSED unsigned *p)
       return Error_EMPRuntimeError;
    }
 
-   interp->gms_sym_iterator.active = false;
-
    // TODO gmd_resolve
-   return dct_resolve(dct, &data);
+   return dct_read_equvar(dct, &data);
 }
 
 NONNULL static
@@ -558,7 +559,7 @@ UNUSED static int imm_ctr_dualvar(Interpreter *interp, bool is_flipped)
 }
 
 static int imm_read_param(Interpreter *interp, unsigned *p, IdentData *data,
-                          const char *ident_str, unsigned *param_gidx)
+                          unsigned *param_gidx)
 {
    TO_IMPLEMENT("read_param in immediate mode");
 }
@@ -620,7 +621,6 @@ const InterpreterOps interp_ops_imm = {
    .ctr_markequasflipped  = imm_ctr_markequasflipped,
    .gms_get_uelidx        = get_uelidx_via_dct,
    .gms_get_uelstr        = get_uelstr_via_dct,
-   .gms_resolve_sym       = imm_gms_resolve,
    .identaslabels         = imm_identaslabels,
    .mp_addcons            = imm_mp_addcons,
    .mp_addvars            = imm_mp_addvars,
@@ -642,8 +642,8 @@ const InterpreterOps interp_ops_imm = {
    .ovf_check             = imm_ovf_check,
    .ovf_param_getvecsize  = imm_ovf_param_getvecsize,
    .ovf_getname           = imm_ovf_getname,
-   .read_param            = imm_read_param,
    .read_elt_vector       = imm_read_elt_vector,
+   .read_gms_symbol       = imm_read_gms_symbol,
+   .read_param            = imm_read_param,
    .resolve_tokasident    = imm_resolve_tokasident,
-   .resolve_lexeme_as_gmssymb = dct_findlexeme,
 };

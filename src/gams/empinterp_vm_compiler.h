@@ -25,10 +25,11 @@ typedef struct {
    IteratorData iters[GMS_MAX_INDEX_DIM];
 } LoopIterators;
 
-void compiler_free(struct empvm_compiler* c);
+void empvm_compiler_free(struct empvm_compiler* c);
 bool resolve_local(struct empvm_compiler* c,  struct ident_data *ident);
-NONNULL MALLOC_ATTR(compiler_free,1) OWNERSHIP_RETURNS
-struct empvm_compiler* compiler_init(Interpreter * restrict interp);
+NONNULL MALLOC_ATTR(empvm_compiler_free,1) OWNERSHIP_RETURNS
+struct empvm_compiler* empvm_compiler_init(Interpreter * restrict interp);
+NONNULL void empvm_compiler_setgmd(Interpreter * restrict interp);
 
 NONNULL
 int parse_loop(struct interpreter * restrict interp, unsigned * restrict p);

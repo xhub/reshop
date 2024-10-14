@@ -109,6 +109,15 @@ const char * identtype2str(IdentType type)
    return "INVALID IDENTIFIER";
 }
 
+NONNULL static bool chk_ident_idx(const VmData *vmdat, const IdentData *ident)
+{
+   switch (ident->type) {
+   case IdentSet:
+      return ident->idx < vmdat->globals->sets.len;
+   default:
+      return false;
+   }
+}
 
 static int vm_gmssymiter_alloc(Compiler* restrict c, const IdentData *ident,
                                VmGmsSymIterator **f, unsigned *gidx);
@@ -174,7 +183,7 @@ NONNULL static Compiler* ensure_vm_mode(Interpreter *interp)
    Compiler *c = interp->compiler;
 
    if (!c) {
-      c = compiler_init(interp);
+      c = empvm_compiler_init(interp);
    }
 
    return c;
@@ -215,6 +224,22 @@ static inline int emit_jump(Tape *tape, uint8_t instr, unsigned *jump_addr) {
    return OK;
 }
 
+UNUSED static inline int emit_patchable_byte(Tape *tape, unsigned *addr) {
+   S_CHECK(emit_byte(tape, 0xff));
+   assert(tape->code->len > 1);
+   *addr = tape->code->len - 1;
+
+   return OK;
+}
+
+static inline int emit_patchable_short(Tape *tape, unsigned *addr) {
+   S_CHECK(emit_short(tape, 0xffff));
+   assert(tape->code->len > 2);
+   *addr = tape->code->len - 2;
+
+   return OK;
+}
+
 /* TODO(cleanup): this should be used rather than direct acess */
 UNUSED static inline int make_global(EmpVm *vm, VmValue value, GIDX_TYPE *i) {
    S_CHECK(vmvals_add(&vm->globals, value));
@@ -242,6 +267,29 @@ static int patch_jump(Tape *tape, unsigned jump_addr) {
 
    tape->code->ip[jump_addr] = (jump >> 8) & 0xff;
    tape->code->ip[jump_addr + 1] = jump & 0xff;
+
+   return OK;
+}
+
+UNUSED static int patch_byte(Tape *tape, unsigned addr, uint8_t val) {
+   assert(tape->code->len > addr);
+
+   trace_empparser("[empcompiler] PATCHING ip@%u to %s #%u\n", addr,
+                   opcodes_name(val), val);
+
+   tape->code->ip[addr] = val;
+
+   return OK;
+}
+
+UNUSED static int patch_short(Tape *tape, unsigned addr, uint16_t val) {
+   assert(tape->code->len > addr + 1);
+
+   trace_empparser("[empcompiler] PATCHING ip@%u to #%u\n", addr,
+                  val);
+
+   tape->code->ip[addr] = (val >> 8) & 0xff;
+   tape->code->ip[addr + 1] = val & 0xff;
 
    return OK;
 }
@@ -618,6 +666,8 @@ int loop_initandstart(Interpreter * restrict interp, Tape * restrict tape,
       const IdentData * restrict ident = &loopidents[i];
       IteratorData * restrict iterator = &loopiters[i];
 
+      assert(embmode(interp) || chk_ident_idx(&interp->compiler->vm->data, ident));
+ 
       /* a_elt  <-  a_set[a_idx] */
       S_CHECK(emit_bytes(tape, OP_UPDATE_LOOPVAR, iterator->iter_lidx,
                          loopiters[i].idx_lidx, ident->type));
@@ -767,25 +817,25 @@ static int vm_regentry_alloc(Compiler* restrict c, const char *basename,
    return OK;
 }
 
-static int vm_linklabels_alloc(Compiler* restrict c, LinkLabels **link,
-                              const char* nodename, unsigned nodename_len,
+static int vm_linklabels_alloc(EmpVm * restrict vm, LinkLabels **link,
+                              const char* label, unsigned label_len,
                               uint8_t dim, uint8_t num_vars, unsigned size,
                               LinkType linktype, unsigned *gidx)
 {
    LinkLabels *link_;
-   A_CHECK(link_, linklabels_new(nodename, nodename_len, dim, num_vars, size));
+   A_CHECK(link_, linklabels_new(label, label_len, dim, num_vars, size));
    link_->linktype = linktype;
 
-   S_CHECK(vmvals_add(&c->vm->globals, ARCOBJ_VAL(link_)));
+   S_CHECK(vmvals_add(&vm->globals, ARCOBJ_VAL(link_)));
 
    *link = link_;
-   *gidx = c->vm->globals.len - 1;
+   *gidx = vm->globals.len - 1;
 
    return OK;
 }
 
 /**
- * @brief Process the GAMS indices
+ * @brief Process the GAMS indices associated with an identifier (label/equ/var)
  *
  * - copy the constant indices in the uels
  * - Fill the iterators with the non-constant ones, if any
@@ -795,12 +845,12 @@ static int vm_linklabels_alloc(Compiler* restrict c, LinkLabels **link,
  * @param[out] iterators  the loop iterators
  * @param      tape       the tape
  * @param[out] uels       the uels of the loop object
- * @param[out] compact    indicator if the 
+ * @param[out] compact    indicator if the label is continous
  *
  * @return                 the error code
  */
-static int gmsindices_process(GmsIndicesData *indices, LoopIterators *iterators,
-                              Tape * restrict tape, int * restrict uels, bool *compact)
+static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iterators,
+                                    Tape * restrict tape, int * restrict uels, bool *compact)
 {
    unsigned loopi = 0;
    GIDX_TYPE loopidx_gidx = iterators->loopobj_gidx;
@@ -879,14 +929,14 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
 
    S_CHECK(gmssymiter_chk_dim(indices, ident, interp->linenr));
 
-   return gmsindices_process(indices, iterators, tape, symiter->uels, &symiter->compact);
+   return ident_gmsindices_process(indices, iterators, tape, symiter->uels, &symiter->compact);
 }
 
 
 static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
-                           const char* nodename, unsigned nodename_len,
+                           const char* label, unsigned label_len,
                            LinkType linktype, GmsIndicesData *indices,
-                           LoopIterators *iterators, unsigned *linklabels_gidx)
+                           LoopIterators *loopiterators, unsigned *linklabels_gidx)
 {
    Compiler *c = interp->compiler;
 
@@ -894,24 +944,24 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
    uint8_t dim = indices->nargs;
    uint8_t num_vars = indices->num_sets + indices->num_localsets;
    unsigned gidx;
-   S_CHECK(vm_linklabels_alloc(c, &linklabels, nodename, nodename_len, dim,
+   S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label, label_len, dim,
                               num_vars, 0, linktype, &gidx));
    *linklabels_gidx = gidx;
 
    if (indices->nargs == 0) {
-      iterators->size = 0;
-      iterators->loopobj_gidx = UINT_MAX;
+      loopiterators->size = 0;
+      loopiterators->loopobj_gidx = UINT_MAX;
       return OK;
    }
 
-   iterators->loopobj_gidx = *linklabels_gidx;
-   iterators->loopobj_opcode = OP_LINKLABELS_SETFROM_LOOPVAR;
+   loopiterators->loopobj_gidx = *linklabels_gidx;
+   loopiterators->loopobj_opcode = OP_LINKLABELS_SETFROM_LOOPVAR;
 
    bool dummy;
-   S_CHECK(gmsindices_process(indices, iterators, tape, linklabels->data, &dummy));
+   S_CHECK(ident_gmsindices_process(indices, loopiterators, tape, linklabels->data, &dummy));
 
    // TODO: document why we need to duplicate this
-   memcpy(&linklabels->data[dim], iterators->iteridx2dim, iterators->size * sizeof(int));
+   memcpy(&linklabels->data[dim], loopiterators->iteridx2dim, loopiterators->size * sizeof(int));
 
    return OK;
 }
@@ -933,7 +983,7 @@ static int regentry_init(Interpreter * restrict interp, const char *labelname,
    iterators->loopobj_opcode = OP_REGENTRY_SETFROM_LOOPVAR;
 
    bool dummy;
-   S_CHECK(gmsindices_process(indices, iterators, tape, regentry->uels, &dummy));
+   S_CHECK(ident_gmsindices_process(indices, iterators, tape, regentry->uels, &dummy));
 
    return OK;
 }
@@ -1044,7 +1094,7 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
 
    switch (toktype) {
    case TOK_GMS_UEL:
-      uel_idx = interp->cur.symdat.idx;
+      uel_idx = interp->cur.symdat.ident.idx;
       break;
    case TOK_IDENT:
       RESOLVE_IDENTAS(interp, &ident, "a GAMS parameter is expected",
@@ -1094,7 +1144,7 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
 
    switch (toktype) {
    case TOK_GMS_UEL:
-      uel_idx = interp->cur.symdat.idx;
+      uel_idx = interp->cur.symdat.ident.idx;
       break;
    case TOK_IDENT:
       RESOLVE_IDENTAS(interp, &ident, "a GAMS parameter is expected",
@@ -1277,7 +1327,7 @@ static inline void ovfdecl_empty(OvfDeclData *ovfdecl)
 
 }
 
-Compiler* compiler_init(Interpreter * restrict interp)
+Compiler* empvm_compiler_init(Interpreter * restrict interp)
 {
    Compiler *c;
    MALLOC_NULL(c, Compiler, 1);
@@ -1303,7 +1353,7 @@ Compiler* compiler_init(Interpreter * restrict interp)
    return c;
 }
 
-void compiler_free(Compiler* c)
+void empvm_compiler_free(Compiler* c)
 {
    if (!c) return;
 
@@ -1359,12 +1409,7 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
 /**
  * @brief 
  *
- *  We have parsed an expression of the type:
- *  - max obj + VF('name', n.valfn(set)$(cond(set)), ...)  ...
- *  - max obj x nLower ...
- *  - Nash(n(set)$(cond(set)))
- *
- * 
+
  *
  * @param interp 
  * @param p 
@@ -1375,8 +1420,8 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
  *
  * @return                the error code
  */
-static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *nodename,
-                               unsigned nodename_len, LinkType arc_type,
+static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *label,
+                               unsigned label_len, LinkType link_type,
                                GmsIndicesData *gmsindices)
 {
    Compiler *c = interp->compiler;
@@ -1384,11 +1429,19 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   /* This defines the loop iterators and the edgeobj*/
+   /*
+    *  We have parsed an expression of the type:
+    *  - max obj + VF('name', n.valfn(set)$(cond(set)), ...)  ...
+    *  - max obj x nLower ...
+    *  - Nash(n(set)$(cond(set)))
+    *
+    */
+
+   /* This defines the loop iterators and the linklabels object */
    LoopIterators loopiters = {.size = 0};
    unsigned linklabels_gidx;
-   S_CHECK(linklabels_init(interp, tape, nodename, nodename_len, arc_type,
-                        gmsindices, &loopiters, &linklabels_gidx));
+   S_CHECK(linklabels_init(interp, tape, label, label_len, link_type,
+                           gmsindices, &loopiters, &linklabels_gidx));
 
    assert(vmval_is_arcobj(&vm->globals, linklabels_gidx) == OK);
 
@@ -1401,8 +1454,8 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
     * And we are done
     * --------------------------------------------------------------------- */
 
-   uint8_t num_vars = gmsindices->num_localsets + gmsindices->num_sets;
-   if (num_vars == 0) {
+   uint8_t num_iterators = gmsindices->num_localsets + gmsindices->num_sets;
+   if (num_iterators == 0) {
       assert(gmsindices->num_iterators > 0);
       S_CHECK(emit_bytes(tape, OP_LINKLABELS_DUP));
       S_CHECK(EMIT_GIDX(tape, linklabels_gidx));
@@ -1440,9 +1493,9 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
     * This will duplicate the DagLabels and put it on the stack.
     * --------------------------------------------------------------------- */
 
-   S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_vars));
+   S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
 
-   for (unsigned i = 0; i < num_vars; ++i) {
+   for (unsigned i = 0; i < num_iterators; ++i) {
       S_CHECK(emit_byte(tape, loopiters.iters[i].iter_lidx));
    }
 
@@ -1465,16 +1518,17 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *node
    assert(no_outstanding_jump(&c->truey_jumps, c->scope_depth));
    assert(no_outstanding_jump(&c->falsey_jumps, c->scope_depth));
 
-   S_CHECK(emit_bytes(tape, OP_LINKLABELS_FINALIZE));
+   S_CHECK(emit_bytes(tape, OP_LINKLABELS_FINI));
 
    return end_scope(interp, tape);
 }
 
 NONNULL static
-int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, LinkType edge_type)
+int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p,
+                    LinkType linktype)
 {
-   const char* nodename = emptok_getstrstart(&interp->cur);
-   unsigned nodename_len = emptok_getstrlen(&interp->cur);
+   const char* label = emptok_getstrstart(&interp->cur);
+   unsigned label_len = emptok_getstrlen(&interp->cur);
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
@@ -1487,7 +1541,7 @@ int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p, LinkTy
    }
 
 
-   S_CHECK(vm_gmsindicesasarc(interp, p, nodename, nodename_len, edge_type, &indices));
+   S_CHECK(vm_gmsindicesasarc(interp, p, label, label_len, linktype, &indices));
    assert(interp->cur.type == TOK_RPAREN);
 
    return advance(interp, p, &toktype);
@@ -1558,7 +1612,7 @@ static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
 /**
  * @brief Parse the iterators of a loop/sum statement
  *
- * This function isused to parse the first argument to a loop or sum keyword.
+ * This function is used to parse the first argument to a loop or sum keyword.
  *
  * @param interp          the interpreter
  * @param p               the position pointer
@@ -1567,8 +1621,8 @@ static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
  *
  * @return                the error code
  */
-static int parse_loopiters(Interpreter * restrict interp, unsigned * restrict p,
-                           Compiler *c, LoopIterators *iterators)
+static int parse_loopiters_operator(Interpreter * restrict interp, unsigned * restrict p,
+                                    Compiler *c, LoopIterators *iterators)
 {
    /* We get the set/sets to iterate over */
    TokenType toktype;
@@ -1689,7 +1743,7 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
     * Step 1: Parse loop iterators
     * --------------------------------------------------------------------- */
    LoopIterators iterators;
-   S_CHECK(parse_loopiters(interp, p, c, &iterators))
+   S_CHECK(parse_loopiters_operator(interp, p, c, &iterators))
 
    /* ---------------------------------------------------------------------
     * Step 2:  Parse the body of the loop
@@ -1772,34 +1826,157 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    }
 
    /* ---------------------------------------------------------------------
+    * Step 0: Define the VM objects
+    * --------------------------------------------------------------------- */
+   /* This defines the loop iterators and the linklabels object */
+   // XXX understand what loopiterator is doing in our case
+   unsigned addr_linklabel_gidx;
+   Lexeme label_valfn;
+   GmsIndicesData label_gmsindices = {.nargs = 0};
+
+   S_CHECK(emit_byte(tape, OP_LINKLABELS_INIT));
+   S_CHECK(emit_patchable_short(tape, &addr_linklabel_gidx));
+
+   begin_scope(c, __func__);
+
+   /* ---------------------------------------------------------------------
     * Step 1: Parse loop iterators
     * --------------------------------------------------------------------- */
    LoopIterators iterators;
-   S_CHECK(parse_loopiters(interp, p, c, &iterators));
+   S_CHECK(parse_loopiters_operator(interp, p, c, &iterators));
 
    /* ---------------------------------------------------------------------
-    * Step 2: parse the expression. We accept cst * valfn * variables
+    * Step 2: parse the expression. We accept param * valfn * variables
     * --------------------------------------------------------------------- */
+   bool has_var = false, has_param = false, has_valfn = false, has_ident = false;
+
+   do {
    S_CHECK(advance(interp, p, &toktype));
    PARSER_EXPECTS(interp, "a GAMS variable or parameter or a value function",
                   TOK_GMS_VAR, TOK_GMS_PARAM, TOK_IDENT);
 
-//   bool has_var = false, has_param = false, has_valfn = false;
+   switch (toktype) {
+   case TOK_GMS_VAR:
+      if (has_var) {
+         error("[empinterp] ERROR line %u: only one variable is allowed in a %s "
+               "statement\n", interp->linenr, toktype2str(TOK_SUM));
+         return Error_EMPIncorrectInput;
+         }
+      has_var = true;
+      break;
+   case TOK_GMS_PARAM:
+      if (has_param) {
+         error("[empinterp] ERROR line %u: only one parameter is allowed in a %s "
+               "statement\n", interp->linenr, toktype2str(TOK_SUM));
+         return Error_EMPIncorrectInput;
+         }
+      has_param = true;
+      break;
+   case TOK_IDENT: {
+      if (has_ident) {
+         error("[empinterp] ERROR line %u: only one identifier is allowed in a %s "
+               "statement\n", interp->linenr, toktype2str(TOK_SUM));
+         return Error_EMPIncorrectInput;
+      }
+      has_ident = true;
+
+      IdentData ident;
+      S_CHECK(interp->ops->resolve_tokasident(interp, &ident));
+
+      if (ident.type == IdentNotFound) {
+         /* ----------------------------------------------------------------------
+          * We expect the identifier to be a label, followed by a valfn
+          * ---------------------------------------------------------------------- */
+          has_valfn = true;
+
+          tok2lexeme(&interp->cur, &label_valfn);
+
+          unsigned p2 = *p;
+          TokenType toktype2;
+          S_CHECK(peek(interp, &p2, &toktype2));
+          if (toktype2 == TOK_LPAREN) {
+               *p = p2;
+               S_CHECK(parse_gmsindices(interp, p, &label_gmsindices));
+           }
 
 
-//   do {
-//   switch (toktype) {
-//   case TOK_GMS_VAR:
-//   }
-//}
-   //
+
+          } else {
+
+           double dummyval;
+           S_CHECK(parse_identasscalar(interp, p, &dummyval));
+          }
+
+      }
+      break;
+
+   default: runtime_error(interp->linenr);
+   }
+
+   S_CHECK(advance(interp, p, &toktype));
+   } while (toktype == TOK_STAR);
+
+
    // WE need to ensure that all parameters / variables only resolve to scalar quantities
-   
+ 
+   unsigned gidx;
+
+   if (has_valfn) {
+      
+      uint8_t num_iterators = label_gmsindices.num_localsets + label_gmsindices.num_sets;
+
+      if (num_iterators > 0) {
+         TO_IMPLEMENT()
+      }
+      LinkLabels *linklabels;
+      S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label_valfn.start,
+                                  label_valfn.len, label_gmsindices.nargs,
+                                  num_iterators, 0, LinkArcVF, &gidx));
+
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
+
+      for (unsigned i = 0; i < num_iterators; ++i) {
+         S_CHECK(emit_byte(tape, iterators.iters[i].iter_lidx));
+      }
+
+   }  else {
+      LinkLabels *linklabels;
+      S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, NULL, 0, 0, 0,
+                                  0, LinkObjAddMap, &gidx));
+
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, 0));
+   }
+
+   assert(gidx < UINT16_MAX);
+   S_CHECK(patch_short(tape, addr_linklabel_gidx, gidx))
+
+   /* ---------------------------------------------------------------------
+    * Step 3:  Increment loop index and check of the condition idx < max
+    * --------------------------------------------------------------------- */
+
+   tape->linenr = interp->linenr;
+
+   /* Resolve all remaining jumps linked to a false condition */
+   S_CHECK(patch_jumps(&c->falsey_jumps, tape, c->scope_depth));
+
+   S_CHECK(loop_increment(tape, &iterators));
+
+   /* ---------------------------------------------------------------------
+    * We are at the end of the loop. We allow for outstanding "true" jump
+    * to come here.
+    * --------------------------------------------------------------------- */
+
+   S_CHECK(patch_jumps(&c->truey_jumps, tape, c->scope_depth));
+
+   assert(no_outstanding_jump(&c->truey_jumps, c->scope_depth));
+   assert(no_outstanding_jump(&c->falsey_jumps, c->scope_depth));
+
+   S_CHECK(emit_bytes(tape, OP_LINKLABELS_FINI));
+
+   S_CHECK(end_scope(interp, tape));
+
    /* Consume the delimiter_endloop token */
    S_CHECK(parser_expect(interp, "end delimiter of loop", delimiter_endloop));
-
-   /* Parse the next token */
-   S_CHECK(advance(interp, p, &toktype))
 
    /* ---------------------------------------------------------------------
     * If we are back to the general scope, we execute the VM now
@@ -2087,7 +2264,7 @@ int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
    begin_scope(c, __func__);
 
    tape->linenr = interp->linenr;
-   
+
    LoopIterators iterators;
    unsigned regentry_gidx;
    S_CHECK(regentry_init(interp, labelname, labelname_len, gmsindices,
@@ -2284,7 +2461,6 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
    LoopIterators loopiter = {.size = 0};
    unsigned symiter_gidx;
    IdentData *ident = &interp->gms_sym_iterator.ident;
-   assert(ident->type == IdentEqu || ident->type == IdentVar);
 
    begin_scope(c, __func__);
 
@@ -2297,13 +2473,14 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
       * We can just resolve and move on.
       * --------------------------------------------------------------------- */
 
-      S_CHECK(emit_byte(tape, OP_GMSSYM_RESOLVE));
+      S_CHECK(emit_byte(tape, OP_GMS_SYMBOL_READ_SIMPLE));
       S_CHECK(EMIT_GIDX(tape, symiter_gidx));
 
       goto _exit;
    }
 
-   S_CHECK(emit_bytes(tape, OP_GMS_EQUVAR_INIT, ident->type));
+   assert(ident->type == IdentEqu || ident->type == IdentVar);
+   S_CHECK(emit_bytes(tape, OP_GMS_EQUVAR_READ_INIT, ident->type));
 
    S_CHECK(loop_initandstart(interp, tape, &loopiter));
 
@@ -2322,7 +2499,7 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
     * if true.
     * --------------------------------------------------------------------- */
 
-   S_CHECK(emit_byte(tape, OP_GMS_RESOLVE_EXTEND));
+   S_CHECK(emit_byte(tape, OP_GMS_SYMBOL_READ_EXTEND));
    S_CHECK(EMIT_GIDX(tape, symiter_gidx));
 
    /* ---------------------------------------------------------------------
@@ -2334,7 +2511,7 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
 
    S_CHECK(loop_increment(tape, &loopiter));
 
-   S_CHECK(emit_bytes(tape, OP_GMS_EQUVAR_SYNC, ident->type));
+   S_CHECK(emit_bytes(tape, OP_GMS_EQUVAR_READ_SYNC, ident->type));
 
 _exit:
 
@@ -2576,7 +2753,7 @@ static const char* c_ovf_getname(Interpreter* restrict interp, UNUSED void *ovfd
 
 static int c_read_param(Interpreter* restrict interp, unsigned *p,
                       IdentData* restrict ident,
-                      const char *identstr, unsigned* restrict param_gidx)
+                      unsigned* restrict param_gidx)
 {
    Compiler* restrict c = interp->compiler;
 
@@ -2730,6 +2907,31 @@ static int c_read_param(Interpreter* restrict interp, unsigned *p,
 
 
    filter->active = false;
+
+   return OK;
+}
+
+static int c_read_elt_vector(Interpreter *interp, const char *vectorname,
+                             IdentData *ident, GmsIndicesData *gmsindices,
+                             UNUSED double *val)
+{
+   Compiler *c = interp->compiler;
+
+   EmpVm *vm = c->vm;
+   Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
+   Tape * const tape = &tape_;
+
+   LoopIterators loopiter = {.size = 0};
+   unsigned gmssymiter_gidx;
+   S_CHECK(gmssymiter_init(interp, ident, gmsindices,
+                           &loopiter, tape, &gmssymiter_gidx));
+
+   if (loopiter.size != 0) { 
+      TO_IMPLEMENT("loop iterators");
+   }
+
+   S_CHECK(emit_byte(tape, OP_GMS_SYMBOL_READ_SIMPLE));
+   S_CHECK(EMIT_GIDX(tape, gmssymiter_gidx));
 
    return OK;
 }
@@ -2932,7 +3134,7 @@ const struct interp_ops interp_ops_compiler = {
    .ctr_markequasflipped = c_ctr_markequasflipped,
    .gms_get_uelidx        = get_uelidx_via_dct,
    .gms_get_uelstr        = get_uelstr_via_dct,
-   .gms_resolve_sym = c_gms_resolve,
+   .read_gms_symbol = c_gms_resolve,
    .identaslabels = c_identaslabels,
    .mp_addcons = c_mp_addcons,
    .mp_addvars = c_mp_addvars,
@@ -2955,7 +3157,7 @@ const struct interp_ops interp_ops_compiler = {
    .ovf_param_getvecsize = c_ovf_param_getvecsize,
    .ovf_getname = c_ovf_getname,
    .read_param = c_read_param,
-   .resolve_lexeme_as_gmssymb = dct_findlexeme,
+   .read_elt_vector = c_read_elt_vector,
    .resolve_tokasident = c_resolve_tokasident,
 };
 
@@ -3001,7 +3203,7 @@ int c_switch_to_compmode(Interpreter *interp, bool *switched)
       *switched = true;
 
       if (!interp->compiler) {
-         NS_CHECK(compiler_init(interp));
+         NS_CHECK(empvm_compiler_init(interp));
       }
 
       EmpVm *vm = interp->compiler->vm;
@@ -3034,4 +3236,9 @@ int c_switch_to_immmode(Interpreter *interp)
    vm->data.uid_grandparent = EMPDAG_UID_NONE;
 
    return OK;
+}
+
+void empvm_compiler_setgmd(Interpreter * restrict interp)
+{
+   interp->compiler->vm->data.gmd = interp->gmd;
 }

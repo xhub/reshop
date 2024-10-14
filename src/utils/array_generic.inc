@@ -123,9 +123,7 @@ FN_SCOPE int RHP_MAKE_STR(set)(struct RHP_ARRAY_TYPE *dat, RHP_ELT_TYPE* elts, I
 
 FN_SCOPE void RHP_MAKE_STR(free)(struct RHP_ARRAY_TYPE *dat)
 {
-   if (dat->len > 0) {
-      FREE(dat->arr);
-   }
+   free(dat->arr);
 }
 
 #ifdef RHP_ELT_FREE

@@ -504,7 +504,8 @@ static inline bool empdag_needs_transformations(const EmpDag *empdag) {
            empdag->epi_dual_subdag.len     > 0)
 
           || empdag->mps2reformulate.len > 0
-          || empdag->mps2instantiate.len > 0;
+          || empdag->mps2instantiate.len > 0
+          || empdag->objfn_maps.mps.len > 0;
 }
 
 

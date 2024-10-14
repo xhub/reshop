@@ -5,6 +5,7 @@
 #include "embcode_empinfo.h"
 #include "empinfo.h"
 #include "empinterp.h"
+#include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
 #include "empparser_priv.h"
@@ -20,257 +21,6 @@
 
 #include "gmdcc.h"
 
-/**
- * @brief Try to resolve a string lexeme as a gams symbol using GMD
- *
- * @param interp  the interpreter
- * @param tok     the token containing the lexeme
- *
- * @return        the error code
- */
-static int resolve_lexeme_as_gmssymb_via_gmd(Interpreter * restrict interp, Token * restrict tok)
-{
-   GamsSymData *symdat = &tok->symdat;
-
-   size_t lexeme_len = emptok_getstrlen(tok);
-   if (lexeme_len >= GMS_SSSIZE) { goto _not_found; }
-
-   char lexeme[GMS_SSSIZE];
-   memcpy(lexeme, emptok_getstrstart(tok), lexeme_len * sizeof(char));
-   lexeme[lexeme_len] = '\0';
-
-   gmdHandle_t gmd = interp->gmd; assert(gmd);
-
-   void *symptr;
-   if (!gmdFindSymbol(gmd, lexeme, &symptr)) { /* We do not fail here as it could be a UEL */
-      int uelidx;
-      if (!gmdFindUel(gmd, lexeme, &uelidx)) {
-         error("[embcode] ERROR while calling 'gmsFindUEL' for lexeme '%s'", lexeme);
-         return Error_GamsCallFailed;
-      }
-
-      if (uelidx <= 0) { goto _not_found; }
-
-      tok->type = TOK_GMS_UEL;
-      symdat->idx = uelidx;
-
-      return OK;
-   }
-
-  /* ----------------------------------------------------------------------
-   * 2024.05.09: Note that gmdFindSymbol never return an alias symbol, but rather
-   * the aliased (or target) symbol. Therefore, we don't need to look for it,
-   * and we hard fail if we encounter an aliased symbol
-   * ---------------------------------------------------------------------- */
-
-   /* ---------------------------------------------------------------------
-    * Save the index of the symbol
-    * --------------------------------------------------------------------- */
-
-   int symnr;
-   if (!gmdSymbolInfo(gmd, symptr, GMD_NUMBER, &symnr, NULL, NULL)) {
-      error("[embcode] ERROR: could not query number of symbol '%s'\n", lexeme);
-      return Error_GamsCallFailed;
-   }
-   assert(symnr >= 0);
-   // TODO: this is a hack!
-   symdat->idx = symnr;
-
-
-   /* ---------------------------------------------------------------------
-    * Save the dimension of the symbol index
-    * --------------------------------------------------------------------- */
-
-   int symdim;
-   if (!gmdSymbolInfo(gmd, symptr, GMD_DIM, &symdim, NULL, NULL)) {
-      error("[embcode] ERROR: could not query dimension of symbol '%s'\n", lexeme);
-      return Error_GamsCallFailed;
-   }
-   /* What does a negative value of symdim means? */
-   assert(symdim >= 0);
-
-   /* ---------------------------------------------------------------------
-    * Save the type of the symbol
-    * --------------------------------------------------------------------- */
-
-   int symtype;
-   if (!gmdSymbolInfo(gmd, symptr, GMD_TYPE, &symtype, NULL, NULL)) {
-      error("[embcode] ERROR: could not query type of symbol '%s'\n", lexeme);
-      return Error_GamsCallFailed;
-   }
-
-   symdat->dim = symdim;
-   symdat->origin = IdentOriginGmd;
-   S_CHECK(symtype2toktype(symtype, symdat, tok));
-
-   symdat->ptr = symptr;
-
-   symdat->read = false;
-
-  /* ----------------------------------------------------------------------
-   * If gmdout is set, we copy sets and parameters (if this hasn't been done yet)
-   *
-   * TODO: gmdFindSymbol returning false when the symbol doesn't exists isn't great
-   * ---------------------------------------------------------------------- */
-
-   void *symptr2 = NULL;
-   gmdHandle_t gmdout = interp->gmdout;
-   if (gmdout && (symtype == GMS_DT_SET || symtype == GMS_DT_PAR) && 
-      !gmdFindSymbol(gmdout, lexeme, &symptr2)) {
-
-      GMD_CHK(gmdAddSymbol, gmdout, lexeme, symdim, symtype, 0, "", &symptr2);
-
-      GMD_CHK(gmdCopySymbol, gmdout, symptr2, symptr);
-   }
-
-   return OK;
-
-_not_found:
-   symdat->idx = IdxNotFound;
-   tok->type = TOK_IDENT;
-
-   return OK;
-}
-
-/**
- * @brief Try to resolve an identifier using GMD
- *
- * @param interp  the interpreter
- * @param ident   the identifier
- *
- * @return        the error code
- */
-static int emb_resolve_tokasident(Interpreter * restrict interp, IdentData * restrict ident)
-{
-   struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
-   ident_init(ident, tok);
-
-   size_t lexeme_len = ident->lexeme.len;
-   if (lexeme_len >= GMS_SSSIZE-1) { goto _not_found; }
-
-   char lexeme[GMS_SSSIZE];
-   memcpy(lexeme, ident->lexeme.start, lexeme_len * sizeof(char));
-   lexeme[lexeme_len] = '\0';
-
-   gmdHandle_t gmd = interp->gmd; assert(gmd);
-
-   void *symptr;
-   if (!gmdFindSymbol(gmd, lexeme, &symptr)) { /* We do not fail here as it could be a UEL */
-      int uelidx;
-      if (!gmdFindUel(gmd, lexeme, &uelidx)) {
-         error("[embcode] ERROR while calling 'gmsFindUEL' for lexeme '%s'", lexeme);
-         return Error_GamsCallFailed;
-      }
-
-      if (uelidx <= 0) { goto _not_found; }
-
-      ident->type = IdentUEL;
-      ident->idx = uelidx;
-
-      return OK;
-   }
-
-   ident->origin = IdentOriginGmd;
-
-  /* ----------------------------------------------------------------------
-   * 2024.05.09: Note that gmdFindSymbol never return an alias symbol, but rather
-   * the aliased (or target) symbol. Therefore, we don't need to look for it,
-   * and we hard fail if we encounter an aliased symbol
-   * ---------------------------------------------------------------------- */
-
-   /* ---------------------------------------------------------------------
-    * Save the index of the symbol
-    * --------------------------------------------------------------------- */
-
-   int symnr;
-   if (!gmdSymbolInfo(gmd, symptr, GMD_NUMBER, &symnr, NULL, NULL)) {
-      error("[embcode] ERROR: could not query number of symbol '%s'\n", lexeme);
-      return Error_GamsCallFailed;
-   }
-   assert(symnr >= 0);
-   // TODO: this is a hack!
-   ident->idx = symnr;
-
-
-   /* ---------------------------------------------------------------------
-    * Save the dimension of the symbol index
-    * --------------------------------------------------------------------- */
-
-   int symdim;
-   if (!gmdSymbolInfo(gmd, symptr, GMD_DIM, &symdim, NULL, NULL)) {
-      error("[embcode] ERROR: could not query dimension of symbol '%s'\n", lexeme);
-      return Error_GamsCallFailed;
-   }
-   /* What does a negative value of symdim means? */
-   assert(symdim >= 0);
-
-   /* ---------------------------------------------------------------------
-    * Save the type of the symbol
-    * --------------------------------------------------------------------- */
-
-   int symtype;
-   if (!gmdSymbolInfo(gmd, symptr, GMD_TYPE, &symtype, NULL, NULL)) {
-      error("[embcode] ERROR: could not query type of symbol '%s'\n", lexeme);
-      return Error_GamsCallFailed;
-   }
-
-   ident->dim = symdim;
-   S_CHECK(symtype2identtype(symtype, ident));
-
-   ident->ptr = symptr;
-
-  /* ----------------------------------------------------------------------
-   * If gmdout is set, we copy sets and parameters (if this hasn't been done yet)
-   *
-   * TODO: gmdFindSymbol returning false when the symbol doesn't exists isn't great
-   * ---------------------------------------------------------------------- */
-
-   void *symptr2 = NULL;
-   gmdHandle_t gmdout = interp->gmdout;
-   if (gmdout && (symtype == GMS_DT_SET || symtype == GMS_DT_PAR) && 
-      !gmdFindSymbol(gmdout, lexeme, &symptr2)) {
-
-      GMD_CHK(gmdAddSymbol, gmdout, lexeme, symdim, symtype, 0, "", &symptr2);
-
-      GMD_CHK(gmdCopySymbol, gmdout, symptr2, symptr);
-   }
-
-   return OK;
-
-_not_found:
-   ident->idx = IdxNotFound;
-   ident->type = IdentNotFound;
-
-   return OK;
-}
-
-static int get_uelidx_via_gmd(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE], int * restrict uelidx)
-{
-   gmdHandle_t gmd = interp->gmd;
-
-   if (!gmdFindUel(gmd, uelstr, uelidx)) {
-      error("[embcode] ERROR while calling 'gmsFindUEL' for lexeme '%s'", uelstr);
-      return Error_GamsCallFailed;
-   }
-
-   return OK;
-}
-
-static int get_uelstr_via_gmd(Interpreter *interp, int uelidx, unsigned uelstrlen, char uelstr[VMT(static uelstrlen)])
-{
-   gmdHandle_t gmd = interp->gmd;
-   assert(gmd);
-
-   if (uelstrlen < GMS_SSSIZE) {
-      error("[embcode] ERROR in %s: string argument is too short\n", __func__);
-      return Error_SizeTooSmall;
-   }
-
-   GMD_CHK(gmdGetUelByIndex, gmd, uelidx, uelstr);
-
-   return OK;
-}
-
 NONNULL static
 int embcode_register_basename(Interpreter *interp, DagRegisterEntry *regentry)
 {
@@ -279,31 +29,20 @@ int embcode_register_basename(Interpreter *interp, DagRegisterEntry *regentry)
     return OK;
 }
 
-static int emb_gms_resolve(Interpreter* restrict interp, UNUSED unsigned * p)
+static int emb_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned * p)
 {
-   /* TODO(xhub) unclear if we need a real function here */
-   #if 0
-   TokenType toktype = parser_getcurtoktype(interp);
-   DctResolveData data;
+  /* ----------------------------------------------------------------------
+   * In EMBCODE mode, we do not read symbols. We just fake it for the
+   * reminder of the code
+   * ---------------------------------------------------------------------- */
 
-   data.type = GmsSymIteratorTypeImm;
-   data.symiter.imm.toktype = toktype;
-   data.symiter.imm.symidx = interp->cur.gms_dct.idx;
-   // needed?
-   data.symiter.imm.symiter = &interp->gms_sym_iterator;
-
-   gmdHandle_t gmd = interp->gmd;
-
-   // needed?
-   interp->gms_sym_iterator.active = false;
-#endif
    interp->cur.symdat.read = true;
    return OK;
 }
 
 
 NONNULL static
-int emb_identaslabels(Interpreter * restrict interp, unsigned * restrict p, LinkType edge_type)
+int emb_identaslabels(Interpreter * restrict interp, unsigned * restrict p, LinkType linktype)
 {
    UNUSED const char* basename = emptok_getstrstart(&interp->cur);
    UNUSED unsigned basename_len = emptok_getstrlen(&interp->cur);
@@ -478,7 +217,10 @@ static int emb_mp_ccflib_new(Interpreter* restrict interp, unsigned ccflib_idx,
    S_CHECK(mp_from_ccflib(mp_, ccflib_idx));
 
    DagRegisterEntry *regentry = interp->regentry;
-   S_CHECK(embcode_register_basename(interp, regentry));
+   if (regentry) {
+      S_CHECK(embcode_register_basename(interp, regentry));
+      interp->regentry = NULL;
+   }
 
    trace_empinterp("[embcode] line %u: new CCFLIB MP\n", interp->linenr);
 
@@ -529,7 +271,7 @@ UNUSED static int imm_ctr_dualvar(Interpreter *interp, bool is_flipped)
 }
 
 static int emb_read_param(Interpreter *interp, unsigned *p, IdentData *data,
-                          const char *ident_str, unsigned *param_gidx)
+                          unsigned *param_gidx)
 {
    return OK;
 }
@@ -540,6 +282,34 @@ static int emb_read_elt_vector(Interpreter *interp, const char *identstr,
    return OK;
 }
 
+static int get_uelidx_via_gmd(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE], int * restrict uelidx)
+{
+   gmdHandle_t gmd = interp->gmd;
+
+   if (!gmdFindUel(gmd, uelstr, uelidx)) {
+      error("[embcode] ERROR while calling 'gmsFindUEL' for lexeme '%s'", uelstr);
+      return Error_GamsCallFailed;
+   }
+
+   return OK;
+}
+
+static int get_uelstr_via_gmd(Interpreter *interp, int uelidx, unsigned uelstrlen, char uelstr[VMT(static uelstrlen)])
+{
+   gmdHandle_t gmd = interp->gmd;
+   assert(gmd);
+
+   if (uelstrlen < GMS_SSSIZE) {
+      error("[embcode] ERROR in %s: string argument is too short\n", __func__);
+      return Error_SizeTooSmall;
+   }
+
+   GMD_CHK(gmdGetUelByIndex, gmd, uelidx, uelstr);
+
+   return OK;
+}
+
+
 const InterpreterOps parser_ops_emb = {
    .type                  = InterpreterOpsEmb,
    .ccflib_new            = emb_mp_ccflib_new,
@@ -547,7 +317,6 @@ const InterpreterOps parser_ops_emb = {
    .ctr_markequasflipped  = emb_ctr_markequasflipped,
    .gms_get_uelidx        = get_uelidx_via_gmd,
    .gms_get_uelstr        = get_uelstr_via_gmd,
-   .gms_resolve_sym       = emb_gms_resolve,
    .identaslabels         = emb_identaslabels,
    .mp_addcons            = emb_mp_addcons,
    .mp_addvars            = emb_mp_addvars,
@@ -571,8 +340,8 @@ const InterpreterOps parser_ops_emb = {
    .ovf_getname           = emb_ovf_getname,
    .read_param            = emb_read_param,
    .read_elt_vector       = emb_read_elt_vector,
-   .resolve_tokasident         = emb_resolve_tokasident,
-   .resolve_lexeme_as_gmssymb = resolve_lexeme_as_gmssymb_via_gmd,
+   .resolve_tokasident    = gmd_find_ident,
+   .read_gms_symbol       = emb_read_gms_symbol,
 };
 
 NONNULL static int write_empinfo(Interpreter *interp, const char *fname)
@@ -623,15 +392,15 @@ NONNULL static int interp_setup_embparse(Interpreter *interp, gmdHandle_t gmd)
    interp->ops = &parser_ops_emb;
    interp->gmd = gmd;
 
-   gmdHandle_t gmdout;
-   if (!gmdCreate(&gmdout, msg, sizeof(msg))) {
+   gmdHandle_t gmdcpy;
+   if (!gmdCreate(&gmdcpy, msg, sizeof(msg))) {
       error("[embcode] ERROR: cannot create output GMD object: %s\n", msg);
       return Error_EMPRuntimeError;
    }
 
-   interp->gmdout = gmdout;
+   interp->gmdcpy = gmdcpy;
 
-   S_CHECK(copy_UELs(gmd, gmdout));
+   S_CHECK(copy_UELs(gmd, gmdcpy));
 
    S_CHECK(interp_create_buf(interp));
 
@@ -641,7 +410,7 @@ NONNULL static int interp_setup_embparse(Interpreter *interp, gmdHandle_t gmd)
 static NONNULL int embcode_empinfo_finalize(Interpreter *interp, const char *scrdir)
 {
    int status = OK;
-   if (!interp->gmdout) { return OK; }
+   if (!interp->gmdcpy) { return OK; }
 
    char *fname;
    MALLOC_(fname, char, strlen(scrdir) + MAX(strlen(EMBCODE_GMDOUT_FNAME), strlen("empinfo.dat")) + 1);
@@ -655,7 +424,7 @@ static NONNULL int embcode_empinfo_finalize(Interpreter *interp, const char *scr
    * Save the GMD
    * ---------------------------------------------------------------------- */
 
-   gmdHandle_t gmd = interp->gmdout;
+   gmdHandle_t gmd = interp->gmdcpy;
    if (!gmdWriteGDX(gmd, fname, true)) {
       char msg[GMS_SSSIZE];
 

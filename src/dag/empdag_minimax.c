@@ -138,10 +138,11 @@ int rmdl_empdag_transform(Model *mdl_reform)
 
    len = empdag_up->objfn_maps.mps.len;
    mpid_arr = empdag_up->objfn_maps.mps.arr;
+   Lequ **lequs = empdag_up->objfn_maps.lequs;
 
    for (unsigned i = 0; i < len; ++i) {
       mpid_t mpid = mpid_arr[i];
-      Lequ *le = empdag_up->objfn_maps.lequs[i]; assert(le);
+      Lequ *le = lequs[i]; assert(le);
       MathPrgm *mp;
 
       S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));

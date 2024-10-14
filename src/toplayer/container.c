@@ -784,11 +784,10 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
    do {
       double val_;
       S_CHECK(ctr_var_iterequs(ctr, vi, &iter, &val_, ei, &nlflag));
-      ei_ = *ei;
 
       /* We've seen this variable in more than one equation of this MP */
       if (ei_ != IdxNA) {
-         error("[container] ERROR: the variable %s appears in more than one equation."
+         error("[container] ERROR: the variable %s appears in more than one equation. "
                "It cannot define a mapping.\n", ctr_printvarname(ctr, vi));
          return Error_EMPIncorrectInput;
       }
@@ -800,6 +799,7 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
          return Error_EMPIncorrectInput;
       }
 
+      ei_ = *ei;
       val = val_;
 
    } while (iter);

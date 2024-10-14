@@ -262,9 +262,9 @@ int rhp_int_extend_except(IntArray * restrict dat,
 
 void rhp_int_empty(IntArray *dat)
 {
-   if (dat->len > 0) {
-      FREE(dat->arr);
-   }
+   free(dat->arr);
+   dat->arr = NULL;
+   dat->max = 0;
 }
 
 unsigned rhp_int_find(const IntArray *dat, int v)
@@ -376,9 +376,7 @@ int rhp_obj_add(ObjArray *dat, void *v)
 
 void rhp_obj_empty(ObjArray *dat)
 {
-   if (dat->len > 0) {
-      FREE(dat->arr);
-   }
+   FREE(dat->arr);
 }
 
 int rhp_obj_reserve(ObjArray *dat, unsigned size)

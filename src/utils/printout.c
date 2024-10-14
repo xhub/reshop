@@ -96,7 +96,9 @@ static DESTRUCTOR_ATTR void cleanup_bck(void)
 
 static CONSTRUCTOR_ATTR void register_signals(void)
 {
-   bck_obj = regsig();
+   if (!getenv("RHP_NO_BACKTRACE")) {
+      bck_obj = regsig();
+   }
 }
 
 #else /* WITH_BACKWARD  */

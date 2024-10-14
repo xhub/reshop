@@ -72,7 +72,9 @@ bool empdag_mp_hasobjfn_modifiers(const EmpDag *empdag, mpid_t mpid)
 
    /* There could be an objfn added */
    unsigned idx = mpidarray_find(&empdag->objfn.dst, mpid);
+   if (idx < UINT_MAX) { return true; }
 
+   idx = mpidarray_find(&empdag->objfn_maps.mps, mpid);
    return idx < UINT_MAX;
 }
 

@@ -29,10 +29,10 @@ const char* vmval_typename(VmValue vmval)
    case SIGNATURE_OVFOBJ:    return "OVF object";
    case SIGNATURE_GMSSYMITER:    return "GmsSymIterator";
    case SIGNATURE_REGENTRY:    return "Register entry";
-   case SIGNATURE_ARCOBJ:    return "Edge object";
+   case SIGNATURE_ARCOBJ:    return "Arc object";
+   default: return "ERROR invalid vmval type";
    }
 
-   return "ERROR invalid vmval type";
 }
 
 

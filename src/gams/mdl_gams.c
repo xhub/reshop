@@ -365,6 +365,9 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
          return Error_SystemError;
       }
 
+      /* We know for sure we can delete the scratch dir */
+      mdldat_gms->delete_scratch = true;
+
       STRNCPY_FIXED(mdldat_gms->gamscntr, gamsctrl_new);
       trace_model("[model] %s model '%.*s' #%u: gamscntr from gevDuplicateScratchDir()"
                " is '%s'\n", mdl_fmtargs(mdl_gms), mdldat_gms->gamscntr);

@@ -225,8 +225,8 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
       }
 
       const char *name = mps->names[i];
+      char *lname = NULL;
       if (!name) {
-         char *lname;
          const char *mp_ident = NULL;
 
          switch(mp->type) {
@@ -263,6 +263,8 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
       } else {
          IO_CALL(fprintf(f, " MP%u [label=\"%s\", %s];\n", mp->id, name, nodestyle_mp));
       }
+
+      free(lname);
    }
 
    if (hidden_mps) {
@@ -274,20 +276,22 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
    return OK;
 }
 
-static int print_nash_nodes(const struct nash_namedarray* mpes, FILE* f, const Container *ctr)
+static int print_nash_nodes(const struct nash_namedarray* nashs, FILE* f, const Container *ctr)
 {
-   for (unsigned i = 0, len = mpes->len; i < len; ++i) {
-      if (!mpes->arr[i]) continue;
+   for (unsigned i = 0, len = nashs->len; i < len; ++i) {
+      if (!nashs->arr[i]) continue;
 
-      const Nash *mpe = mpes->arr[i];
-      const char *name = mpes->names[i];
+      const Nash *nash = nashs->arr[i];
+      const char *name = nashs->names[i];
+      char *lname = NULL;
       if (!name) {
-         char *lname;
-         IO_CALL(asprintf(&lname, "Nash(%u)", mpe->id));
+         IO_CALL(asprintf(&lname, "Nash(%u)", nash->id));
          name = lname;
       }
 
-      IO_CALL(fprintf(f, " Nash%u [label=\"%s\", %s];\n", mpe->id, name, nodestyle_nash));
+      IO_CALL(fprintf(f, " Nash%u [label=\"%s\", %s];\n", nash->id, name, nodestyle_nash));
+
+      free(lname);
    }
 
    return OK;

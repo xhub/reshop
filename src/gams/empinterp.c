@@ -67,7 +67,9 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    }
 
    interp->gmd = NULL;
-   interp->gmdout = NULL;
+   interp->gmd_fromgdx = false;
+   interp->gmd_own = false;
+   interp->gmdcpy = NULL;
 
    emptok_init(&interp->cur, 0);
    emptok_init(&interp->peek, 0);
@@ -77,7 +79,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    interp->last_kw_info.type = TOK_UNSET;
    finalization_init(&interp->finalize);
    interp->ops = &interp_ops_imm;
-   interp->compiler = compiler_init(interp);
+   interp->compiler = empvm_compiler_init(interp);
 
    interp->regentry = NULL;
    interp->dag_root_label = NULL;
@@ -122,15 +124,30 @@ NONNULL void interp_free(Interpreter *interp)
    }
 
    FREE(interp->buf);
-   compiler_free(interp->compiler);
+   empvm_compiler_free(interp->compiler);
 
    for (unsigned i = 0, len = interp->gdx_readers.len; i < len; ++i) {
       gdx_reader_free(&interp->gdx_readers.list[i]);
    }
    gdxreaders_free(&interp->gdx_readers);
 
+   if (interp->gmd && interp->gmd_own) {
+      gmdHandle_t obj = interp->gmd;
+      if (interp->gmd_fromgdx) {
+         gmdCloseGDX(obj, 0);
+      }
+      gmdFree(&obj);
+      interp->gmd = NULL;
+   }
+
+   if (interp->gmdcpy) {
+      gmdHandle_t obj = interp->gmdcpy;
+      gmdFree(&obj);
+      interp->gmdcpy = NULL;
+   }
+
    aliases_free(&interp->globals.aliases);
-   namedints_free(&interp->globals.sets);
+   namedints_freeall(&interp->globals.sets);
    multisets_free(&interp->globals.multisets);
 
    namedscalar_free(&interp->globals.scalars);
@@ -146,9 +163,11 @@ NONNULL void interp_free(Interpreter *interp)
    }
 
    FREE(interp->regentry);
+   interp->regentry = NULL;
 
    linklabel2arc_freeall(&interp->linklabel2arc);
    linklabels2arcs_freeall(&interp->linklabels2arcs);
+   dual_labels_freeall(&interp->dual_label);
 
    assert(interp->health != PARSER_OK || !gmsindices_isactive(&interp->gmsindices));
 }
@@ -226,7 +245,7 @@ static int interp_loadgmdsets(Interpreter *interp)
 
       S_CHECK(rhp_int_reserve(&set, nrecs))
 
-      void *symiterptr;
+      void *symiterptr = NULL;
       GMD_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
 
       bool has_next;
@@ -236,6 +255,7 @@ static int interp_loadgmdsets(Interpreter *interp)
          int uelidx = dctUelIndex(dct, uel);
          if (uelidx < 0) {
             error("[empinterp] ERROR: cound't find UEL '%s' in DCT\n", uel);
+            gmdFreeSymbolIterator(gmd, symiterptr);
             return Error_GamsCallFailed;
          }
 
@@ -249,6 +269,10 @@ static int interp_loadgmdsets(Interpreter *interp)
 
       trace_empinterp("%s ", setname);
       has_set = true;
+
+      if (symiterptr) {
+         GMD_CHK(gmdFreeSymbolIterator, gmd, symiterptr);
+      }
    }
 
    if (!has_set) {
@@ -292,7 +316,7 @@ static int interp_loadgmdparams(Interpreter *interp)
 
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, param_name);
 
-      void *symiterptr;
+      void *symiterptr = NULL;
       GMD_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
 
       if (symdim == 0) {
@@ -326,11 +350,17 @@ static int interp_loadgmdparams(Interpreter *interp)
          if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
       } while (has_next);
 
+
       S_CHECK(namedvec_add(&interp->globals.vectors, v, strdup(param_name)));
 
 _end_loop:
       trace_empinterp("%s ", param_name);
       has_param = true;
+
+      if (symiterptr) {
+         gmdFreeSymbolIterator(gmd, symiterptr);
+      }
+
    }
 
    if (!has_param) {
@@ -378,6 +408,9 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
       }
 
       interp.gmd = gmd;
+      interp.gmd_fromgdx = true;
+      interp.gmd_own = true;
+      empvm_compiler_setgmd(&interp);
 
       S_CHECK_EXIT(interp_loadgmdsets(&interp));
       S_CHECK_EXIT(interp_loadgmdparams(&interp));
