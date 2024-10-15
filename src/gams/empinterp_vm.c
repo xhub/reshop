@@ -1275,6 +1275,27 @@ int empvm_run(struct empvm *vm)
          vm->data.linklabels = NULL;
          break;
       }
+      case OP_LINKLABELS_KEYWORDS_UPDATE: {
+         assert(vm->data.linklabels);
+         LinkLabels *linklabels = vm->data.linklabels;
+
+         if (linklabels->num_children == 0) {
+            errormsg("[empvm] ERROR: empty linklabels!\n");
+            status = Error_EMPRuntimeError;
+            goto _exit;
+         }
+
+         switch (linklabels->linktype) {
+         case LinkObjAddMapSmoothed: {
+            double param;
+            S_CHECK(vmdata_consume_scalardata(&vm->data, &param));
+         }
+         default: ;
+
+         }
+         break;
+      }
+
          // TODO: Delete?
       case OP_SET_DAGUID_FROM_REGENTRY: {
          DagRegister *dagregister = vm->data.dagregister;

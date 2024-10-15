@@ -256,7 +256,7 @@ typedef struct linklabels {
    int *uels_var;          /**< uel_var[num_var] per child */
    rhp_idx *vi;            /**< Optional variable index    */
    double *coeff;          /**< Optional coefficient       */
-   void *extras;           /**< extra objects              */
+   void **extras;           /**< extra objects              */
    int data[]; /* Layout: uels[dim] + pos[num_vars]*/
 } LinkLabels;
 

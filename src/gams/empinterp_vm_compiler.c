@@ -1964,7 +1964,9 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
       }
 
 
-      if (parse_kwd) {
+      if (parse_kwd) { // only smooth() operator. We assume to be at n.valn.smooth(
+                       //                                                         ^ 
+         assert(parser_getcurtoktype(interp) == TOK_LPAREN);
          TO_IMPLEMENT("Do something");
       }
 

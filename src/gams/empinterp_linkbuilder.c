@@ -113,6 +113,7 @@ int linklabels_add(LinkLabels *link, int *uels, double coeff, rhp_idx vi)
       }
       REALLOC_(link->coeff, double, size);
       REALLOC_(link->vi, rhp_idx, size);
+      REALLOC_(link->extras, void*, size);
    }
 
    if (uels) {
