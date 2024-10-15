@@ -2,7 +2,7 @@
 #include "macros.h"
 #include "ovf_functions_common.h"
 #include "printout.h"
-#include "ovf_smax.h"
+#include "ovf_smax_smin.h"
 #include "ovf_parameter.h"
 #include "ovf_generator.h"
 #include "status.h"

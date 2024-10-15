@@ -248,14 +248,15 @@ typedef struct linklabels {
    uint8_t dim;
    uint8_t num_var;
    LinkType linktype;
-   uint16_t label_len;  /**< node name length */
+   uint16_t label_len;     /**< label length */
    unsigned num_children;
    unsigned max_children;  /**< Max number of children  */
    daguid_t daguid_parent; /**< daguid ot the parent */
-   const char *label;   /**< Basename of the parent */
+   const char *label;      /**< Basename of the parent */
    int *uels_var;          /**< uel_var[num_var] per child */
    rhp_idx *vi;            /**< Optional variable index    */
    double *coeff;          /**< Optional coefficient       */
+   void *extras;           /**< extra objects              */
    int data[]; /* Layout: uels[dim] + pos[num_vars]*/
 } LinkLabels;
 

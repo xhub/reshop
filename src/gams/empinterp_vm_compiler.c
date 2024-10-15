@@ -823,8 +823,7 @@ static int vm_linklabels_alloc(EmpVm * restrict vm, LinkLabels **link,
                               LinkType linktype, unsigned *gidx)
 {
    LinkLabels *link_;
-   A_CHECK(link_, linklabels_new(label, label_len, dim, num_vars, size));
-   link_->linktype = linktype;
+   A_CHECK(link_, linklabels_new(linktype, label, label_len, dim, num_vars, size));
 
    S_CHECK(vmvals_add(&vm->globals, ARCOBJ_VAL(link_)));
 
@@ -1849,6 +1848,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
     * Step 2: parse the expression. We accept param * valfn * variables
     * --------------------------------------------------------------------- */
    bool has_var = false, has_param = false, has_valfn = false, has_ident = false;
+   bool parse_kwd = false;
 
    do {
    S_CHECK(advance(interp, p, &toktype));
@@ -1881,6 +1881,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
       has_ident = true;
 
       IdentData ident;
+      // HACK
       S_CHECK(interp->ops->resolve_tokasident(interp, &ident));
 
       if (ident.type == IdentNotFound) {
@@ -1899,6 +1900,27 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
                S_CHECK(parse_gmsindices(interp, p, &label_gmsindices));
            }
 
+            S_CHECK(advance(interp, p, &toktype));
+
+            S_CHECK(consume_valfn_kwd(interp, p));
+
+            /* HACK: there needs to be an abstraction here */
+
+               S_CHECK(peek(interp, &p2, &toktype2));
+               if (toktype2 == TOK_DOT) {
+                  *p = p2;
+                  S_CHECK(advance(interp, p, &toktype2));
+                  S_CHECK(parser_expect(interp, "After a valfn, only the smooth operator is valid",
+                                        TOK_SMOOTH));
+
+                  /* smoothing requires at least one parameter (the value) */
+                  S_CHECK(advance(interp, p, &toktype));
+                  S_CHECK(parser_expect(interp, "After a smooth keyword, an left parenthesis '(' is expected",
+                                        TOK_LPAREN));
+
+
+                  parse_kwd = true;
+               }
 
 
           } else {
@@ -1925,9 +1947,11 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
       
       uint8_t num_iterators = label_gmsindices.num_localsets + label_gmsindices.num_sets;
 
-      if (num_iterators > 0) {
+      // HACK
+      if (num_iterators > 0 && !embmode(interp)) {
          TO_IMPLEMENT()
       }
+
       LinkLabels *linklabels;
       S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label_valfn.start,
                                   label_valfn.len, label_gmsindices.nargs,
@@ -1937,6 +1961,11 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 
       for (unsigned i = 0; i < num_iterators; ++i) {
          S_CHECK(emit_byte(tape, iterators.iters[i].iter_lidx));
+      }
+
+
+      if (parse_kwd) {
+         TO_IMPLEMENT("Do something");
       }
 
    }  else {

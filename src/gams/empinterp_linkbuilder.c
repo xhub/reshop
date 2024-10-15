@@ -7,11 +7,11 @@
 #include "macros.h"
 #include "printout.h"
 
-LinkLabels * linklabels_new(const char *label, unsigned label_len,
+LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len,
                            uint8_t dim, uint8_t num_vars, unsigned max_children)
 {
    LinkLabels *link = NULL;
-   MALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
+   CALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
 
    if (max_children > 0) {
       MALLOC_EXIT_NULL(link->uels_var, int, (size_t)max_children*num_vars); 
@@ -22,6 +22,16 @@ LinkLabels * linklabels_new(const char *label, unsigned label_len,
       link->vi = NULL;
       link->coeff = NULL;
    }
+
+   link->linktype = type;
+
+   switch (type) {
+   case LinkObjAddMapSmoothed:
+
+   default: ;
+      
+   }
+   link->extras = NULL;
 
    link->dim = dim;
    link->num_var = num_vars;
@@ -34,7 +44,10 @@ LinkLabels * linklabels_new(const char *label, unsigned label_len,
 
    return link;
 _exit:
-   FREE(link);
+   free(link->uels_var);
+   free(link->vi);
+   free(link->coeff);
+   free(link);
    return NULL;
 }
 

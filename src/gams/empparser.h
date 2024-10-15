@@ -31,6 +31,7 @@ bool tok_untilwsorchar(Token *tok, const char * restrict buf, char c,
 const char* toktype2str(TokenType type);
 int tok2ident(Token * restrict tok, IdentData * restrict ident) NONNULL;
 
+NONNULL int consume_valfn_kwd(Interpreter *interp, unsigned *p);
 /* ---------------------------------------------------------------------
  * Prototypes for parsing statements
  * --------------------------------------------------------------------- */

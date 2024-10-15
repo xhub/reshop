@@ -22,13 +22,14 @@ typedef enum {
    EmpDag_Subset,
 } EmpDagStage;
 
-/** Type of arc */
+/** Link type */
 typedef enum {
    LinkArcVF,
    LinkArcCtrl,
    LinkArcNash,
    LinkVFObjFn,
-   LinkObjAddMap, /**< Not a true arc, used to add maps to objfn */
+   LinkObjAddMap,         /**< Not an EMPDAG arc, used to add maps to objfn */
+   LinkObjAddMapSmoothed, /**< Not an EMPDAG arc, used to add maps to objfn */
    LinkViKkt,
    LinkTypeLast = LinkViKkt,
 } LinkType;

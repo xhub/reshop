@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,22 @@
 
 #define MALLOCBYTES_EXIT_NULL(ptr,type,bytes) MALLOCBYTES((ptr),type,bytes); \
    if (RHP_UNLIKELY(!(ptr))) { goto _exit; };
+
+
+#define CALLOCBYTES(ptr,type,bytes) ((ptr) = (type*)calloc(bytes, sizeof(uint8_t))); assert((ptr))
+
+#define CALLOCBYTES_(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
+  if (RHP_UNLIKELY(!(ptr))) { return Error_InsufficientMemory; }
+
+#define CALLOCBYTES_NULL(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
+  if (RHP_UNLIKELY(!(ptr))) { return NULL; }
+
+#define CALLOCBYTES_EXIT(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
+   if (RHP_UNLIKELY(!(ptr))) { status = Error_InsufficientMemory; goto _exit; };
+
+#define CALLOCBYTES_EXIT_NULL(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
+   if (RHP_UNLIKELY(!(ptr))) { goto _exit; };
+
 
 #define MALLOC(ptr,type,n)  ((ptr) = (type*)malloc((n)*sizeof(type))); \
    assert(((ptr) || n == 0) && "Allocation error for object " #ptr); \

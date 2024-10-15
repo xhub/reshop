@@ -73,7 +73,8 @@ typedef enum {
    MpIsHidableAsDual              = 0x4,  /**< Hiddable MP: is used as dual             */
    MpIsHidableAsKkt               = 0x8,  /**< Hiddable MP: is used as kkt              */
    MpIsHidableAsInstance          = 0x10,  /**< Hiddable MP: is used as kkt              */
-   MpCcflibNeedsFullInstantiation = 0x20,
+   MpIsHidableAsSmooth            = 0x10,  /**< Hiddable MP: smoothing operator           */
+   MpCcflibNeedsFullInstantiation = 0x40,
 } MpStatus;
 
 #define MpIsHidable  (MpIsHidableAsDual | MpIsHidableAsKkt | MpIsHidableAsInstance)

@@ -53,7 +53,7 @@ x.lo = 10;
 
 * This is the second variant in Subsection 3.1
 defobj_smax(i)..
-  obj =e= (beta*rho/x)$sameas(i,'ordfix') + (gamma*x/2)$sameas(i,'inv');
+  obj =g= (beta*rho/x)$sameas(i,'ordfix') + (gamma*x/2)$sameas(i,'inv');
 
 model biobjective_smax_ref / defobj_smax /;
 solve biobjective_smax_ref using nlp min obj;

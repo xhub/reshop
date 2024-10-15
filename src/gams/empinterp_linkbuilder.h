@@ -4,11 +4,12 @@
 #include <stdint.h>
 
 #include "compat.h"
+#include "empdag_common.h"
 #include "empdag_data.h"
 #include "empinterp_fwd.h"
 
 void linklabels_free(LinkLabels *link);
-LinkLabels * linklabels_new(const char *label, unsigned label_len,
+LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len,
                            uint8_t dim, uint8_t num_vars, unsigned size) MALLOC_ATTR(linklabels_free, 1);
 LinkLabels * linklabels_dup(const LinkLabels * link_src) MALLOC_ATTR(linklabels_free);
 LinkLabel * linklabels_dupaslabel(const LinkLabels * link_src) NONNULL;

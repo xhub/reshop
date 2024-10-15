@@ -17,6 +17,7 @@ DECLARE_OVF_FUNCTION(ecvarlo) \
 DECLARE_OVF_FUNCTION(cvarlo) \
 DECLARE_OVF_FUNCTION(expectation) \
 DECLARE_OVF_FUNCTION(smax) \
+DECLARE_OVF_FUNCTION(smin) \
 
 
 #include "ovf_huber.h"
@@ -39,4 +40,4 @@ DECLARE_OVF_FUNCTION(smax) \
 #include "ovf_cvarlo.h"
 #include "ovf_expectation.h"
 
-#include "ovf_smax.h"
+#include "ovf_smax_smin.h"

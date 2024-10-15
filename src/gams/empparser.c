@@ -2379,7 +2379,30 @@ NONNULL static int ensure_valfn_kwd(Interpreter *interp, unsigned *p)
  *
  * @return        the error code
  */
-NONNULL static int consume_valfn_kwd(Interpreter *interp, unsigned *p)
+NONNULL static int consume_optional_valfn_kwd(Interpreter *interp, unsigned *p)
+{
+   TokenType toktype;
+   unsigned p2 = *p;
+   S_CHECK(peek(interp, &p2, &toktype));
+
+   if (toktype == TOK_DOT) {
+      S_CHECK(peek(interp, &p2, &toktype));
+      S_CHECK(parser_expect_peek(interp, "valfn keyword expected after '.'", TOK_VALFN));
+   }
+
+   *p = p2;
+   return OK;
+}
+
+/**
+ * @brief Consume any ".valfn" after the current position
+ *
+ * @param  interp the interpreter
+ * @param  p      the pointer
+ *
+ * @return        the error code
+ */
+int consume_valfn_kwd(Interpreter *interp, unsigned *p)
 {
    TokenType toktype;
    unsigned p2 = *p;
@@ -2803,7 +2826,7 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
    interp_save_tok(interp);
 
    /* we do not require '.valfn' for now, but consnume it */
-   S_CHECK(consume_valfn_kwd(interp, p));
+   S_CHECK(consume_optional_valfn_kwd(interp, p));
 
    S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_arc, vm_add_VFobjSimple_arc))
 
