@@ -1289,6 +1289,7 @@ int empvm_run(struct empvm *vm)
          case LinkObjAddMapSmoothed: {
             double param;
             S_CHECK(vmdata_consume_scalardata(&vm->data, &param));
+
          }
          default: ;
 
