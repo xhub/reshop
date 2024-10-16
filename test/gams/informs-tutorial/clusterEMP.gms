@@ -79,6 +79,8 @@ endEmbeddedCode
 
 solve cluster using emp;
 
+abort$[cluster.modelStat > %MODELSTAT.LOCALLY OPTIMAL%]      'solve failed', cluster.modelStat;
+abort$[cluster.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', cluster.solveStat;
   theta = theta*5;
 );
 

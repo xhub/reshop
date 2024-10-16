@@ -1212,6 +1212,7 @@ int empvm_run(struct empvm *vm)
 
          S_CHECK_EXIT(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
 
+         DEBUGVMRUN("\n");
          break;
       }
       case OP_LINKLABELS_INIT: {
@@ -1232,6 +1233,7 @@ int empvm_run(struct empvm *vm)
             REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
          }
 
+         DEBUGVMRUN("\n");
          break;
       }
       case OP_LINKLABELS_STORE: {
@@ -1261,6 +1263,17 @@ int empvm_run(struct empvm *vm)
 
 
          S_CHECK_EXIT(linklabels_add(linklabels, uels, coeff, vi));
+
+         DEBUGVMRUN("#%u: ", linklabels->num_children-1);
+         DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < linklabels->num_var; ++i) {
+            int dummy; if (i == 0) {DEBUGVMRUN("(");}
+            dct_printuel(vm->data.dct, uels[i], PO_TRACE_EMPINTERP, &dummy);
+            if (i == linklabels->num_var-1) { DEBUGVMRUN(")");}}
+            if (valid_vi(vi)) {DEBUGVMRUN(" vi = %s", mdl_printvarname(vm->data.mdl, vi));}
+            if (isfinite(coeff) && coeff != 1.) {DEBUGVMRUN(" c = %e", coeff);}
+            });
+         DEBUGVMRUN("\n");
+         
          break;
       }
       case OP_LINKLABELS_FINI: {
@@ -1295,10 +1308,12 @@ int empvm_run(struct empvm *vm)
             SmoothingOperatorData *opdat;
             A_CHECK_EXIT(opdat, smoothing_operator_data_new(param));
             linklabels->extras[num_children-1] = opdat;
+            DEBUGVMRUN("coeff value is %e", param);
          }
          default: ;
 
          }
+         DEBUGVMRUN("\n");
          break;
       }
 

@@ -2001,11 +2001,11 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
          TO_IMPLEMENT()
       }
 
-      LinkLabels *linklabels;
-      LinkType type = has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
-      S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label_valfn.start,
-                                  label_valfn.len, label_gmsindices.nargs,
-                                  num_iterators, 0, type, &gidx));
+      LinkType linktype = has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
+      LoopIterators loopiters = {.size = 0};
+      S_CHECK(linklabels_init(interp, tape, label_valfn.start,
+                              label_valfn.len, linktype, &label_gmsindices,
+                              &loopiters, &gidx));
 
       S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
 
