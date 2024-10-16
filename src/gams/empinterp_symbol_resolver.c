@@ -1,5 +1,4 @@
 #include "empinterp_symbol_resolver.h"
-#include "apifiles/C/api/dctmcc.h"
 #include "empparser.h"
 #include "empinterp_vm_utils.h"
 #include "equ.h"
