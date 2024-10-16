@@ -14,4 +14,6 @@ typedef struct linklabels LinkLabels;
 typedef struct linklabel LinkLabel;
 typedef struct dual_label DualLabel;
 
+typedef struct dual_operator_data DualOperatorData;
+typedef struct smoothing_operator_data SmoothingOperatorData;
 #endif

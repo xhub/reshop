@@ -628,10 +628,11 @@ NONNULL static int vmdata_init(VmData *data)
    return OK;
 }
 
-struct empvm* empvm_new(Interpreter *interp)
+EmpVm* empvm_new(Interpreter *interp)
 {
-   struct empvm* vm;
-   CALLOC_NULL(vm, struct empvm, 1);
+   void *obj;
+   CALLOC_NULL(obj, EmpVm, 1);
+   EmpVm* vm = (EmpVm*)obj;
 
    vm->stack_top = vm->stack;
 
@@ -662,7 +663,8 @@ struct empvm* empvm_new(Interpreter *interp)
    return vm;
 
 _exit:
-   empvm_free(vm);
+
+   IGNORE_DEALLOC_MISMATCH(empvm_free(vm));
    return NULL;
 }
 
@@ -936,7 +938,7 @@ int empvm_run(struct empvm *vm)
          assert(IS_LOOPVAR(vm->locals[slot]));
 
          int val = AS_INT(vm->locals[slot]);
-         S_CHECK(rhp_int_add(set, val));
+         S_CHECK_EXIT(rhp_int_add(set, val));
          break;
       }
       case OP_LSET_RESET: {
@@ -970,7 +972,7 @@ int empvm_run(struct empvm *vm)
          unsigned size = vmvec->len;
          param->type = ARG_TYPE_VEC;
          param->size_vector = size;
-         MALLOC_(param->vec, double, size);
+         MALLOC_EXIT(param->vec, double, size);
          memcpy(param->vec, vm->data.dscratch.data, size * sizeof(double));
 
          /* Reset the length for the next use */
@@ -1125,12 +1127,12 @@ int empvm_run(struct empvm *vm)
       }
       case OP_GMS_EQUVAR_READ_INIT: {
          uint8_t identtype = READ_BYTE(vm);
-         S_CHECK(gms_extend_init(&vm->data, identtype));
+         S_CHECK_EXIT(gms_extend_init(&vm->data, identtype));
          break;
       }
       case OP_GMS_EQUVAR_READ_SYNC: {
          uint8_t identtype = READ_BYTE(vm);
-         S_CHECK(gms_equvar_sync(&vm->data, identtype));
+         S_CHECK_EXIT(gms_equvar_sync(&vm->data, identtype));
          break;
       }
       case OP_GMS_MEMBERSHIP_TEST: {
@@ -1205,10 +1207,10 @@ int empvm_run(struct empvm *vm)
 
          LinkLabels *linklabels_src = AS_ARCOBJ(vm->globals.arr[gidx]);
          LinkLabel *linklabel_cpy;
-         A_CHECK(linklabel_cpy, linklabels_dupaslabel(linklabels_src));
+         A_CHECK_EXIT(linklabel_cpy, linklabels_dupaslabel(linklabels_src));
          linklabel_cpy->daguid_parent = vm->data.uid_parent;
 
-         S_CHECK(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
+         S_CHECK_EXIT(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
 
          break;
       }
@@ -1219,15 +1221,15 @@ int empvm_run(struct empvm *vm)
 
          LinkLabels *linklabels = AS_ARCOBJ(vm->globals.arr[gidx]);
          LinkLabels *linklabels_cpy;
-         A_CHECK(linklabels_cpy, linklabels_dup(linklabels));
+         A_CHECK_EXIT(linklabels_cpy, linklabels_dup(linklabels));
          linklabels_cpy->daguid_parent = vm->data.uid_parent;
 
-         S_CHECK(linklabels2arcs_add(vm->data.linklabels2arcs, linklabels_cpy));
+         S_CHECK_EXIT(linklabels2arcs_add(vm->data.linklabels2arcs, linklabels_cpy));
 
          vm->data.linklabels = linklabels_cpy;
          unsigned num_var = linklabels_cpy->num_var;
          if (num_var > 0) {
-            REALLOC_(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
+            REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
          }
 
          break;
@@ -1242,7 +1244,7 @@ int empvm_run(struct empvm *vm)
 
          int *uels = NULL;
          if (nargs > 0) {
-            S_CHECK(scratchint_ensure(&vm->data.e_data, nargs));
+            S_CHECK_EXIT(scratchint_ensure(&vm->data.e_data, nargs));
             uels = vm->data.e_data.data;
 
             for (unsigned i = 0; i < linklabels->num_var; ++i) {
@@ -1254,11 +1256,11 @@ int empvm_run(struct empvm *vm)
 
          double coeff;
          rhp_idx vi;
-         S_CHECK(vmdata_consume_scalardata(&vm->data, &coeff));
-         S_CHECK(vmdata_consume_scalarvar(&vm->data, &vi));
+         S_CHECK_EXIT(vmdata_consume_scalardata(&vm->data, &coeff));
+         S_CHECK_EXIT(vmdata_consume_scalarvar(&vm->data, &vi));
 
 
-         S_CHECK(linklabels_add(linklabels, uels, coeff, vi));
+         S_CHECK_EXIT(linklabels_add(linklabels, uels, coeff, vi));
          break;
       }
       case OP_LINKLABELS_FINI: {
@@ -1278,6 +1280,7 @@ int empvm_run(struct empvm *vm)
       case OP_LINKLABELS_KEYWORDS_UPDATE: {
          assert(vm->data.linklabels);
          LinkLabels *linklabels = vm->data.linklabels;
+         unsigned num_children = linklabels->num_children;
 
          if (linklabels->num_children == 0) {
             errormsg("[empvm] ERROR: empty linklabels!\n");
@@ -1288,8 +1291,10 @@ int empvm_run(struct empvm *vm)
          switch (linklabels->linktype) {
          case LinkObjAddMapSmoothed: {
             double param;
-            S_CHECK(vmdata_consume_scalardata(&vm->data, &param));
-
+            S_CHECK_EXIT(vmdata_consume_scalardata(&vm->data, &param));
+            SmoothingOperatorData *opdat;
+            A_CHECK_EXIT(opdat, smoothing_operator_data_new(param));
+            linklabels->extras[num_children-1] = opdat;
          }
          default: ;
 

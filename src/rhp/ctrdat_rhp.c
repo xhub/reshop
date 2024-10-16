@@ -113,6 +113,11 @@ static int cdat_resize_equs(RhpContainerData *cdat, unsigned max_m, unsigned old
 {
    unsigned diff = max_m - old_max_m;
 
+   if (max_m == 0) {
+      errormsg("[container] ERROR: cannot resize to 0.\n");
+      return Error_RuntimeError;
+   }
+
    REALLOC_(cdat->equs, CMatElt *, max_m);
    REALLOC_(cdat->equ_rosetta, struct rosetta, max_m);
    REALLOC_(cdat->equ_stage, unsigned char, max_m);

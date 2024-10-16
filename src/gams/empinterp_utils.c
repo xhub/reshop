@@ -3,6 +3,7 @@
 #include "empinterp_utils.h"
 #include "empinterp_vm_utils.h"
 #include "empparser.h"
+#include "mathprgm_data.h"
 #include "mdl.h"
 #include "printout.h"
 #include "win-compat.h"
@@ -112,10 +113,14 @@ const char *linktype2str(LinkType type)
       return "ArcCtrl";
    case LinkArcNash:
       return "ArcNash";
-   case LinkViKkt:
-      return "VI KKT";
    case LinkVFObjFn:
       return "ObjFn";
+   case LinkObjAddMap:
+      return "ObjAddMap";
+   case LinkObjAddMapSmoothed:
+      return "ObjAddMapSmoothed";
+   case LinkViKkt:
+      return "VI KKT";
    default:
       return "ERROR: invalid arc type";
    }
@@ -158,4 +163,26 @@ int has_longform_solve(Interpreter *interp)
    return OK;
 }
 
+void dual_operator_data_init(DualOperatorData *dual_operator)
+{
+   dual_operator->scheme = FenchelScheme;
+   dual_operator->domain = NodeDomain;
+}
 
+void smoothing_operator_data_init(SmoothingOperatorData *smoothing_operator)
+{
+   smoothing_operator->scheme = LogSumExp;
+   smoothing_operator->parameter = NAN;
+   smoothing_operator->parameter_position = UINT_MAX;
+}
+
+SmoothingOperatorData * smoothing_operator_data_new(double param)
+{
+   SmoothingOperatorData *smoothing_opdat;
+   MALLOC_NULL(smoothing_opdat, SmoothingOperatorData, 1);
+   smoothing_operator_data_init(smoothing_opdat);
+
+   smoothing_opdat->parameter = param;
+
+   return smoothing_opdat;
+}

@@ -192,10 +192,14 @@ static void* ovf_newobj(VmData *data, unsigned argc, const VmValue *values)
 static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values)
 {
    assert(IS_MPOBJ(values[0]));
-   assert(IS_MPOBJ(values[-1]));
    S_CHECK(_argcnt(argc, 1, __func__));
    MathPrgm *mp, *mp_parent;
    N_CHECK(mp, AS_MPOBJ(values[0]));
+
+   // HACK: have a better way to detect whether we are in another MP declaration
+   if (!valid_uid(data->uid_grandparent)) {
+      goto _finalize;
+   }
 
    /* ---------------------------------------------------------------------
     * Is the CCF has no child, by convention it has value 1 and we delete the MP
@@ -227,6 +231,7 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
       return OK;
    }
 
+   assert(IS_MPOBJ(values[-1]));
    N_CHECK(mp_parent, AS_MPOBJ(values[-1]));
 
    ArcVFObj obj = {.id_parent = mp_parent->id, .id_child = mp->id};
@@ -237,6 +242,8 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
 
    /* Update the number of children */
    mp->ccflib.ccf->num_empdag_children = num_children;
+
+_finalize:
 
    S_CHECK(mp_finalize(mp));
 
@@ -456,10 +463,28 @@ static int vm_ovf_setrho(VmData *data, unsigned argc, const VmValue *values)
 
 static int vm_ovf_addarg(VmData *data, unsigned argc, const VmValue *values)
 {
-   assert(IS_OVFOBJ(values[0]));
+   assert(IS_OVFOBJ(values[0]) || IS_MPOBJ(values[0]));
    S_CHECK(_argcnt(argc, 1, __func__));
    OvfDef *ovfdef;
-   N_CHECK(ovfdef, AS_OVFOBJ(values[0]));
+   VmValue vmval = values[0];
+
+   if (IS_OVFOBJ(vmval)) {
+      N_CHECK(ovfdef, AS_OVFOBJ(values[0]));
+   } else if (IS_MPOBJ(vmval)) {
+      MathPrgm *mp = AS_MPOBJ(vmval);
+
+      if (mp->type != MpTypeCcflib) {
+         error("[empvm] ERROR: MP(%s) is not of type %s. Please file a bug\n",
+               mp_getname(mp), mptype2str(MpTypeCcflib));
+         return Error_EMPRuntimeError;
+      }
+
+      ovfdef = mp->ccflib.ccf;
+   } else {
+      errormsg("[empvm] ERROR: Unexpecte runtime error. Please file a bug\n");
+      return Error_EMPRuntimeError;
+   }
+
    Avar *v = data->v_current;
 
    return avar_extend(ovfdef->args, v);

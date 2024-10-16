@@ -167,9 +167,15 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #endif
 
 #if !defined(__clang__) && (__GNUC__ >= 11)
-#  define MALLOC_ATTR(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
+   #define MALLOC_ATTR(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
+   #define IGNORE_DEALLOC_MISMATCH(EXPR) \
+       _Pragma("GCC diagnostic push"); _Pragma("GCC diagnostic ignored \"-Wmismatched-dealloc\""); \
+       EXPR; \
+       _Pragma("GCC diagnostic pop");
+
 #else
-#  define MALLOC_ATTR(...) __attribute__ ((malloc))
+   #define MALLOC_ATTR(...) __attribute__ ((malloc))
+   #define IGNORE_DEALLOC_MISMATCH(EXPR) EXPR
 #endif
 
 #define MALLOC_ATTR_SIMPLE __attribute__ ((malloc))

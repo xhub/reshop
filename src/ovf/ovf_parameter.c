@@ -15,14 +15,16 @@ int ovf_fill_params(OvfParamList * params, size_t ovf_idx)
    unsigned param_size = *paramdefs->s;
    const OvfParamDef * const * p = paramdefs->p;
 
+   params->size = param_size;
    if (param_size > 0) {
-      params->size = param_size;
       /* CALLOC serves as initialization */
       CALLOC_(params->p, OvfParam, param_size);
 
       for (unsigned i = 0; i < param_size; ++i) {
          params->p[i].def = p[i];
       }
+   } else {
+      params->p = NULL;
    }
 
    return OK;

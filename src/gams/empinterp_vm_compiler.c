@@ -109,7 +109,30 @@ const char * identtype2str(IdentType type)
    return "INVALID IDENTIFIER";
 }
 
-NONNULL static bool chk_ident_idx(const VmData *vmdat, const IdentData *ident)
+// HACK: this should not be here
+static const char *smoothing_scheme_options[] =
+   {"LogSumExp", NULL};
+
+static void smoothing_scheme_setter(void *dat, unsigned idx)
+{
+   assert(idx <= SmoothingOperatorSchemeLast);
+   SmoothingOperatorData *smoothing_operator = dat;
+   smoothing_operator->scheme = idx;
+}
+
+UNUSED static void smoothing_par_dblsetter(void *dat, double val)
+{
+   SmoothingOperatorData *smoothing_operator = dat;
+   smoothing_operator->parameter = val;
+}
+
+static void smoothing_par_uintsetter(void *dat, unsigned pos)
+{
+   SmoothingOperatorData *smoothing_operator = dat;
+   smoothing_operator->parameter_position = pos;
+}
+
+NONNULL DBGUSED static bool chk_ident_idx(const VmData *vmdat, const IdentData *ident)
 {
    switch (ident->type) {
    case IdentSet:
@@ -1217,7 +1240,7 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
       return Error_EMPIncorrectInput;
    }
 
-   if (toktype == TOK_LPAREN) { 
+   if (toktype== TOK_LPAREN) { 
       need_rparent = true;
       S_CHECK(advance(interp, p, &toktype));
       PARSER_EXPECTS(interp, "a GAMS set or NOT", TOK_IDENT, TOK_NOT, TOK_SAMEAS);
@@ -1848,7 +1871,8 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
     * Step 2: parse the expression. We accept param * valfn * variables
     * --------------------------------------------------------------------- */
    bool has_var = false, has_param = false, has_valfn = false, has_ident = false;
-   bool parse_kwd = false;
+   bool parse_kwd = false, has_smooth = false;
+   unsigned p_bck = UINT_MAX;
 
    do {
    S_CHECK(advance(interp, p, &toktype));
@@ -1905,19 +1929,40 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
             S_CHECK(consume_valfn_kwd(interp, p));
 
             /* HACK: there needs to be an abstraction here */
+               //{ GDB_STOP()}
 
+               p2 = *p;
                S_CHECK(peek(interp, &p2, &toktype2));
                if (toktype2 == TOK_DOT) {
                   *p = p2;
                   S_CHECK(advance(interp, p, &toktype2));
                   S_CHECK(parser_expect(interp, "After a valfn, only the smooth operator is valid",
                                         TOK_SMOOTH));
+                  has_smooth = true;
 
                   /* smoothing requires at least one parameter (the value) */
-                  S_CHECK(advance(interp, p, &toktype));
-                  S_CHECK(parser_expect(interp, "After a smooth keyword, an left parenthesis '(' is expected",
-                                        TOK_LPAREN));
+                  //S_CHECK(advance(interp, p, &toktype));
+                  //S_CHECK(parser_expect(interp, "After a smooth keyword, an left parenthesis '(' is expected",
+                  //                      TOK_LPAREN));
+                  //S_CHECK(advance(interp, p, &toktype));
+                  
+                  
+                  OperatorKeyword smoothing_keywords[] = {
+                     {.name = "scheme", .optional = true, .type = OperatorKeywordString,
+                        .position = UINT_MAX, .kwstrs = smoothing_scheme_options, .strsetter = smoothing_scheme_setter},
+                     {.name = "par",    .optional = true, .type = OperatorKeywordScalar,
+                        .position = UINT_MAX, //.dblsetter = smoothing_par_dblsetter,
+                        .uintsetter = smoothing_par_uintsetter },
+                  };
 
+
+                  SmoothingOperatorData smoothing_operator;
+                  smoothing_operator_data_init(&smoothing_operator);
+
+                  S_CHECK(parse_operator_kw_args(interp, p, ARRAY_SIZE(smoothing_keywords),
+                                                 smoothing_keywords, &smoothing_operator));
+
+                  p_bck = smoothing_operator.parameter_position;
 
                   parse_kwd = true;
                }
@@ -1941,6 +1986,10 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 
    // WE need to ensure that all parameters / variables only resolve to scalar quantities
  
+   // HACK: move this around, toards the end of the function
+   /* Consume the delimiter_endloop token */
+   S_CHECK(parser_expect(interp, "end delimiter of loop", delimiter_endloop));
+
    unsigned gidx;
 
    if (has_valfn) {
@@ -1953,9 +2002,10 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
       }
 
       LinkLabels *linklabels;
+      LinkType type = has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
       S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label_valfn.start,
                                   label_valfn.len, label_gmsindices.nargs,
-                                  num_iterators, 0, LinkArcVF, &gidx));
+                                  num_iterators, 0, type, &gidx));
 
       S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
 
@@ -1966,8 +2016,14 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 
       if (parse_kwd) { // only smooth() operator. We assume to be at n.valn.smooth(
                        //                                                         ^ 
-         assert(parser_getcurtoktype(interp) == TOK_LPAREN);
-         TO_IMPLEMENT("Do something");
+         assert(p_bck < UINT_MAX);
+         double dummy;
+         TokenType toktype_dummy;
+         S_CHECK(advance(interp, &p_bck, &toktype_dummy));
+         if (!embmode(interp)) {
+            S_CHECK(parse_identasscalar(interp, &p_bck, &dummy));
+         }
+         S_CHECK(emit_byte(tape, OP_LINKLABELS_KEYWORDS_UPDATE));
       }
 
    }  else {
@@ -2005,9 +2061,6 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    S_CHECK(emit_bytes(tape, OP_LINKLABELS_FINI));
 
    S_CHECK(end_scope(interp, tape));
-
-   /* Consume the delimiter_endloop token */
-   S_CHECK(parser_expect(interp, "end delimiter of loop", delimiter_endloop));
 
    /* ---------------------------------------------------------------------
     * If we are back to the general scope, we execute the VM now

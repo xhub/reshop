@@ -137,7 +137,8 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
 
    ident->ptr = symptr;
 
-   trace_empinterp("[GMD] Lexeme '%s' resolved as a %s\n", sym_name, identtype2str(ident->type));
+   trace_empinterp("[GMD] Lexeme '%s' resolved as a %s of dimension %u\n",
+                   sym_name, identtype2str(ident->type), symdim);
 
   /* ----------------------------------------------------------------------
    * If gmdout is set, we copy sets and parameters (if this hasn't been done yet)

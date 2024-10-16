@@ -1,4 +1,5 @@
 #include "empinterp_symbol_resolver.h"
+#include "apifiles/C/api/dctmcc.h"
 #include "empparser.h"
 #include "empinterp_vm_utils.h"
 #include "equ.h"
@@ -147,6 +148,7 @@ void dct_printuelwithidx(dctHandle_t dct, int uel, unsigned mode)
    char buf[GMS_SSSIZE] = " ";
    char quote = ' ';
 
+   assert(uel < dctNUels(dct));
    dctUelLabel(dct, uel, &quote, buf, sizeof(buf));
    printout(mode, "[%5d] %c%s%c", uel, quote, buf, quote);
 }
@@ -155,6 +157,8 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
 {
    char buf[GMS_SSSIZE] = " ";
    char quote[] = " ";
+
+   assert(uel < dctNUels(dct));
 
    if (uel == 0) {
       printout(mode, "'*'%n", offset);

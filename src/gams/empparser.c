@@ -13,6 +13,7 @@
 #include "empinfo.h"
 #include "empinterp.h"
 #include "empinterp_checks.h"
+#include "empinterp_data.h"
 #include "empinterp_linkbuilder.h"
 #include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
@@ -1142,56 +1143,18 @@ int parser_peekasUEL(Interpreter *interp, unsigned * restrict p, char quote,
    return OK;
 }
 
-typedef enum { OperatorKeywordString, OperatorKeywordScalar } OperatorKeywordType;
-
-typedef void (*setter_operator_optchoice)(void *dat, unsigned idx);
-typedef void (*setter_operator_double)(void *dat, double val);
-
-typedef struct {
-   const char *name;
-   bool optional;
-   OperatorKeywordType type;
-   union {
-      const char **kwstrs;
-   };
-   union {
-   setter_operator_optchoice strsetter;
-      setter_operator_double dblsetter;
-   };
-} OperatorKeyword;
-
 static const char *dual_scheme_options[] = {"fenchel", "epi", NULL};
 
 static const char *dual_domain_options[] = {"subdag", "node", NULL};
 
 
 UNUSED static const OperatorKeyword dual_keywords[] = {
-   {.name = "scheme", .optional = true, .type = OperatorKeywordString, .kwstrs = dual_scheme_options},
-   {.name = "dom",    .optional = true, .type = OperatorKeywordString, .kwstrs = dual_domain_options}
+   {.name = "scheme", .optional = true, .type = OperatorKeywordString,
+      .position = UINT_MAX, .kwstrs = dual_scheme_options},
+   {.name = "dom",    .optional = true, .type = OperatorKeywordString,
+      .position = UINT_MAX, .kwstrs = dual_domain_options}
 };
 
-
-static const char *smoothing_scheme_options[] =
-   {"LogSumExp", NULL};
-
-static void smoothing_scheme_setter(void *dat, unsigned idx)
-{
-   assert(idx <= SmoothingOperatorSchemeLast);
-   SmoothingOperatorData *smoothing_operator = dat;
-   smoothing_operator->scheme = idx;
-}
-
-static void smoothing_par_setter(void *dat, double val)
-{
-   SmoothingOperatorData *smoothing_operator = dat;
-   smoothing_operator->parameter = val;
-}
-
-
-UNUSED static const OperatorKeyword smoothing_keywords[] = {
-   {.name = "scheme", .optional = true, .type = OperatorKeywordString, .kwstrs = smoothing_scheme_options, .strsetter = smoothing_scheme_setter},
-   {.name = "par",    .optional = true, .type = OperatorKeywordScalar, .dblsetter = smoothing_par_setter },
-};
 
 static const char *opkwtype2str(OperatorKeywordType type)
 {
@@ -1228,20 +1191,8 @@ static int opkwstr_notfound(Token *tok, const OperatorKeyword *opkw, UNUSED Oper
    return Error_EMPIncorrectInput;
 }
 
-static void dual_operator_data_init(DualOperatorData *dual_operator)
-{
-   dual_operator->scheme = FenchelScheme;
-   dual_operator->domain = NodeDomain;
-}
-
-UNUSED static void smoothing_operator_data_init(SmoothingOperatorData *smoothing_operator)
-{
-   smoothing_operator->scheme = LogSumExp;
-   smoothing_operator->parameter = NAN;
-}
-
-UNUSED static int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
-                                  unsigned op_kws_size, const OperatorKeyword *op_kws, void *dat)
+int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
+                           unsigned op_kws_size, const OperatorKeyword *op_kws, void *dat)
 {
    TokenType toktype;
   /* ----------------------------------------------------------------------
@@ -1312,6 +1263,7 @@ UNUSED static int parse_operator_kw_args(Interpreter * restrict interp, unsigned
       if (opkw->type != OperatorKeywordScalar) {
          return opkwtypemismatch(tok, opkw, OperatorKeywordScalar);
       }
+         opkw->uintsetter(dat, tok->start - interp->buf);
       break;
       // TODO: check that we indeed has a scalar
    case TOK_IDENT:
@@ -1330,9 +1282,9 @@ UNUSED static int parse_operator_kw_args(Interpreter * restrict interp, unsigned
          return opkwstr_notfound(tok, opkw, OperatorKeywordScalar, &interp->cur);
       }
       } else if (opkw->type == OperatorKeywordScalar) {
-         IdentData ident;
-         RESOLVE_IDENTAS(interp, &ident, "Scalar argument is expected", IdentScalar);
-         opkw->dblsetter(dat, interp->cur.payload.real);
+         //opkw->dblsetter(dat, interp->cur.payload.real);
+         // HACK just save th pointer
+         opkw->uintsetter(dat, tok->start - interp->buf);
       } else {
          return runtime_error(tok->linenr);
       }
@@ -1349,17 +1301,19 @@ UNUSED static int parse_operator_kw_args(Interpreter * restrict interp, unsigned
       S_CHECK(parser_expect(interp, "Closing quote", quotetype));
    }
 
+   if (skipws(buf, p)) { goto _err_missing_rparent; }
+   pos = *p;
+
 //_closing:
    if (buf[pos] != ')') {
-      error("[empparser] ERROR line %u: expecting ')' after operator '%s', got ", interp->linenr, toktype2str(tok->type));
-      if (eof) {
-         errormsg("EOL\n");
-      } else {
-         error("%c", buf[pos]);
-      }
+      error("[empparser] ERROR line %u: expecting ')' after operator '%s', got '%c'\n",
+            interp->linenr, toktype2str(tok->type), buf[pos]);
 
       return Error_EMPIncorrectSyntax;
    }
+
+   /* Consume ')' */
+   (*p)++;
 
    return OK;
 
@@ -1639,7 +1593,7 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
    TokenType toktype = emptok_gettype(tok);
    if (toktype != TOK_IDENT) { goto _exit; }
 
-resolve_as_gms_symbol:
+resolve_as_gms_symbol: ;
    /* TODO: if we support either gdxin or variable creation using ':=', we should
     * look this this up here. For variable creation, we need to have a concept
     * of scope. We want to inherit the variables in the previous scope, and
@@ -1650,6 +1604,18 @@ resolve_as_gms_symbol:
     * scoping, as in a loop/sum we operate over a set, but then each time
     * said set appears, it should be substituted by the elements.
     * */
+
+   // HACK
+   IdentData ident;
+   ident_init(&ident, tok);
+
+   if (!embmode(interp) && resolve_local(interp->compiler, &ident)) {
+      tok->type = ident2toktype(ident.type);
+      if (tok->type == TOK_ERROR) {
+         tok->type = TOK_IDENT;
+      }
+      return OK;
+   }
 
    /* ---------------------------------------------------------------------
     * In this step, we determine if the token is a GAMS object
@@ -2784,9 +2750,10 @@ NONNULL static
 int parse_MPargs_gmsvars_list(Interpreter * restrict interp, unsigned * restrict p,
                               void *ovfdef)
 {
-   if (interp->ops->type != InterpreterOpsImm) {
-      TO_IMPLEMENT("OVF/CCF with empparser in VM mode");
-   }
+   // HACK
+   //if (interp->ops->type != InterpreterOpsImm) {
+   //   TO_IMPLEMENT("OVF/CCF with empparser in VM mode");
+   //}
 
    TokenType toktype = parser_getcurtoktype(interp);
 
@@ -2961,9 +2928,8 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
 
    OvfDef *ovfdef = mp_ccf ? mp_ccf->ccflib.ccf : NULL;
 
-   bool has_lparent = false;
-   if (toktype == TOK_LPAREN) {
-      has_lparent = true;
+   bool has_lparent = toktype == TOK_LPAREN;
+   if (has_lparent) {
       S_CHECK(advance(interp, p, &toktype))
       PARSER_EXPECTS(interp, "expected MP argument to be a variable or node label",
                      TOK_GMS_VAR, TOK_IDENT);
@@ -2990,9 +2956,6 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
             }
 
          }
-
-         S_CHECK(parser_expect(interp, "Closing ')' missing for MP arguments", TOK_RPAREN));
-         S_CHECK(advance(interp, p, &toktype));
       } else {
             // XXX This is wrong
          S_CHECK(parse_MPargs_labels(interp, p, ovfdef));
@@ -3013,6 +2976,17 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       return runtime_error(interp->linenr);
    }
 
+
+   if (has_lparent) {
+
+      S_CHECK(parser_expect(interp, "Closing ')' missing for MP arguments", TOK_RPAREN));
+      S_CHECK(advance(interp, p, &toktype));
+   }
+
+   /* We need this here as c_ccflib_finalize unconditional expects a parameter */
+   const OvfParamDefList *paramsdef;
+   S_CHECK(interp->ops->ovf_paramsdefstart(interp, ovfdef, &paramsdef));
+
    toktype = emptok_gettype(&interp->cur);
    if (toktype == TOK_RPAREN) {
       goto _finalize;
@@ -3023,9 +2997,6 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
      /* ---------------------------------------------------------------------
       * Step 3: Parse CCF kw args as    kw=arg
       * --------------------------------------------------------------------- */
-
-   const OvfParamDefList *paramsdef;
-   S_CHECK(interp->ops->ovf_paramsdefstart(interp, ovfdef, &paramsdef));
 
    while (toktype == TOK_COMMA) {
       if (parser_skipws(interp, p)) goto _err_EOF_fname;

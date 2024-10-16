@@ -69,10 +69,12 @@ SET iter / i1*i5 /;
 
 loop(iter,
 * Where does x go here?
+* TODO: f(s): MP('smin', dist(s,r)) FAILS!
+
 embeddedCode ReSHOP:
 deffn dist(s,r) defdist(s,r)
-f(s): MP('smin',dist(s,r))
-main: min SUM(s, f(s).valfn.smooth(par=theta))) x(r,c)
+f(s): MP('smin', dist(s,r))
+main: min SUM(s, f(s).valfn.smooth(par=theta)) x(r,c)
 endEmbeddedCode
 
 solve cluster using emp;

@@ -44,7 +44,8 @@ typedef enum {
    DualOperatorDomainLast = NodeDomain,
 } DualOperatorDomain;
 
-typedef struct {
+typedef struct dual_operator_data {
+
    DualOperatorScheme scheme;
    DualOperatorDomain domain;
 } DualOperatorData;

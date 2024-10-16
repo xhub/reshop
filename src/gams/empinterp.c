@@ -16,6 +16,7 @@
 #include "mdl.h"
 #include "mdl_gams.h"
 
+#include "dctmcc.h"
 #include "gmdcc.h"
 
 NONNULL
@@ -217,11 +218,11 @@ static int interp_loadgmdsets(Interpreter *interp)
 
    gmdHandle_t gmd = interp->gmd;
    dctHandle_t dct = interp->dct;
+
+   int dct_nuels = dctNUels(dct);
    int nsymbols;
    GMD_CHK(gmdInfo, gmd, GMD_NRSYMBOLS, &nsymbols, NULL, NULL);
 
-   IntArray set;
-   rhp_int_init(&set);
    char setname[GMS_SSSIZE];
 
    trace_empinterp("[empinterp] Loading sets from GMD: ");
@@ -243,6 +244,8 @@ static int interp_loadgmdsets(Interpreter *interp)
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &nrecs, NULL, NULL);
       assert(nrecs > 0);
 
+      IntArray set;
+      rhp_int_init(&set);
       S_CHECK(rhp_int_reserve(&set, nrecs))
 
       void *symiterptr = NULL;
@@ -250,13 +253,20 @@ static int interp_loadgmdsets(Interpreter *interp)
 
       bool has_next;
       do {
-         char uel[GLOBAL_UEL_IDENT_SIZE];
-         GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uel)
-         int uelidx = dctUelIndex(dct, uel);
+         char uelstr[GLOBAL_UEL_IDENT_SIZE];
+         GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uelstr)
+         int uelidx = dctUelIndex(dct, uelstr);
+
          if (uelidx < 0) {
-            error("[empinterp] ERROR: cound't find UEL '%s' in DCT\n", uel);
+            error("[empinterp] ERROR: cound't find UEL '%s' in DCT\n", uelstr);
             gmdFreeSymbolIterator(gmd, symiterptr);
             return Error_GamsCallFailed;
+         }
+
+         if (uelidx > dct_nuels) {
+            error("[empinterp] ERROR: UEL '%s' has index %d in DCT, not in [1,%d]",
+                  uelstr, uelidx, dct_nuels);
+            return Error_RuntimeError;
          }
 
          rhp_int_add(&set, uelidx);

@@ -76,9 +76,10 @@ typedef enum {
    SmoothingOperatorSchemeLast = LogSumExp,
 } SmoothingOperatorScheme;
 
-typedef struct {
+typedef struct smoothing_operator_data {
    SmoothingOperatorScheme scheme;
    double parameter;
+   unsigned parameter_position;
 } SmoothingOperatorData;
 
 
@@ -120,7 +121,7 @@ static inline int gdxsymtype2ident(enum gdxSyType gdxtype, IdentData *ident)
       return OK;
    case dt_par:
       if (dim == 0) { ident->type = IdentScalar; }
-      if (dim == 1) { ident->type = IdentVector; }
+      else if (dim == 1) { ident->type = IdentVector; }
       else { ident->type = IdentParam; }
       return OK;
    case dt_alias:
