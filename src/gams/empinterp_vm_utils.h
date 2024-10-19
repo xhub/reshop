@@ -25,50 +25,54 @@
  */
 
 
-#define MASK_SIGN           ((uint64_t)0x8000000000000000)
-#define MASK_EXPONENT       ((uint64_t)0x7ff0000000000000)
-#define MASK_QUIET          ((uint64_t)0x0008000000000000)
-#define MASK_TYPE           ((uint64_t)0x0007000000000000)
-#define MASK_SIGNATURE      ((uint64_t)0xffff000000000000)
-#define MASK_PAYLOAD_PTR    ((uint64_t)0x0000ffffffffffff)
-#define MASK_PAYLOAD_32     ((uint64_t)0x00000000ffffffff)
+#define MASK_SIGN              ((uint64_t)0x8000000000000000)
+#define MASK_EXPONENT          ((uint64_t)0x7ff0000000000000)
+#define MASK_QUIET             ((uint64_t)0x0008000000000000)
+#define MASK_TYPE              ((uint64_t)0x0007000000000000)
+#define MASK_SIGNATURE         ((uint64_t)0xffff000000000000)
+#define MASK_PAYLOAD_PTR       ((uint64_t)0x0000ffffffffffff)
+#define MASK_PAYLOAD_32        ((uint64_t)0x00000000ffffffff)
 
 
-#define MASK_TYPE_NAN       ((uint64_t)0x0000000000000000)
-#define MASK_TYPE_VALUES    ((uint64_t)0x0001000000000000)
-#define MASK_TYPE_INTEGER   ((uint64_t)0x0002000000000000)
-#define MASK_TYPE_UINTEGER  ((uint64_t)0x0003000000000000)
-#define MASK_TYPE_LOOPVAR   ((uint64_t)0x0004000000000000)
+/* We can only define 7 types */
+#define MASK_TYPE_NAN          ((uint64_t)0x0000000000000000)
+#define MASK_TYPE_VALUES       ((uint64_t)0x0001000000000000)
+#define MASK_TYPE_INTEGER      ((uint64_t)0x0002000000000000)
+#define MASK_TYPE_UINTEGER     ((uint64_t)0x0003000000000000)
+#define MASK_TYPE_LOOPVAR      ((uint64_t)0x0004000000000000)
 /* Is MASK_TYPE needed? */
 /* We can get rid of MASK_TYPE_NULL if needed */
 
+/* We can only define 7 types because of MASK_QUIET */
 #define MASK_TYPE_STRING       ((uint64_t)0x0001000000000000)
 #define MASK_TYPE_MPOBJ        ((uint64_t)0x0002000000000000)
 #define MASK_TYPE_NASHOBJ      ((uint64_t)0x0003000000000000)
 #define MASK_TYPE_OVFOBJ       ((uint64_t)0x0004000000000000)
 #define MASK_TYPE_GMSSYMITER   ((uint64_t)0x0005000000000000)
 #define MASK_TYPE_REGENTRY     ((uint64_t)0x0006000000000000)
-#define MASK_TYPE_ARCOBJ      ((uint64_t)0x0007000000000000)
+// TODO: If we move LinkLabels to their own array storage rather than globals
+// We can kill this as we never read them from the stack
+#define MASK_TYPE_ARCOBJ       ((uint64_t)0x0007000000000000)
 
 // SNAN would be MASK_EXPONENT
-#define QNAN                (MASK_EXPONENT | MASK_QUIET)
+#define QNAN                   (MASK_EXPONENT | MASK_QUIET)
 
-#define SIGNATURE_QNAN       (QNAN)
-#define SIGNATURE_VALUES    (QNAN | MASK_TYPE_VALUES)
-#define SIGNATURE_INTEGER   (QNAN | MASK_TYPE_INTEGER)
-#define SIGNATURE_UINTEGER  (QNAN | MASK_TYPE_UINTEGER)
-#define SIGNATURE_LOOPVAR   (QNAN | MASK_TYPE_LOOPVAR)
+#define SIGNATURE_QNAN         (QNAN)
+#define SIGNATURE_VALUES       (QNAN | MASK_TYPE_VALUES)
+#define SIGNATURE_INTEGER      (QNAN | MASK_TYPE_INTEGER)
+#define SIGNATURE_UINTEGER     (QNAN | MASK_TYPE_UINTEGER)
+#define SIGNATURE_LOOPVAR      (QNAN | MASK_TYPE_LOOPVAR)
 
 /* All pointers do match SIGNATURE_POINTER, and we distinguish a few types */
-#define SIGNATURE_POINTER     (QNAN | MASK_SIGN )
+#define SIGNATURE_POINTER      (QNAN | MASK_SIGN )
 
-#define SIGNATURE_STRING      (SIGNATURE_POINTER | MASK_TYPE_STRING)
-#define SIGNATURE_MPOBJ       (SIGNATURE_POINTER | MASK_TYPE_MPOBJ)
-#define SIGNATURE_NASHOBJ     (SIGNATURE_POINTER | MASK_TYPE_NASHOBJ)
-#define SIGNATURE_OVFOBJ      (SIGNATURE_POINTER | MASK_TYPE_OVFOBJ)
-#define SIGNATURE_GMSSYMITER  (SIGNATURE_POINTER | MASK_TYPE_GMSSYMITER)
-#define SIGNATURE_REGENTRY    (SIGNATURE_POINTER | MASK_TYPE_REGENTRY)
-#define SIGNATURE_ARCOBJ      (SIGNATURE_POINTER | MASK_TYPE_ARCOBJ)
+#define SIGNATURE_STRING       (SIGNATURE_POINTER | MASK_TYPE_STRING)
+#define SIGNATURE_MPOBJ        (SIGNATURE_POINTER | MASK_TYPE_MPOBJ)
+#define SIGNATURE_NASHOBJ      (SIGNATURE_POINTER | MASK_TYPE_NASHOBJ)
+#define SIGNATURE_OVFOBJ       (SIGNATURE_POINTER | MASK_TYPE_OVFOBJ)
+#define SIGNATURE_GMSSYMITER   (SIGNATURE_POINTER | MASK_TYPE_GMSSYMITER)
+#define SIGNATURE_REGENTRY     (SIGNATURE_POINTER | MASK_TYPE_REGENTRY)
+#define SIGNATURE_ARCOBJ       (SIGNATURE_POINTER | MASK_TYPE_ARCOBJ)
 
 
 #define TAG_FALSE           1
@@ -100,7 +104,7 @@
 #define IS_OVFOBJ(value)     (((value) & MASK_SIGNATURE) == SIGNATURE_OVFOBJ)
 #define IS_GMSSYMITER(value) (((value) & MASK_SIGNATURE) == SIGNATURE_GMSSYMITER)
 #define IS_REGENTRY(value)   (((value) & MASK_SIGNATURE) == SIGNATURE_REGENTRY)
-#define IS_ARCOBJ(value)    (((value) & MASK_SIGNATURE) == SIGNATURE_ARCOBJ)
+#define IS_ARCOBJ(value)     (((value) & MASK_SIGNATURE) == SIGNATURE_ARCOBJ)
 
 #define AS_BOOL(value)      ((value) == TRUE_VAL)
 #define AS_NUMBER(value)    (value)
@@ -118,6 +122,9 @@
 #define AS_OVFOBJ(value)     AS_OBJ(OvfDef*, (value))
 #define AS_GMSSYMITER(value) AS_OBJ(void *, (value))
 #define AS_REGENTRY(value)   AS_OBJ(void *, (value))
+
+// TODO: If we move LinkLabels to their own array storage rather than globals
+// We can kill this as we never read them from the stack
 #define AS_ARCOBJ(value)     AS_OBJ(void *, (value))
 
 

@@ -4,12 +4,15 @@
 #include "consts.h"
 #include "ctr_rhp.h"
 #include "ctrdat_rhp.h"
+#include "equ_modif.h"
 #include "equvar_helpers.h"
+#include "lequ.h"
 #include "mathprgm.h"
 #include "mdl.h"
 #include "mdl_rhp.h"
 #include "nltree.h"
 #include "nltree_priv.h"
+#include "rctr_equ_edit_priv.h"
 #include "rmdl_priv.h"
 
 
@@ -138,7 +141,7 @@ int rmdl_dup_equ(Model *mdl, rhp_idx *ei)
  *
  *  @return the status of the operation
  */
-int rmdl_dup_equ_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_no)
+int rmdl_equ_dup_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_no)
 {
    Container *ctr = &mdl->ctr;
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
@@ -176,16 +179,137 @@ int rmdl_dup_equ_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_
    /* Update the rosetta info  */
    cdat->equ_rosetta[ei_src].res.equ = ei_new;
 
-   /* Update the model info  */
+   *ei = ei_new;
+
+   /* Update the model info */
    rhp_idx objequ;
    rmdl_getobjequ_nochk(mdl, &objequ);
    if (objequ == ei_src) {
+
       rmdl_setobjfun(mdl, ei_new);
+
+   } else if (ctr->equmeta) {
+
+      /* -------------------------------------------------------------------
+       * Keep the EMP tree consistent: add the new equation to the MP
+       * ------------------------------------------------------------------- */
+
+      ctr->equmeta[ei_new] = ctr->equmeta[ei_src];
+
+      /* metadata has already been copied in equ_copy_to */
+      EquMeta *emeta = &ctr->equmeta[ei_new];
+      /* We don't want the equation to be marked as deleted */
+      emeta->ppty &= ~EquPptyIsDeleted;
+
+      if (equmeta_is_shared(emeta)) {
+         TO_IMPLEMENT("Shared Equation");
+      }
+
+      mpid_t mpid = emeta->mp_id;
+      if (!mpid_regularmp(mpid)) { return OK; }
+
+      MathPrgm *mp;
+      S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp))
+      
+      EquRole equrole = emeta->role;
+
+      //HACK use of internal MP DS
+      emeta->mp_id = MpId_NA;
+
+      switch (equrole) {
+      case EquObjective:
+         assert(mp->type == MpTypeOpt);
+         S_CHECK(mp_setobjequ(mp, ei_new));
+         break;
+      case EquViFunction: {
+         /* HACK: try to use mp_addvipir*/
+         rhp_idx vi_dual = emeta->dual;
+         if (emeta->ppty & EquPptyHasDualVar) {
+            assert(mdl_valid_vi_(mdl, vi_dual, __func__));
+            VarMeta *vmeta = &ctr->varmeta[vi_dual]; assert(vmeta->dual == ei_src);
+            vmeta->dual = ei_new;
+         }
+         rhp_idx_addsorted(&mp->equs, ei_new);
+         emeta->mp_id = mpid;
+         }
+         break;
+      case EquConstraint:
+         S_CHECK(mp_addconstraint(mp, ei_new));
+         break;
+
+      default:
+         error("[model] ERROR: duplicated equation has role %s. This is not supported yet\n",
+               equrole2str(equrole));
+         return Error_NotImplemented;
+      }
    }
 
-   *ei = ei_new;
-
    return OK;
+}
+
+int rmdl_equ_defmap2map(Model *mdl, Equ **e, rhp_idx defvar)
+{
+  /* ----------------------------------------------------------------------
+   * We want to find defvar in the linear part of the equation, then multiply
+   * the coeff
+   * ---------------------------------------------------------------------- */
+
+   Container *ctr = &mdl->ctr;
+   Equ *e_map = *e; assert(e_map);
+   assert(e_map->object == DefinedMapping); assert(mdl_is_rhp(mdl));
+
+   S_CHECK(rctr_reserve_equs(ctr, 1));
+
+   unsigned pos_dummy;
+   double vi_coeff;
+   Lequ *le = e_map->lequ;
+   S_CHECK(lequ_find(le, defvar, &vi_coeff, &pos_dummy));
+
+   if (pos_dummy == UINT_MAX) {
+      error("[container] ERROR: could not find variable '%s' in equation '%s'",
+            ctr_printvarname(ctr, defvar), ctr_printequname(ctr, e_map->idx));
+      return Error_RuntimeError;
+   }
+
+   double coeff = -1/vi_coeff;
+
+   rhp_idx ei = e_map->idx;
+
+   /* The value of defvar is defined by the equation */
+   S_CHECK(rctr_add_eval_equvar(&mdl->ctr, ei, defvar));
+
+   if (rctr_equ_is_readonly(ctr, ei)) {
+      S_CHECK(rmdl_equ_dup_except(mdl, &ei, 0, defvar));
+      e_map = &ctr->equs[ei];
+      *e = e_map;
+   } else {
+      S_CHECK(equ_rm_var(ctr, e_map, defvar));
+      TO_IMPLEMENT("Deletion without copy");
+      // HACK: update the model representation to reflect the deletion of the variable
+   }
+
+   e_map->object = Mapping;
+
+   if (ctr->varmeta) {
+      VarMeta *vmeta = &ctr->varmeta[defvar];
+
+      mpid_t mpid = vmeta->mp_id;
+      if (mpid_regularmp(mpid)) {
+         MathPrgm *mp;
+         S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp));
+
+         S_CHECK(rhp_idx_rmsorted(&mp->vars, defvar));
+
+         // HACK: USE of internal MP data structures
+         if (mp->type == MpTypeOpt && mp->opt.objvar == defvar) {
+            mp->opt.objvar = IdxNA;
+         }
+
+      }
+
+      }
+
+   return rctr_equ_scal(ctr, e_map, coeff);
 }
 
 /**

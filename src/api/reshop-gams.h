@@ -71,6 +71,16 @@ int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir,
 RHP_PUBLIB
 int rhp_gms_set_solvelink(struct rhp_mdl *mdl, unsigned solvelink);
 
+/* -------------------------------------------------------------------------
+ * Misc functions
+ * ------------------------------------------------------------------------- */
+
+RHP_PUBLIB
+int rhp_rc2gmosolvestat(int rc);
+RHP_PUBLIB
+void rhp_printrcmsg(int rc, void *gev);
+
+
 #undef RHP_PUBLIB
 
 #endif /* RESHOP_GAMS_H */

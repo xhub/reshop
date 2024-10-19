@@ -317,14 +317,14 @@ int empdag_delete(EmpDag *empdag, daguid_t uid) NONNULL;
  * -------------------------------------------------------------------------- */
 
 int empdag_nash_getchildren(const EmpDag *empdag, nashid_t nashid,
-                           DagUidArray *mps) WRITE_ONLY(3) NONNULL;
+                           DagUidArray **mps) WRITE_ONLY(3) NONNULL;
 
 
 const char *empdag_getmpname(const EmpDag *empdag, mpid_t mpid);
 const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid);
 const char *empdag_getnashname(const EmpDag *empdag, nashid_t nashid);
 const char *empdag_getnashname2(const EmpDag *empdag, nashid_t nashid);
-const struct rhp_empdag_arcVF* empdag_find_edgeVF(const EmpDag *empdag, mpid_t mpid_parent,
+const struct rhp_empdag_arcVF* empdag_find_Varc(const EmpDag *empdag, mpid_t mpid_parent,
                                             mpid_t mpid_child) NONNULL;
 
 /* --------------------------------------------------------------------------

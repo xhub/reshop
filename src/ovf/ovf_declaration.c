@@ -31,6 +31,7 @@ static const char * ovf_synonyms_str(const char *name)
    return NULL;
 }
 
+// TODO: use Lexeme?
 static const char * ovf_synonyms_token(const char *start, unsigned len)
 {
   size_t i = 0;

@@ -5,6 +5,7 @@
 #include "empdag_uid.h"
 #include "empinterp.h"
 #include "macros.h"
+#include "mathprgm_data.h"
 #include "printout.h"
 
 LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len,
@@ -158,20 +159,51 @@ void linklabel_free(LinkLabel *link)
    FREE(link);
 }
 
-DualLabel* dual_label_new(const char *identname, unsigned identname_len, uint8_t dim, mpid_t mpid_dual)
+DualsLabel* dualslabel_new(const char *label, unsigned label_len, uint8_t dim, uint8_t num_vars)
+{
+   DualsLabel* dualslabel;
+   CALLOCBYTES_EXIT_NULL(dualslabel, DualsLabel, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
+
+   dualslabel->label = label;
+   dualslabel->label_len = label_len;
+
+   unsigned max_children = 3;
+
+   MALLOC_EXIT_NULL(dualslabel->uels_var, int, (size_t)max_children*num_vars); 
+   MALLOC_EXIT_NULL(dualslabel->opdat, DualOperatorData, max_children); 
+ 
+   return dualslabel;
+
+_exit:
+   IGNORE_DEALLOC_MISMATCH(dualslabel_free(dualslabel));
+
+   return NULL;
+}
+
+int dualslabel_add(DualsLabel* duals_label, mpid_t mpid_dual, int *uels, DualOperatorData opdat)
+{
+   TO_IMPLEMENT("TBD");
+}
+
+void dualslabel_free(DualsLabel *dualslabel)
+{
+   if (!dualslabel) { return; }
+
+   free(dualslabel->uels_var);
+   free(dualslabel->opdat);
+   mpidarray_empty(&dualslabel->mpid_uals);
+   free(dualslabel);
+}
+
+DualLabel* dual_label_new(const char *label, unsigned label_len, uint8_t dim, mpid_t mpid_dual)
 {
    DualLabel *dual;
    MALLOCBYTES_NULL(dual, DualLabel, sizeof(DualLabel) + (sizeof(int) * dim));
 
    dual->dim = dim;
-   dual->label_len = identname_len;
+   dual->label_len = label_len;
    dual->mpid_dual = mpid_dual;
-   dual->label = identname;
+   dual->label = label;
 
    return dual;
-}
-
-void dual_label_free(DualLabel *dual)
-{
-   free(dual);
 }

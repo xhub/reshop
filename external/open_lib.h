@@ -34,6 +34,16 @@
 void* open_library(const char* lib_name, int flags);
 
 /**
+ *  @brief open a library and return an handle (casted as void*). Does not error
+ *
+ *  @param lib_name  name of the library
+ *  @param flags     additional flags (for dlopen)
+ *
+ *  @return          the handle to the library
+ */
+void* open_library_nofail(const char* lib_name, int flags);
+
+/**
  *  @brief get the address of a function in an already opened lib
  *
  *  @param handle  plugin handle to the library

@@ -57,7 +57,7 @@ void varmeta_init(VarMeta *vmd)
    vmd->mp_id = MpId_NA;
 }
 
-const char* equrole_name(EquRole role)
+const char* equrole2str(EquRole role)
 {
    switch (role) {
    case EquUndefined:
@@ -73,7 +73,7 @@ const char* equrole_name(EquRole role)
    }
 }
 
-const char* varrole_name(VarRole type)
+const char* varrole2str(VarRole type)
 {
    switch (type) {
    case VarUndefined:
@@ -118,7 +118,7 @@ void varmeta_print(const VarMeta * restrict vmeta, rhp_idx vi, const Model *mdl,
                    unsigned mode, unsigned offset)
 {
    printout(mode, "%*sVariable '%s' has type %s\n", offset, "",
-            mdl_printvarname(mdl, vi), varrole_name(vmeta->type));
+            mdl_printvarname(mdl, vi), varrole2str(vmeta->type));
 
    VarPptyType ppty = vmeta->ppty;
    printout(mode, "%*sVariable '%s' has properties: %s", offset, "",
@@ -143,6 +143,6 @@ void equmeta_rolemismatchmsg(const Container *ctr, rhp_idx ei, EquRole actual,
                              EquRole expected, const char *fn)
 {
    error("%s :: ERROR: the equation %s has type %s. It should be %s\n", fn,
-         ctr_printequname(ctr, ei), equrole_name(actual),
-         equrole_name(expected));
+         ctr_printequname(ctr, ei), equrole2str(actual),
+         equrole2str(expected));
 }

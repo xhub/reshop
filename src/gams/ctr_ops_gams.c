@@ -72,6 +72,8 @@ static void gams_deallocdata(Container *ctr)
 {
    struct ctrdata_gams *gms = ctr->data;
 
+   if (!gms) { return; }
+
    if (!gms->initialized) {
       FREE(gms);
       ctr->data = NULL;

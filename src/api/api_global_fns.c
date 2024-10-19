@@ -17,6 +17,7 @@ const char* rhp_version(void)
   return rhp_git_hash;
 }
 
+
 void rhp_show_stackinfo(unsigned char val)
 {
   if (val) {

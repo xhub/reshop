@@ -107,18 +107,6 @@ model superquantile /all/;
 
 solve superquantile min obj using emp;
 
-file res / "superquantile_%reformulation%_%gams.nlp%.out" /;
-put res;
-res.nd=10;
-res.nw=10;
-res.ap=0;
-put "x = ";
-loop(j, put x.l(j); put " ";);
-put / "obj = " obj.l;
-put / "time = " superquantile.resUsd;
-putclose;
-
-
 PARAMETERS x_l(j), x_m(j);
 SCALAR tol /1e-6/;
 
@@ -170,6 +158,19 @@ deffn phi(i) defphi(i)
 cvar: MP("cvarup", phi(i), tail=tail)
 main: min cvar.objfn x(j)
 equil: vi main.kkt() cvar.kkt()
+endEmbeddedCode
+
+reset(x)
+solve superquantile_EC using emp;
+
+abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
+abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
+
+EmbeddedCode ReSHOP:
+deffn phi(i) defphi(i)
+cvar: MP("cvarup", phi(i), tail=tail)
+main: min cvar.objfn x(j)
+equil: Nash(main,cvar)
 endEmbeddedCode
 
 reset(x)

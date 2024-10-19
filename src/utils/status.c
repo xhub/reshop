@@ -6,6 +6,7 @@
 
 #define DEFINE_ERRMSGS() \
 ERRMSG(OK, "OK") \
+ERRMSG(Error_BugPleaseReport, "Bug encountered. Please report.") \
 ERRMSG(Error_DimensionDifferent, "DimensionDifferent") \
 ERRMSG(Error_DuplicateValue, "DuplicateValue") \
 ERRMSG(Error_EMPIncorrectInput, "Invalid EMP input") \

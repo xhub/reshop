@@ -116,7 +116,7 @@ NONNULL static inline bool valid_linktype(LinkType type)
    return type <= LinkTypeLast;
 }
 
-NONNULL static inline bool valid_arcVF(const ArcVFData *arc)
+NONNULL static inline bool valid_Varc(const ArcVFData *arc)
 {
    return arc->type != ArcVFUnset;
 }
@@ -228,7 +228,7 @@ int arcVFb_mul_arcVFb(ArcVFData *arcVF1, const ArcVFData *arcVF2)
 NONNULL static inline
 int arcVFb_mul_arcVF(ArcVFData *edgeVF1, const ArcVFData *edgeVF2)
 {
-   assert(valid_arcVF(edgeVF1) && valid_arcVF(edgeVF2));
+   assert(valid_Varc(edgeVF1) && valid_Varc(edgeVF2));
 
    switch (edgeVF2->type) {
    case ArcVFBasic:
@@ -243,7 +243,7 @@ int arcVFb_mul_arcVF(ArcVFData *edgeVF1, const ArcVFData *edgeVF2)
 NONNULL static inline
 int arcVF_mul_arcVF(ArcVFData *arcVF1, const ArcVFData *arcVF2)
 {
-   assert(valid_arcVF(arcVF1) && valid_arcVF(arcVF2));
+   assert(valid_Varc(arcVF1) && valid_Varc(arcVF2));
 
    switch (arcVF1->type) {
    case ArcVFBasic:
@@ -315,7 +315,7 @@ int arcVFb_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double * rest
 NONNULL static inline
 int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double *vals)
 {
-   assert(valid_arcVF(arcVF));
+   assert(valid_Varc(arcVF));
 
    switch (arcVF->type) {
    case ArcVFBasic:
@@ -333,7 +333,7 @@ unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl);
 NONNULL static inline
 unsigned arcVF_getnumcons(ArcVFData *arc, const Model *mdl)
 {
-   assert(valid_arcVF(arc));
+   assert(valid_Varc(arc));
 
    switch (arc->type) {
    case ArcVFBasic:
@@ -358,7 +358,7 @@ bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl);
 NONNULL static inline
 bool arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
 {
-   assert(valid_arcVF(arc));
+   assert(valid_Varc(arc));
 
    switch (arc->type) {
    case ArcVFBasic:
@@ -374,7 +374,7 @@ int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new);
 NONNULL static inline
 int arcVF_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new)
 {
-   assert(valid_arcVF(arc));
+   assert(valid_Varc(arc));
 
    switch (arc->type) {
    case ArcVFBasic:
@@ -390,7 +390,7 @@ bool arcVFb_has_abstract_objfunc(const ArcVFData *arc);
 NONNULL static inline
 bool arcVF_has_abstract_objfunc(const ArcVFData *arc)
 {
-   assert(valid_arcVF(arc));
+   assert(valid_Varc(arc));
 
    switch (arc->type) {
    case ArcVFBasic:

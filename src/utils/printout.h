@@ -14,8 +14,10 @@ void printout(unsigned mode, const char *format, ...) FORMAT_CHK(2,3);
 void printstr(unsigned mode, const char *str);
 void logging_syncenv(void);
 
-#define error(format, ...) printout(PO_ERROR, format, __VA_ARGS__)
-#define errormsg(msg)      printstr(PO_ERROR, msg)
+#define error(format, ...)   printout(PO_ERROR, format, __VA_ARGS__)
+#define errormsg(msg)        printstr(PO_ERROR, msg)
+#define errbug(format, ...)  printout(PO_ERROR, format " Please report his as a bug\n", __VA_ARGS__)
+#define errbugmsg(format)    printout(PO_ERROR, format " Please report his as a bug\n")
 
 static inline int error_runtime(void)
 {

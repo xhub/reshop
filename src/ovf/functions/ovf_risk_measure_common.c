@@ -19,7 +19,7 @@ const struct ovf_param_def cvar_tail = {
 };
 
 const struct ovf_param_def ecvar_lambda = {
-   .name = "cvar_weight",
+   .name = "risk_wt",
    .help = "Level ",
    .mandatory = true,
    .allow_data = true,

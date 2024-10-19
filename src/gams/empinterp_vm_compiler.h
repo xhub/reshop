@@ -58,6 +58,8 @@ int empvm_finalize(Interpreter *interp) NONNULL;
 int c_switch_to_compmode(Interpreter *interp, bool *switched) NONNULL;
 int c_switch_to_immmode(Interpreter *interp) NONNULL;
 
+int hack_scalar2vmdata(Interpreter *interp, unsigned idx) NONNULL;
+
 #endif // !EMPPARSER_VM_COMPILER_H
 
 

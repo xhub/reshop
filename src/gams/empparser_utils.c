@@ -79,7 +79,7 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
       gmsindices->num_sets++;
       break;
    case IdentLoopIterator:
-      gmsindices->num_iterators++;
+      gmsindices->num_loopiterators++;
       break;
    default:
       return runtime_error(interp->linenr);

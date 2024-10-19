@@ -91,8 +91,8 @@ typedef struct var_meta {
    mpid_t mp_id;                  /**< mathematical program owning this var  */
 } VarMeta;
 
-const char* equrole_name(EquRole role);
-const char* varrole_name(VarRole type);
+const char* equrole2str(EquRole role);
+const char* varrole2str(VarRole type);
 void equmeta_rolemismatchmsg(const Container *ctr, rhp_idx ei, EquRole actual,
                              EquRole expected, const char *fn) NONNULL;
 
@@ -111,17 +111,21 @@ static inline unsigned vmd_basictype(VarPptyType ppty) {
    return ppty & VarPptyBasicMask;
 }
 
-static inline bool equmeta_hasdual(struct equ_meta *emd)
+NONNULL static inline bool equmeta_hasdual(struct equ_meta *emd)
 {
    return emd->role == EquViFunction || emd->ppty == EquPptyHasDualVar;
 }
 
-static inline bool var_is_defined_objvar(VarMeta *vmeta)
+NONNULL static inline bool var_is_defined_objvar(VarMeta *vmeta)
 {
    unsigned basic_type = vmd_basictype(vmeta->ppty);
 
    return (basic_type == (VarIsExplicitlyDefined | VarIsObjMin) ||
            basic_type == (VarIsExplicitlyDefined | VarIsObjMax));
+}
+
+NONNULL static inline bool equmeta_is_shared(EquMeta *emeta) {
+   return emeta->ppty & (EquPptyIsSharedVi | EquPptyIsSharedGnep);
 }
 
 

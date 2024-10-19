@@ -90,14 +90,14 @@ static inline int mp_addvarchk(MathPrgm *mp, rhp_idx vi)
    if (mp2_id != MpId_NA) {
       EmpDag *empdag = &mp->mdl->empinfo.empdag;
       if (mp2_id != mp->id) {
-         error("[empdag] ERROR: trying to add variable '%s' (#%u) to MP '%s', "
+         error("[empdag] ERROR: trying to add variable '%s' (#%u) to MP('%s'), "
                "but it already belongs to MP '%s'.\n Shared variable are not "
                "supported yet.\n", ctr_printvarname(&mp->mdl->ctr, vi), vi,
                empdag_getmpname(empdag, mp->id),
                empdag_getmpname(empdag, mp2_id));
       } else {
-          error("[empdag] ERROR: variable '%s' (#%u) already belongs to MP '%s',"
-                "but it was tried to be added again.\n",
+          error("[empdag] ERROR: variable '%s' (#%u) already belongs to MP('%s'),"
+                " and it was supposed to be added again to the same MP node.\n",
                 ctr_printvarname(&mp->mdl->ctr, vi), vi,
                 empdag_getmpname(empdag, mp->id));
       }
@@ -457,6 +457,7 @@ int mp_setobjequ_internal(MathPrgm *mp, rhp_idx objequ)
    mp->opt.objequ = objequ;
    _setequrole(mp, objequ, EquObjective);
 
+   // HACK: this can create havoc. Should not be done. Try to delete
    rhp_idx objvar = mp->opt.objvar;
    if (valid_vi(objvar)) {
       _addvarbasictype(mp, objvar, VarIsExplicitlyDefined);
@@ -800,8 +801,8 @@ int mp_finalize(MathPrgm *mp)
    unsigned type, cone;
    S_CHECK(ctr_getequtype(&mp->mdl->ctr, objequ, &type, &cone));
    if (type != Mapping) {
-      error("[MP] ERROR: In MP(%.*s) (ID #%u) objequ has type %s, should be %s. ",
-            mp_fmtargs(mp), equtype_name(type), equtype_name(Mapping));
+      error("[MP] ERROR: In MP(%s) objequ '%s' has type %s, should be %s. ",
+            mp_getname(mp), mdl_printequname(mp->mdl, objequ), equtype_name(type), equtype_name(Mapping));
       errormsg("If there is an objective variable, it should be added to ");
       errormsg("the MP *before* the objective equation\n");
       return Error_EMPRuntimeError;

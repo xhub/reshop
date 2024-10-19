@@ -54,7 +54,7 @@ enum _dag_idents {
 
 typedef struct gms_indices_data {
    uint8_t nargs;
-   uint8_t num_iterators;
+   uint8_t num_loopiterators;                /**< Number of loop iterator */
    uint8_t num_sets;
    uint8_t num_localsets;
    IdentData idents[GMS_MAX_INDEX_DIM];
@@ -252,12 +252,12 @@ typedef struct linklabels {
    unsigned num_children;
    unsigned max_children;  /**< Max number of children  */
    daguid_t daguid_parent; /**< daguid ot the parent */
-   const char *label;      /**< Basename of the parent */
+   const char *label;      /**< Label                 */
    int *uels_var;          /**< uel_var[num_var] per child */
    rhp_idx *vi;            /**< Optional variable index    */
    double *coeff;          /**< Optional coefficient       */
    void **extras;           /**< extra objects              */
-   int data[]; /* Layout: uels[dim] + pos[num_vars]*/
+   int data[];              /**< Layout: uels[dim] + pos[num_vars]*/
 } LinkLabels;
 
 typedef struct linklabel {
@@ -270,6 +270,19 @@ typedef struct linklabel {
    rhp_idx vi;
    int uels[] __counted_by(dim);
 } LinkLabel;
+
+/** The DualLabels data structure links EmpDag record with mpids.
+ * Given thelabel(...), we link it to already created mpids */
+typedef struct dual_labels {
+   uint8_t dim;
+   uint8_t num_var;
+   uint16_t label_len;       /**< label length */
+   const char *label;        /**< Basename of the parent */
+   int *uels_var;            /**< uel_var[num_var] per child */
+   DualOperatorData *opdat;  /**< Data for the operation */
+   MpIdArray mpid_uals;      /**< Arrays of mp duals. Contains the length data */
+   int data[];               /**< Layout: uels[dim] + pos[num_vars]*/
+} DualsLabel;
 
 typedef struct dual_label {
    uint8_t dim;
@@ -290,6 +303,12 @@ typedef struct linklabel2arc {
    unsigned max;
    LinkLabel **arr;
 } LinkLabel2Arc;
+
+typedef struct DualsLabelArray {
+   unsigned len;
+   unsigned max;
+   DualsLabel **arr;
+} DualsLabelArray;
 
 typedef struct DualLabelArray {
    unsigned len;
@@ -315,10 +334,18 @@ typedef struct DualLabelArray {
 #include "array_generic.inc"
 
 #define RHP_LOCAL_SCOPE
-#define RHP_ARRAY_PREFIX dual_labels
+#define RHP_ARRAY_PREFIX dual_label
 #define RHP_ARRAY_TYPE DualLabelArray
 #define RHP_ELT_FREE FREE
 #define RHP_ELT_TYPE DualLabel*
+#define RHP_ELT_INVALID NULL
+#include "array_generic.inc"
+
+#define RHP_LOCAL_SCOPE
+#define RHP_ARRAY_PREFIX dualslabel_arr
+#define RHP_ARRAY_TYPE DualsLabelArray
+#define RHP_ELT_FREE dualslabel_free
+#define RHP_ELT_TYPE DualsLabel*
 #define RHP_ELT_INVALID NULL
 #include "array_generic.inc"
 
@@ -402,6 +429,7 @@ typedef struct interpreter {
 
    LinkLabels2Arcs linklabels2arcs;
    LinkLabel2Arc linklabel2arc;
+   DualsLabelArray dualslabel;
    DualLabelArray dual_label;
 
    /* Other dynamic data */

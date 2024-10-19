@@ -288,7 +288,7 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
       S_CHECK(mpidarray_add(&empdag->fooc.src, mpid_src));
       S_CHECK(mpidarray_add(&empdag->fooc.vi, mpid_vi));
 
-      mp_operator_kkt(mp_src);
+      S_CHECK(mp_operator_kkt(mp_src));
 
       return OK;
    }

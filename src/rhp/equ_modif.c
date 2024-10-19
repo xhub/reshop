@@ -1014,6 +1014,7 @@ int equ_switch_var_nl(Container *ctr, Equ *e, rhp_idx vi)
  *
  *  @return      the error code
  */
+// HACK : this should be a rctr function
 int equ_rm_var(Container *ctr, Equ *e, rhp_idx vi)
 {
    double dummy = NAN;
@@ -1029,6 +1030,7 @@ int equ_rm_var(Container *ctr, Equ *e, rhp_idx vi)
 
    lequ_delete(e->lequ, pos);
 
+   // HACK: what about the MP
    S_CHECK(cmat_equ_rm_var(ctr, e->idx, vi));
 
    assert(e->lequ && !lequ_debug_hasvar(e->lequ, vi));

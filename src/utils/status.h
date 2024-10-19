@@ -3,9 +3,9 @@
 
 const char *status_descr(int status);
 
-
 enum status {
    OK                          = 0,
+   Error_BugPleaseReport,
    Error_DimensionDifferent,
    Error_DuplicateValue,
    Error_EMPIncorrectInput,

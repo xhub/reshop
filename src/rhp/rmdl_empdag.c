@@ -500,6 +500,12 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       rhp_idx objequ_big = mp_getobjequ(mp_big);
 
       if (valid_vi(objvar_big) && valid_ei(objequ_big)) {
+         // HACK: investigate is something cleaner can be done ...
+         // This is needed since the replacement of the objequ in
+         // rmdl_equ_dup_except wil update the MP owning the objequ ...
+         emeta[objequ_big].mp_id = mpid_big;
+         vmeta[objvar_big].mp_id = mpid_big;
+
          S_CHECK(rmdl_mp_objequ2objfun(mdl, mp_big, objvar_big, objequ_big));
       }
 

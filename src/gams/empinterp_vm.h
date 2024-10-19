@@ -87,12 +87,19 @@ typedef enum OpCode {
    OP_LINKLABELS_SETFROM_LOOPVAR,
    OP_LINKLABELS_STORE,
    OP_LINKLABELS_FINI,
+   OP_DUAL_LABELS_STORE,
+   OP_SCALAR_SYMBOL_TRACKER_INIT,
+   OP_SCALAR_SYMBOL_TRACKER_CHECK,
    OP_SET_DAGUID_FROM_REGENTRY,
+   OP_HACK_SCALAR2VMDATA,
    OP_END,
    OP_MAXCODE,
 } EmpVmOpCode;
 
+
 #define NAN_BOXING
+
+
 #ifdef NAN_BOXING
 
 typedef uint64_t VmValue;
@@ -182,7 +189,18 @@ typedef struct arcvfobj_array {
 #define RHP_ELT_INVALID ((ArcVFObj){.id_parent = MpId_NA, .id_child = MpId_NA})
 #include "array_generic.inc"
 
+/** Help ensure that exactly 1 record of a symbol has been read */
+typedef enum {
+   ScalarSymbolInactive,  /**<  No tracking is happening    */
+   ScalarSymbolZero,      /**< No Symbol has been read yet  */
+   ScalarSymbolRead,      /**< A symbol has been read       */
+} ScalarSymbolStatus;
+
+
 typedef struct {
+   ScalarSymbolStatus scalar_tracker; /**< Tracker to ensure 1 record is read */
+
+   /* data for reading symbols (equations, variables, sets, parameters) */
    Aequ e;
    Avar v;
    Aequ e_extend;
@@ -195,13 +213,14 @@ typedef struct {
    double dval;
    unsigned inrecs;
    unsigned dnrecs;
-   ArcVFObjArray arcvfobjs;
-   daguid_t uid_grandparent;    /**< uid of the parent node                */
-   daguid_t uid_parent;         /**< uid of the parent node                */
-   int *linklabel_ws;  /* why is this not iscratch ?*/
 
    Aequ *e_current;
    Avar *v_current;
+
+   ArcVFObjArray arcvfobjs;
+   daguid_t uid_grandparent;    /**< uid of the grand parent node            */
+   daguid_t uid_parent;         /**< uid of the parent node                  */
+   int *linklabel_ws;  /* why is this not iscratch ?*/
 
    /* Borrowed data follow */
    Model *mdl;
@@ -213,6 +232,7 @@ typedef struct {
    LinkLabels *linklabels;
    LinkLabels2Arcs *linklabels2arcs;
    LinkLabel2Arc *linklabel2arc;
+   DualsLabelArray *dual_labels;
 } VmData;
 
 typedef int (*empapi)(VmData *data, unsigned argc, const VmValue *values);

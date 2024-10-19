@@ -964,7 +964,7 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
 
    LinkLabels *linklabels;
    uint8_t dim = indices->nargs;
-   uint8_t num_vars = indices->num_sets + indices->num_localsets;
+   uint8_t num_vars = indices->num_sets + indices->num_localsets + indices->num_loopiterators;
    unsigned gidx;
    S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label, label_len, dim,
                               num_vars, 0, linktype, &gidx));
@@ -1478,7 +1478,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
 
    uint8_t num_iterators = gmsindices->num_localsets + gmsindices->num_sets;
    if (num_iterators == 0) {
-      assert(gmsindices->num_iterators > 0);
+      assert(gmsindices->num_loopiterators > 0);
       S_CHECK(emit_bytes(tape, OP_LINKLABELS_DUP));
       S_CHECK(EMIT_GIDX(tape, linklabels_gidx));
 
@@ -1870,7 +1870,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    /* ---------------------------------------------------------------------
     * Step 2: parse the expression. We accept param * valfn * variables
     * --------------------------------------------------------------------- */
-   bool has_var = false, has_param = false, has_valfn = false, has_ident = false;
+   bool has_var = false, has_param = false, has_valfn = false;
    bool parse_kwd = false, has_smooth = false;
    unsigned p_bck = UINT_MAX;
 
@@ -1897,21 +1897,20 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
       has_param = true;
       break;
    case TOK_IDENT: {
-      if (has_ident) {
-         error("[empinterp] ERROR line %u: only one identifier is allowed in a %s "
-               "statement\n", interp->linenr, toktype2str(TOK_SUM));
-         return Error_EMPIncorrectInput;
-      }
-      has_ident = true;
-
       IdentData ident;
       // HACK
       S_CHECK(interp->ops->resolve_tokasident(interp, &ident));
 
+      // HACK
       if (ident.type == IdentNotFound) {
          /* ----------------------------------------------------------------------
           * We expect the identifier to be a label, followed by a valfn
           * ---------------------------------------------------------------------- */
+          if (has_valfn) {
+             error("[empinterp] ERROR line %u: only one value function (valFn) is allowed in a %s "
+                   "statement\n", interp->linenr, toktype2str(TOK_SUM));
+             return Error_EMPIncorrectInput;
+          }
           has_valfn = true;
 
           tok2lexeme(&interp->cur, &label_valfn);
@@ -1970,6 +1969,13 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 
           } else {
 
+          if (has_param) {
+             error("[empinterp] ERROR line %u: only one parameter is allowed in a %s "
+                   "statement\n", interp->linenr, toktype2str(TOK_SUM));
+             return Error_EMPIncorrectInput;
+          }
+          has_param = true;
+
            double dummyval;
            S_CHECK(parse_identasscalar(interp, p, &dummyval));
           }
@@ -2007,9 +2013,10 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
                               label_valfn.len, linktype, &label_gmsindices,
                               &loopiters, &gidx));
 
-      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
+      uint8_t num_vars = label_gmsindices.num_sets + label_gmsindices.num_localsets + label_gmsindices.num_loopiterators;
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_vars));
 
-      for (unsigned i = 0; i < num_iterators; ++i) {
+      for (unsigned i = 0; i < num_vars; ++i) {
          S_CHECK(emit_byte(tape, iterators.iters[i].iter_lidx));
       }
 
@@ -3325,4 +3332,21 @@ int c_switch_to_immmode(Interpreter *interp)
 void empvm_compiler_setgmd(Interpreter * restrict interp)
 {
    interp->compiler->vm->data.gmd = interp->gmd;
+}
+
+int hack_scalar2vmdata(Interpreter *interp, unsigned idx)
+{
+   assert(interp->ops->type == InterpreterOpsCompiler);
+   assert(idx < GIDX_MAX);
+
+   Compiler *c = interp->compiler;
+   EmpVm * restrict vm = c->vm;
+   Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
+   Tape * const tape = &tape_;
+
+
+   S_CHECK(emit_byte(tape, OP_HACK_SCALAR2VMDATA));
+   S_CHECK(EMIT_GIDX(tape, idx));
+
+   return OK;
 }

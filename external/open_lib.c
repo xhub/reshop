@@ -35,15 +35,16 @@ typedef void* PluginHandle;
 #include "open_lib.h"
 #include "printout.h"
 
-void* open_library(const char* lib_name, int flags)
+static void* open_library_priv(const char* lib_name, int flags, bool doprint)
 {
   void* HandleRes;
 
 #ifdef _WIN32
   HandleRes = (void*) LoadLibrary(lib_name);
-  if (!HandleRes)
+  if (!HandleRes && doprint)
   {
     int err = (int)GetLastError();
+
     error("[open_library] ERROR: LoadLibrary error number %d while trying to open %s\n", err, lib_name);
   }
 
@@ -68,12 +69,22 @@ void* open_library(const char* lib_name, int flags)
 
   HandleRes = dlopen(lib_name, mode);
 
-  if (!HandleRes) {
+  if (!HandleRes && doprint) {
     error("[open_library] ERROR: dlopen error '%s while trying to open library '%s'\n", dlerror(), lib_name);
   }
 #endif
 
   return HandleRes;
+}
+
+void *open_library(const char* lib_name, int flags)
+{
+   return open_library_priv(lib_name, flags, true);
+}
+
+void *open_library_nofail(const char* lib_name, int flags)
+{
+   return open_library_priv(lib_name, flags, false);
 }
 
 void* get_function_address(void* handle, const char* func)

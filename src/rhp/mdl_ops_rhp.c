@@ -5,7 +5,6 @@
 #include "ctr_rhp_add_vars.h"
 #include "ctrdat_gams.h"
 #include "empinfo.h"
-#include "gams_solve.h"
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
 #include "filter_ops.h"
@@ -18,11 +17,9 @@
 #include "ctrdat_rhp_priv.h"
 #include "mdl_priv.h"
 #include "mdl_rhp.h"
-#include "nltree.h"
-#include "pool.h"
 #include "printout.h"
 #include "reshop_solvers.h"
-#include "rhp_alg.h"
+#include "rctr_equ_edit_priv.h"
 #include "rhp_fwd.h"
 #include "rmdl_gams.h"
 #include "rmdl_data.h"
@@ -747,7 +744,6 @@ int ensure_newobjfun(Model *mdl, Fops *fops, rhp_idx objvar, rhp_idx *objequ,
                      Equ **e_obj)
 {
    rhp_idx lobjequ = *objequ;
-   S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
 
   /* ------------------------------------------------------------------------
    * If objequ points to a valid equation, then we check that the objvar
@@ -755,6 +751,7 @@ int ensure_newobjfun(Model *mdl, Fops *fops, rhp_idx objvar, rhp_idx *objequ,
    * ------------------------------------------------------------------------ */
 
    if (!valid_ei(lobjequ) || (fops && !fops->keep_equ(fops->data, lobjequ))) {
+      S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
       S_CHECK(rctr_add_equ_empty(&mdl->ctr, &lobjequ, e_obj, Mapping, CONE_NONE));
       assert(valid_ei(lobjequ));
       *objequ = lobjequ;
@@ -775,23 +772,16 @@ int ensure_newobjfun(Model *mdl, Fops *fops, rhp_idx objvar, rhp_idx *objequ,
       return Error_IndexOutOfRange;
    }
 
-   S_CHECK(rmdl_dup_equ_except(mdl, objequ, 0, objvar));
+   S_CHECK(rmdl_equ_dup_except(mdl, objequ, 0, objvar));
+
    lobjequ = *objequ;
    Equ *e = &mdl->ctr.equs[lobjequ];
    *e_obj = e;
    e->object = Mapping;
 
    double coeff_inv = -1./objvar_coeff;
-   S_CHECK(lequ_scal(e->lequ, coeff_inv));
-   if (e->tree && e->tree->root) {
-      S_CHECK(nltree_scal(&mdl->ctr, e->tree, coeff_inv));
-   }
-   S_CHECK(cmat_scal(&mdl->ctr, e->idx, coeff_inv));
 
-   double cst = equ_get_cst(e);
-   equ_set_cst(e, cst*coeff_inv);
-
-   return OK;
+   return rctr_equ_scal(&mdl->ctr, e, coeff_inv);
 }
 
 /**
@@ -1083,8 +1073,9 @@ int rmdl_mp_objequ2objfun(Model *mdl, MathPrgm *mp, rhp_idx objvar, rhp_idx obje
    S_CHECK(check_var_is_really_deleted(ctr, fops, objvar));
    /* TODO ensure that objvar values are set  */
 
+   // HACK: check the following
    S_CHECK(mp_setobjvar(mp, IdxNA));
-   S_CHECK(mp_setobjequ(mp, objequ));
+   assert(mp->opt.objequ == objequ);
    trace_process("[process] MP(%s): objvar '%s' removed; objequ is now '%s'\n",
                  empdag_getmpname(&mdl->empinfo.empdag, mp->id), mdl_printvarname(mdl, objvar),
                  mdl_printequname(mdl, objequ));

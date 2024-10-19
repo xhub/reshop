@@ -125,7 +125,7 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
          int len, *instrs, *args;
 
          S_CHECK(gctr_getopcode(&mdl->ctr, ei, &len, &instrs, &args));
-         
+ 
          if (len > 0) {
             A_CHECK(tree, nltree_buildfromgams(len, instrs, args));
          }

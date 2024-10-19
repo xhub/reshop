@@ -606,7 +606,7 @@ int rmdl_remove_fixedvars(Model *mdl)
       }
 
       rhp_idx ei_new = ei;
-      S_CHECK(rmdl_dup_equ_except(mdl, &ei_new, 0, vi));
+      S_CHECK(rmdl_equ_dup_except(mdl, &ei_new, 0, vi));
       Equ *e_new = &mdl->ctr.equs[ei_new]; 
 
       if (v->value == ub) {

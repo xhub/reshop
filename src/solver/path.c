@@ -83,7 +83,7 @@ static int load_pathlib(Model *mdl)
       }
 
       if (libpath_fname) {
-         libpath_handle = open_library(libpath_fname, 0);
+         libpath_handle = open_library_nofail(libpath_fname, 0);
          if (libpath_handle) {
            libname = copy_libpath_fname ? strdup(libpath_fname) : libpath_fname;
          }
@@ -95,7 +95,7 @@ static int load_pathlib(Model *mdl)
       while (!libpath_handle && ii <= ARRAY_SIZE(path_libnames) && ii > 0) {
          ii--;
          libname = path_libnames[ii];
-         libpath_handle = open_library(libname, 0);
+         libpath_handle = open_library_nofail(libname, 0);
       }
 
       if (!libpath_handle || !libname) {

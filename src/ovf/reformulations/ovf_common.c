@@ -64,21 +64,9 @@ int ovf_replace_var(Model *mdl, rhp_idx ovf_vidx, void **jacptr,
    /* Copy if needed */
    if (equinfo.copy_if_modif) {
 
-      S_CHECK(rmdl_dup_equ_except(mdl, &ei_new, extra_vars, ovf_vidx));
+      S_CHECK(rmdl_equ_dup_except(mdl, &ei_new, extra_vars, ovf_vidx));
       DPRINT("%s :: copy equation %d in %d\n", __func__, eidx, ei_new);
 
-      /* -------------------------------------------------------------------
-       * Keep the EMP tree consistent: add the new equation to the MP
-       * ------------------------------------------------------------------- */
-
-      MathPrgm *mp = mdl_getmpforequ(mdl, eidx);
-      if (mp) {
-         if (mp_getobjequ(mp) == eidx) {
-            S_CHECK(mp_setobjequ(mp, ei_new));
-         } else {
-            S_CHECK(mp_addconstraint(mp, ei_new));
-         }
-      }
    } else {
 
       /* -------------------------------------------------------------------

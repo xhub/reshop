@@ -321,7 +321,7 @@ DBGUSED static void print_symiter(VmGmsSymIterator *symiter, EmpVm *vm)
       int *uels = symiter->uels;
       DEBUGVMRUN("%s", "(");
       for (unsigned ii = 0; ii < dim; ++ii) {
-         if (ii > 1) { DEBUGVMRUN("%s", ", "); }
+         if (ii > 0) { DEBUGVMRUN(", "); }
          int dummyoffset;
          dct_printuel(vm->data.dct, uels[ii], PO_TRACE_EMPINTERP,
                       &dummyoffset);
@@ -597,6 +597,8 @@ static int vm_membership_test(UNUSED VmData *vmdata, VmGmsSymIterator *symiter,
 
 NONNULL static int vmdata_init(VmData *data)
 {
+   data->scalar_tracker = ScalarSymbolInactive;
+
    data->uid_grandparent = EMPDAG_UID_NONE;
    data->uid_parent = EMPDAG_UID_NONE;
 
@@ -659,6 +661,7 @@ EmpVm* empvm_new(Interpreter *interp)
    vm->data.dagregister = &interp->dagregister;
    vm->data.linklabels2arcs = &interp->linklabels2arcs;
    vm->data.linklabel2arc = &interp->linklabel2arc;
+   vm->data.dual_labels = &interp->dualslabel;
 
    return vm;
 
@@ -1200,21 +1203,7 @@ int empvm_run(struct empvm *vm)
          }
          break;
       }
-      case OP_LINKLABELS_DUP: {
-         GIDX_TYPE gidx = READ_GIDX(vm);
-         assert(gidx < vm->globals.len);
-         assert(IS_ARCOBJ(vm->globals.arr[gidx]));
 
-         LinkLabels *linklabels_src = AS_ARCOBJ(vm->globals.arr[gidx]);
-         LinkLabel *linklabel_cpy;
-         A_CHECK_EXIT(linklabel_cpy, linklabels_dupaslabel(linklabels_src));
-         linklabel_cpy->daguid_parent = vm->data.uid_parent;
-
-         S_CHECK_EXIT(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
-
-         DEBUGVMRUN("\n");
-         break;
-      }
       case OP_LINKLABELS_INIT: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          assert(gidx < vm->globals.len);
@@ -1232,6 +1221,22 @@ int empvm_run(struct empvm *vm)
          if (num_var > 0) {
             REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
          }
+
+         DEBUGVMRUN("\n");
+         break;
+      }
+
+      case OP_LINKLABELS_DUP: {
+         GIDX_TYPE gidx = READ_GIDX(vm);
+         assert(gidx < vm->globals.len);
+         assert(IS_ARCOBJ(vm->globals.arr[gidx]));
+
+         LinkLabels *linklabels_src = AS_ARCOBJ(vm->globals.arr[gidx]);
+         LinkLabel *linklabel_cpy;
+         A_CHECK_EXIT(linklabel_cpy, linklabels_dupaslabel(linklabels_src));
+         linklabel_cpy->daguid_parent = vm->data.uid_parent;
+
+         S_CHECK_EXIT(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
 
          DEBUGVMRUN("\n");
          break;
@@ -1285,9 +1290,12 @@ int empvm_run(struct empvm *vm)
           * --------------------------------------------------------------- */
 
          if (linklabels->num_children == 0) {
+            // TODO: is there a memory leak here?
+            // TEST stochastic program with leaf nodes 
             vm->data.linklabels2arcs->len--;
          }
          vm->data.linklabels = NULL;
+         DEBUGVMRUN("\n");
          break;
       }
       case OP_LINKLABELS_KEYWORDS_UPDATE: {
@@ -1308,7 +1316,7 @@ int empvm_run(struct empvm *vm)
             SmoothingOperatorData *opdat;
             A_CHECK_EXIT(opdat, smoothing_operator_data_new(param));
             linklabels->extras[num_children-1] = opdat;
-            DEBUGVMRUN("coeff value is %e", param);
+            DEBUGVMRUN("log-sum-exp: coeff = %e", param);
          }
          default: ;
 
@@ -1328,9 +1336,69 @@ int empvm_run(struct empvm *vm)
          }
          vm->data.uid_parent = dagregister->list[reglen-1]->daguid_parent;
          assert(valid_uid(vm->data.uid_parent));
+
+         DEBUGVMRUN("\n");
          break;
       }
+
+      /* Set the scalar tracker value to zero */
+      case OP_SCALAR_SYMBOL_TRACKER_INIT:
+         switch (vm->data.scalar_tracker) {
+         case ScalarSymbolInactive:
+         case ScalarSymbolRead:
+            vm->data.scalar_tracker = ScalarSymbolZero;
+            break;
+         default:
+            errbugmsg("[empvm] ERROR: scalar symbol tracker has the wrong value");
+            status = Error_BugPleaseReport;
+            goto _exit;
+         }
+
+         DEBUGVMRUN("\n");
+         break;
+
+      /* Check that only one value has been read */
+      case OP_SCALAR_SYMBOL_TRACKER_CHECK: {
+         ScalarSymbolStatus symbol_tracker = vm->data.scalar_tracker;
+
+         switch (symbol_tracker) {
+         case ScalarSymbolInactive:
+            errbugmsg("[empvm] ERROR: scalar symbol tracker is inactive.");
+            status = Error_BugPleaseReport;
+            goto _exit;
+
+         case ScalarSymbolRead:
+            // TODO: improve to provide the user better error message
+            // TODO: TEST!
+            errormsg("[empvm] ERROR: More than one value read for a given symbol! "
+                     "Exactly one value was expected\n");
+            status = Error_EMPIncorrectInput;
+            goto _exit;
+ 
+         case ScalarSymbolZero:
+            vm->data.scalar_tracker = ScalarSymbolRead;
+            break;
+         default:
+            errbug("[empvm] ERROR: unexpected value %u for symbol tracker.", symbol_tracker);
+            status = Error_BugPleaseReport;
+            goto _exit;
+         }
+
+         DEBUGVMRUN("\n");
+         break;
+      }
+
+      /* Put a scalar into the read values */
+      case OP_HACK_SCALAR2VMDATA: {
+         GIDX_TYPE gidx = READ_GIDX(vm); assert(gidx < vm->data.globals->scalars.len);
+         double val = vm->data.globals->scalars.list[gidx];
+         DEBUGVMRUN("stored %e\n", val);
+         vm->data.dval = val;
+         break;
+      }
+
       case OP_END: {
+         // HACK: turn this into an error?
          if (vm->stack != vm->stack_top) {
             errormsg("[empvm_run]: ERROR: stack non-empty at the end.\n");
          }
@@ -1338,9 +1406,11 @@ int empvm_run(struct empvm *vm)
          DEBUGVMRUN("\n");
          return OK;
       }
+
       default:
-         error("[empvm_run]: ERROR: unhandled instruction %s #%u\n", opcodes_name(instr), instr);
-         return Error_EMPRuntimeError;
+         errbug("\n\n[empvm_run]: ERROR: unhandled instruction %s #%u\n", opcodes_name(instr), instr);
+         status = Error_BugPleaseReport;
+         goto _exit;
       }
    }
 
@@ -1349,7 +1419,7 @@ int empvm_run(struct empvm *vm)
 _exit:
 
    linenr = getlinenr(vm);
-   error("[empvm_run] %nError occurred on line %u:\n", &poffset, linenr);
+   error("\n\n[empvm_run] %nError occurred on line %u:\n", &poffset, linenr);
 
    const char * restrict start = vm->data.interp->buf, * restrict end;
    linenr--;

@@ -231,6 +231,11 @@ static inline bool mdl_valid_vi_(const Model *mdl, rhp_idx vi, const char *fn) {
    return valid_vi_(vi, ctr_nvars_total(&mdl->ctr), fn);
 }
 
+NONNULL
+static inline bool mdl_valid_ei_(const Model *mdl, rhp_idx ei, const char *fn) {
+   return valid_ei_(ei, ctr_nequs_total(&mdl->ctr), fn);
+}
+
 NONNULL static inline void mdl_resettype(Model *mdl)
 {
    mdl_settype(mdl, MdlType_none);

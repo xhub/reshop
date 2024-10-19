@@ -19,8 +19,13 @@ void linklabel_free(LinkLabel *link);
 MALLOC_ATTR(linklabel_free, 1) NONNULL
 LinkLabel* linklabel_new(const char *label, unsigned label_len, uint8_t dim);
 
-void dual_label_free(DualLabel *dual);
-MALLOC_ATTR(dual_label_free, 1) NONNULL
+/* The underscore '_' is needed to avoid a name clash */
+void dualslabel_free(DualsLabel *dual_labels);
+MALLOC_ATTR(dualslabel_free, 1) NONNULL
+DualsLabel* dualslabel_new(const char *label, unsigned label_len, uint8_t dim, uint8_t num_vars);
+int dualslabel_add(DualsLabel* duals_label, mpid_t mpid_dual, int *uels, DualOperatorData opdat);
+
+MALLOC_ATTR(free, 1) NONNULL
 DualLabel* dual_label_new(const char *label, unsigned label_len, uint8_t dim, mpid_t mpid_dual);
 
 #endif

@@ -206,3 +206,37 @@ int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
 
    return OK;
 }
+
+int rhp_rc2gmosolvestat(int rc)
+{
+   enum gmoSolverStatus sstat;
+
+   /* TODO(GAMS review) When should one use gmoModelStat_ErrorUnknown? */
+
+   switch (rc) {
+   case Error_EMPIncorrectInput:
+   case Error_EMPIncorrectSyntax:
+      sstat = gmoSolveStat_SetupErr;
+      break;
+   default:
+      sstat = gmoSolveStat_InternalErr;
+   }
+
+   return sstat;
+}
+
+
+void rhp_printrcmsg(int rc, void *gev)
+{
+   gevHandle_t gev_ = gev;
+   char msg[GMS_SSSIZE];
+
+   switch (rc) {
+   case Error_BugPleaseReport:
+      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: The model triggered a bug in ReSHOP. "
+                     "Please consider filing a bug report. Thanks!");
+      gevLogStat(gev_, msg);
+      break;
+   default: ;
+   }
+}

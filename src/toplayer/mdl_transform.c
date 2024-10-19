@@ -36,8 +36,8 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
    
    /* TODO: test this code */
    if (!empinfo_hasempdag(&mdl->empinfo) && !valid_uid(empdag->uid_root)) {
-      mdl_linkmodels(mdl, mdl_fooc);
 
+      mdl_linkmodels(mdl, mdl_fooc);
       return OK;
    }
 
@@ -78,18 +78,45 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
    }
 
    if (nash) {
-      MpIdArray mps;
+      MpIdArray *mps;
       S_CHECK(empdag_nash_getchildren(empdag, nash->id, &mps));
-      unsigned nb_mp = mps.len;
+      unsigned nb_mp = mps->len;
       if (nb_mp == 0) {
-         error("%s ERROR: empty equilibrium '%s'\n", __func__,
-               empdag_getnashname(empdag, nash->id));
+         error("[FOOC] ERROR: empty NASH(%s)\n", empdag_getnashname(empdag, nash->id));
          return Error_EMPRuntimeError;
       }
 
       for (unsigned i = 0; i < nb_mp; ++i) {
-         mpid_t mpid = uid2id(mps.arr[i]);
+         mpid_t mpid = uid2id(mps->arr[i]);
          if (!childless_mp(empdag, mpid)) { status = Error_OperationNotAllowed; }
+
+         MathPrgm *mp_;
+         S_CHECK(empdag_getmpbyid(empdag, mpid, &mp_));
+
+         // HACK: should we modify the EMPDAG here?
+         MpType type = mp_->type;
+         switch (type) {
+         case MpTypeOpt:
+         case MpTypeVi:
+            break;
+         case MpTypeCcflib:
+            if (!mp_->ccflib.mp_instance) {
+               errbug("[FOOC] ERROR: %s MP(%s) is part of NASH(%s) but has not been instanciated!",
+                      mptype2str(type), empdag_getmpname(empdag, mpid),
+                      empdag_getnashname(empdag, nash->id));
+                  return Error_RuntimeError;
+            }
+
+            mpid_t mpid_instance = mp_->ccflib.mp_instance->id;
+            S_CHECK(empdag_substitute_mp_arcs(empdag, mpid, mpid_instance));
+
+            break;
+         default:
+            errbug("[FOOC] ERROR: %s MP(%s) is part of NASH(%s). This is unsupported.",
+                   mptype2str(type), empdag_getmpname(empdag, mpid),
+                   empdag_getnashname(empdag, nash->id));
+                  return Error_RuntimeError;
+         }
       }
 
    } else {

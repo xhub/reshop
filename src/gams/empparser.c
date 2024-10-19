@@ -24,6 +24,7 @@
 #include "empparser_utils.h"
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
+#include "lequ.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mathprgm_priv.h"
@@ -174,7 +175,7 @@ void  tok_free(Token *tok)
    _tok_empty(tok);
 }
 
-const char* tok_dupident(const Token *tok) 
+char* tok_dupident(const Token *tok) 
 {
    const char *ident = emptok_getstrstart(tok);
    unsigned ident_len = emptok_getstrlen(tok);
@@ -1868,6 +1869,7 @@ static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
    S_CHECK(interp->ops->read_gms_symbol(interp, p));
 
    interp->gms_sym_iterator.active = false;
+   assert(gmsindices_deactivate(indices));
 
    return OK;
 }
@@ -2110,7 +2112,7 @@ int imm_add_duallabel(Interpreter * restrict interp, MathPrgm *mp,
                    ((int)(indices->idents[indices->nargs-1].lexeme.start - identname))
                    +  indices->idents[indices->nargs-1].lexeme.len : identname_len, identname);
 
-   S_CHECK(dual_labels_add(&interp->dual_label, dual));
+   S_CHECK(dual_label_add(&interp->dual_label, dual));
 
    return OK;
 }
@@ -2234,6 +2236,8 @@ static int vm_set_dagroot(Interpreter * interp, unsigned * restrict p,
 
 static int fn_noop_noargs(Interpreter * interp, unsigned * restrict p)
 {
+   assert(!gmsindices_isset(&interp->gmsindices) || gmsindices_deactivate(&interp->gmsindices));
+
    return OK;
 }
 
@@ -2354,9 +2358,9 @@ NONNULL static int consume_optional_valfn_kwd(Interpreter *interp, unsigned *p)
    if (toktype == TOK_DOT) {
       S_CHECK(peek(interp, &p2, &toktype));
       S_CHECK(parser_expect_peek(interp, "valfn keyword expected after '.'", TOK_VALFN));
+      *p = p2;
    }
 
-   *p = p2;
    return OK;
 }
 
@@ -2399,8 +2403,7 @@ static int parse_ovfparamscalar(Interpreter * interp, unsigned * restrict p,
    return OK;
 }
 
-int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
-                               double *val)
+int parse_identasscalar(Interpreter *interp, unsigned *restrict p, double *val)
 {
    int status = OK;
    IdentData ident;
@@ -2422,6 +2425,10 @@ int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
          goto _exit;
       }
       *val = interp->globals.scalars.list[idx];
+      // HACK
+      if (interp->ops->type == InterpreterOpsCompiler) {
+         S_CHECK(hack_scalar2vmdata(interp, idx));
+         }
       break;
    }
 
@@ -2439,6 +2446,7 @@ int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
 
       S_CHECK_EXIT(parse_gmsindices(interp, p, &indices));
       S_CHECK_EXIT(interp->ops->read_elt_vector(interp, identstr, &ident, &indices, val));
+      assert(gmsindices_deactivate(&indices));
       break;
    }
    case IdentParam: {
@@ -2530,7 +2538,8 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
    case IdentVector: {
       unsigned p2 = *p;
       S_CHECK_EXIT(peek(interp, &p2, &toktype));
-      if (interp->ops->type == InterpreterOpsImm && toktype != TOK_LPAREN && toktype != TOK_CONDITION) {
+
+      if (interp->ops->type == InterpreterOpsImm && toktype != TOK_CONDITION) {
 
             // TODO: what happens in immMode and with TOK_LPAREN or TOK_CONDITION???
          unsigned idx;
@@ -2546,16 +2555,54 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
 
          const Lequ * vec = &interp->globals.vectors.list[idx];
          unsigned size_vector = interp->ops->ovf_param_getvecsize(interp, ovfdef, pdef);
-         if (size_vector != UINT_MAX && vec->len != size_vector) {
-            error("[empinterp] ERROR line %u: for OVF parameter '%s', "
-                  "expecting the vector '%s' to have length %u, got %u instead.\n",
-                  interp->linenr, pdef->name, identstr, size_vector, vec->len);
-            status = Error_EMPIncorrectInput;
-            goto _exit;
-         }
-
          S_CHECK_EXIT(scratchdbl_ensure(scratch, size_vector));
-         memcpy(scratch->data, vec->coeffs, size_vector * sizeof(double));
+
+         if (toktype == TOK_LPAREN) {
+            *p = p2;
+            S_CHECK_EXIT(advance(interp, p, &toktype));
+            parser_expect(interp, "a 1D set", TOK_IDENT);
+
+            IdentData *ident_set = &interp->cur.symdat.ident;
+            if (ident_set->type != IdentSet) {
+               return runtime_error(interp->linenr);
+            }
+            char *identstr_set = tok_dupident(&interp->cur);
+            unsigned idxset = namedints_findbyname_nocase(&interp->globals.sets, identstr_set);
+            free(identstr_set);
+
+            if (idxset == UINT_MAX) {
+               error("[empinterp] unexpected runtime error: couldn't find set '%.*s'\n",
+                     tok_fmtargs(&interp->cur));
+               return Error_RuntimeError;
+            }
+
+            IntArray *set = &interp->globals.sets.list[idxset];
+
+            for (unsigned i = 0, len = set->len; i < len; ++i) {
+               unsigned pos = UINT_MAX;
+               lequ_find(vec, set->arr[i], &scratch->data[i], &pos);
+
+               if (pos == UINT_MAX) {
+                  error("[empinterp] ERROR line %u: UEL %d is not in parameter %s\n",
+                        interp->linenr, set->arr[i], identstr);
+                  return Error_EMPIncorrectInput;
+               }
+             }
+
+            S_CHECK_EXIT(advance(interp, p, &toktype));
+            parser_expect(interp, "a 1D set", TOK_RPAREN);
+         } else {
+
+            if (size_vector != UINT_MAX && vec->len != size_vector) {
+               error("[empinterp] ERROR line %u: for OVF parameter '%s', "
+                     "expecting the vector '%s' to have length %u, got %u instead.\n",
+                     interp->linenr, pdef->name, identstr, size_vector, vec->len);
+               status = Error_EMPIncorrectInput;
+               goto _exit;
+            }
+
+            memcpy(scratch->data, vec->coeffs, size_vector * sizeof(double));
+         }
 
          payload->vec = scratch->data;
          *type = ARG_TYPE_VEC;
@@ -2706,6 +2753,8 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
       TO_IMPLEMENT("'node.valFn *' is not yet supported");
    }
 
+   assert(!gmsindices_isactive(&interp->gmsindices));
+
    return OK;
 }
 
@@ -2792,10 +2841,11 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
    assert(interp->cur.type == TOK_IDENT);
    interp_save_tok(interp);
 
-   /* we do not require '.valfn' for now, but consnume it */
-   S_CHECK(consume_optional_valfn_kwd(interp, p));
-
    S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_arc, vm_add_VFobjSimple_arc))
+
+     /* we do not require '.valfn' for now, but consume it */
+   // HACK: this has to be moved here. But if made mandatory should be elsewhere ...
+   S_CHECK(consume_optional_valfn_kwd(interp, p));
 
   /* ----------------------------------------------------------------------
    * This is to update the number of EMPDAG children whenever we were in ImmMode
@@ -2957,7 +3007,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
 
          }
       } else {
-            // XXX This is wrong
+         // HACK This is wrong
          S_CHECK(parse_MPargs_labels(interp, p, ovfdef));
          S_CHECK(advance(interp, p, &toktype));
       }
@@ -3451,8 +3501,9 @@ static int parse_vi(MathPrgm * restrict mp, Interpreter * restrict interp,
             /* The next token is a label definition */
             return OK;
          } else {
-
+            assert(gmsindices_deactivate(&interp->gmsindices));
             TO_IMPLEMENT("VI with labels");
+            
          }
          goto _advance;
       }
@@ -4470,7 +4521,7 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
       return vm_labeldef_condition(interp, p, identname, identname_len, &gmsindices);
    }
 
-   if (gmsindices.num_sets > 0 || gmsindices.num_localsets > 0 || gmsindices.num_iterators > 0) {
+   if (gmsindices.num_sets > 0 || gmsindices.num_localsets > 0 || gmsindices.num_loopiterators > 0) {
       return vm_labeldef_loop(interp, p, identname, identname_len, &gmsindices);
    }
 

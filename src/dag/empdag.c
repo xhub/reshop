@@ -759,10 +759,15 @@ int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
    S_CHECK(chk_mpid_(empdag, mpid));
 
    MathPrgm *mp = empdag->mps.arr[mpid];
-   if (mp->type == MpTypeUndef) {
+   MpType type = mp->type;
+   if (type == MpTypeUndef) {
       error("[empdag] ERROR: the MP(%s) has an undefined type",
             empdag_getmpname(empdag, mpid));
       return Error_RuntimeError;
+   }
+
+   if (type == MpTypeCcflib) {
+      S_CHECK(empdag_mp_needs_instantiation(empdag, mpid));
    }
 
    S_CHECK(daguidarray_adduniqsorted(&empdag->nashs.arcs[nashid], mpid2uid(mpid)));
@@ -777,23 +782,23 @@ int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
    return OK;
 }
 
-int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t id_parent, const ArcVFData *arcVF)
+int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t mpid_parent, const ArcVFData *arc)
 {
-   mpid_t mpid_child = arcVF->mpid_child;
-   S_CHECK(chk_mpid_(empdag, id_parent));
+   mpid_t mpid_child = arc->mpid_child;
+   S_CHECK(chk_mpid_(empdag, mpid_parent));
    S_CHECK(chk_mpid_(empdag, mpid_child));
-   assert(id_parent != mpid_child);
-   assert(valid_arcVF(arcVF));
+   assert(mpid_parent != mpid_child);
+   assert(valid_Varc(arc));
 
-   S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[mpid_child], rarcVFuid(mpid2uid(id_parent))));
+   S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[mpid_child], rarcVFuid(mpid2uid(mpid_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
-                arcVFType2str(arcVF->type), empdag_getmpname(empdag, id_parent),
+                arcVFType2str(arc->type), empdag_getmpname(empdag, mpid_parent),
                 empdag_getmpname(empdag, mpid_child));
 
 
    /* We store the details of the VF edge on the parent MP */
-   S_CHECK(_edgeVFs_add(&empdag->mps.Varcs[id_parent], *arcVF));
+   S_CHECK(_edgeVFs_add(&empdag->mps.Varcs[mpid_parent], *arc));
 
    empdag->finalized = false;
 
@@ -1072,7 +1077,7 @@ int empdag_check(EmpDag *empdag)
  *
  * @return             NULL if there is no such edge, otherwise the edge
  */
-const ArcVFData* empdag_find_edgeVF(const EmpDag *empdag, unsigned mpid_parent,
+const ArcVFData* empdag_find_Varc(const EmpDag *empdag, unsigned mpid_parent,
                                  unsigned mpid_child)
 {
    SN_CHECK(chk_mpid_(empdag, mpid_parent));
@@ -1119,11 +1124,11 @@ int empdag_setmpname(EmpDag *empdag, mpid_t mpid, const char *const name)
 }
 
 int empdag_nash_getchildren(const EmpDag *empdag, nashid_t nashid,
-                           DagUidArray *mps)
+                           DagUidArray **mps)
 {
    S_CHECK(chk_nashid_(empdag, nashid));
 
-   memcpy(mps, &empdag->nashs.arcs[nashid], sizeof(DagUidArray));
+   *mps = &empdag->nashs.arcs[nashid];
 
    return OK;
 }
@@ -1410,7 +1415,7 @@ int empdag_infer_roots(EmpDag *empdag)
 
 unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl)
 {
-   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+   assert(valid_Varc(arc) && arc->type == ArcVFBasic);
 
    rhp_idx ei = arc->basic_dat.ei;
 
@@ -1423,7 +1428,7 @@ unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl)
 
 bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl)
 {
-   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+   assert(valid_Varc(arc) && arc->type == ArcVFBasic);
 
    rhp_idx ei = arc->basic_dat.ei;
 
@@ -1436,7 +1441,7 @@ bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl)
 
 int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new)
 {
-   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+   assert(valid_Varc(arc) && arc->type == ArcVFBasic);
 
    if (arc->basic_dat.ei == ei_old) {
       arc->basic_dat.ei = ei_new;
@@ -1447,7 +1452,7 @@ int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new)
 
 bool arcVFb_has_abstract_objfunc(const ArcVFData *arc)
 {
-   assert(valid_arcVF(arc) && arc->type == ArcVFBasic);
+   assert(valid_Varc(arc) && arc->type == ArcVFBasic);
 
    return arc->basic_dat.ei == IdxObjFunc;
 }

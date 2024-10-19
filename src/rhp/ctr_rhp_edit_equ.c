@@ -36,7 +36,6 @@ UNUSED static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
           (!valid_vimap && object == Mapping);
 }
 
-
 int rctr_equ_addnewvar(Container *ctr, Equ *e, rhp_idx vi, double val)
 {
    UNUSED RhpContainerData *cdat = (RhpContainerData *)ctr->data;
@@ -555,7 +554,7 @@ int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, doub
    Lequ *lequ_src = ctr->equs[ei].lequ;
 
    /* --------------------------------------------------------------------
-    * If coeff is not given, it is -coeff(vi_map)
+    * If vi_map is valid, coeff <- -coeff(vi_map)
     * -------------------------------------------------------------------- */
    if (valid_vi(vi_map)) {
       unsigned pos_dummy;

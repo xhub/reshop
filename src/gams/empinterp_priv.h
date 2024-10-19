@@ -141,7 +141,7 @@ static inline void gmsindices_init(GmsIndicesData *indices)
 {
    indices->nargs = 0;
    indices->num_sets = 0;
-   indices->num_iterators = 0;
+   indices->num_loopiterators = 0;
    indices->num_localsets = 0;
 }
 
@@ -171,7 +171,7 @@ static inline bool gmsindices_deactivate(GmsIndicesData *indices)
 static inline bool gmsindices_needcompmode(GmsIndicesData *indices)
 {
    return indices->nargs > 0 &&
-   (indices->num_sets > 0 || indices->num_localsets > 0 || indices->num_iterators > 0);
+   (indices->num_sets > 0 || indices->num_localsets > 0 || indices->num_loopiterators > 0);
 }
 
 static inline bool _has_bilevel(const Interpreter *interp)

@@ -467,11 +467,11 @@ static int export_equilibrium_(struct empinfo_dat *file,
                                Model *mdl) {
   IO_CALL(fprintf(file->empinfo_file, "equilibrium"));
 
-  UIntArray mps;
+  MpIdArray *mps;
   S_CHECK(empdag_nash_getchildren(empdag, mpe->id, &mps));
-  for (size_t i = 0, len = mps.len; i < len; ++i) {
+  for (size_t i = 0, len = mps->len; i < len; ++i) {
     MathPrgm *mp;
-    S_CHECK(empdag_getmpbyuid(empdag, rhp_uint_at(&mps, i), &mp));
+    S_CHECK(empdag_getmpbyuid(empdag, rhp_uint_at(mps, i), &mp));
 
     S_CHECK(_check_no_child_mp(empdag, mp));
 

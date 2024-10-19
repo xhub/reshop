@@ -12,6 +12,7 @@ typedef struct emptok Token;
 
 typedef struct linklabels LinkLabels;
 typedef struct linklabel LinkLabel;
+typedef struct dual_labels DualsLabel;
 typedef struct dual_label DualLabel;
 
 typedef struct dual_operator_data DualOperatorData;

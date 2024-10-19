@@ -775,6 +775,7 @@ int ctr_ensure_pool(Container *ctr)
    return OK;
 }
 
+// HACK document the function
 int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei)
 {
    void *iter = NULL;

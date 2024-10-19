@@ -22,7 +22,7 @@ static int FN(gen_b)(unsigned n, const void* env, double **vals)
 {
    const struct ovf_param_list *p = (const struct ovf_param_list *) env;
    const struct ovf_param *alpha = ovf_find_param("tail", p);
-   const struct ovf_param *lambda = ovf_find_param("cvar_weight", p);
+   const struct ovf_param *lambda = ovf_find_param("risk_wt", p);
    const struct ovf_param *probs = ovf_find_param("probabilities", p);
 
    OVF_CHECK_PARAM(alpha, Error_OvfMissingParam);
@@ -49,7 +49,7 @@ static int FN(gen_b_0)(unsigned n, const void* env, SpMat *mat,
 {
    const struct ovf_param_list *p = (const struct ovf_param_list *) env;
    const struct ovf_param *alpha = ovf_find_param("tail", p);
-   const struct ovf_param *lambda = ovf_find_param("cvar_weight", p);
+   const struct ovf_param *lambda = ovf_find_param("risk_wt", p);
    const struct ovf_param *probs = ovf_find_param("probabilities", p);
 
    OVF_CHECK_PARAM(alpha, Error_OvfMissingParam);
@@ -91,7 +91,7 @@ static int FN(gen_b_0)(unsigned n, const void* env, SpMat *mat,
 static double FN(var_lb)(const void* env, unsigned indx)
 {
    const struct ovf_param_list *p = (const struct ovf_param_list *) env;
-   const struct ovf_param *lambda = ovf_find_param("cvar_weight", p);
+   const struct ovf_param *lambda = ovf_find_param("risk_wt", p);
    const struct ovf_param *probs = ovf_find_param("probabilities", p);
 
    OVF_CHECK_PARAM(lambda, Error_OvfMissingParam);
@@ -105,7 +105,7 @@ static double FN(var_ub)(const void* env, unsigned indx)
 {
    const struct ovf_param_list *p = (const struct ovf_param_list*) env;
    const struct ovf_param *alpha = ovf_find_param("tail", p);
-   const struct ovf_param *lambda = ovf_find_param("cvar_weight", p);
+   const struct ovf_param *lambda = ovf_find_param("risk_wt", p);
    const struct ovf_param *probs = ovf_find_param("probabilities", p);
 
    OVF_CHECK_PARAM(alpha, Error_OvfMissingParam);

@@ -45,7 +45,6 @@ typedef enum {
 } DualOperatorDomain;
 
 typedef struct dual_operator_data {
-
    DualOperatorScheme scheme;
    DualOperatorDomain domain;
 } DualOperatorData;

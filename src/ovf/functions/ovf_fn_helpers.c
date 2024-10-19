@@ -5,6 +5,12 @@
 #include "ovf_parameter.h"
 #include "printout.h"
 
+const char * const ovfparam_synonyms[][2] = {
+   /* Synonym, OVF name */
+   { "risk_weight", "risk_wt" },
+   { NULL, NULL },
+};
+
 const struct ovf_param*
 ovf_find_param(const char *name, const struct ovf_param_list *plist)
 {
@@ -22,6 +28,19 @@ ovf_find_param(const char *name, const struct ovf_param_list *plist)
    return NULL;
 }
 
+static const char * ovfparam_synonyms_str(const char *name, unsigned len)
+{
+   size_t i = 0;
+   while (ovfparam_synonyms[i][0]) {
+      if (!strncasecmp(name, ovfparam_synonyms[i][0], len)) {
+         return ovfparam_synonyms[i][1];
+      }
+      ++i;
+   }
+
+   return NULL;
+}
+
 const OvfParamDef*
 ovfparamdef_find(const OvfParamDefList *plist, const char *kwnamestart,
                  unsigned kwnamelen, unsigned *pidx)
@@ -35,6 +54,19 @@ ovfparamdef_find(const OvfParamDefList *plist, const char *kwnamestart,
          return plist->p[i];
       }
    }
+
+   const char *kwname = ovfparam_synonyms_str(kwnamestart, kwnamelen);
+
+   if (kwname) {
+      unsigned kwlen = strlen(kwname);
+      for (unsigned i = 0, len = *plist->s; i < len; ++i) {
+         if (!strncasecmp(plist->p[i]->name, kwname, kwlen)) {
+            *pidx = i;
+            return plist->p[i];
+         }
+      }
+   }
+   
 
    error("[ovfparam] Could not find a parameter named '%.*s'. Valid parameter "
          "names are: \n",

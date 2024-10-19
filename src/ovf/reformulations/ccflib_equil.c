@@ -6,6 +6,7 @@
 #include "ctr_rhp.h"
 #include "empdag.h"
 #include "empinfo.h"
+#include "mdl_rhp.h"
 #include "nltree.h"
 #include "nltree_priv.h"
 #include "macros.h"
@@ -147,16 +148,16 @@ static int ccflib_instantiate_mp(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat,
 }
 
 NONNULL static inline
-int primal_edgeVFb_add_by(Model *mdl, ArcVFBasicData *edgeVFb_dat,  double *b, Avar *y)
+int primal_arcVFb_add_by(Model *mdl, ArcVFBasicData *arcVFb_dat,  double *b, Avar *y)
 {
-   rhp_idx ei = edgeVFb_dat->ei;
+   rhp_idx ei = arcVFb_dat->ei;
    assert(valid_ei_(ei, rctr_totalm(&mdl->ctr), __func__));
 
-   if (valid_vi(edgeVFb_dat->vi)) {
+   if (valid_vi(arcVFb_dat->vi)) {
       TO_IMPLEMENT("bilinear case of primal_edgeVFb_add_by()")
    }
 
-   double cst = edgeVFb_dat->cst;
+   double cst = arcVFb_dat->cst;
    Container *ctr = &mdl->ctr;
    return rctr_equ_addlinvars_coeff(ctr, &ctr->equs[ei], y, b, cst);
 }
@@ -172,49 +173,120 @@ int primal_edgeVFb_add_by(Model *mdl, ArcVFBasicData *edgeVFb_dat,  double *b, A
  * @return        the error code
  */
 NONNULL static inline
-int primal_add_by(Model *mdl, ArcVFData *edgeVF, double *b, Avar *y)
+int primal_add_by(Model *mdl, ArcVFData *arc, double *b, Avar *y)
 {
    /* ---------------------------------------------------------------------
     * This adds the term <b,y> to the equation where the VF of the MP associated
     * with y appears
     * --------------------------------------------------------------------- */
 
-   switch (edgeVF->type) {
+   switch (arc->type) {
    case ArcVFBasic:
-      return primal_edgeVFb_add_by(mdl, &edgeVF->basic_dat, b, y);
+      return primal_arcVFb_add_by(mdl, &arc->basic_dat, b, y);
    default: TO_IMPLEMENT("primal_add_by for non-trivial edge type");
    }
 }
 
+typedef struct {
+   rhp_idx ei_old;
+   rhp_idx ei_new;
+} EiRosetta;
+
 NONNULL static inline
-int primal_check_ei_dst(Model *mdl, ArcVFData *edgeVF, mpid_t mpid)
+int primal_check_Varc_ei(Model *mdl, ArcVFData *arc, mpid_t mpid, EiRosetta *ei_rosetta)
 {
    rhp_idx ei_dst;
-   switch (edgeVF->type) {
+   switch (arc->type) {
    case ArcVFBasic:
-      ei_dst = edgeVF->basic_dat.ei;
+      ei_dst = arc->basic_dat.ei;
       break;
-   default: TO_IMPLEMENT("primal_add_minus_ky not implement for given edgeVF");
+   default: TO_IMPLEMENT("Varc type not supported");
    }
 
+   if (ei_rosetta->ei_old == ei_dst) {
+      assert(ei_dst != IdxNA); assert(mdl_valid_ei_(mdl, ei_rosetta->ei_new, __func__));
+      arc->basic_dat.ei = ei_rosetta->ei_new;
+      return OK;
+   }
+
+  /* ----------------------------------------------------------------------
+   * If no objective equation / variable was given, then we instanciate an
+   * objective function. We need to be careful to update all references.
+   * ---------------------------------------------------------------------- */
+
    if (ei_dst == IdxObjFunc) {
-      RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
-      S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
+      MathPrgm *mp;
+      S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp));
+
+      assert(mp->type == MpTypeOpt);
+
+      Container *ctr = &mdl->ctr;
+      RhpContainerData *cdat = (RhpContainerData*)ctr->data;
+      S_CHECK(rctr_reserve_equs(ctr, 1));
 
       char *mp_objequ_name;
       IO_CALL(asprintf(&mp_objequ_name, "MP_objequ(%u)", mpid));
       S_CHECK(cdat_equname_start(cdat, mp_objequ_name));
 
-      S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei_dst, NULL, Mapping, CONE_NONE));
+      S_CHECK(rctr_add_equ_empty(ctr, &ei_dst, NULL, Mapping, CONE_NONE));
       S_CHECK(cdat_equname_end(cdat));
 
-      MathPrgm *mp;
-      S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp));
 
       mp_setobjequ(mp, ei_dst);
-      edgeVF->basic_dat.ei = ei_dst;
 
+      rhp_idx objvar = mp_getobjvar(mp);
+
+      if (valid_vi(objvar)) {
+         Equ *e_dst = &ctr->equs[ei_dst];
+         S_CHECK(rctr_equ_addnewvar(ctr, e_dst, objvar, 1.));
+         mp_setobjvar(mp, IdxNA);
+      }
+
+      arc->basic_dat.ei = ei_dst;
+
+      ei_rosetta->ei_old = IdxObjFunc;
+      ei_rosetta->ei_new = ei_dst;
+
+      return OK;
    }
+
+  /* ----------------------------------------------------------------------
+   * Check that the equation is not a defined mapping. In that case, we
+   * transform it into an mapping
+   * ---------------------------------------------------------------------- */
+
+   Equ *edst = &mdl->ctr.equs[ei_dst];
+
+   EquObjectType equtype = edst->object;
+
+   switch (equtype) {
+   case Mapping:
+   case ConeInclusion:
+      break;
+   case DefinedMapping: {
+      Equ *e_map = edst;
+      MathPrgm *mp;
+      S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp));
+      rhp_idx objvar = mp_getobjvar(mp);
+      rhp_idx objequ = mp_getobjequ(mp);
+
+      if (objequ != ei_dst) {
+         TO_IMPLEMENT("Defined mapping (not objective equation) involved");
+      }
+      S_CHECK(rmdl_equ_defmap2map(mdl, &e_map, objvar));
+      rhp_idx ei_new = e_map->idx;
+      ei_rosetta->ei_old = ei_dst;
+      ei_rosetta->ei_new = ei_new;
+      arc->basic_dat.ei = ei_new;
+
+      }
+   break;
+   default:
+      errbug("[ccflib/equil] ERROR: cannot copy into equation '%s' of type %s\n",
+             mdl_printequname(mdl, ei_dst), equtype_name(equtype));
+      return Error_BugPleaseReport;
+   }
+
 
    return OK;
 }
@@ -283,9 +355,9 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, SpMat *B,
    RhpSense dual_sense = mp_getsense(mp);
    RhpSense primal_sense = dual_sense == RhpMax ? RhpMin : RhpMax;
 
-   const struct VFedges *edgesVFs = &mps_old->Varcs[mp->id];
-   unsigned n_arcs = edgesVFs->len;
-   ArcVFData * restrict children = edgesVFs->arr;
+   const VarcArray *Varcs = &mps_old->Varcs[mp->id];
+   unsigned n_arcs = Varcs->len;
+   ArcVFData * restrict children = Varcs->arr;
    const MathPrgm *mp_old = mps_old->arr[mp->id];
 
    unsigned n_primal_children = 0;
@@ -445,30 +517,36 @@ static int ccflib_equil_dfs_primal(mpid_t mpid_primal, DfsData *dfsdat, DagMpArr
       S_CHECK(copy_objequ_as_nlnode(&dfsdat->dual_objequ_dat, empdag->mdl, e, objvar));
    }
 
+   /* Reset the Varcs in the new EMPDAG */
+   mps->Varcs[mpid_primal].len = 0;
+
   /* ----------------------------------------------------------------------
    * Iterate over the children. 
    * ---------------------------------------------------------------------- */
+   const ArcVFData *Varcs_primal_old = mps_old->Varcs[mpid_primal].arr;
 
-   const ArcVFData *edgeVFs_primal = mps_old->Varcs[mpid_primal].arr;
-   struct VFedges *children = &mps->Varcs[mpid_primal];
-   children->len = 0;
    RhpSense path_sense = dfsdat->path_sense;
 
    UIntArray *rarcs = mps->rarcs;
    //ArcVFData edgeVFdual_bck = dfsdat->edgeVFdual;
    //ArcVFData edgeVFprimal_bck = dfsdat->edgeVFprimal;
    mpid_t mpid_dual_bck = dfsdat->mpid_dual;
+   EiRosetta ei_rosetta = {.ei_new = IdxNA, .ei_old = IdxNA};
+   Model *mdl = dfsdat->mdl;
 
    unsigned narcs = mps_old->Varcs[mpid_primal].len;
    for (unsigned i = 0; i < narcs; ++i) {
-      const ArcVFData *edgeVF_primal = &edgeVFs_primal[i];
-      unsigned child_id = edgeVF_primal->mpid_child;
+      ArcVFData Varc_primal;
+      S_CHECK(arcVF_copy(&Varc_primal, &Varcs_primal_old[i]));
+      S_CHECK(primal_check_Varc_ei(mdl, &Varc_primal, mpid_primal, &ei_rosetta));
 
-      MathPrgm *mp_child = mps->arr[child_id];
+
+      mpid_t mpid_child = Varc_primal.mpid_child;
+      MathPrgm *mp_child = mps->arr[mpid_child];
       RhpSense child_sense = mp_getsense(mp_child);
       assert(child_sense == RhpMin || child_sense == RhpMax);
 
-      trace_process("[ccflib/equil:primal] tackling child MP(%s)\n", mps->names[child_id]);
+      trace_process("[ccflib/equil:primal] tackling child MP(%s)\n", mps->names[mpid_child]);
 
       /* ---------------------------------------------------------------------
        * Update/restore the primal MPID
@@ -487,7 +565,7 @@ static int ccflib_equil_dfs_primal(mpid_t mpid_primal, DfsData *dfsdat, DagMpArr
           * We need to multiply the incoming primal edgeVF by the current one
           * to get the right value
           * --------------------------------------------------------------------- */
-         S_CHECK(empdag_mpVFmpbyid(dfsdat->empdag, mpid_primal, edgeVF_primal));
+         S_CHECK(empdag_mpVFmpbyid(dfsdat->empdag, mpid_primal, &Varc_primal));
 
          if (valid_mpid(dfsdat->mpid_dual)) {
             TO_IMPLEMENT("Primal -> primal");
@@ -505,16 +583,16 @@ static int ccflib_equil_dfs_primal(mpid_t mpid_primal, DfsData *dfsdat, DagMpArr
           * - Set the primal VF edge to the current one (TODO: true in general?)
           * - 
           * --------------------------------------------------------------------- */
-         S_CHECK(rhp_uint_rm(&rarcs[child_id], mpid_primal));
+         S_CHECK(rhp_uint_rm(&rarcs[mpid_child], mpid_primal));
 
-         S_CHECK(arcVF_copy(&dfsdat->arcVFprimal, edgeVF_primal));
+         S_CHECK(arcVF_copy(&dfsdat->arcVFprimal, &Varc_primal));
 
          // TODO: what is this for???
          //EdgeVF edgeVFdual_child;
          //S_CHECK(edgeVF_copy(&edgeVFdual_child, &edgeVFdual_bck));
          //S_CHECK(edgeVF_mul_edgeVF(&edgeVFdual_child, edgeVF_primal));
 
-         S_CHECK(ccflib_equil_dfs_dual(child_id, dfsdat, mps, mps_old));
+         S_CHECK(ccflib_equil_dfs_dual(mpid_child, dfsdat, mps, mps_old));
 
       }
    }
@@ -571,14 +649,13 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
    /* Add - w * k(y) to the primal MP equation(s) */
    rhp_idx objequ_dual = mp_getobjequ(mp_dual);
 
-   S_CHECK(primal_check_ei_dst(mdl, &dfsdat->arcVFprimal, dfsdat->mpid_primal));
    S_CHECK(primal_add_minus_ky(mdl, &dfsdat->arcVFprimal, objequ_dual));
 
    /* EMPDAG: reset VF children of dual node */
    unsigned n_arcs = mps_old->Varcs[mpid_dual].len;
    const ArcVFData *arcVFs_old = mps_old->Varcs[mpid_dual].arr;
-   struct VFedges *VFchildren = &mps->Varcs[mpid_dual];
-   VFchildren->len = 0;
+   VarcArray *Varcs = &mps->Varcs[mpid_dual];
+   Varcs->len = 0;
 
    RhpSense path_sense = dfsdat->path_sense;
 
@@ -608,7 +685,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
    UIntArray *rarcs = mps->rarcs;
 
    /* save our dual information */
-   ArcVFData edgeVFprimal2dual = dfsdat->arcVFprimal;
+   ArcVFData Varc_primal2dual = dfsdat->arcVFprimal;
    mpid_t mpid_primal_bck = dfsdat->mpid_primal;
 
    CopyExprData dual_objequ_dat_bck = dfsdat->dual_objequ_dat;
@@ -638,7 +715,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
       }
 
       /* ---------------------------------------------------------------------
-       * We reset the edge to the current child 
+       * We reset the arcVF to the current child 
        * --------------------------------------------------------------------- */
 
       arcVFb_init(&dfsdat->arcVFdual, objei_dual);
@@ -667,12 +744,12 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
 
          S_CHECK_EXIT(daguidarray_rm(&rarcs[child_id], mpid_dual));
 
-         ArcVFData edge_primal_parent2child;
-         S_CHECK_EXIT(arcVF_copy(&edge_primal_parent2child, &edgeVFprimal2dual));
-         edge_primal_parent2child.mpid_child = child_id;
-         S_CHECK_EXIT(arcVF_mul_lequ(&edge_primal_parent2child, len, workY, vals));
+         ArcVFData Varc_primal_parent2child;
+         S_CHECK_EXIT(arcVF_copy(&Varc_primal_parent2child, &Varc_primal2dual));
+         Varc_primal_parent2child.mpid_child = child_id;
+         S_CHECK_EXIT(arcVF_mul_lequ(&Varc_primal_parent2child, len, workY, vals));
 
-         S_CHECK_EXIT(empdag_mpVFmpbyid(dfsdat->empdag, dfsdat->mpid_primal, &edge_primal_parent2child));
+         S_CHECK_EXIT(empdag_mpVFmpbyid(dfsdat->empdag, dfsdat->mpid_primal, &Varc_primal_parent2child));
 
 
          /* finally iterate on the primal child MP */
@@ -840,19 +917,19 @@ int ccflib_equil(Model *mdl)
          if (idx == UINT_MAX) {
             int offset;
             error("[CCFLIB:equilibrium]: %nERROR MP(%s) has MP(%s) as parent, "
-                  "but cannot find the CTRL edge between the 2.\n", &offset,
+                  "but cannot find the CTRL arc between the 2.\n", &offset,
                   empdag_getmpname(empdag, mpid), empdag_getname(empdag, uid));
 
-            const ArcVFData *edge = empdag_find_edgeVF(empdag, mpid_parent, mpid);
+            const ArcVFData *arc = empdag_find_Varc(empdag, mpid_parent, mpid);
 
-            if (edge) {
-               error("%*sFound a VF edge between the 2. Please file a bug report\n",
+            if (arc) {
+               error("%*sFound a VF arc between the 2. Please file a bug report\n",
                      offset, "");
             } else {
                error("%*sInconsistent EMPDAG. Please file a bug report\n", offset, "");
             }
  
-               return Error_RuntimeError;
+               return Error_BugPleaseReport;
             }
 
             Carcs_parent->arr[idx] = nashid2uid(equil->id);

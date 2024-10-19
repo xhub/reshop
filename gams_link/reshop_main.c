@@ -304,23 +304,23 @@ _exit:
    return rc;
 }
 
-DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
+DllExport int STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
 {
    rhpRec_t *jh = (rhpRec_t *)Cptr;
    int rc;
    char msg[GMS_SSSIZE];
    struct rhp_mdl *mdl_solver  = NULL;
 
+   gmoModelStatSet(jh->gh, gmoModelStat_ErrorNoSolution);
+   gmoSolveStatSet(jh->gh, gmoSolveStat_SetupErr);
+
    rc = opt_pushtosolver(jh);
    if (rc) {
       (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: reading options failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc);
       gevLogStatPChar(jh->eh, msg);
-      goto _exit;
+      return rc; /* Early return */
    }
-
-   gmoModelStatSet(jh->gh, gmoModelStat_ErrorNoSolution);
-   gmoSolveStatSet(jh->gh, gmoSolveStat_SetupErr);
 
    /* Process the EMPINFO  */
    rc = rhp_gms_readempinfo(jh->mdl, NULL);
@@ -367,9 +367,10 @@ DllExport int  STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
 
 _exit:
    if (rc) {
-      gmoSolveStatSet(jh->gh, gmoSolveStat_InternalErr);
       gmoModelStatSet(jh->gh, gmoModelStat_ErrorNoSolution);
-      /* TODO(GAMS review) would gmoModelStat_ErrorUnknown be better? */
+      gmoSolveStatSet(jh->gh, rhp_rc2gmosolvestat(rc));
+
+      rhp_printrcmsg(rc, jh->eh);
    }
 
    /*  TODO(xhub) is this the right place to free, or in rhpFree? */

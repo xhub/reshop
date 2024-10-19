@@ -18,7 +18,7 @@
  * Prototypes for tokens
  * --------------------------------------------------------------------- */
 
-NONNULL MALLOC_ATTR(free, 1) const char* tok_dupident(const Token *tok);
+NONNULL MALLOC_ATTR(free, 1) char* tok_dupident(const Token *tok);
 int tok_expects(const Token *tok, const char *msg, unsigned argc, ...) NONNULL;
 int tok_err(const Token *tok, TokenType type_expected, const char *msg) NONNULL;
 bool tokisgms(TokenType toktype);

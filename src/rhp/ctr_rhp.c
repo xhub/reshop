@@ -20,6 +20,7 @@
 #include "ctrdat_rhp.h"
 #include "pool.h"
 #include "printout.h"
+#include "rctr_equ_edit_priv.h"
 #include "reshop_data.h"
 #include "rmdl_priv.h"
 #include "timings.h"
@@ -467,7 +468,7 @@ int rctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
       EquRole equrole = equmeta->role;
       if (equrole != EquUndefined) {
          error("[container] ERROR: equ '%s' already has type '%s'. It should be unset\n",
-               ctr_printequname(ctr, ei), equrole_name(equrole));
+               ctr_printequname(ctr, ei), equrole2str(equrole));
          return Error_UnExpectedData;
       }
 
@@ -710,8 +711,7 @@ int rctr_get_equation(const Container* ctr, rhp_idx ei, EquInfo * restrict equ)
    equ->flipped = flipped;
 
    /* If the equation is from another stage, force copy */
-   unsigned char e_stage = cdat->equ_stage[equ->ei];
-   equ->copy_if_modif = cdat->current_stage != e_stage;
+   equ->copy_if_modif = rctr_equ_is_readonly(ctr, ei);
 
    return OK;
 }

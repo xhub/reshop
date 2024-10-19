@@ -23,7 +23,7 @@ static inline void _setvarrole(MathPrgm *mp, rhp_idx vi, VarRole type)
 {
    assert(mp->mdl->ctr.varmeta);
    MP_DEBUG("Var '%s' has now type '%s'\n", ctr_printvarname(&mp->mdl->ctr, vi),
-            varrole_name(type));
+            varrole2str(type));
    (mp->mdl->ctr.varmeta)[vi].type = type;
 }
 
@@ -38,7 +38,7 @@ static inline void _addvarbasictype(MathPrgm *mp, rhp_idx vi, VarPptyType ppty)
 static inline void _setequrole(MathPrgm *mp, rhp_idx ei, EquRole role)
 {
    MP_DEBUG("Equ '%s' has now type '%s'\n", ctr_printequname(&mp->mdl->ctr, ei),
-            equrole_name(role));
+            equrole2str(role));
    assert(mp->mdl->ctr.equmeta);
    (mp->mdl->ctr.equmeta)[ei].role = role;
 }
