@@ -40,6 +40,9 @@ static inline void emptok_init(struct emptok *tok, unsigned linenr)
    scratchint_init(&tok->iscratch);
    tok->dscratch.data = NULL;
    tok->dscratch.size = 0;
+
+   // HACK make sure it makes sense
+   //memset(tok->payload.label, 0, sizeof(tok->payload));
 }
 
 NONNULL
@@ -51,13 +54,18 @@ static void finalization_init(InterpFinalization *finalize)
 
 void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 {
+   interp->health = PARSER_OK;
    interp->peekisactive = false;
+   interp->err_shown = false;
    interp->linenr = 1;
+   interp->read = 0;
    interp->linestart = NULL;
    interp->linestart_old = NULL;
    interp->buf = NULL;
-   interp->health = PARSER_OK;
+   // HACK UNUSED?
+   interp->tmpstr = NULL;
    interp->empinfo_fname = fname;
+   interp->tmpstrlen = 0;
 
    interp->mdl = mdl;
    if (mdl) {
@@ -67,10 +75,10 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
       interp->dct = NULL;
    }
 
+   interp->gmdcpy = NULL;
    interp->gmd = NULL;
    interp->gmd_fromgdx = false;
    interp->gmd_own = false;
-   interp->gmdcpy = NULL;
 
    emptok_init(&interp->cur, 0);
    emptok_init(&interp->peek, 0);
@@ -79,6 +87,8 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    parsedkwds_init(&interp->state);
    interp->last_kw_info.type = TOK_UNSET;
    finalization_init(&interp->finalize);
+
+
    interp->ops = &interp_ops_imm;
    interp->compiler = empvm_compiler_init(interp);
 
@@ -113,7 +123,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    interp->daguid_child = EMPDAG_UID_NONE;
 }
 
-NONNULL void interp_free(Interpreter *interp)
+NONNULL void empinterp_free(Interpreter *interp)
 {
    if (interp->pre.type != TOK_UNSET) {
       tok_free(&interp->pre);
@@ -491,7 +501,7 @@ _exit:
 
    }
 
-   interp_free(&interp);
+   empinterp_free(&interp);
 
    return status;
 }

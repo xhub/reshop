@@ -280,6 +280,15 @@ int resolve_lexeme_as_gms_symbol(Interpreter * restrict interp, Token * restrict
    }
 
    tok->type = ident2toktype(symdat->ident.type);
+
+   // HACK: this is needed, especially in embmode
+   // TODO: use a status flag in the Token to indicate of data has been read
+   if (tok->type == TOK_GMS_VAR) {
+      avar_init(&tok->payload.v);
+   } else if (tok->type == TOK_GMS_EQU) {
+      aequ_init(&tok->payload.e);
+   }
+
    return OK;
 
 }

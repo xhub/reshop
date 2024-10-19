@@ -915,6 +915,8 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
 
    iterators->size = loopi;
 
+   assert(gmsindices_deactivate(indices));
+
    return OK;
 }
 
@@ -1380,7 +1382,7 @@ void empvm_compiler_free(Compiler* c)
    if (!c) return;
 
    empvm_free(c->vm);
-   FREE(c);
+   free(c);
 }
 
 
@@ -1868,10 +1870,10 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    S_CHECK(parse_loopiters_operator(interp, p, c, &iterators));
 
    /* ---------------------------------------------------------------------
-    * Step 2: parse the expression. We accept param * valfn * variables
+    * Step 2: parse the expression like param * n(...){.dual()}.valFn * variables
     * --------------------------------------------------------------------- */
    bool has_var = false, has_param = false, has_valfn = false;
-   bool parse_kwd = false, has_smooth = false;
+   bool parse_kwd = false, has_smooth = false; //, has_dual = false;
    unsigned p_bck = UINT_MAX;
 
    do {

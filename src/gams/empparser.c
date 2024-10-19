@@ -154,7 +154,7 @@ struct dblobj {
 NONNULL static
 int parse_dualequ_equvar(Interpreter * restrict interp, unsigned * restrict p);
 
-void  tok_free(Token *tok)
+void tok_free(Token *tok)
 {
    switch (tok->type) {
    case TOK_GMS_VAR:
@@ -1868,8 +1868,8 @@ static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
    // See code for labeldef
    S_CHECK(interp->ops->read_gms_symbol(interp, p));
 
+   // read_gms_symbol already deactivates the gmsindices
    interp->gms_sym_iterator.active = false;
-   assert(gmsindices_deactivate(indices));
 
    return OK;
 }
@@ -2278,18 +2278,29 @@ static int add_edge4label(Interpreter *interp, unsigned *p,
    /* If we are in ImmMode and need to switch to CompilerMode, we have to execute
     * the VM before returning as the EMPDAG uid would be wrong if executed later
     */
-   GmsIndicesData gmsindices;
-   gmsindices_init(&gmsindices);
+   GmsIndicesData gmsindices_local;
+   GmsIndicesData *gmsindices;
 
-   if (toktype == TOK_LPAREN) {
-      *p = p2;
-      S_CHECK(parse_gmsindices(interp, p, &gmsindices));
+   // HACK: with the new syntax, do we need to part gmsindices here?
+   // See if we can kill it
+   if (gmsindices_isactive(&interp->gmsindices)) {
+      gmsindices = &interp->gmsindices;
+      if (toktype == TOK_LPAREN) {
+         TO_IMPLEMENT("gmsindices from the interpreter and we have a parenthesis");
+      }
+   } else {
+      gmsindices = &gmsindices_local;
+      gmsindices_init(gmsindices);
+      if (toktype == TOK_LPAREN) {
+         *p = p2;
+         S_CHECK(parse_gmsindices(interp, p, gmsindices));
+      }
    }
 
    bool switch_back_imm = false;
-   if (gmsindices_needcompmode(&gmsindices)) {
+   if (gmsindices_needcompmode(gmsindices)) {
       S_CHECK(c_switch_to_compmode(interp, &switch_back_imm));
-      S_CHECK(vm_fn(interp, p, identname, identname_len, &gmsindices));
+      S_CHECK(vm_fn(interp, p, identname, identname_len, gmsindices));
    } else {
 
       /* ---------------------------------------------------------------------
@@ -2304,7 +2315,8 @@ static int add_edge4label(Interpreter *interp, unsigned *p,
          error("%*sPlease report this as a bug.\n", offset, "");
          return Error_EMPRuntimeError;
       }
-      S_CHECK(imm_fn(interp, identname, identname_len, &gmsindices));
+      // HACK embmode also goes thru here ....
+      S_CHECK(imm_fn(interp, identname, identname_len, gmsindices));
    }
 
    if (switch_back_imm) {
@@ -2446,7 +2458,6 @@ int parse_identasscalar(Interpreter *interp, unsigned *restrict p, double *val)
 
       S_CHECK_EXIT(parse_gmsindices(interp, p, &indices));
       S_CHECK_EXIT(interp->ops->read_elt_vector(interp, identstr, &ident, &indices, val));
-      assert(gmsindices_deactivate(&indices));
       break;
    }
    case IdentParam: {
@@ -3299,6 +3310,15 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
       S_CHECK(advance(interp, p, &toktype));
    }
 
+   // HACK: we have trouble parsing
+   //    cv('1'): min SUM(O_1, pr(O_1)*n(O_1).valfn)
+   // for the lack of equation or variable...
+   // The real fix is to detech an upcoming labdeldef and exit in that case
+   //
+   if (TOK_IDENT == toktype) {
+      goto exit_while;
+   }
+
    assert(toktype == TOK_GMS_VAR || toktype == TOK_GMS_EQU);
 
    /* ------------------------------------------------------------------
@@ -3379,7 +3399,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
             if (toktype == TOK_COLON) { goto exit_while; }
          }
  
-         /* ----------------------------------------------------------------
+/* ----------------------------------------------------------------
           * We have a MP or Nash in the constraints
           * ---------------------------------------------------------------- */
          interp_save_tok(interp);

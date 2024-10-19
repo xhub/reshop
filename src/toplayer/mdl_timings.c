@@ -54,6 +54,7 @@ int mdl_timings_alloc(Model *mdl)
    t->gams.empinfo_file.interp = 0.;
    t->gams.empinfo_file.empdag_edges_built = 0.;
 
+   simple_timing_init(&t->rhp.mdl_creation);
    simple_timing_init(&t->empdag.analysis);
 
    t->reformulation.container.dualvar = 0.;
@@ -68,11 +69,11 @@ int mdl_timings_alloc(Model *mdl)
 
    t->reformulation.empdag.total = 0.;
 
+   t->gmo_creation = 0.;
+
    t->solve.presolve_wall = 0.;
    t->solve.fooc = 0.;
    t->solve.solver_wall = 0.;
-
-   t->gmo_creation = 0.;
 
    t->postprocessing = 0.;
 

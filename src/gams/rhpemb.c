@@ -15,16 +15,20 @@ int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir, unsigned
       return Error_NotImplemented;
    }
 
-   char *fname, *scrdir2;
+   char *fname = NULL, *scrdir2;
    MALLOC_(fname, char, codelen+1);
-   MALLOC_(scrdir2, char, scrdirlen+1);
+   MALLOC_EXIT(scrdir2, char, scrdirlen+1);
 
-   strncpy(fname, code, codelen+1);
-   strncpy(scrdir2, scrdir, scrdirlen+1);
+   strncpy(fname, code, codelen);
+   fname[codelen] = '\0';
+   strncpy(scrdir2, scrdir, scrdirlen);
+   scrdir2[scrdirlen] = '\0';
 
    S_CHECK_EXIT(embcode_process_empinfo(gmd, scrdir2, fname))
 
 _exit:
-   FREE(fname);
+   free(fname);
+   free(scrdir2);
+
    return status;
 }

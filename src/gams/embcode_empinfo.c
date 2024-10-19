@@ -515,7 +515,7 @@ _exit:
 
    }
 
-   interp_free(&interp);
+   empinterp_free(&interp);
 
    return status;
 
