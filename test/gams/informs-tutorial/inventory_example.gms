@@ -34,7 +34,7 @@ SCALAR tol /1e-6/;
 x_l = x.l;
 x_m = x.m;
 
-* This is the first variant in Subsection 3.1
+* This is the first variant in Subsection 3.1 alpha = [5, 0.5]
 EmbeddedCode ReSHOP:
   deffn f(i) defcost(i)
   main: min SUM(i, alpha(i)*f(i)) x
@@ -51,7 +51,7 @@ abort$[abs(x_m - x.m) > tol] "wrong solution", x_m, x.m;
 option clear=x;
 x.lo = 10;
 
-* This is the second variant in Subsection 3.1
+* This is the second variant in Subsection 3.1 alpha = [1 1]
 defobj_smax(i)..
   obj =g= (beta*rho/x)$sameas(i,'ordfix') + (gamma*x/2)$sameas(i,'inv');
 
@@ -60,6 +60,35 @@ solve biobjective_smax_ref using nlp min obj;
 
 x_l = x.l;
 x_m = x.m;
+
+option clear=x;
+x.lo = 10;
+
+embeddedCode ReSHOP:
+  deffn f(i) defcost(i)
+  main: min h0.dual().valFn x
+  h0: MP('smax', f(i))
+endEmbeddedCode
+ 
+solve biobjective using emp;
+
+check_status(biobjective);
+abort$[abs(x_l - x.l) > tol] "wrong solution", x_l, x.l;
+abort$[abs(x_m - x.m) > tol] "wrong solution", x_m, x.m;
+
+* Equilibrium solve
+embeddedCode ReSHOP:
+  deffn f(i) defcost(i)
+  main: min h0.objFn x
+  h0: MP('smax', f(i))
+  equil: Nash(main,h0)
+endEmbeddedCode
+ 
+solve biobjective using emp;
+
+check_status(biobjective);
+abort$[abs(x_l - x.l) > tol] "wrong solution", x_l, x.l;
+abort$[abs(x_m - x.m) > tol] "wrong solution", x_m, x.m;
 
 option clear=x;
 x.lo = 10;
@@ -75,3 +104,17 @@ solve biobjective using emp;
 check_status(biobjective);
 abort$[abs(x_l - x.l) > tol] "wrong solution", x_l, x.l;
 abort$[abs(x_m - x.m) > tol] "wrong solution", x_m, x.m;
+
+$exit
+
+* third variant alpha = [5,0.5]
+option clear=x;
+x.lo = 10;
+
+embeddedCode ReSHOP:
+  deffn f(i) defcost(i)
+  H(i): MP('plus',f(i),offset=tau(i))
+  root: min SUM(i, alpha(i)*H(i).dual().valfn) x
+endEmbeddedCode
+
+solve biobjective using emp;
