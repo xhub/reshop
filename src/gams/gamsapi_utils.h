@@ -40,6 +40,7 @@
 
 #define GMD_FIND_CHK(func, gmdh, ...) \
    if (!func(gmdh, __VA_ARGS__)) { \
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, buf); \
       error("[empinterp] ERROR: in the GMD, could not find record for symbol %s", buf); \
       if (dim > 1 || (dim == 1 && uels[0] > 0)) { \
          errormsg("("); \

@@ -637,8 +637,7 @@ int rhp_uint_rm(UIntArray *dat, unsigned v)
    unsigned pos = dat->len-1;
    for (unsigned i = 0; i < dat->len-1; ++i, --pos) {
       if (dat->arr[pos] < v) {
-         error("%s :: could not find value %d in the dataset\n",
-                            __func__, v);
+         error("%s :: ERROR: could not find value %d in the dataset\n", __func__, v);
          return Error_NotFound;
       }
 

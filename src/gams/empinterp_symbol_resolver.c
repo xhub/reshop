@@ -178,7 +178,7 @@ int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symnam
    unsigned dim;
    TokenType toktype;
    bool compact;
-   char buf[GMS_SSSIZE];
+   char buf[GMS_SSSIZE] = " ";
 
    if (data->type == GmsSymIteratorTypeImm) {
       symnr = data->symiter.imm.symidx;

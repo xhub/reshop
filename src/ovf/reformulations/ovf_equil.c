@@ -21,7 +21,7 @@
 #include "timings.h"
 
 int reformulation_equil_compute_inner_product(enum OVF_TYPE type, union ovf_ops_data ovfd, Model *mdl,
-                                              const SpMat *B, const double *b, Equ **e, Avar *uvar,
+                                              const SpMat *B, const double *b, rhp_idx *objequ, Avar *uvar,
                                               const char *ovf_name)
 {
    rhp_idx *equ_idx = NULL;
@@ -46,20 +46,23 @@ int reformulation_equil_compute_inner_product(enum OVF_TYPE type, union ovf_ops_
    S_CHECK(op->get_args(ovfd, &args));
    S_CHECK(ovf_process_indices(mdl, args, equ_idx));
 
-   Equ *eobj = *e;
    Container *ctr = &mdl->ctr;
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
-   if (!eobj) {
+   Equ *eobj;
+   rhp_idx objequ_ = *objequ;
+   if (!valid_ei(objequ_)) {
       S_CHECK(rctr_reserve_equs(ctr, 1));
 
       char *ovf_objequ_name;
       NEWNAME2(ovf_objequ_name, ovf_name, strlen(ovf_name), "_objequ");
       S_CHECK(cdat_equname_start(cdat, ovf_objequ_name));
 
-      rhp_idx ei_obj;
-      S_CHECK(rctr_add_equ_empty(ctr, &ei_obj, &eobj, Mapping, CONE_NONE));
+      S_CHECK(rctr_add_equ_empty(ctr, objequ, &eobj, Mapping, CONE_NONE));
+      objequ_ = *objequ;
       S_CHECK(cdat_equname_end(cdat));
+   } else {
+      eobj = &mdl->ctr.equs[objequ_];
    }
 
    unsigned nargs = avar_size(args);
@@ -74,13 +77,11 @@ int reformulation_equil_compute_inner_product(enum OVF_TYPE type, union ovf_ops_
    S_CHECK(rctr_nltree_cpy_dot_prod_var_map(&mdl->ctr, eobj->tree, eobj->tree->root, uvar, B, b,
                                             coeffs, args, &aeqn));
 
-   *e = eobj;
-
    return OK;
 
 }
 
-int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, Equ *eobj, rhp_idx vi_ovf,
+int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, rhp_idx objequ, rhp_idx vi_ovf,
                                       Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd,
                                       Avar *uvar, unsigned n_args)
 {
@@ -94,7 +95,7 @@ int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, Equ *eobj, rhp_idx vi_ov
     * - add u to the MP
     * ---------------------------------------------------------------------- */
 
-   assert(valid_ei_(eobj->idx, mdl_nequs_total(mdl), __func__));
+   assert(valid_ei_(objequ, mdl_nequs_total(mdl), __func__));
    int status = OK;
 
    const struct ovf_ops *op;
@@ -110,6 +111,7 @@ int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, Equ *eobj, rhp_idx vi_ov
    }
 
    /*  Add -k(y) */
+   Equ *eobj = &mdl->ctr.equs[objequ];
    op->add_k(ovfd, mdl, eobj, uvar);
 
    /*  TODO(xhub) URG remove this HACK */
@@ -260,9 +262,10 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    /* ----------------------------------------------------------------------
     * Create <y, G(F(x))>
     * ---------------------------------------------------------------------- */
-   Equ *eobj = NULL;
-   S_CHECK_EXIT(reformulation_equil_compute_inner_product(type, ovfd, mdl, &B, b, &eobj, &uvar, ovf_name));
+   rhp_idx objequ = IdxNA;
+   S_CHECK_EXIT(reformulation_equil_compute_inner_product(type, ovfd, mdl, &B, b, &objequ, &uvar, ovf_name));
 
+   Equ *eobj = &mdl->ctr.equs[objequ];
    NlNode *dot_prod_parent = eobj->tree->root;
    assert(dot_prod_parent);
 
@@ -298,7 +301,8 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    } while(iter);
 
    /* The first agent is now completed, move to the second one */
-   S_CHECK(reformulation_equil_setup_dual_mp(mp_ovf, eobj, vi_ovf, mdl, type, ovfd, &uvar, nargs))
+
+   S_CHECK(reformulation_equil_setup_dual_mp(mp_ovf, objequ, vi_ovf, mdl, type, ovfd, &uvar, nargs))
 
 _exit:
    op->trimmem(ovfd);

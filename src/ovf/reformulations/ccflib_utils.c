@@ -72,7 +72,7 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
       OvfOpsData ovfd_mp = {.ccfdat = &ccfdat};
       S_CHECK_EXIT(reformulation_equil_compute_inner_product(OvfType_Ccflib, ovfd_mp, mdl,
                                                         &instancedat->B, instancedat->b,
-                                                        &eobj, &y, NULL));
+                                                        &objequ, &y, NULL));
    }
 
 _exit:

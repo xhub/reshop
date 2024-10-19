@@ -218,7 +218,7 @@ int primal_check_Varc_ei(Model *mdl, ArcVFData *arc, mpid_t mpid, EiRosetta *ei_
       MathPrgm *mp;
       S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp));
 
-      assert(mp->type == MpTypeOpt);
+      assert(mp->type == MpTypeOpt); assert(!valid_ei(mp->opt.objequ));
 
       Container *ctr = &mdl->ctr;
       RhpContainerData *cdat = (RhpContainerData*)ctr->data;
@@ -230,7 +230,6 @@ int primal_check_Varc_ei(Model *mdl, ArcVFData *arc, mpid_t mpid, EiRosetta *ei_
 
       S_CHECK(rctr_add_equ_empty(ctr, &ei_dst, NULL, Mapping, CONE_NONE));
       S_CHECK(cdat_equname_end(cdat));
-
 
       mp_setobjequ(mp, ei_dst);
 
@@ -692,13 +691,13 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
 
    for (unsigned i = 0; i < n_arcs; ++i) {
       const ArcVFData *arcVF_old = &arcVFs_old[i];
-      unsigned child_id = arcVF_old->mpid_child;
+      mpid_t mpid_child = arcVF_old->mpid_child;
 
-      MathPrgm *mp_child = mps->arr[child_id];
+      MathPrgm *mp_child = mps->arr[mpid_child];
       RhpSense child_sense = mp_getsense(mp_child);
       assert(child_sense == RhpMin || child_sense == RhpMax);
 
-      trace_process("[ccflib/equil:dual] tackling child MP(%s)\n", mps->names[child_id]);
+      trace_process("[ccflib/equil:dual] tackling child MP(%s)\n", mps->names[mpid_child]);
 
       /* TODO: add restrict keyword */
       unsigned si, len, *idxs;
@@ -742,18 +741,18 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
           * primal parent to child MPs with weights being multiplied
           * --------------------------------------------------------------- */
 
-         S_CHECK_EXIT(daguidarray_rm(&rarcs[child_id], mpid_dual));
+         S_CHECK_EXIT(daguidarray_rm(&rarcs[mpid_child], mpid_dual));
 
          ArcVFData Varc_primal_parent2child;
          S_CHECK_EXIT(arcVF_copy(&Varc_primal_parent2child, &Varc_primal2dual));
-         Varc_primal_parent2child.mpid_child = child_id;
+         Varc_primal_parent2child.mpid_child = mpid_child;
          S_CHECK_EXIT(arcVF_mul_lequ(&Varc_primal_parent2child, len, workY, vals));
 
          S_CHECK_EXIT(empdag_mpVFmpbyid(dfsdat->empdag, dfsdat->mpid_primal, &Varc_primal_parent2child));
 
 
          /* finally iterate on the primal child MP */
-         S_CHECK_EXIT(ccflib_equil_dfs_primal(child_id, dfsdat, mps, mps_old));
+         S_CHECK_EXIT(ccflib_equil_dfs_primal(mpid_child, dfsdat, mps, mps_old));
 
       } else {
          /* ---------------------------------------------------------------------

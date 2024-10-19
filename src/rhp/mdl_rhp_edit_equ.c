@@ -164,6 +164,9 @@ int rmdl_equ_dup_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_
 
    S_CHECK(cdat_equname_start(cdat, name_));
    rhp_idx ei_new = IdxNA;
+
+   S_CHECK(rctr_reserve_equs(ctr, 1));
+
    S_CHECK(rctr_add_equ_empty(ctr, &ei_new, NULL, ctr->equs[ei_src].object, ctr->equs[ei_src].cone));
    cdat_equname_end(cdat);
 
@@ -257,8 +260,6 @@ int rmdl_equ_defmap2map(Model *mdl, Equ **e, rhp_idx defvar)
    Container *ctr = &mdl->ctr;
    Equ *e_map = *e; assert(e_map);
    assert(e_map->object == DefinedMapping); assert(mdl_is_rhp(mdl));
-
-   S_CHECK(rctr_reserve_equs(ctr, 1));
 
    unsigned pos_dummy;
    double vi_coeff;

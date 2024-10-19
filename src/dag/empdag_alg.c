@@ -133,7 +133,7 @@ typedef struct empdag_mp_ppty {
 
 typedef struct empdag_mpe_ppty {
    unsigned level;
-} DagMpePpty;
+} DagNashPpty;
 
 typedef struct empdag_dfs {
    const Model *mdl;
@@ -153,7 +153,7 @@ typedef struct empdag_dfs {
    unsigned * restrict topo_order;
    unsigned * restrict topo_order_revidx;
    DagMpPpty * restrict mp_ppty;
-   DagMpePpty * restrict mpe_ppty;
+   DagNashPpty * restrict nash_ppty;
    bool * restrict processed_vi;
    MpIdArray adversarial_mps;
    MpIdArray saddle_path_starts;
@@ -386,7 +386,7 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
 
    unsigned num_nodes = dfsdata->num_nodes;
    unsigned num_mps = dfsdata->num_mps;
-   unsigned num_mpes = dfsdata->num_mpes;
+   unsigned num_nash = dfsdata->num_mpes;
 
    CALLOC_(dfsdata->nodes_stat, DfsState, num_nodes);
    CALLOC_(dfsdata->preorder, unsigned, num_nodes);
@@ -394,7 +394,7 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    CALLOC_(dfsdata->topo_order, unsigned, num_nodes);
    CALLOC_(dfsdata->topo_order_revidx, unsigned, num_nodes);
    MALLOC_(dfsdata->mp_ppty, DagMpPpty, num_mps);
-   MALLOC_(dfsdata->mpe_ppty, DagMpePpty, num_mpes);
+   MALLOC_(dfsdata->nash_ppty, DagNashPpty, num_nash);
 
    dfsdata->processed_vi_len = ctr_nvars_total(&empdag->mdl->ctr);
    MALLOC_(dfsdata->processed_vi, bool, dfsdata->processed_vi_len);
@@ -416,7 +416,7 @@ void dfsdata_free(EmpDagDfsData *dfsdata)
    FREE(dfsdata->topo_order);
    FREE(dfsdata->topo_order_revidx);
    FREE(dfsdata->mp_ppty);
-   FREE(dfsdata->mpe_ppty);
+   FREE(dfsdata->nash_ppty);
    FREE(dfsdata->processed_vi);
 
    rhp_uint_empty(&dfsdata->adversarial_mps);
@@ -1141,10 +1141,10 @@ int report_error_foreign_equ(const Model *mdl, rhp_idx ei, mpid_t mp_id)
 }
 
 NONNULL static
-int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
+int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mpid, AnalysisData *data)
 {
    const DagMpArray *mps = &dfsdata->empdag->mps;
-   const MathPrgm * restrict mp = mps->arr[mp_id];
+   const MathPrgm * restrict mp = mps->arr[mpid];
 
   /* ----------------------------------------------------------------------
    * If the EMPDAG was edited, we allow for NULL mps
@@ -1153,7 +1153,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
    /* See GG #9 */
    if (!mp || mp_ishidden(mp)) { return OK; }
 
-   DagMpPpty * restrict mp_ppty = &dfsdata->mp_ppty[mp_id];
+   DagMpPpty * restrict mp_ppty = &dfsdata->mp_ppty[mpid];
    const IdxArray * restrict equs = &mp->equs;
    const Model *mdl = dfsdata->empdag->mdl;
    VarMeta *varmeta = mdl->ctr.varmeta;
@@ -1168,12 +1168,12 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
    unsigned level;
    MpType type = mp_gettype(mp);
 
-   if (mps->rarcs[mp_id].len > 0) {
-      daguid_t uid = mps->rarcs[mp_id].arr[0];
+   if (mps->rarcs[mpid].len > 0) {
+      daguid_t uid = mps->rarcs[mpid].arr[0];
       dagid_t pid = uid2id(uid);
 
       bool parent_is_MP = uidisMP(uid);
-      level = parent_is_MP ? dfsdata->mp_ppty[pid].level : dfsdata->mpe_ppty[pid].level;
+      level = parent_is_MP ? dfsdata->mp_ppty[pid].level : dfsdata->nash_ppty[pid].level;
       /* If the parent is an equilibrium, the */
       if (parent_is_MP && rarcTypeCtrl(uid)) {
          level += 1;
@@ -1185,8 +1185,8 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
       level = 0;
    }
 
-   for (unsigned i = 1, len = mps->rarcs[mp_id].len; i < len; ++i) {
-      daguid_t uid = mps->rarcs[mp_id].arr[i];
+   for (unsigned i = 1, len = mps->rarcs[mpid].len; i < len; ++i) {
+      daguid_t uid = mps->rarcs[mpid].arr[i];
       dagid_t pid = uid2id(uid);
       unsigned l = dfsdata->mp_ppty[pid].level;
 
@@ -1198,7 +1198,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
 
       if (l != level) {
          error("[empdag] MP(%s) has different levels by different parents: %u "
-               "vs %u\n", mps->names[mp_id], l, level);
+               "vs %u\n", mps->names[mpid], l, level);
          return Error_NotImplemented;
       }
    }
@@ -1266,13 +1266,13 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
             error("[empdag] ERROR: var %n'%s' is not attached to any MP!\n",
                   &offset, mdl_printvarname(mdl, vi));
             error("%*sIt appears in equ '%s' of MP(%s)\n", offset, "",
-                  mdl_printequname(mdl, ei), empdag_getmpname(dfsdata->empdag, mp_id));
+                  mdl_printequname(mdl, ei), empdag_getmpname(dfsdata->empdag, mpid));
             num_err++;
             continue;
          }
 
          /* Check whether the equation contains variables from the MP */
-         if (mp_var == mp_id) { equ_has_owned_var = true; }
+         if (mp_var == mpid) { equ_has_owned_var = true; }
 
 
          if (processed_vi[vi]) { continue; }
@@ -1284,13 +1284,13 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
          assert(mp_var < mps->len);
 
          /* Simplest case: the MP owns the variable */
-         if (mp_var == mp_id) {
+         if (mp_var == mpid) {
             mp_ppty->num_ownvar++;
             continue;
          }
 
          /* A (direct) child MP owns the variable: CTRL cases */
-         if (is_child_Carcs(&mps->Carcs[mp_id], mp_var)) {
+         if (is_child_Carcs(&mps->Carcs[mpid], mp_var)) {
 
             /* objvar do not get tagged as not really part of the problem */
             if (var_is_defined_objvar(&varmeta[vi])) { continue; }
@@ -1301,13 +1301,13 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
          }
 
          /* A variable from a descendent VF MP cannot be present in the equation */
-         if (is_child_Varcs(&mps->Varcs[mp_id], mp_var)) {
-            report_error_futurevar(dfsdata->empdag, vi, ei, mp_var, mp_id);
+         if (is_child_Varcs(&mps->Varcs[mpid], mp_var)) {
+            report_error_futurevar(dfsdata->empdag, vi, ei, mp_var, mpid);
             continue;
          }
 
          /* The parent MP owns the variable: VF and CTRL subcases */
-         if (is_parent(&mps->rarcs[mp_id], mp_var, &uid)) {
+         if (is_parent(&mps->rarcs[mpid], mp_var, &uid)) {
 
             if (rarcTypeVF(uid)) {
                mp_ppty->num_history++;
@@ -1323,8 +1323,8 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
          TreePath *path = &data->path;
 
          /* Check for a case of history/CTRL variable */
-         if (is_ancestor(dfsdata, mp_var, mp_id)) {
-            S_CHECK(tree_get_path_backward(dfsdata, mp_var, mp_id, path));
+         if (is_ancestor(dfsdata, mp_var, mpid)) {
+            S_CHECK(tree_get_path_backward(dfsdata, mp_var, mpid, path));
 
             /* If the path contains a CTRL edge, the variable is a CTRL one.
              * Otherwise it is a history one */
@@ -1339,12 +1339,12 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
          }
 
          /* Check for solvar */
-         if (is_ancestor(dfsdata, mp_id, mp_var)) {
-            S_CHECK(tree_get_path_backward(dfsdata, mp_id, mp_var, path));
+         if (is_ancestor(dfsdata, mpid, mp_var)) {
+            S_CHECK(tree_get_path_backward(dfsdata, mpid, mp_var, path));
 
             /* We enforce that a CTRL edge must be present */
             if (path->ctrl_edges == 0) {
-               report_error_futurevar(dfsdata->empdag, vi, ei, mp_var, mp_id);
+               report_error_futurevar(dfsdata->empdag, vi, ei, mp_var, mpid);
                num_err++;
             } else {
 
@@ -1383,13 +1383,13 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
           * We proceed to look for the least common ancestor and check
           * that it is an Nash node
           * ---------------------------------------------------------------- */
-         nidx_t nidx_lca = lca(mp_id, mp_var, dfsdata);
+         nidx_t nidx_lca = lca(mpid, mp_var, dfsdata);
          if (!valid_uid(nidx_lca)) {
-            report_error_nolca(dfsdata->empdag, vi, ei, mp_var, mp_id);
+            report_error_nolca(dfsdata->empdag, vi, ei, mp_var, mpid);
          }
          daguid_t nidx_uid = nidx2uid(nidx_lca, dfsdata);
          if (!uidisNash(nidx_uid)) {
-            report_error_badlca(dfsdata->empdag, vi, ei, mp_var, mp_id, nidx_uid);
+            report_error_badlca(dfsdata->empdag, vi, ei, mp_var, mpid, nidx_uid);
             num_err++;
          } else {
              mp_ppty->num_nashvar++;
@@ -1398,15 +1398,15 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
       } while (iterator);
 
       if (!equ_is_cst && !equ_has_owned_var &&
-         !valid_foreign_equ_ctrlchildren(mdl, ei, mp_id, dfsdata)) {
-         report_error_foreign_equ(mdl, ei, mp_id);
+         !valid_foreign_equ_ctrlchildren(mdl, ei, mpid, dfsdata)) {
+         report_error_foreign_equ(mdl, ei, mpid);
          num_err++;
       }
    }
 
    if (num_err > 0) {
       error("[empdag] %u errors found while checking MP(%s)\n", num_err,
-            empdag_getmpname(dfsdata->empdag, mp_id));
+            empdag_getmpname(dfsdata->empdag, mpid));
       return -num_err;
    }
 
@@ -1414,11 +1414,11 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mp_id, AnalysisData *data)
 }
 
 NONNULL static
-int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
+int analyze_nash(EmpDagDfsData *dfsdata, nashid_t nashid, AnalysisData *data)
 {
    EmpDag *empdag = dfsdata->empdag;
    const DagNashArray *mpes = &empdag->nashs;
-   DagMpePpty * restrict mpe_ppty = &dfsdata->mpe_ppty[mpe_id];
+   DagNashPpty * restrict nash_ppty = &dfsdata->nash_ppty[nashid];
    unsigned num_err = 0;
 
    /* ---------------------------------------------------------------------
@@ -1430,8 +1430,8 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
    const DagMpArray *mps = &empdag->mps;
    bool mp_parent_opt = false, mp_parent_vi = false;
 
-   if (mpes->rarcs[mpe_id].len > 0) {
-      daguid_t uid = mpes->rarcs[mpe_id].arr[0];
+   if (mpes->rarcs[nashid].len > 0) {
+      daguid_t uid = mpes->rarcs[nashid].arr[0];
       dagid_t pid = uid2id(uid);
       assert(uidisMP(pid));
 
@@ -1447,15 +1447,15 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
       level = 0;
    }
 
-   for (unsigned i = 1, len = mpes->rarcs[mpe_id].len; i < len; ++i) {
-      daguid_t uid = mpes->rarcs[mpe_id].arr[i];
+   for (unsigned i = 1, len = mpes->rarcs[nashid].len; i < len; ++i) {
+      daguid_t uid = mpes->rarcs[nashid].arr[i];
       dagid_t pid = uid2id(uid);
       assert(uidisMP(pid));
       unsigned l = dfsdata->mp_ppty[pid].level;
 
       if (l != level) {
          error("[empdag] Nash(%s) has different levels by different parents: %u "
-               "vs %u\n", mpes->names[mpe_id], l, level);
+               "vs %u\n", mpes->names[nashid], l, level);
          return Error_NotImplemented;
       }
 
@@ -1467,7 +1467,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
       }
    }
 
-   mpe_ppty->level = level;
+   nash_ppty->level = level;
 
    EmpDagViEdgeFeatures  vifeat;
    EmpDagOptEdgeFeatures optfeat;
@@ -1489,7 +1489,7 @@ int analyze_mpe(EmpDagDfsData *dfsdata, mpid_t mpe_id, AnalysisData *data)
 
    if (num_err > 0) {
       error("[empdag] %u errors found while checking MP(%s)\n", num_err,
-            empdag_getnashname(dfsdata->empdag, mpe_id));
+            empdag_getnashname(dfsdata->empdag, nashid));
    }
 
    return OK;
@@ -1637,13 +1637,14 @@ int empdag_analysis(EmpDag * restrict empdag)
    unsigned num_mps = dfsdata.num_mps;
    S_CHECK(analysis_data_init(&analysis_data, &dfsdata));
 
-   for (unsigned len = dfsdata.num_nodes, i = len-1; i < len; --i) {
+   // HACK: num_visited vs num_nodes
+   for (unsigned len = dfsdata.num_visited, i = len-1; i < len; --i) {
       unsigned node_idx = dfsdata.topo_order[i];
       assert(node_idx < dfsdata.num_nodes);
 
       int rc;
       if (node_idx < num_mps)  { rc = analyze_mp(&dfsdata, node_idx, &analysis_data); }
-      else { rc = analyze_mpe(&dfsdata, node_idx-num_mps, &analysis_data); }
+      else { rc = analyze_nash(&dfsdata, node_idx-num_mps, &analysis_data); }
 
       if (rc > 0) { status = rc; goto _exit_analysis_loop; }
       if (rc < 0) { num_issues++; }

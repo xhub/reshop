@@ -4,9 +4,9 @@
 #include "ovfinfo.h"
 
 int reformulation_equil_compute_inner_product(enum OVF_TYPE type, union ovf_ops_data ovfd, Model *mdl,
-                                              const SpMat *B, const double *b, Equ **e,
+                                              const SpMat *B, const double *b, rhp_idx *objequ,
                                               Avar *uvar, const char *ovf_name);
-int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, Equ *eobj, rhp_idx vi_ovf,
+int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, rhp_idx objequ, rhp_idx vi_ovf,
                                       Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd,
                                       Avar *uvar, unsigned n_args) NONNULL;
 int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd);
