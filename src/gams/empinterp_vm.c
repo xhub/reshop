@@ -479,7 +479,7 @@ static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
       char symname[GMS_SSSIZE];
       memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
       symname[symiter->ident.lexeme.len] = 0;
-      status = gmd_read(vmdata->gmd, &data, symname);
+      status = gmd_read(vmdata->gmd, vmdata->dct, &data, symname);
       if (type == IdentSet) {
          vmdata->inrecs = data.nrecs;
          vmdata->ival = data.itmp;
@@ -661,7 +661,7 @@ EmpVm* empvm_new(Interpreter *interp)
    vm->data.dagregister = &interp->dagregister;
    vm->data.linklabels2arcs = &interp->linklabels2arcs;
    vm->data.linklabel2arc = &interp->linklabel2arc;
-   vm->data.dual_labels = &interp->dualslabel;
+   vm->data.dualslabel = &interp->dualslabel;
 
    return vm;
 
@@ -864,6 +864,7 @@ int empvm_run(struct empvm *vm)
          DBGUSED Lexeme *lexeme = &symiter->ident.lexeme;
          DEBUGVMRUN("%.*s[%u] <- %n", lexeme->len, lexeme->start, idx, &offset1);
          DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
+         DEBUGVMRUN(" #%u%n", uel, &offset2);
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
 

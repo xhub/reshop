@@ -428,9 +428,17 @@ int mdl_checkmetadata(Model *mdl)
       case VarDefiningMap:
          /* Doing nothing */
          break;
+
+      case VarImplicitMap:
+         error("[metadata check] ERROR: variable '%s' is tagged as %s. "
+               "This is not yet supported\n", ctr_printvarname(ctr, i),
+               varrole2str(var_md.type));
+         status = status == OK ? Error_NotImplemented : status;
+         break;
+
       default:
-         errmc("[metadata check] ERROR: Invalid type %d for variable '%s'\n",
-               var_md.type, ctr_printvarname(ctr, i));
+         errmc("[metadata check] ERROR: Invalid type %s #%d for variable '%s'\n",
+               varrole2str(var_md.type), var_md.type, ctr_printvarname(ctr, i));
          status = status == OK ? Error_IncompleteModelMetadata : status;
       }
    }

@@ -232,7 +232,7 @@ typedef struct {
    LinkLabels *linklabels;
    LinkLabels2Arcs *linklabels2arcs;
    LinkLabel2Arc *linklabel2arc;
-   DualsLabelArray *dual_labels;
+   DualsLabelArray *dualslabel;
 } VmData;
 
 typedef int (*empapi)(VmData *data, unsigned argc, const VmValue *values);

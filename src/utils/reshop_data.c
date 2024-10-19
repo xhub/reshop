@@ -165,7 +165,6 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
    }
 
    dat->len += slen;
-   unsigned len_new = dat->len;
 
    if (dat->len > dat->max) {
       dat->max = MAX(2*dat->max, dat->len+1);
@@ -212,6 +211,8 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       slen = idx;
    }
 
+   assert(dat->len >= darr-dat->arr);
+
    while (slen > 0) {
 
       unsigned idx = bin_insert_int(darr, dlen, sarr[0]);
@@ -220,14 +221,16 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       int v = darr[0];
 
       /* Maximize the length of the copy */
-      while (offset <= slen && sarr[offset] <= v) { offset++; }
+      // HACK: offset < slen or offset <= slen?
+      while (offset < slen && sarr[offset] <= v) { offset++; }
+
+      assert((darr-dat->arr) + dlen == dat->len);
+
+      memmove(&darr[offset], darr, (dlen-offset)*sizeof(int));
+      memcpy(darr, sarr, offset*sizeof(int));
 
       assert(dlen >= idx+offset);
       dlen -= idx+offset;
-
-
-      memmove(&darr[offset], darr, (len_new-offset)*sizeof(int));
-      memcpy(darr, sarr, offset*sizeof(int));
 
       darr += offset;
       sarr += offset;
@@ -235,7 +238,7 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
    }
 
 
-   assert(chk_sorted_intarray(dat->arr, len_new));
+   assert(chk_sorted_intarray(dat->arr, dat->len));
 
    return OK;
 }

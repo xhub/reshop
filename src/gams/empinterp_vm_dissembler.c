@@ -478,7 +478,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
 
          case OPARG_DUAL_LABELS_SYNCANDSTORE: {
             GIDX_TYPE gidx = READ_GIDX(vm);
-            VM_CHK(valid_vmidx(gidx, vm->data.dual_labels->len, "vm->dual_labels"));
+            VM_CHK(valid_vmidx(gidx, vm->data.dualslabel->len, "vm->dual_labels"));
 
             uint8_t nargs = READ_BYTE(vm);
             assert(nargs < GMS_MAX_INDEX_DIM);

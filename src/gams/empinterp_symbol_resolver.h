@@ -47,7 +47,8 @@ int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data) NONNULL;
 void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset);
 void dct_printuelwithidx(dctHandle_t dct, int uel, unsigned mode) NONNULL;
 
-int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symname) NONNULL;
+//HACK NONNULL_AT
+int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, const char *symname) NONNULL_AT(1, 3, 4);
 void gmd_printuel(gmdHandle_t gmd, int uel, unsigned mode, int *offset);
 void gmd_printuelwithidx(gmdHandle_t gmd, int uel, unsigned mode) NONNULL;
 

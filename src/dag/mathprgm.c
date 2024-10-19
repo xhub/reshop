@@ -762,9 +762,21 @@ int mp_finalize(MathPrgm *mp)
    }
 
    if (mp->vars.len == 0 && (mp->type != MpTypeVi || !mp->vi.has_kkt)) {
-      error("[MP] ERROR: MP(%s) has no variable assigned to it\n",
-            empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
-      return Error_EMPRuntimeError;
+      EmpDag *empdag = &mp->mdl->empinfo.empdag;
+
+      /* If the EMPDAG has not being finalized, we need to delay here */
+      if (!empdag->has_resolved_arcs) { return OK; }
+
+      if (empdag->mps.Varcs->len == 0) {
+
+         error("[MP] ERROR: MP(%s) has no variable assigned to it and no child "
+               "in the EMPDAG\n",
+               empdag_getmpname(empdag, mp->id));
+         return Error_EMPRuntimeError;
+      }
+      
+      // HACK: Check that this is correct
+      goto _finalize;
    }
 
    if (!mp_isobj(mp)) { goto _finalize; }

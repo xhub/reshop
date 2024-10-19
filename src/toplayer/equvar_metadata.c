@@ -84,6 +84,10 @@ const char* varrole2str(VarRole type)
       return "primal variable";
    case VarDual:
       return "dual variable";
+   case VarDefiningMap:
+      return "variable defining a mapping";
+   case VarImplicitMap:
+      return "variable in an implicit relation";
    default:
       return "INVALID";
    }

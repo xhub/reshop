@@ -48,7 +48,7 @@ int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
                       buf, symidx, toktype2str(toktype), dim);
 
       if (dim > 1 || (dim == 1 && uels[0] > 0)) {
-         trace_empinterp("[empinterp] UELs values are:\n");
+         trace_empinterp("[DCT] UELs values are:\n");
          for (unsigned i = 0; i < dim; ++i) {
             int uel = uels[i];
             if (uel > 0) { dctUelLabel(dct, uels[i], &quote, buf, sizeof(buf));
@@ -155,7 +155,7 @@ void dct_printuelwithidx(dctHandle_t dct, int uel, unsigned mode)
 void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
 {
    char buf[GMS_SSSIZE] = " ";
-   char quote[] = " ";
+   char quote[] = "'";
 
    assert(uel < dctNUels(dct));
 
@@ -166,14 +166,13 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
    } else if (quote[0] != ' ') {
       printout(mode, "%c%s%c%n", quote[0], buf, quote[0], offset);
    } else {
-      printout(mode, "%s%n", buf, offset);
+      printout(mode, "'%s'%n", buf, offset);
    }
 }
 
-int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symname)
+// HACK
+int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, const char *symname)
 {
-   assert(gmd);
-
    int symnr, *uels;
    unsigned dim;
    TokenType toktype;
@@ -214,10 +213,17 @@ int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symnam
       trace_empinterp("[GMD] resolving GAMS symbol '%s' of type %s and dim %u.\n",
                       buf, toktype2str(toktype), dim);
       if (dim > 1 || (dim == 1 && uels[0] > 0)) {
+         // HACK: this is wrong
          trace_empinterp("[GMD] UELs values are:\n");
          for (unsigned i = 0; i < dim; ++i) {
             int uel = uels[i];
-            if (uel > 0) { GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf);
+            if (uel > 0) { if (dct) {
+                  char quote_[] = " ";
+                  if (dctUelLabel(dct, uel, quote_, buf, sizeof(buf))) {
+                     const char err_uel[] = "invalid UEL";
+                     memcpy(buf, err_uel, sizeof(err_uel));
+                  }
+               } else { GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf); }
             } else { strcpy(buf, "'*'"); }
             trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
@@ -244,13 +250,22 @@ int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symnam
       bool single_record = true;
       data->allrecs = true;
       char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
-      const char *uels_strp[GLOBAL_MAX_INDEX_DIM];
+      char *uels_strp[GLOBAL_MAX_INDEX_DIM];
 
       if (!compact) {
          /* initialize UELs */
          for (unsigned i = 0; i < dim; ++i) {
             uels_strp[i] = uels_str[i];
-            GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
+            if (dct) {
+               char quote_[] = " ";
+               if (dctUelLabel(dct, uels[i], quote_, uels_strp[i], GLOBAL_UEL_IDENT_SIZE)) {
+                  error("[DCT] Could not find UEL #%d\n", uels[i]);
+                  return Error_EMPRuntimeError;
+               } 
+
+            } else {
+               GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
+            }
             if (uels[i] == 0) { single_record = false; }
             if (uels[i] != 0) { data->allrecs = false; }
          }
@@ -259,7 +274,7 @@ int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symnam
       }
 
       if (single_record) {
-         GMD_FIND_CHK(gmdFindRecord, gmd, symptr, uels_strp, &symiterptr);
+         GMD_FIND_CHK(gmdFindRecord, gmd, symptr, (const char **)uels_strp, &symiterptr);
 
          double vals[GMS_VAL_MAX];
          GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
@@ -277,7 +292,7 @@ int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symnam
          if (compact) {
             GMD_FIND_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
          } else {
-            GMD_FIND_CHK(gmdFindFirstRecordSlice, gmd, symptr, uels_strp, &symiterptr);
+            GMD_FIND_CHK(gmdFindFirstRecordSlice, gmd, symptr, (const char **)uels_strp, &symiterptr);
          }
 
          /* ------------------------------------------------------------------

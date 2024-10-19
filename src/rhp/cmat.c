@@ -1230,9 +1230,9 @@ static const char *vtag2str(enum vtag tag)
 {
    switch (tag & 0xf) {
    case vnone: return "none";
-   case vlin: return "lin";
-   case vquad: return "quad";
-   case vnl: return "NL";
+   case vlin: return "linear";
+   case vquad: return "quadratic";
+   case vnl: return "nonlinear";
    default: return "unkonwn tag ERROR";
    }
 }
@@ -1498,7 +1498,7 @@ _end:
          if (missing_linvar) {
             error("%u linear variables ", nlinvar);
             if (missing_nlvar) { errormsg(" and "); }
-            else { errormsg("\n"); }
+            else { errormsg("are absent from the container matrix\n"); }
          }
          if (missing_nlvar) {
             error("%u nonlinear variables are absent from the container matrix\n",

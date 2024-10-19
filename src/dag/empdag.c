@@ -1335,6 +1335,7 @@ int empdag_subdag_getmplist(const EmpDag *empdag, daguid_t subdag_root,
    return dfs_mplist(empdag, subdag_root, mplist);
 }
 
+// HACK: looks unused!!
 int empdag_finalize(Model *mdl)
 {
    EmpDag *empdag = &mdl->empinfo.empdag;

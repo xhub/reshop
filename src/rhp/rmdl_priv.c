@@ -35,7 +35,7 @@ void rmdl_getobjequ_nochk(const Model *mdl, rhp_idx *objequ)
 
 int rmdl_get_editable_mdl(Model *mdl, Model **mdl_dst, const char *name)
 {
-   if (rmdl_iseditable(mdl)) {
+   if (mdl_is_rhp(mdl) && rmdl_iseditable(mdl)) {
       *mdl_dst = mdl_borrow(mdl);
       mdl_unsetmetachecked(mdl);
       mdl_unsetchecked(mdl);

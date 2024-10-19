@@ -296,7 +296,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
       } else {
 
          if (valid_vi(objvar)) {
-            S_CHECK(rctr_equ_add_newmap(ctr, e, eobj->idx, objvar, NAN));
+            S_CHECK(rctr_equ_add_map(ctr, e, eobj->idx, objvar, 1.));
          } else {
             S_CHECK(rctr_equ_add_equ_coeff(ctr, e, eobj, cst));
          }
@@ -331,6 +331,17 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
    }
 
    rhp_idx objequ = mp_getobjequ(mp_child), objvar = mp_getobjvar(mp_child);
+
+  /* ----------------------------------------------------------------------
+   * If objequ does not exists, which happens when we have a trivial MP with
+   * just a sum of valFn, just skip
+   * ---------------------------------------------------------------------- */
+
+   if (objequ == IdxNA) {
+      assert(mp_child->mdl->empinfo.empdag.mps.Varcs[mp_child->id].len > 0);
+      return OK;
+   }
+
    assert(valid_ei_(objequ, mdl_nequs_total(mdl), __func__));
 
    /* Set objvar to be evaluated via objequ */
@@ -890,6 +901,7 @@ int rmdl_contract_along_Vpaths(Model *mdl_src, Model **mdl_dst)
    char *mdlname;
    IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_src)));
 
+   //TODO if mdl_Src is not rhp, copy
    S_CHECK(rmdl_get_editable_mdl(mdl_src, mdl_dst, mdlname));
 
    FREE(mdlname);
@@ -897,6 +909,7 @@ int rmdl_contract_along_Vpaths(Model *mdl_src, Model **mdl_dst)
    Model *mdl_dst_ = *mdl_dst;
 
   /* ----------------------------------------------------------------------
+   * HACK: Finish this
    * This 
    * ---------------------------------------------------------------------- */
 
