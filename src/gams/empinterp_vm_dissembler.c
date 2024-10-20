@@ -29,7 +29,8 @@ enum OpCodeArgType {
    OPARG_IDENT_TYPE,
    OPARG_IDENT_IDX,
    OPARG_LINKLABELS_SYNCANDSTORE,
-   OPARG_DUAL_LABELS_SYNCANDSTORE,
+   OPARG_DUALSLABEL_GIDX,
+   OPARG_DUALSLABEL_SYNCANDSTORE,
    OPARG_GMSSYMITER,
    OPARG_ARCOBJ,
    OPARG_REGENTRY,
@@ -99,7 +100,9 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_LINKLABELS_STORE] = {{OPARG_LINKLABELS_SYNCANDSTORE},},
    [OP_LINKLABELS_FINI] = {{OPARG_NONE},},
    [OP_SET_DAGUID_FROM_REGENTRY] = {{OPARG_NONE},},
-   [OP_DUAL_LABELS_STORE] = {{OPARG_DUAL_LABELS_SYNCANDSTORE}},
+   //[OP_DUALSLABEL_ADD] = {{OPARG_DUALSLABEL_GIDX}},
+   [OP_DUALSLABEL_STORE] = {{OPARG_DUALSLABEL_SYNCANDSTORE}},
+   [OP_VARC_DUAL] = {{OPARG_NONE},},
    [OP_SCALAR_SYMBOL_TRACKER_INIT] = {{OPARG_NONE}},
    [OP_SCALAR_SYMBOL_TRACKER_CHECK] = {{OPARG_NONE}},
    [OP_HACK_SCALAR2VMDATA] = {{OPARG_GIDX}, },
@@ -159,7 +162,9 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_LINKLABELS_SETFROM_LOOPVAR] = 3,
    [OP_LINKLABELS_STORE] = 1,
    [OP_LINKLABELS_FINI] = 0,
-   [OP_DUAL_LABELS_STORE] = 1,
+//   [OP_DUALSLABEL_ADD] = 1,
+   [OP_DUALSLABEL_STORE] = 1,
+   [OP_VARC_DUAL] = 0,
    [OP_SCALAR_SYMBOL_TRACKER_INIT] = 0,
    [OP_SCALAR_SYMBOL_TRACKER_CHECK] = 0,
    [OP_SET_DAGUID_FROM_REGENTRY] = 0,
@@ -220,12 +225,15 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_LINKLABELS_SETFROM_LOOPVAR,"LINKLABELS_SETFROM_LOOPVAR") \
  DEFSTR(OP_LINKLABELS_STORE,"LINKLABELS_STORE") \
  DEFSTR(OP_LINKLABELS_FINI,"LINKLABELS_FINI") \
- DEFSTR(OP_DUAL_LABELS_STORE,"DUAL_LABELS_STORE") \
+ DEFSTR(OP_DUALSLABEL_STORE,"DUALSLABEL_STORE") \
+ DEFSTR(OP_VARC_DUAL,"VARC_DUAL") \
  DEFSTR(OP_SCALAR_SYMBOL_TRACKER_INIT,"SCALAR_SYMBOL_TRACKER_INIT") \
  DEFSTR(OP_SCALAR_SYMBOL_TRACKER_CHECK,"SCALAR_SYMBOL_TRACKER_CHECK") \
  DEFSTR(OP_SET_DAGUID_FROM_REGENTRY, "SET_DAGUID_FROM_REGENTRY") \
  DEFSTR(OP_HACK_SCALAR2VMDATA, "HACK_SCALAR2VMDATA") \
  DEFSTR(OP_END,"END")
+ 
+//DEFSTR(OP_DUALSLABEL_ADD,"DUALSLABEL_ADD")
 
 #define DEFSTR(id, str) char id[sizeof(str)];
 
@@ -464,6 +472,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                status = Error_EMPRuntimeError;
             }
             break;
+
          case OPARG_LINKLABELS_SYNCANDSTORE: {
             uint8_t nargs = READ_BYTE(vm);
             assert(nargs < GMS_MAX_INDEX_DIM);
@@ -476,9 +485,21 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
             break;
          }
 
-         case OPARG_DUAL_LABELS_SYNCANDSTORE: {
+         case OPARG_DUALSLABEL_GIDX: {
             GIDX_TYPE gidx = READ_GIDX(vm);
-            VM_CHK(valid_vmidx(gidx, vm->data.dualslabel->len, "vm->dual_labels"));
+            VM_CHK(valid_vmidx(gidx, vm->data.dualslabels->len, "vm->dualslabels"));
+
+            // HACK: improve output here?
+            printout(mode, "%20u ", gidx);
+
+            printout(mode, "\n");
+            break;
+         }
+
+         case OPARG_DUALSLABEL_SYNCANDSTORE: {
+            GIDX_TYPE gidx = READ_GIDX(vm);
+            VM_CHK(valid_vmidx(gidx, vm->data.dualslabels->len, "vm->dualslabels"));
+            printout(mode, "%20u ", gidx);
 
             uint8_t nargs = READ_BYTE(vm);
             assert(nargs < GMS_MAX_INDEX_DIM);
@@ -487,6 +508,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                val = READ_BYTE(vm);
                printout(mode, "%20u ", val);
             }
+
             printout(mode, "\n");
             break;
          }

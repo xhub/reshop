@@ -22,7 +22,7 @@ static int ccflib_getnargs(OvfOpsData ovfd, unsigned *nargs)
    assert(ovfd.ccfdat->mp->type == MpTypeCcflib);
    OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
 
-   *nargs = ovf->args->size;
+   *nargs = ovf_argsize(ovf);
 
    return OK;
 }

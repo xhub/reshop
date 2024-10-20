@@ -143,6 +143,7 @@ typedef struct empdag_dfs {
    unsigned n_nonleaf;
    unsigned timestamp;
    unsigned num_visited;
+   unsigned num_visited_dual;
    unsigned num_mps;
    unsigned num_mpes;
    unsigned num_nodes;
@@ -379,6 +380,7 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    dfsdata->n_nonleaf = 0;
    dfsdata->timestamp = 0;
    dfsdata->num_visited = 0;
+   dfsdata->num_visited_dual = 0;
    dfsdata->num_mps = empdag->mps.len;
    dfsdata->num_mpes = empdag->nashs.len;
    dfsdata->num_nodes = empdag->mps.len + empdag->nashs.len;
@@ -487,9 +489,10 @@ typedef struct {
    mpid_t      saddle_path_start;
 } DfsPathDataFwd;
 
-static int dfs_mpC(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
-static int dfs_mpV(mpid_t mpid_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
-static int dfs_mpe(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
+static int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
+static int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
+static int dfs_nash(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
+static int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata);
 
 DBGUSED static inline 
 bool pathtype_is_VF(DagPathType pathtype) {
@@ -529,7 +532,7 @@ NONNULL static int process_Carcs(EmpDagDfsData *dfsdata, UIntArray *Carcs,
       if (uidisMP(uid_child)) {
          rc = dfs_mpC(uid2id(uid_child), dfsdata, pathdata_child);
       } else {
-         rc = dfs_mpe(uid2id(uid_child), dfsdata, pathdata_child);
+         rc = dfs_nash(uid2id(uid_child), dfsdata, pathdata_child);
       }
       if (rc == 0) continue;
       if (rc > 0) { return rc; }
@@ -633,6 +636,20 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
       return runtime_error_state(state);
    }
 
+   MathPrgm *mp;
+   S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));
+
+   /* Dual MPs are specials */
+   if (mp->type == MpTypeDual) {
+      /* Mark node as processed so that no further exploration is required */
+      mark_as_processed(dfsdata, node_idx);
+
+      dfsdata->num_visited_dual++;
+
+      mpid_t mpid_primal = mp->dual.mpid_primal;
+      return dfs_mpC(mpid_primal, dfsdata, pathdata);
+   }
+ 
    dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
 
    /* We are at a leaf node */
@@ -709,7 +726,21 @@ int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
       return runtime_error_state(state);
    }
 
-   dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
+   MathPrgm *mp;
+   S_CHECK(empdag_getmpbyid(empdag, mpid, &mp));
+
+   /* Dual MPs are specials */
+   if (mp->type == MpTypeDual) {
+      /* Mark node as processed so that no further exploration is required */
+      mark_as_processed(dfsdata, node_idx);
+
+      dfsdata->num_visited_dual++;
+
+      mpid_t mpid_primal = mp->dual.mpid_primal;
+      return dfs_mpV(mpid_primal, dfsdata, pathdata);
+   }
+
+    dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
 
    /* We are at a leaf node */
    unsigned Vlen = Varcs->len;
@@ -815,7 +846,7 @@ int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathd
 }
 
 NONNULL static
-int dfs_mpe(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
+int dfs_nash(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
    unsigned node_idx = id_parent + dfsdata->num_mps;
@@ -900,7 +931,7 @@ int tree_get_path_backward(EmpDagDfsData *dfsdata, mpid_t mp_parent, mpid_t mp_c
    assert(mp_parent < dfsdata->num_mps && mp_child < dfsdata->num_mps);
 
    const DagMpArray *mps = &dfsdata->empdag->mps;
-   const DagNashArray *mpes = &dfsdata->empdag->nashs;
+   const DagNashArray *nashs = &dfsdata->empdag->nashs;
 
    /* ---------------------------------------------------------------------
     * To get the path between 2 nodes, the easiest is to go up from the
@@ -920,7 +951,7 @@ int tree_get_path_backward(EmpDagDfsData *dfsdata, mpid_t mp_parent, mpid_t mp_c
          rarcs = &mps->rarcs[uid2id(uid)];
       } else {
          assert(uidisNash(uid));
-         rarcs = &mpes->rarcs[uid2id(uid)];
+         rarcs = &nashs->rarcs[uid2id(uid)];
       }
 
       uid = rarcs->len > 0 ? rarcs->arr[0] : EMPDAG_UID_NONE;
@@ -1558,7 +1589,7 @@ int empdag_analysis(EmpDag * restrict empdag)
       if (uidisMP(uid)) {
          rc = dfs_mpInNashOrRoot(idx, &dfsdata, pathdata);
       } else {
-         rc = dfs_mpe(idx, &dfsdata, pathdata);
+         rc = dfs_nash(idx, &dfsdata, pathdata);
       }
 
       if (rc != 0) return error_rc(rc);
@@ -1569,7 +1600,7 @@ int empdag_analysis(EmpDag * restrict empdag)
     * to the DAG
     * --------------------------------------------------------------------- */
 
-   if (dfsdata.num_visited < dfsdata.num_nodes) {
+   if (dfsdata.num_visited + dfsdata.num_visited_dual < dfsdata.num_nodes) {
 
       /* -------------------------------------------------------------------
        * If the EMPDAG, was edited, some MPS could have disappeared, count these
@@ -1581,10 +1612,10 @@ int empdag_analysis(EmpDag * restrict empdag)
          MathPrgm *mp = mps[i];
          if (!mp) { num_mps_null++; continue; }
 
-         if (mp_ishidden(mp)) { num_mps_hidden++; assert(dfsdata.nodes_stat[i] != Processed); }
+         if (mp_ishidden(mp) && dfsdata.nodes_stat[i] != Processed) { num_mps_hidden++; }
       }
 
-      unsigned num_seen_nodes = dfsdata.num_visited + num_mps_null + num_mps_hidden;
+      unsigned num_seen_nodes = dfsdata.num_visited +  dfsdata.num_visited_dual + num_mps_null + num_mps_hidden;
       if (num_seen_nodes != dfsdata.num_nodes) {
 
          if (num_seen_nodes > dfsdata.num_nodes) {
@@ -1597,17 +1628,17 @@ int empdag_analysis(EmpDag * restrict empdag)
          error("[empdag:check] ERROR: %u problems are not present in the graph:\n",
                missing_nodes);
          unsigned num_visited = 0;
-   
+ 
          do {
             missing_nodes--;
-   
+ 
             while (num_visited < dfsdata.num_nodes &&
                    (dfsdata.nodes_stat[num_visited] == Processed || 
                    ((num_visited < num_mps) && (!mps[num_visited] || mp_ishidden(mps[num_visited])))))
             {
                num_visited++;
             }
-   
+ 
             if (num_visited >= dfsdata.num_nodes) {
                   errormsg("[empdag] ERROR: couldnt find all missing nodes\n");
                   return Error_RuntimeError;
@@ -1618,7 +1649,7 @@ int empdag_analysis(EmpDag * restrict empdag)
             default:
                runtime_error_state(dfsdata.nodes_stat[num_visited]);
             }
-   
+
             error("\t%s(%s)\n", nidx_typename(num_visited, &dfsdata),
                   nidx_getname(num_visited, &dfsdata));
 
@@ -1626,6 +1657,9 @@ int empdag_analysis(EmpDag * restrict empdag)
 
    
          } while (missing_nodes > 0);
+
+         /* If ask, export the EMPDAG for debugging purposes */
+         S_CHECK(empdag_export(empdag->mdl));
    
          return Error_EMPIncorrectInput;
       }
@@ -1636,6 +1670,9 @@ int empdag_analysis(EmpDag * restrict empdag)
    unsigned num_issues = 0;
    unsigned num_mps = dfsdata.num_mps;
    S_CHECK(analysis_data_init(&analysis_data, &dfsdata));
+
+   // HACK
+   if (dfsdata.num_visited_dual > 0) { goto _hack_skip_analysis_dual; }
 
    // HACK: num_visited vs num_nodes
    for (unsigned len = dfsdata.num_visited, i = len-1; i < len; --i) {
@@ -1653,6 +1690,8 @@ int empdag_analysis(EmpDag * restrict empdag)
    if (num_issues > 0) {
       goto _exit_analysis_loop;
    }
+
+_hack_skip_analysis_dual: ;
 
    /* ---------------------------------------------------------------------
     * Printout some stats here

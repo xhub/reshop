@@ -19,6 +19,7 @@
 #include "empinterp_fwd.h"
 #include "empparser_data.h"
 #include "gdx_reader.h"
+#include "mathprgm_data.h"
 #include "mdl_data.h"
 #include "ovfinfo.h"
 #include "reshop_data.h"
@@ -276,11 +277,11 @@ typedef struct linklabel {
 typedef struct dual_labels {
    uint8_t dim;
    uint8_t num_var;
-   uint16_t label_len;       /**< label length */
-   const char *label;        /**< Basename of the parent */
+   uint16_t label_len;       /**< Label length */
+   const char *label;        /**< Label of the primal MP */
    int *uels_var;            /**< uel_var[num_var] per child */
-   DualOperatorData *opdat;  /**< Data for the operation */
-   MpIdArray mpid_uals;      /**< Arrays of mp duals. Contains the length data */
+   DualOperatorData opdat;  /**< Data for the operation */
+   MpIdArray mpid_duals;      /**< Arrays of mp duals. Contains the length data */
    int data[];               /**< Layout: uels[dim] + pos[num_vars]*/
 } DualsLabel;
 
@@ -429,7 +430,7 @@ typedef struct interpreter {
 
    LinkLabels2Arcs linklabels2arcs;
    LinkLabel2Arc linklabel2arc;
-   DualsLabelArray dualslabel;
+   DualsLabelArray dualslabels;
    DualLabelArray dual_label;
 
    /* Other dynamic data */
@@ -443,8 +444,8 @@ typedef struct interpreter {
 
    /* Immediate mode data*/
    daguid_t daguid_parent;                    /**< UID of the EMPDAG parent node */
-   daguid_t daguid_grandparent;               /**< UID of the EMPDAG parent node */
-   daguid_t daguid_child;                     /**< */
+   daguid_t daguid_grandparent;               /**< UID of the EMPDAG grandparent node */
+   daguid_t daguid_child;                     /**< UID of the */
 } Interpreter;
 
 

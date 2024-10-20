@@ -1086,7 +1086,7 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    struct mp_dual *dualdat = &mp->dual;
 
    MathPrgm *mp_primal;
-   S_CHECK(empdag_getmpbyid(empdag, dualdat->mpid, &mp_primal));
+   S_CHECK(empdag_getmpbyid(empdag, dualdat->mpid_primal, &mp_primal));
 
    if (mp_primal->type != MpTypeCcflib) {
       TO_IMPLEMENT("Dualization of a generic MP");
@@ -1104,6 +1104,10 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
 
    mpopt_init(&mp->opt);
    mp->status = 0;
+
+   if (mp_primal->ccflib.ccf->args->size == 0 && mp_primal->ccflib.ccf->num_empdag_children > 0) {
+      TO_IMPLEMENT("Dualization of MP node with only EMPDAG children");
+   }
 
    S_CHECK(ovf_fenchel(mdl, OvfType_Ccflib_Dual, ovfd));
 

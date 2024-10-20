@@ -23,6 +23,7 @@
 */
 
 #include <inttypes.h>
+#include <stddef.h>
 
 #include "dctmcc.h"
 #include "empdag.h"
@@ -348,22 +349,6 @@ NONNULL static int vmdata_consume_scalardata(VmData *data, double *coeff)
    data->dnrecs = UINT_MAX;
 
    data->dval = NAN;
-   return OK;
-}
-
-NONNULL static int vmdata_consume_scalarvar(VmData *data, rhp_idx *vi)
-{
-   unsigned var_len = data->v.size;
-
-   if (var_len > 1) {
-      error("[empvm] ERROR: expecting a variable of size at most 1, got %u\n",
-            var_len);
-      return Error_EMPIncorrectInput;
-   }
-
-   *vi = var_len == 0 ? IdxNA : avar_fget(&data->v, 0);
-
-   avar_reset(&data->v);
 
    return OK;
 }
@@ -626,6 +611,7 @@ NONNULL static int vmdata_init(VmData *data)
    data->ival = UINT_MAX;
    data->inrecs = UINT_MAX;
    data->dnrecs = UINT_MAX;
+   data->mpid_dual = MpId_NA;
 
    return OK;
 }
@@ -651,6 +637,8 @@ EmpVm* empvm_new(Interpreter *interp)
    SN_CHECK_EXIT(vmvals_add(&vm->globals, UINT_VAL(0)));
    SN_CHECK_EXIT(vmvals_add(&vm->globals, INT_VAL(0)));
 
+
+
    /* genlabelname needs interpreter for the ops */
    vm->data.interp = interp;
 
@@ -661,7 +649,7 @@ EmpVm* empvm_new(Interpreter *interp)
    vm->data.dagregister = &interp->dagregister;
    vm->data.linklabels2arcs = &interp->linklabels2arcs;
    vm->data.linklabel2arc = &interp->linklabel2arc;
-   vm->data.dualslabel = &interp->dualslabel;
+   vm->data.dualslabels = &interp->dualslabels;
 
    return vm;
 
@@ -870,6 +858,92 @@ int empvm_run(struct empvm *vm)
 
          break;
       }
+
+#ifdef HACK
+      case OP_DUALSLABEL_ADD: {
+         GIDX_TYPE gidx = READ_GIDX(vm);
+
+         DualsLabel *dualslabel;
+         N_CHECK_EXIT(dualslabel, dualslabel_arr_at(vm->data.dualslabels, gidx));
+
+S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
+
+         break;
+      }
+#endif 
+
+// HACK: it's unclear this is any kind of good idea. 
+// Review OP_LINKLABELS_SETFROM_LOOPVAR 
+#ifdef HACK
+      case OP_DUALSLABEL_SETFROM_LOOPVAR: {
+         GIDX_TYPE gidx = READ_GIDX(vm);
+         uint8_t idx = READ_BYTE(vm);
+         uint8_t lidx = READ_BYTE(vm);
+
+         DualsLabel *dualslabel;
+         N_CHECK_EXIT(dualslabel, dualslabel_arr_at(vm->data.dualslabels, gidx));
+
+         assert(idx < dualslabel->dim);
+         assert(IS_LOOPVAR(vm->locals[lidx]));
+
+         int uel = AS_LOOPVAR(vm->locals[lidx]);
+         assert(dualslabel->mpid_duals.len > 0); assert(dualslabel->num_var > 0);
+
+         unsigned offset = dualslabel->mpid_duals.len - 1;
+         int *uels = &dualslabel->uels_var[(size_t)offset*dualslabel->num_var];
+         uels[idx] = uel;
+
+         DBGUSED int offset1, offset2;
+         DEBUGVMRUN("%.*s[%u] <- %n", dualslabel->label_len, dualslabel->label, idx, &offset1);
+         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
+         DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
+
+         break;
+      }
+#endif
+      case OP_DUALSLABEL_STORE: {
+         GIDX_TYPE gidx = READ_GIDX(vm);
+
+         DualsLabel *dualslabel;
+         N_CHECK_EXIT(dualslabel, dualslabel_arr_at(vm->data.dualslabels, gidx));
+
+         /* This is a dummy read. Otherwise the VM dissassembler is lost */
+         uint8_t nargs = READ_BYTE(vm);
+
+         // HACK: loopiterators are not given here, but count as num_var ...
+         assert(dualslabel->num_var == nargs);
+
+         int *uels = NULL;
+         if (nargs > 0) {
+            S_CHECK_EXIT(scratchint_ensure(&vm->data.e_data, nargs));
+            uels = vm->data.e_data.data;
+
+            for (unsigned i = 0; i < nargs; ++i) {
+               uint8_t slot = READ_BYTE(vm);
+               int uel_lidx = AS_INT(vm->locals[slot]);
+               uels[i] = uel_lidx;
+            }
+         }
+
+         mpid_t mpid_dual = vm->data.mpid_dual;
+         if (!mpid_regularmp(mpid_dual)) {
+            error("[empvm] ERROR: invalid value %s #%u\n",
+                  mpid_specialvalue(mpid_dual), mpid_dual);
+         }
+
+         S_CHECK_EXIT(dualslabel_add(dualslabel, uels, nargs, mpid_dual));
+
+         DEBUGVMRUN("#%u: ", dualslabel->mpid_duals.len-1);
+         DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < dualslabel->num_var; ++i) {
+            int dummy; if (i == 0) {DEBUGVMRUN("(");}
+            dct_printuel(vm->data.dct, uels[i], PO_TRACE_EMPINTERP, &dummy);
+            if (i == dualslabel->num_var-1) { DEBUGVMRUN(")");}}
+            });
+         DEBUGVMRUN("\n");
+         
+         break;
+      }
+
       case OP_LINKLABELS_SETFROM_LOOPVAR: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          uint8_t idx = READ_BYTE(vm);
@@ -1217,6 +1291,11 @@ int empvm_run(struct empvm *vm)
 
          S_CHECK_EXIT(linklabels2arcs_add(vm->data.linklabels2arcs, linklabels_cpy));
 
+
+         // HACK: reset variable and double counter
+         avar_reset(&vm->data.v);
+
+
          vm->data.linklabels = linklabels_cpy;
          unsigned num_var = linklabels_cpy->num_var;
          if (num_var > 0) {
@@ -1234,7 +1313,15 @@ int empvm_run(struct empvm *vm)
 
          LinkLabels *linklabels_src = AS_ARCOBJ(vm->globals.arr[gidx]);
          LinkLabel *linklabel_cpy;
-         A_CHECK_EXIT(linklabel_cpy, linklabels_dupaslabel(linklabels_src));
+
+
+         double coeff;
+         rhp_idx vi = IdxNA;
+         S_CHECK_EXIT(vmdata_consume_scalardata(&vm->data, &coeff));
+         // HACK
+         //S_CHECK_EXIT(vmdata_consume_scalarvar(&vm->data, &vi));
+
+         A_CHECK_EXIT(linklabel_cpy, linklabels_dupaslabel(linklabels_src, coeff, vi));
          linklabel_cpy->daguid_parent = vm->data.uid_parent;
 
          S_CHECK_EXIT(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
@@ -1326,7 +1413,29 @@ int empvm_run(struct empvm *vm)
          break;
       }
 
-         // TODO: Delete?
+      case OP_VARC_DUAL: {
+         assert(valid_uid(vm->data.uid_parent));
+         assert(valid_mpid(vm->data.mpid_dual));
+
+         daguid_t uid_parent = vm->data.uid_parent;
+         mpid_t mpid_dual = vm->data.mpid_dual;
+
+         /* We don't need it afterwards, reset it */
+         vm->data.mpid_dual = MpId_NA;
+
+        double coeff;
+        S_CHECK(vmdata_consume_scalardata(&vm->data, &coeff));
+ 
+         ptrdiff_t line_idx = vm->code.ip - vm->instr_start;
+        S_CHECK(Varc_dual(vm->data.mdl, vm->code.line[line_idx], uid_parent,
+                          mpid2uid(mpid_dual), coeff));
+
+
+         DEBUGVMRUN("\n");
+         break;
+      }
+
+         // HACK: Delete?
       case OP_SET_DAGUID_FROM_REGENTRY: {
          DagRegister *dagregister = vm->data.dagregister;
          unsigned reglen = dagregister->len;

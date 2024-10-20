@@ -163,7 +163,7 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
    return OK;
 }
 
-static int print_nash_edges(const struct nash_namedarray* mpes, FILE* f)
+static int print_nash_arcs(const struct nash_namedarray* mpes, FILE* f)
 {
    for (unsigned i = 0, len = mpes->len; i < len; ++i) {
       if (mpes->arcs[i].len == 0) continue;
@@ -306,7 +306,7 @@ static int empdag2dot(const EmpDag *empdag, FILE *f)
    S_CHECK(print_nash_nodes(&empdag->nashs, f, &empdag->mdl->ctr));
 
    S_CHECK(print_mp_arcs(empdag, f));
-   S_CHECK(print_nash_edges(&empdag->nashs, f));
+   S_CHECK(print_nash_arcs(&empdag->nashs, f));
 
    IO_CALL(fputs("\n}\n", f));
    SYS_CALL(fflush(f));

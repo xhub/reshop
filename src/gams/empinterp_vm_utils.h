@@ -230,6 +230,8 @@ NONNULL
 int vm_store_set_nrecs_gmd(Interpreter * restrict interp, EmpVm * restrict vm,
                            const IdentData * restrict ident, GIDX_TYPE *gidx);
 
+int vmdata_consume_scalarvar(VmData *data, rhp_idx *vi) NONNULL;
+
 static inline 
 int vm_store_set_nrecs(Interpreter * restrict interp, EmpVm * restrict vm,
                        const IdentData * restrict ident, GIDX_TYPE *gidx)

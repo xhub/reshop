@@ -87,7 +87,9 @@ typedef enum OpCode {
    OP_LINKLABELS_SETFROM_LOOPVAR,
    OP_LINKLABELS_STORE,
    OP_LINKLABELS_FINI,
-   OP_DUAL_LABELS_STORE,
+   //OP_DUALSLABEL_ADD,
+   OP_DUALSLABEL_STORE,
+   OP_VARC_DUAL,
    OP_SCALAR_SYMBOL_TRACKER_INIT,
    OP_SCALAR_SYMBOL_TRACKER_CHECK,
    OP_SET_DAGUID_FROM_REGENTRY,
@@ -151,6 +153,7 @@ enum EmpApi {
    FN_MP_ADDZEROFUNC,
    FN_MP_ADD_MAP_OBJFN,
    FN_MP_FINALIZE,
+   FN_MP_SETID_AS_CHILD,
    FN_MP_SETOBJVAR,
    FN_MP_SETPROBTYPE,
    FN_NASH_ADDMPBYID,
@@ -214,6 +217,8 @@ typedef struct {
    unsigned inrecs;
    unsigned dnrecs;
 
+   mpid_t mpid_dual;
+
    Aequ *e_current;
    Avar *v_current;
 
@@ -232,7 +237,7 @@ typedef struct {
    LinkLabels *linklabels;
    LinkLabels2Arcs *linklabels2arcs;
    LinkLabel2Arc *linklabel2arc;
-   DualsLabelArray *dualslabel;
+   DualsLabelArray *dualslabels;
 } VmData;
 
 typedef int (*empapi)(VmData *data, unsigned argc, const VmValue *values);

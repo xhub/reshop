@@ -877,6 +877,7 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
    unsigned loopi = 0;
    GIDX_TYPE loopidx_gidx = iterators->loopobj_gidx;
    EmpVmOpCode upd_opcode = iterators->loopobj_opcode;
+
    assert(iterators->loopobj_gidx < UINT_MAX);
 
    for (unsigned i = 0, len = indices->nargs; i < len; ++i) {
@@ -892,9 +893,16 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
          uels[i] = 0;
          break;
       case IdentLoopIterator:
-         S_CHECK(emit_byte(tape, upd_opcode));
-         S_CHECK(EMIT_GIDX(tape, loopidx_gidx));
-         S_CHECK(emit_bytes(tape, i, idxident->idx));
+         // HACK: understand what is being done here
+         if (upd_opcode < OP_MAXCODE) {
+            S_CHECK(emit_byte(tape, upd_opcode));
+            S_CHECK(EMIT_GIDX(tape, loopidx_gidx));
+            S_CHECK(emit_bytes(tape, i, idxident->idx));
+         } else {
+            iterators->iteridx2dim[loopi] = i;
+            memcpy(&iterators->idents[loopi], idxident, sizeof(*idxident));
+            loopi++;
+         }
          break; 
       /* -------------------------------------------------------------------
        * We add this ident to the loopiterators
@@ -1545,6 +1553,165 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
    S_CHECK(emit_bytes(tape, OP_LINKLABELS_FINI));
 
    return end_scope(interp, tape);
+}
+
+int dualslabels_setupnew(Interpreter *interp, Tape *tape, const char *label,
+                         unsigned label_len, GmsIndicesData *gmsindices,
+                         DualOperatorData* opdat, LoopIterators *loopiterators, 
+                         unsigned *dualslabel_gidx)
+{
+   DualsLabel *dualslabel;
+   uint8_t dim = gmsindices->nargs;
+   uint8_t num_vars = gmsindices->num_sets + gmsindices->num_localsets + gmsindices->num_loopiterators;
+   A_CHECK(dualslabel, dualslabel_new(label, label_len, dim, num_vars, opdat));
+
+   S_CHECK(dualslabel_arr_add(&interp->dualslabels, dualslabel));
+
+   unsigned gidx = interp->dualslabels.len-1;
+   *dualslabel_gidx = gidx;
+
+   /* Add new OP_DUALSLABEL_ADD */
+   // TODO: where do we add mpid_dual?
+//   S_CHECK(emit_byte(tape, OP_DUALSLABEL_ADD));
+//   S_CHECK(EMIT_GIDX(tape, gidx));
+
+   if (gmsindices->nargs == 0) {
+      loopiterators->size = 0;
+      loopiterators->loopobj_gidx = UINT_MAX;
+      return OK;
+   }
+
+   loopiterators->loopobj_gidx = *dualslabel_gidx;
+   loopiterators->loopobj_opcode = OP_MAXCODE;
+
+   bool dummy;
+   S_CHECK(ident_gmsindices_process(gmsindices, loopiterators, tape, dualslabel->data, &dummy));
+
+   // TODO: document why we need to duplicate this
+   memcpy(&dualslabel->data[dim], loopiterators->iteridx2dim, loopiterators->size * sizeof(int));
+
+   return OK;
+
+}
+
+int vm_add_dualslabel(Interpreter *interp, const char *label, unsigned label_len,
+                             GmsIndicesData *gmsindices, DualOperatorData *opdat)
+{
+   Compiler *c = interp->compiler;
+   EmpVm *vm = c->vm;
+   Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
+   Tape * const tape = &tape_;
+
+   /*
+    *  We have parsed an expression of the type:
+    *  - max obj + VF('name', n.valfn(set)$(cond(set)), ...)  ...
+    *  - max obj x nLower ...
+    *  - Nash(n(set)$(cond(set)))
+    *
+    */
+
+   /* This defines the loop iterators and the linklabels object */
+   LoopIterators loopiters = {.size = 0};
+   unsigned dualslabel_gidx;
+   S_CHECK(dualslabels_setupnew(interp, tape, label, label_len, gmsindices,
+                                opdat, &loopiters, &dualslabel_gidx));
+
+   /* ---------------------------------------------------------------------
+    * If there is no (local) set, then we can just duplicate the value
+    * that is in the global index. There must be some iterator values that
+    * were updated in labelargs_initloop().
+    * 1) Copy the object and set the gidx value on the stack  
+    * 2) Set the arguments as index for the  
+    * And we are done
+    * --------------------------------------------------------------------- */
+
+   uint8_t num_iterators_innerloop = gmsindices->num_localsets + gmsindices->num_sets;
+   if (num_iterators_innerloop == 0) {
+      assert(gmsindices->num_loopiterators > 0);
+      S_CHECK(emit_bytes(tape, OP_DUALSLABEL_STORE));
+      S_CHECK(EMIT_GIDX(tape, dualslabel_gidx));
+
+      uint8_t num_loopiterators = gmsindices->num_loopiterators;
+
+      S_CHECK(emit_byte(tape, num_loopiterators));
+
+      for (unsigned i = 0; i < num_loopiterators; ++i) {
+         S_CHECK(emit_byte(tape, loopiters.idents[i].idx));
+      }
+
+      return OK;
+   }
+
+   uint8_t num_iterators = num_iterators_innerloop + gmsindices->num_loopiterators;
+
+
+   // HACK: force only 1 read (vector of dual() don't make sense)
+   /* ---------------------------------------------------------------------
+    * Start the loop. For each set, we must declare an iterator and loop over
+    * the possible values. 
+    * --------------------------------------------------------------------- */
+
+   begin_scope(c, __func__);
+   S_CHECK(loop_initandstart(interp, tape, &loopiters));
+
+   /* ---------------------------------------------------------------------
+    * HACK: do we need condition parsing?
+    * If present, Parse the condition
+    * --------------------------------------------------------------------- */
+
+#ifdef HACK
+   unsigned p2 = *p;
+   TokenType toktype;
+   S_CHECK(peek(interp, &p2, &toktype));
+
+   if (toktype == TOK_CONDITION) {
+      *p = p2;
+      S_CHECK(parse_condition(interp, p, c, tape));
+   }
+#endif
+   /* ---------------------------------------------------------------------
+    * Step : Main body: we add the tuple (iter1, iter2, iter3)
+    * This will duplicate the DagLabels and put it on the stack.
+    * --------------------------------------------------------------------- */
+
+   S_CHECK(emit_bytes(tape, OP_DUALSLABEL_STORE));
+   S_CHECK(EMIT_GIDX(tape, dualslabel_gidx));
+   S_CHECK(emit_bytes(tape, num_iterators));
+
+   for (unsigned i = 0; i < num_iterators; ++i) {
+      S_CHECK(emit_byte(tape, loopiters.iters[i].iter_lidx));
+   }
+
+   /* ---------------------------------------------------------------------
+    * Step 4:  Increment loop index and check of the condition idx < max
+    * --------------------------------------------------------------------- */
+
+   /* Resolve all remaining jumps linked to a false condition */
+   S_CHECK(patch_jumps(&c->falsey_jumps, tape, c->scope_depth));
+
+   S_CHECK(loop_increment(tape, &loopiters));
+
+   /* ---------------------------------------------------------------------
+    * We are at the end of the loop. We allow for outstanding "true" jump
+    * to come here.
+    * --------------------------------------------------------------------- */
+
+   S_CHECK(patch_jumps(&c->truey_jumps, tape, c->scope_depth));
+
+   assert(no_outstanding_jump(&c->truey_jumps, c->scope_depth));
+   assert(no_outstanding_jump(&c->falsey_jumps, c->scope_depth));
+
+   return end_scope(interp, tape);
+}
+
+int vm_add_Varc_dual(Interpreter * interp, UNUSED unsigned *p)
+{
+   Compiler *c = interp->compiler;
+   EmpVm *vm = c->vm;
+   Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
+   Tape * const tape = &tape_;
+
+   return emit_byte(tape, OP_VARC_DUAL);
 }
 
 NONNULL static
@@ -3130,7 +3297,14 @@ static int c_mp_finalize(UNUSED Interpreter *interp, UNUSED MathPrgm *mp)
 
 static int c_mp_setaschild(UNUSED Interpreter *interp, UNUSED MathPrgm *mp)
 {
-   TO_IMPLEMENT("c_mp_setaschild");
+   Compiler *c = interp->compiler;
+   EmpVm * restrict vm = c->vm;
+   Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
+   Tape * const tape = &tape_;
+
+   S_CHECK(emit_bytes(tape, OP_EMPAPI_CALL, FN_MP_SETID_AS_CHILD));
+
+   return OK;
 }
 
 static int c_mp_setobjvar(Interpreter *interp, UNUSED MathPrgm *mp)

@@ -63,7 +63,7 @@ struct mp_ccflib {
 };
 
 struct mp_dual {
-   mpid_t mpid;
+   mpid_t mpid_primal;
    DualOperatorData dualdat;
 };
 

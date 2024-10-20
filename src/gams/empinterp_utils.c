@@ -3,6 +3,7 @@
 #include "empinterp_utils.h"
 #include "empinterp_vm_utils.h"
 #include "empparser.h"
+#include "mathprgm.h"
 #include "mathprgm_data.h"
 #include "mdl.h"
 #include "printout.h"
@@ -185,4 +186,61 @@ SmoothingOperatorData * smoothing_operator_data_new(double param)
    smoothing_opdat->parameter = param;
 
    return smoothing_opdat;
+}
+
+int Varc_dual(Model *mdl, unsigned linenr, daguid_t uid_parent, daguid_t uid_child,
+              double coeff)
+{
+   if (!valid_uid(uid_child)) {
+      error("[empinterp] ERROR line %u: expecting a valid child daguid\n", linenr);
+      return Error_EMPRuntimeError;
+   }
+
+   if (!uidisMP(uid_child)) {
+      error("[empinterp] ERROR line %u: expecting the child daguid to be an MP\n",
+            linenr);
+      return Error_EMPRuntimeError;
+   }
+
+   if (!valid_uid(uid_parent)) {
+      error("[empinterp] ERROR line %u: expecting a valid parent daguid\n",
+            linenr);
+      return Error_EMPRuntimeError;
+   }
+
+   if (!uidisMP(uid_parent)) {
+      error("[empinterp] ERROR line %u: expecting the parent daguid to be an MP\n",
+            linenr);
+      return Error_EMPRuntimeError;
+   }
+
+   EmpDag *empdag = &mdl->empinfo.empdag;
+
+   EmpDagArc arc = { .type = LinkArcVF };
+
+   mpid_t mpid_child = uid2id(uid_child);
+   mpid_t mpid_parent = uid2id(uid_parent);
+   MathPrgm *mp_parent, *mp_child;
+
+   S_CHECK(empdag_getmpbyid(empdag, mpid_child, &mp_child));
+   S_CHECK(empdag_getmpbyid(empdag, mpid_parent, &mp_parent));
+
+   rhp_idx objequ = mp_getobjequ(mp_parent);
+   if (!valid_ei(objequ)) {
+      MpType mptype = mp_gettype(mp_parent);
+      if (mptype == MpTypeOpt || mptype == MpTypeDual) {
+         objequ = IdxObjFunc;
+      }
+   }
+
+   assert(valid_ei(objequ) || (objequ == IdxCcflib && mp_gettype(mp_parent) == MpTypeCcflib)
+          || (objequ == IdxObjFunc));
+
+   arc.Varc.type = ArcVFBasic;
+   arc.Varc.mpid_child = mpid_child;
+   arc.Varc.basic_dat.ei = objequ;
+   arc.Varc.basic_dat.cst = coeff;
+   arc.Varc.basic_dat.vi = IdxNA;
+
+   return empdag_addarc(empdag, uid_parent, uid_child, &arc);
 }

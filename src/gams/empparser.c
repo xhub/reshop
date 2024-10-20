@@ -2048,9 +2048,9 @@ static int imm_add_linklabel(Interpreter * restrict interp, LinkType linktype,
     * - IdentLoopIterator, but these needs to be queried
     * --------------------------------------------------------------------- */
 
-   LinkLabel *dagl;
-   A_CHECK(dagl, linklabel_new(identname, identname_len, gmsindices_nargs(gmsindices)));
-   dagl->linktype = linktype;
+   LinkLabel *linklabel;
+   A_CHECK(linklabel, linklabel_new(identname, identname_len, gmsindices_nargs(gmsindices)));
+   linklabel->linktype = linktype;
 
    DagRegister *dagreg = &interp->dagregister;
    unsigned dagreg_len = dagreg->len;
@@ -2062,15 +2062,16 @@ static int imm_add_linklabel(Interpreter * restrict interp, LinkType linktype,
       return Error_EMPRuntimeError;
    }
 
-   dagl->daguid_parent = interp->daguid_parent;
+   linklabel->daguid_parent = interp->daguid_parent;
 
-   S_CHECK(assign_uels(dagl->uels, gmsindices, interp->linenr));
+   S_CHECK(assign_uels(linklabel->uels, gmsindices, interp->linenr));
 
    trace_empinterp("[empinterp] Adding link of type %s between %s and %.*s\n", linktype2str(linktype),
                    empdag_getname(&interp->mdl->empinfo.empdag, interp->daguid_parent),
                    gmsindices_nargs(gmsindices) > 0 ? ((int)(gmsindices->idents[gmsindices->nargs-1].lexeme.start - identname))
                    +  gmsindices->idents[gmsindices->nargs-1].lexeme.len : identname_len, identname);
-   S_CHECK(linklabel2arc_add(&interp->linklabel2arc, dagl));
+
+   S_CHECK(linklabel2arc_add(&interp->linklabel2arc, linklabel));
 
    return OK;
 }
@@ -2159,58 +2160,8 @@ static int imm_add_VFobjSimple_arc_dual(Interpreter * interp, UNUSED unsigned *p
 {
    daguid_t uid_child = interp->daguid_child, uid_parent = interp->daguid_parent;
 
-   if (!valid_uid(uid_child)) {
-      error("[empinterp] ERROR line %u: expecting a valid child daguid\n",
-            interp->linenr);
-      return Error_EMPRuntimeError;
-   }
-
-   if (!uidisMP(uid_child)) {
-      error("[empinterp] ERROR line %u: expecting the child daguid to be an MP\n",
-            interp->linenr);
-      return Error_EMPRuntimeError;
-   }
-
-   if (!valid_uid(uid_parent)) {
-      error("[empinterp] ERROR line %u: expecting a valid parent daguid\n",
-            interp->linenr);
-      return Error_EMPRuntimeError;
-   }
-
-   if (!uidisMP(uid_parent)) {
-      error("[empinterp] ERROR line %u: expecting the parent daguid to be an MP\n",
-            interp->linenr);
-      return Error_EMPRuntimeError;
-   }
-   EmpDag *empdag = &interp->mdl->empinfo.empdag;
-
-   EmpDagArc arc = { .type = LinkArcVF };
-
-   mpid_t mpid_child = uid2id(uid_child);
-   mpid_t mpid_parent = uid2id(uid_parent);
-   MathPrgm *mp_parent, *mp_child;
-
-   S_CHECK(empdag_getmpbyid(empdag, mpid_child, &mp_child));
-   S_CHECK(empdag_getmpbyid(empdag, mpid_parent, &mp_parent));
-
-   rhp_idx objequ = mp_getobjequ(mp_parent);
-   if (!valid_ei(objequ)) {
-      MpType mptype = mp_gettype(mp_parent);
-      if (mptype == MpTypeOpt || mptype == MpTypeDual) {
-         objequ = IdxObjFunc;
-      }
-   }
-
-   assert(valid_ei(objequ) || (objequ == IdxCcflib && mp_gettype(mp_parent) == MpTypeCcflib)
-          || (objequ == IdxObjFunc));
-
-   arc.Varc.type = ArcVFBasic;
-   arc.Varc.mpid_child = mpid_child;
-   arc.Varc.basic_dat.ei = objequ;
-   arc.Varc.basic_dat.cst = 1.;
-   arc.Varc.basic_dat.vi = IdxNA;
-
-   return empdag_addarc(empdag, uid_parent, uid_child, &arc);
+   // HACK: have a way to read the coeff, like for the VM
+   return Varc_dual(interp->mdl, interp->linenr, uid_parent, uid_child, 1.);
 }
 
 static int imm_add_Ctrl_edge(Interpreter * interp, const char* identname,
@@ -2665,6 +2616,9 @@ static int parse_dual_operator(Interpreter *interp, unsigned *p)
 
    InterpreterOpsType type = interp->ops->type;
 
+   /* Tihs call MUST be before adding the next one */
+   S_CHECK(interp->ops->mp_setaschild(interp, mp));
+
    switch (type) {
    case InterpreterOpsImm:
       S_CHECK(imm_add_duallabel(interp, mp, interp->pre.start, interp->pre.len,
@@ -2673,10 +2627,10 @@ static int parse_dual_operator(Interpreter *interp, unsigned *p)
    case InterpreterOpsEmb:
       break;
    default:
-      TO_IMPLEMENT("Compiler mode")
+      S_CHECK(vm_add_dualslabel(interp, interp->pre.start, interp->pre.len,
+                                &interp->gmsindices, &dualdat));
+      break;
    }
-
-   S_CHECK(interp->ops->mp_setaschild(interp, mp));
 
    S_CHECK(interp->ops->mp_finalize(interp, mp));
 
@@ -2751,7 +2705,7 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
 
       if (has_dual) {
          S_CHECK(empinterp_ops_dispatch(interp, p, imm_add_VFobjSimple_arc_dual,
-                                        fn_to_implement_noargs, fn_noop_noargs));
+                                        vm_add_Varc_dual, fn_noop_noargs));
       } else {
          S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_arc, vm_add_VFobjSimple_arc))
       }

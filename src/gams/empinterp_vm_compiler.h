@@ -53,12 +53,22 @@ int vm_add_VFobjSimple_arc(Interpreter * interp, unsigned * restrict p, const ch
 int vm_add_Ctrl_edge(Interpreter * interp, unsigned * restrict p, const char* argname,
                      unsigned argname_len, GmsIndicesData* gmsindices) NONNULL;
 
+int vm_add_Varc_dual(Interpreter * interp, UNUSED unsigned *p) NONNULL;
+
 int empvm_finalize(Interpreter *interp) NONNULL;
 
 int c_switch_to_compmode(Interpreter *interp, bool *switched) NONNULL;
 int c_switch_to_immmode(Interpreter *interp) NONNULL;
 
 int hack_scalar2vmdata(Interpreter *interp, unsigned idx) NONNULL;
+
+//HACK: is this the right place?
+int dualslabels_setupnew(Interpreter *interp, Tape *tape, const char *label,
+                         unsigned label_len, GmsIndicesData *gmsindices,
+                         DualOperatorData* opdat, LoopIterators *loopiterators, 
+                         unsigned *dualslabel_gidx) NONNULL;
+int vm_add_dualslabel(Interpreter *interp, const char *label, unsigned label_len,
+                      GmsIndicesData *gmsindices, DualOperatorData *opdat) NONNULL;
 
 #endif // !EMPPARSER_VM_COMPILER_H
 

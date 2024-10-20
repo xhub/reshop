@@ -14,6 +14,8 @@ LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len
    LinkLabels *link = NULL;
    CALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
 
+   // HACK: check that uels_var needs to be of size num_vars.
+   // That is not obvious as TOK_LINKLABELS_SETFROM_LOOPVAR touches .data ...
    if (max_children > 0) {
       MALLOC_EXIT_NULL(link->uels_var, int, (size_t)max_children*num_vars); 
       MALLOC_EXIT_NULL(link->vi, rhp_idx, (size_t)max_children); 
@@ -28,6 +30,7 @@ LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len
 
    switch (type) {
    case LinkObjAddMapSmoothed:
+      // HACK: what was our thought process here?
 
    default: ;
       
@@ -81,7 +84,7 @@ _exit:
    return NULL;
 }
 
-LinkLabel * linklabels_dupaslabel(const LinkLabels * link_src)
+LinkLabel * linklabels_dupaslabel(const LinkLabels * link_src, double coeff, rhp_idx vi)
 {
    LinkLabel *link;
    uint8_t dim = link_src->dim;
@@ -94,8 +97,8 @@ LinkLabel * linklabels_dupaslabel(const LinkLabels * link_src)
    memcpy(link->uels, link_src->data, sizeof(int) * dim);
 
    link->daguid_parent = link_src->daguid_parent;
-   link->vi = IdxNA;
-   link->coeff = 1.;
+   link->vi = vi;
+   link->coeff = coeff;
    link->linktype = link_src->linktype;
 
    return link;
@@ -149,7 +152,7 @@ LinkLabel* linklabel_new(const char *label, unsigned label_len, uint8_t dim)
    link->daguid_parent = EMPDAG_UID_NONE;
    link->label = label;
    link->vi = IdxNA;
-   link->coeff = 1;
+   link->coeff = 1.;
 
    return link;
 }
@@ -159,18 +162,25 @@ void linklabel_free(LinkLabel *link)
    FREE(link);
 }
 
-DualsLabel* dualslabel_new(const char *label, unsigned label_len, uint8_t dim, uint8_t num_vars)
+DualsLabel* dualslabel_new(const char *label, unsigned label_len, uint8_t dim,
+                           uint8_t num_vars, DualOperatorData *opdat)
 {
    DualsLabel* dualslabel;
-   CALLOCBYTES_EXIT_NULL(dualslabel, DualsLabel, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
+   CALLOCBYTES_EXIT_NULL(dualslabel, DualsLabel, sizeof(*dualslabel) + sizeof(int) * (dim+num_vars));
 
+   dualslabel->dim = dim;
+   dualslabel->num_var = num_vars;
    dualslabel->label = label;
    dualslabel->label_len = label_len;
 
    unsigned max_children = 3;
 
    MALLOC_EXIT_NULL(dualslabel->uels_var, int, (size_t)max_children*num_vars); 
-   MALLOC_EXIT_NULL(dualslabel->opdat, DualOperatorData, max_children); 
+
+   mpidarray_init(&dualslabel->mpid_duals);
+   mpidarray_reserve(&dualslabel->mpid_duals, max_children);
+
+   dualslabel->opdat = *opdat;
  
    return dualslabel;
 
@@ -180,9 +190,29 @@ _exit:
    return NULL;
 }
 
-int dualslabel_add(DualsLabel* duals_label, mpid_t mpid_dual, int *uels, DualOperatorData opdat)
+int dualslabel_add(DualsLabel* dualslabel, int *uels, uint8_t nuels, mpid_t mpid_dual)
 {
-   TO_IMPLEMENT("TBD");
+   uint8_t num_var = dualslabel->num_var;
+   /* The MpIdArray len and max is used to keep track of the other data arrays as well */
+   unsigned num_children = dualslabel->mpid_duals.len, max_children = dualslabel->mpid_duals.max;
+
+   if (num_children >= max_children) {
+      unsigned size = max_children = MAX(2*max_children, num_children + 10);
+      if (num_var > 0) {
+         size_t size_data = (num_var*size);
+         REALLOC_(dualslabel->uels_var, int, size_data);
+      }
+      mpidarray_reserve(&dualslabel->mpid_duals, size);
+   }
+
+   if (uels) {
+      // HACK
+      assert(nuels == num_var);
+      memcpy(&dualslabel->uels_var[(size_t)(num_children*num_var)], uels, num_var*sizeof(*uels));
+   }
+   mpidarray_add(&dualslabel->mpid_duals, mpid_dual);
+
+   return OK;
 }
 
 void dualslabel_free(DualsLabel *dualslabel)
@@ -190,8 +220,7 @@ void dualslabel_free(DualsLabel *dualslabel)
    if (!dualslabel) { return; }
 
    free(dualslabel->uels_var);
-   free(dualslabel->opdat);
-   mpidarray_empty(&dualslabel->mpid_uals);
+   mpidarray_empty(&dualslabel->mpid_duals);
    free(dualslabel);
 }
 

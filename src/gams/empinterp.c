@@ -99,7 +99,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    linklabels2arcs_init(&interp->linklabels2arcs);
    linklabel2arc_init(&interp->linklabel2arc);
    dual_label_init(&interp->dual_label);
-   dualslabel_arr_init(&interp->dualslabel);
+   dualslabel_arr_init(&interp->dualslabels);
 
    gdxreaders_init(&interp->gdx_readers);
    namedints_init(&interp->globals.sets);
@@ -180,7 +180,7 @@ NONNULL void empinterp_free(Interpreter *interp)
    linklabel2arc_freeall(&interp->linklabel2arc);
    linklabels2arcs_freeall(&interp->linklabels2arcs);
    dual_label_freeall(&interp->dual_label);
-   dualslabel_arr_freeall(&interp->dualslabel);
+   dualslabel_arr_freeall(&interp->dualslabels);
 
    assert(interp->health != PARSER_OK || !gmsindices_isactive(&interp->gmsindices));
 }

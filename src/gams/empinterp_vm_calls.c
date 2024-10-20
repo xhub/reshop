@@ -393,6 +393,18 @@ static int vm_mp_setprobtype(UNUSED VmData *data, unsigned argc, const VmValue *
    return mp_setprobtype(mp, type);
 }
 
+static int vm_mp_setid_aschild(VmData *data, unsigned argc, const VmValue *values)
+{
+   S_CHECK(_argcnt(argc, 1, __func__));
+   MathPrgm *mp;
+   assert(IS_MPOBJ(values[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+
+   data->mpid_dual = mp->id;
+
+   return OK;
+}
+
 static int vm_mp_setobjvar(UNUSED VmData *data, unsigned argc, const VmValue *values)
 {
    S_CHECK(_argcnt(argc, 1, __func__));
@@ -403,13 +415,16 @@ static int vm_mp_setobjvar(UNUSED VmData *data, unsigned argc, const VmValue *va
    Avar *v = data->v_current;
    unsigned dim = avar_size(v);
 
+   /* Better error message */
    if (dim != 1) {
       error("[empvm_run] ERROR: expecting a scalar objective variable, got dim = %u.\n", dim);
       return Error_EMPIncorrectInput;
    }
 
+   rhp_idx vi;
+   S_CHECK(vmdata_consume_scalarvar(data, &vi));
 
-   return mp_setobjvar(mp, avar_fget(v, 0));
+   return mp_setobjvar(mp, vi);
 }
 
 static int vm_nash_addmpbyid(UNUSED VmData *data, unsigned argc, const VmValue *values)
@@ -649,6 +664,7 @@ const EmpApiCall empapis[] = {
    [FN_MP_ADDZEROFUNC]        = { .fn = vm_mp_addzerofunc, .argc = 1 },
    [FN_MP_ADD_MAP_OBJFN]      = { .fn = vm_mp_add_map_objfn, .argc = 1},
    [FN_MP_FINALIZE]           = { .fn = vm_mp_finalize, .argc = 1 },
+   [FN_MP_SETID_AS_CHILD]     = { .fn = vm_mp_setid_aschild, .argc = 1 },
    [FN_MP_SETOBJVAR]          = { .fn = vm_mp_setobjvar, .argc = 1 },
    [FN_MP_SETPROBTYPE]        = { .fn = vm_mp_setprobtype, .argc = 2 },
    [FN_NASH_ADDMPBYID]        = { .fn = vm_nash_addmpbyid, .argc = 2 },
@@ -671,6 +687,7 @@ const char * const empapis_names[] = {
    [FN_MP_ADDZEROFUNC]        =  "mp_addzerofunc",
    [FN_MP_ADD_MAP_OBJFN]      =  "mp_add_map_objfn",
    [FN_MP_FINALIZE]           =  "mp_finalize",
+   [FN_MP_SETID_AS_CHILD]     =  "mp_setid_aschild",
    [FN_MP_SETOBJVAR]          =  "mp_setobjvar",
    [FN_MP_SETPROBTYPE]        =  "mp_setprobtype",
    [FN_NASH_ADDMPBYID]        =  "nash_addmpbyid",

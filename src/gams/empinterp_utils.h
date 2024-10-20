@@ -2,7 +2,9 @@
 #define EMPINTERP_UTILS_H
 
 #include "compat.h"
+#include "empdag_data.h"
 #include "empinterp_fwd.h"
+#include "rhp_fwd.h"
 
 int genlabelname(DagRegisterEntry * restrict entry, Interpreter *interp,
                  char **labelname) NONNULL;
@@ -19,5 +21,7 @@ int has_longform_solve(Interpreter *interp) NONNULL;
 void dual_operator_data_init(DualOperatorData *dual_operator) NONNULL;
 void smoothing_operator_data_init(SmoothingOperatorData *smoothing_operator) NONNULL;
 SmoothingOperatorData * smoothing_operator_data_new(double param) NONNULL;
+int Varc_dual(Model *mdl, unsigned linenr, daguid_t uid_parent, daguid_t uid_child,
+              double coeff) NONNULL;
 
 #endif // !EMPINTERP_UTILS_H

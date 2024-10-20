@@ -97,7 +97,7 @@ static int add_dualize_operation(EmpDag *empdag, mpid_t mpid_primal, mpid_t mpid
 
    S_CHECK(empdag_getmpbyid(empdag, mpid_dual, &mp_dual));
 
-   mp_dual->dual.mpid = mpid_primal;
+   mp_dual->dual.mpid_primal = mpid_primal;
 
    mp_dual->sense = mp_primal->sense == RhpMin ? RhpMax : RhpMin;
 
@@ -132,6 +132,10 @@ static int add_dualize_operation(EmpDag *empdag, mpid_t mpid_primal, mpid_t mpid
       error("[empdag] ERROR: unsupported dual scheme value %d\n", dualdat->scheme);
       return Error_RuntimeError;
    }
+
+   trace_empinterp("[empinterp] Setting MP(%s) as dual to MP(%s)\n",
+                   empdag_getmpname(empdag, mpid_dual),
+                   empdag_getmpname(empdag, mpid_primal));
 
    return OK;
 }
@@ -224,8 +228,8 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
       arc.Varc.type = ArcVFBasic;
       arc.Varc.mpid_child = mpid_child;
       arc.Varc.basic_dat.ei = objequ;
-      arc.Varc.basic_dat.cst = 1.;
-      arc.Varc.basic_dat.vi = IdxNA;
+      arc.Varc.basic_dat.cst = arcdat->basic_dat.cst;
+      arc.Varc.basic_dat.vi = arcdat->basic_dat.vi;
 
       break;
    }
@@ -493,9 +497,131 @@ static int dag_resolve_arc_label(Interpreter *interp)
             continue;
             
          }
+
+      arcdat.basic_dat.cst = link->coeff;
+      arcdat.basic_dat.vi = link->vi;
          
          S_CHECK(addarc(interp, uid_parent, uid_child, &arcdat));
       }
+
+   if (num_err > 0) {
+      error("[empinterp] during the labels resolution, %u errors were encountered!\n", num_err);
+      return Error_EMPIncorrectInput;
+   }
+
+   return OK;
+}
+
+static int dag_resolve_duals_label(Interpreter *interp)
+{
+   const DagRegister * restrict dagregister = &interp->dagregister;
+   const DualsLabelArray * restrict dualslabels = &interp->dualslabels;
+
+   unsigned num_err = 0;
+
+   int status = OK;
+   unsigned dagreg_len = dagregister->len;
+
+   EmpDag *empdag = &interp->mdl->empinfo.empdag;
+
+   // TODO: DELETE?
+
+   for (unsigned i = 0, len = dualslabels->len; i < len; ++i) {
+      DualsLabel *dual = dualslabels->arr[i];
+
+      const char *label = dual->label;
+      uint16_t label_len = dual->label_len;
+      bool found = false;
+
+      for (unsigned j = 0; j < dagreg_len; ++j) {
+         const DagRegisterEntry *entry = dagregister->list[j];
+         if (entry->label_len == label_len &&
+            !strncasecmp(label, entry->label, label_len)) {
+            found = true;
+            break;
+         }
+      }
+
+      if (!found) {
+         error("[empinterp] ERROR: no node with name '%.*s' is defined\n", label_len, label);
+         num_err++;
+         status = Error_EMPIncorrectInput;
+      }
+   }
+
+   if (status != OK) {
+      error("[empinterp] %u fatal error%s while resolving labels, exiting\n", num_err, num_err > 1 ? "s" : "");
+      return status;
+   }
+
+   for (unsigned i = 0, len = dualslabels->len; i < len; ++i) {
+      DualsLabel * restrict dual = dualslabels->arr[i];
+      uint8_t dim = dual->dim;
+      int * restrict child_uels_var = dual->uels_var;
+      uint8_t num_vars = dual->num_var;
+      unsigned num_children = dual->mpid_duals.len;
+
+      LabelDat labeldat = {.dim = dim, .label_len = dual->label_len, .label = dual->label};
+
+      /* Initialize with the fixed UELs positions */
+      memcpy(labeldat.uels, dual->data, sizeof(int)*dim);
+
+      const int * restrict positions = &dual->data[dim];
+      for (unsigned j = 0, nlabels = num_children; j < nlabels; ++j, child_uels_var += num_vars) {
+ 
+         for (uint8_t k = 0; k < num_vars; ++k) {
+            assert(positions[k] < dim);
+            labeldat.uels[positions[k]] = child_uels_var[k];
+         }
+
+
+         mpid_t mpid_dual = dual->mpid_duals.arr[j];
+
+
+
+         daguid_t daguid_parent = dagregister_find(dagregister, &labeldat);
+
+         if (daguid_parent == UINT_MAX) {
+            errormsg("[empinterp] ERROR: could not resolve the label '");
+            labeldat_print(&labeldat, interp->dct, PO_ERROR);
+            errormsg("'\n");
+            num_err++;
+            continue;
+
+         }
+
+         mpid_t mpid_primal = uid2id(daguid_parent);
+         bool err = !uidisMP(daguid_parent);
+         MathPrgm *mp; 
+
+         if (!err) {
+            S_CHECK(empdag_getmpbyid(empdag, mpid_primal, &mp));
+            err = !mp || !(mp_isopt(mp) || mp_isccflib(mp));
+         }
+
+         if (err) {
+            errormsg("[empinterp] ERROR: label '");
+            labeldat_print(&labeldat, interp->dct, PO_ERROR);
+            errormsg("' did not resolved to an MP. The dual operator can only be applied to OPT MPs\n");
+            num_err++;
+         }
+
+         // HACK: we don't sync in VM mode yet
+         MathPrgm *mp_dual;
+         S_CHECK(empdag_getmpbyid(empdag, mpid_dual, &mp_dual));
+
+         if (mp_dual->type != MpTypeDual) {
+            error("[empinterp] ERROR: MP(%s) has type %s, expected %s",
+                  mp_getname(mp_dual), mptype2str(mp_dual->type),
+                  mptype2str(MpTypeDual));
+            num_err++;
+         }
+
+         mp_dual->dual.dualdat = dual->opdat;
+
+         S_CHECK(add_dualize_operation(empdag, mpid_primal, mpid_dual));
+      }
+   }
 
    if (num_err > 0) {
       error("[empinterp] during the labels resolution, %u errors were encountered!\n", num_err);
@@ -522,21 +648,21 @@ static int dag_resolve_dual_label(Interpreter *interp)
    for (unsigned i = 0, len = dual_label->len; i < len; ++i) {
       DualLabel *dual = dual_label->arr[i];
 
-      const char *basename = dual->label;
-      uint16_t basename_len = dual->label_len;
+      const char *label = dual->label;
+      uint16_t label_len = dual->label_len;
       bool found = false;
 
       for (unsigned j = 0; j < dagreg_len; ++j) {
          const DagRegisterEntry *entry = dagregister->list[j];
-         if (entry->label_len == basename_len &&
-            !strncasecmp(basename, entry->label, basename_len)) {
+         if (entry->label_len == label_len &&
+            !strncasecmp(label, entry->label, label_len)) {
             found = true;
             break;
          }
       }
 
       if (!found) {
-         error("[empinterp] ERROR: no node with name '%.*s' is defined\n", basename_len, basename);
+         error("[empinterp] ERROR: no node with name '%.*s' is defined\n", label_len, label);
          num_err++;
          status = Error_EMPIncorrectInput;
       }
@@ -656,6 +782,7 @@ int empinterp_resolve_labels(struct interpreter *interp)
    S_CHECK(dag_resolve_arc_labels(interp));
    S_CHECK(dag_resolve_arc_label(interp));
    S_CHECK(dag_resolve_dual_label(interp));
+   S_CHECK(dag_resolve_duals_label(interp));
 //   S_CHECK(dag_resolve_fooc_label(interp));
 
    return OK;
