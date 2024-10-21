@@ -33,7 +33,7 @@ typedef struct rhp_ctr_filter_ops {
    //int (*transform_nltree)(void *data, Equ *e, Equ *edst) NONNULL;
 } Fops;
 
-const char *fopstype_name(FopsType type);
+const char *fopstype2str(FopsType type);
 int fops_active_init(Fops *ops, Container *ctr) NONNULL;
 int fops_deactivate_equ(void *data, rhp_idx ei) NONNULL;
 int fops_deactivate_var(void *data, rhp_idx vi) NONNULL;

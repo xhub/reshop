@@ -435,11 +435,12 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
    }
 
    /* Setup all GAMS objects */
-   S_CHECK(gmdl_cdat_setup(mdl_gms, mdl_src));
-
+   S_CHECK(gmdl_cdat_create(mdl_gms, mdl_src));
 
    gmoHandle_t gmo = gms_dst->gmo;
    dctHandle_t dct = gms_dst->dct;
+   assert(gms_dst->owndct);
+   assert(dctNUels(dct) == 0 && dctNLSyms(dct) == 0);
 
    /* -----------------------------------------------------------------------
     * Get the special values
@@ -1054,7 +1055,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
    /* Complete the initialization of   */
    /*  TODO(Xhub) factorize code */
    gms_dst->owning_handles = true;
-   MALLOC_EXIT(gms_dst->rhsdelta, double, ctr_src->m+1);
+   REALLOC_EXIT(gms_dst->rhsdelta, double, ctr_src->m+1);
    gms_dst->initialized = true;
 
 _exit:

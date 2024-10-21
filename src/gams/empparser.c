@@ -170,8 +170,8 @@ void tok_free(Token *tok)
       ;
    }
 
-   FREE(tok->iscratch.data);
-   FREE(tok->dscratch.data);
+   scratchint_empty(&tok->iscratch);
+   scratchdbl_empty(&tok->dscratch);
    _tok_empty(tok);
 }
 
@@ -3677,6 +3677,7 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
    double valp = NAN;
    TokenType toktype = parser_getcurtoktype(interp);
    DblScratch *scratch = &interp->cur.dscratch;
+   double *hack_dscratch = NULL;
    const char *identstr  = NULL;
 
    unsigned param_gidx = UINT_MAX;
@@ -3860,6 +3861,7 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
       if (p2 > *p) {
          *p = p2;
       }
+      hack_dscratch = scratch->data;
       parser_cpypeek2cur(interp);
    } else if (pdef->mandatory) {
       error("[empinterp] Error line %u: unable to parse parameter '%s' for OVF '%s'"
@@ -3871,18 +3873,20 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
    } else {
       trace_empparser("[empinterp] OVF parameter %s was not found\n",
                       pdef->name);
-      return OK;
+      goto _exit;
    }
 
    trace_empparser("[empinterp] OVF parameter %s parsed with type %s\n",
                    pdef->name, ovf_argtype_str(type));
    S_CHECK(interp->ops->ovf_setparam(interp, ovfdef, pidx, type, payload));
 
-   return OK;
 
 _exit:
 
-   FREE(identstr);
+   scratchdbl_empty(scratch);
+   free(hack_dscratch);
+
+   free((void*)identstr);
    return status;
 }
 
@@ -4535,7 +4539,10 @@ NONNULL static int create_base_mp(Interpreter *interp, const char *mp_name,
    S_CHECK(mdl_getsense(mdl, &sense));
 
    if (!(sense == RhpMin || sense == RhpMax)) {
-      error("%s :: no valid objective sense given\n", __func__);
+      int offset;
+      error("[empinterp] %nERROR: model has invalid sense '%s'. It must be either '%s' or '%s'.\n",
+            &offset, sense2str(sense), sense2str(RhpMin), sense2str(RhpMax));
+      error("%*sCheck that your solve statement includes a 'MIN' or 'MAX' part.\n", offset, "");
       return Error_Inconsistency;
    }
 

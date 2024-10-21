@@ -103,9 +103,9 @@ enum cone cvar_gen_set_cones(unsigned n, const void* env, unsigned idx,
    *cone_data = NULL;
    if (idx < 2*n) {
       return CONE_R_MINUS;
-   } else {
-      return CONE_0;
    }
+
+   return CONE_0;
 }
 
 enum cone cvar_gen_set_cones_nonbox(unsigned n, const void* env, unsigned idx,

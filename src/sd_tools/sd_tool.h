@@ -32,11 +32,11 @@ struct sd_ops {
 
 };
 
-void sd_tool_dealloc(struct sd_tool *adt);
+void sd_tool_free(struct sd_tool *adt);
 struct sd_tool* sd_tool_alloc(enum sd_tool_type adt_type, Container *ctr, rhp_idx ei)
-MALLOC_ATTR(sd_tool_dealloc,1);
+MALLOC_ATTR(sd_tool_free,1);
 struct sd_tool* sd_tool_alloc_fromequ(enum sd_tool_type adt_type, Container *ctr, const Equ *e)
-MALLOC_ATTR(sd_tool_dealloc,1);
+MALLOC_ATTR(sd_tool_free,1);
 
 int sd_tool_assemble(struct sd_tool *adt, Container *ctr, EmpInfo *empinfo);
 //int ad_tool_fooc(struct ad_tool *adt, Container *ctr_fooc);

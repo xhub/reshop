@@ -135,7 +135,7 @@ int ovf_addbyname(EmpInfo *empinfo, const char *name, OvfDef **ovfdef)
 
 int ovf_params_sync(OvfDef * restrict ovf, OvfParamList * restrict params)
 {
-   OvfParamList * restrict params_old = &ovf->params;
+   OvfParamList * restrict params_old = ovf->params;
 
    if (params->size != params_old->size) {
       error("%s :: Number of parameters differs: old = %u; new = %u\n", __func__,
@@ -255,8 +255,8 @@ int rhp_ovf_add(Model *mdl, const char* name, rhp_idx ovf_vi,
      }
    }
 
-   for (size_t i = 0; i < ovfdef_->params.size; ++i) {
-     OvfParam *p = &ovfdef_->params.p[i];
+   for (size_t i = 0; i < ovfdef_->params->size; ++i) {
+     OvfParam *p = &ovfdef_->params->p[i];
      if (p->def->get_vector_size) {
        p->size_vector = p->def->get_vector_size(v_args->size);
      } else {
@@ -291,8 +291,8 @@ int ovf_check(OvfDef *ovf_def)
     * Check if all the mandatory parameters are defined
     * ----------------------------------------------------------------------- */
 
-   for (size_t i = 0; i < ovf_def->params.size; ++i) {
-      OvfParam* p = &ovf_def->params.p[i];
+   for (size_t i = 0; i < ovf_def->params->size; ++i) {
+      OvfParam* p = &ovf_def->params->p[i];
       if (p->type == ARG_TYPE_UNSET) {
          if (p->def->mandatory && !p->def->default_val) {
             error("[ovf/check] in a definition of OVF/CCF of type %s"

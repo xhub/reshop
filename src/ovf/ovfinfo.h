@@ -14,16 +14,12 @@
  */
 
 struct ovf_parameters;
+typedef struct ovf_param_list OvfParamList;
 
 typedef struct ovf_param_def_list {
     const struct ovf_param_def* const * p;
     const unsigned *s;
 } OvfParamDefList;
-
-typedef struct ovf_param_list {
-    struct ovf_param* p;
-    unsigned size;
-} OvfParamList;
 
 extern const unsigned ovf_numbers;
 extern const char* const ovf_names[];
@@ -77,7 +73,7 @@ typedef struct rhp_ovfdef {
    const OvfGenOps *generator;  /**< generator for this OVF */
    const char *name;            /**< name of this OVF */
    OvfDef *next;                /**< next OVF */
-   OvfParamList params;         /**< set of parameters associated with this OVF */
+   OvfParamList *params;         /**< set of parameters associated with this OVF */
    unsigned char reformulation; /**< Reformulation scheme for this OVF */
    bool sense;                  /**< true if the OVF is in sup form (inf form otherwise) */
    OvfStatus status;            /**< status of the OVF def                               */

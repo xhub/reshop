@@ -10,7 +10,7 @@ set (RESHOP_GAMSLINK_LIB ${RESHOP_GAMSLINK_LIB} PARENT_SCOPE)
 
 list(APPEND RESHOP_GAMSLINK_LIB_C_FILES "reshop_main.c"
                                         "reshop_misc.c"
-                                        "reshop_opt.c")
+                                         "${CMAKE_SOURCE_DIR}/src/gams/shared/reshop_gams_optfile.c")
 
 if (NOT GAMS_C_FILES)
   MESSAGE(FATAL_ERROR "GAMS_C_FILES must be defined before this project!")
@@ -25,16 +25,21 @@ endif()
 set_source_files_properties(${GAMS_C_FILES} PROPERTIES COMPILE_DEFINITIONS GC_NO_MUTEX)
 
 set_source_files_properties(${GAMS_C_FILES} PROPERTIES INCLUDE_DIRECTORIES
-   "${GAMSDIR}/apifiles/C/api")
+                                            "${GAMSDIR}/apifiles/C/api")
+
 
 list(APPEND RESHOP_GAMSLINK_LIB_C_FILES ${GAMS_C_FILES})
+
+set_source_files_properties(${RESHOP_GAMSLINK_LIB_C_FILES} PROPERTIES INCLUDE_DIRECTORIES
+                            "${CMAKE_SOURCE_DIR}/src/gams/shared")
 
 add_library(${RESHOP_GAMSLINK_LIB} SHARED ${RESHOP_GAMSLINK_LIB_C_FILES})
 
 
 # This adds gmsrhp_ux.out
 set(RESHOP_GAMSLINK_EXE "gmsrhp_ux.out")
-add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgmomcc.c;"
+add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;"
+                                      "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgmomcc.c;"
                                       "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgevmcc.c")
 
 list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE} ${RESHOP_GAMSLINK_LIB})

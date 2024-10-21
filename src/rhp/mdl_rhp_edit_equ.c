@@ -331,7 +331,7 @@ int rmdl_equ_flip(Model *mdl, rhp_idx ei, rhp_idx *ei_new)
    char name[SHORT_STRING], *name_;
    S_CHECK(ctr_copyequname(ctr, ei, name, sizeof(name)/sizeof(char)));
    size_t namelen = strlen(name);
-   MALLOC_(name_, char, strlen("_flipped") + namelen);
+   MALLOC_(name_, char, strlen("_flipped") + namelen + 1);
    strcpy(name_, name);
    strcat(name_, "_flipped");
 

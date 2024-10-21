@@ -172,11 +172,11 @@ void ovfdef_free(OvfDef* restrict ovfdef)
 
    if (ovfdef->refcnt > 0) { return; }
 
-   for (unsigned i = 0, len = ovfdef->params.size; i < len; ++i) {
-      ovf_param_dealloc(&ovfdef->params.p[i]);
+   for (unsigned i = 0, len = ovfdef->params->size; i < len; ++i) {
+      ovf_param_dealloc(&ovfdef->params->p[i]);
    }
 
-   FREE(ovfdef->params.p);
+   FREE(ovfdef->params);
    avar_free(ovfdef->args);
    FREE(ovfdef->eis);
    FREE(ovfdef->coeffs);
@@ -235,10 +235,10 @@ void ovf_def_print(const OvfDef *ovf, unsigned mode,
    unsigned nargs_empdag = ovf->num_empdag_children;
    printout(mode, " ** Number of VF arguments: %5u\n", nargs_empdag);
 
-   printout(mode, " ** Number of parameters: %5u\n", ovf->params.size);
+   printout(mode, " ** Number of parameters: %5u\n", ovf->params->size);
 
-   for (unsigned i = 0; i < ovf->params.size; ++i) {
-      const OvfParam *p = &ovf->params.p[i];
+   for (unsigned i = 0; i < ovf->params->size; ++i) {
+      const OvfParam *p = &ovf->params->p[i];
       printout(mode, "\tParameter '%s' of type %s", p->def->name, ovf_argtype_str(p->type));
 
       switch (p->type) {

@@ -96,6 +96,10 @@ void interp_restore_savedtok(Interpreter *interp)
 {
    assert(interp->pre.type != TOK_UNSET);
 
+   if (interp->cur.type != TOK_UNSET) {
+      tok_free(&interp->cur);
+   }
+
    memcpy(&interp->cur, &interp->pre, sizeof(Token));
    interp->pre.type = TOK_UNSET;
 }
@@ -103,6 +107,10 @@ void interp_restore_savedtok(Interpreter *interp)
 NONNULL static inline
 void interp_erase_savedtok(Interpreter *interp)
 {
+   if (interp->cur.type != TOK_UNSET) {
+      tok_free(&interp->pre);
+   }
+
    interp->pre.type = TOK_UNSET;
 }
 

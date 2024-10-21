@@ -139,6 +139,7 @@ void linklabels_free(LinkLabels *link)
    FREE(link->uels_var);
    FREE(link->vi);
    FREE(link->coeff);
+   FREE(link->extras);
    FREE(link);
 }
 

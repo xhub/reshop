@@ -246,6 +246,7 @@ VecNamesFoocLookup* vnames_lookup_new(unsigned len, const Model *mdl_fooc,
 void vnames_lookup_free(VecNamesFoocLookup* dat)
 {
    /* dat->rev_rosetta_vars is owned by another object */
+   free((int*)dat->ei_fooc2vi_fooc);
    FREE(dat);
 }
 

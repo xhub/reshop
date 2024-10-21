@@ -38,7 +38,7 @@ endEmbeddedCode
 solve nash using emp;
 
 abort$[nash.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', nash.solveStat;
-abort$[nash.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', nash.modelStat;
+abort$[nash.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', nash.modelStat;
 
 * Solution:
 * x('a1', '0') = alpha / beta
@@ -55,10 +55,11 @@ parameter objval(a,t);
 
 $ondotL
 objval(a, t) = 
-  ((beta/2*sqr(x('a1','0')) - alpha*x('a1','0'))$sameas(t,'0')
+  (   (beta/2*sqr(x('a1','0')) - alpha*x('a1','0'))$sameas(t,'0')
     + (1/2*sqr(x('a1','1')) + 3*x('a1','1')*x('a2','1') - 4*x('a1','1'))$sameas(t,'1')
   )$sameas(a,'a1')
-  + (x('a2','0')$sameas(t,'0')
+  
++ (   x('a2','0')$sameas(t,'0')
     + (1/2*sqr(x('a2','1')) + x('a1','1')*x('a2','1') - 3*x('a2','1'))$sameas(t,'1')
   )$sameas(a,'a2');
 $offdotL

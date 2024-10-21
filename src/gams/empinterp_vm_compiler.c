@@ -329,21 +329,21 @@ static inline int end_scope(Interpreter *interp, UNUSED Tape* tape) {
 
    trace_empparser("[empcompiler] scope depth is %u at line %u.\n", c->scope_depth,
                    tape->linenr);
+
    LocalVar *lvar;
-   unsigned old_cnt = c->local_count;
+
    while (c->local_count > 0 && ((lvar = &c->locals[c->local_count - 1])
       && lvar->depth < UINT_MAX && lvar->depth > c->scope_depth)) {
+
+      trace_empparser("[empcompiler] locals: removing '%.*s' of type %s\n",
+                      lvar->lexeme.len, lvar->lexeme.start,
+                      identtype2str(lvar->type));
+
+      free((char*)lvar->lexeme.start);
       c->local_count--;
    }
 
    if (O_Output & PO_TRACE_EMPPARSER) {
-      for (unsigned i = c->local_count; i < old_cnt; ++i) {
-         lvar = &c->locals[i];
-         trace_empparser("[empcompiler] locals: removing '%.*s' of type %s\n",
-                         lvar->lexeme.len, lvar->lexeme.start,
-                         identtype2str(lvar->type));
-      }
-
       if (c->local_count > 0) {
          trace_empparsermsg("[empcompiler] locals: remaining locals are:\n");
          for (unsigned i = 0, len = c->local_count; i < len; ++i) {
@@ -1390,6 +1390,7 @@ void empvm_compiler_free(Compiler* c)
    if (!c) return;
 
    empvm_free(c->vm);
+
    free(c);
 }
 
@@ -2632,8 +2633,7 @@ int ovfdecl_fillparam(EmpVm* vm, OvfDeclData * restrict ovfdecl, unsigned ovf_id
 {
    ovfdecl->active = true;
 
-   MALLOC_(ovfdecl->params, OvfParamList, 1);
-   S_CHECK(ovf_fill_params(ovfdecl->params, ovf_idx));
+   S_CHECK(ovf_fill_params(&ovfdecl->params, ovf_idx));
    S_CHECK(vmvals_add(&vm->globals, PTR_VAL(ovfdecl->params)));
    ovfdecl->params_gidx = vm->globals.len - 1;
 

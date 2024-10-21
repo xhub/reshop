@@ -1,55 +1,13 @@
 #ifndef RESHOP_PRIV_H
 #define RESHOP_PRIV_H
 
-#include "cfgmcc.h"
-#include "dctmcc.h"
-#include "gevmcc.h"
-#include "gmomcc.h"
-#include "optcc.h"
-
-#ifdef GAMS_BUILD
-#include "palmcc.h"
-#endif
-
 #include "reshop.h"
-
-#define LOGMASK         0x1
-#define STATUSMASK      0x2
-#define ALLMASK         (LOGMASK | STATUSMASK)
-
-// TODO: delete
-struct timeinfo {
-   double start_readyapi;       /**< start time of ready api procedure      */
-   double end_readyapi;         /**< end time of ready api procedure        */
-   double start_callsolver;     /**< start time of call solver procedure    */
-   double end_callsolver;       /**< end time of call solver procedure      */
-   double start_func;
-   double cum_func;
-   double start_grad;
-   double cum_grad;
-};
-
-typedef struct rhpRec {
-   optHandle_t oh;              /**< GAMS option object                     */
-   gmoHandle_t gh;              /**< GAMS model object                      */
-   gevHandle_t eh;              /**< GAMS environment object                */
-   dctHandle_t dh;              /**< GAMS dictionary object                 */
-   cfgHandle_t ch;              /**< GAMS configuration object              */
-#ifdef GAMS_BUILD
-   palHandle_t ph;              /**< GAMS PAL object                        */
-#endif
-   int oh_created;              /**< TRUE if GAMS option object was created */
-
-   struct timeinfo timeinfo;    /**< record timing statistics               */
-   struct rhp_mdl *mdl;         /**< ReSHOP model storage */
-} rhpRec_t;
+#include "reshop_gams_common.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-int opt_pushtosolver(rhpRec_t *jh);
-int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir);
 void printgams(void *env, unsigned mode, const char *str);
 void flushgams(void* env);
 

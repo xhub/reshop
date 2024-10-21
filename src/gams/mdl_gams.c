@@ -1,6 +1,7 @@
 #include "gams_macros.h"
 #include "reshop_config.h"
 #include "asprintf.h"
+#include "reshop_gams_common.h"
 #include <fcntl.h>
 
 /* For IO related things  */
@@ -281,10 +282,10 @@ int gmdl_ensuresimpleprob(Model *mdl)
  *
  * @return         The error code
  */
-int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
+int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
 {
    char gamsctrl_new[GMS_SSSIZE], scrdir[GMS_SSSIZE];
-   GmsModelData *mdldat_gms = mdl_gms->data;
+   GmsModelData *mdldat = mdl_gms->data;
 
    /* ----------------------------------------------------------------------
     * Deal with the GAMS Control File crazyness
@@ -329,11 +330,11 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
          trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' inherited"
                      " from %s model '%.*s' #%u\n", mdl_fmtargs(mdl_gms),
                      mdldat_up->gamsdir, mdl_fmtargs(mdl_gms_up));
-         STRNCPY_FIXED(mdldat_gms->gamsdir, mdldat_up->gamsdir);
+         STRNCPY_FIXED(mdldat->gamsdir, mdldat_up->gamsdir);
       } else {
-         gevGetStrOpt(gev, gevNameSysDir, mdldat_gms->gamsdir);
+         gevGetStrOpt(gev, gevNameSysDir, mdldat->gamsdir);
          trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' set from GEV\n",
-                     mdl_fmtargs(mdl_gms), mdldat_gms->gamsdir);
+                     mdl_fmtargs(mdl_gms), mdldat->gamsdir);
       }
 
       if(!dir_exists(mdldat_up->gamsdir)) {
@@ -366,11 +367,11 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
       }
 
       /* We know for sure we can delete the scratch dir */
-      mdldat_gms->delete_scratch = true;
+      mdldat->delete_scratch = true;
 
-      STRNCPY_FIXED(mdldat_gms->gamscntr, gamsctrl_new);
+      STRNCPY_FIXED(mdldat->gamscntr, gamsctrl_new);
       trace_model("[model] %s model '%.*s' #%u: gamscntr from gevDuplicateScratchDir()"
-               " is '%s'\n", mdl_fmtargs(mdl_gms), mdldat_gms->gamscntr);
+               " is '%s'\n", mdl_fmtargs(mdl_gms), mdldat->gamscntr);
 
       /* TODO: is this still needed?
        * WARNING: this must be after gevDuplicateScratchDir() */
@@ -379,12 +380,12 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
    } else {
 
       /* We need to get a dummy gamscntr.dat file */
-      if (!strlen(mdldat_gms->gamscntr)) {
+      if (!strlen(mdldat->gamscntr)) {
          errormsg("[GAMS] ERROR: no dummy gamscntr.dat file provided\n");
          return Error_GamsIncompleteSetupInfo;
       }
 
-      if (!strlen(mdldat_gms->gamsdir)) {
+      if (!strlen(mdldat->gamsdir)) {
          errormsg("[GAMS] ERROR: no GAMS system directory provided\n");
          return Error_GamsIncompleteSetupInfo;
       }
@@ -397,7 +398,7 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
    Container *ctrgms = &mdl_gms->ctr;
    GmsContainerData *gmsdst = (GmsContainerData *)ctrgms->data;
 
-   S_CHECK(gcdat_init(mdl_gms->ctr.data, mdldat_gms));
+   S_CHECK(gcdat_init_withdct(mdl_gms->ctr.data, mdldat));
 
    gmoHandle_t gmodst = gmsdst->gmo;
    dctHandle_t dctdst = gmsdst->dct;
@@ -444,6 +445,45 @@ int gmdl_cdat_setup(Model *mdl_gms, Model *mdl_src)
 
    dctSetBasicCounts(dctdst, ctrgms->m, ctrgms->n, 0);
 
+   return OK;
+}
+
+int gmdl_loadrhpoptions(Model *mdl)
+{
+   assert(gams_chk_mdl(mdl, __func__) == OK);
+   GmsModelData *mdldat = mdl->data;
+   GmsContainerData *gms = mdl->ctr.data;
+
+   rhpRec_t r = {.eh = gms->gev, .gh = gms->gmo, .ch = gms->cfg};
+
+   const char *sysdir = mdldat->gamsdir;
+   char msg[GMS_SSSIZE];
+
+   if (!optGetReadyD(sysdir, msg, sizeof(msg))) {
+      gevLogStatPChar(r.eh, "[GAMS] ERROR: Could not load option library: ");
+      gevLogStat(r.eh, msg);
+      return Error_GamsCallFailed;
+   }
+
+   if (!optCreate(&r.oh, msg, sizeof(msg))) {
+      gevLogStatPChar(r.eh, "[GAMS] ERROR: Could not create option struct: ");
+      gevLogStat(r.eh, msg);
+      return Error_GamsCallFailed;
+   }
+
+   int rc = opt_process(&r, true, sysdir);
+   if (rc) {
+      error("[GAMS] ERROR: processing option file failed with rc = %d", rc);
+      return Error_GamsCallFailed;
+   }
+
+   rc = opt_pushtosolver(&r);
+   if (rc) {
+      error("[GAMS] ERROR: setting ReSHOP options failed with rc = %d", rc);
+      return Error_RuntimeError;
+   }
+
+   optFree(&r.oh);
 
    return OK;
 }

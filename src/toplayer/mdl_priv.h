@@ -5,6 +5,7 @@
 
 
 void mdl_linkmodels(Model *mdl_src, Model *mdl_dst) NONNULL;
+void mdl_linkmodels_noborrow(Model *mdl_src, Model *mdl_dst) NONNULL;
 
 
 #endif

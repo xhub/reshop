@@ -71,7 +71,7 @@ typedef struct {
 } FilterEmpDagNash;
 
 
-const char *fopstype_name(FopsType type)
+const char *fopstype2str(FopsType type)
 {
    switch (type) {
    case FopsActive:         return "active";
@@ -516,6 +516,7 @@ static int filter_subset_gamsopcode(void *data, rhp_idx ei, unsigned len,
 
 static void filter_subset_freedata(void* data)
 {
+   if (!data) { return; }
    FilterSubset *fs = data;
    filter_subset_release(fs);
 }
@@ -575,7 +576,7 @@ static int filter_subset_setvarpermutation(Fops *fops, rhp_idx *vperm)
 {
    if (fops->type != FopsSubset) {
       error("[fops] ERROR in %s: unexpected fops of type %s, was expecting %s",
-            __func__, fopstype_name(fops->type), fopstype_name(FopsSubset));
+            __func__, fopstype2str(fops->type), fopstype2str(FopsSubset));
       return Error_RuntimeError;
    }
 
@@ -796,8 +797,10 @@ static int dfs_equ(EmpDag *empdag, daguid_t uid, struct aequ_list *equs)
 
 static void subdag_freedata(void *data)
 {
+   if (!data) { return; }
    FilterEmpDagSubDag *dat = data;
    filter_subset_freedata(dat->fs);
+   free(dat);
 }
 
 static void subdag_get_sizes(void *data, size_t* n, size_t* m)
@@ -991,7 +994,7 @@ mpid_t fops_singleMP_getmpid(Fops *fops)
 {
    if (fops->type != FopsEmpDagSingleMp) {
       error("[fops] ERROR in %s: expecting %s, got %s\n", __func__,
-            fopstype_name(FopsEmpDagSingleMp), fopstype_name(fops->type));
+            fopstype2str(FopsEmpDagSingleMp), fopstype2str(fops->type));
       return MpId_NA;
    }
 
@@ -1003,7 +1006,7 @@ const MpIdArray* fops_Nash_getmpids(Fops *fops)
 {
    if (fops->type != FopsEmpDagNash) {
       error("[fops] ERROR in %s: expecting %s, got %s\n", __func__,
-            fopstype_name(FopsEmpDagNash), fopstype_name(fops->type));
+            fopstype2str(FopsEmpDagNash), fopstype2str(fops->type));
       return NULL;
    }
 
@@ -1015,7 +1018,7 @@ daguid_t fops_subdag_getrootuid(Fops *fops)
 {
    if (fops->type != FopsEmpDagSubDag) {
       error("[fops] ERROR in %s: expecting %s, got %s\n", __func__,
-            fopstype_name(FopsEmpDagNash), fopstype_name(fops->type));
+            fopstype2str(FopsEmpDagNash), fopstype2str(fops->type));
       return EMPDAG_UID_NONE;
    }
 

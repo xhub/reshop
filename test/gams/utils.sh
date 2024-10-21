@@ -47,11 +47,13 @@ e_subcase() { printf "${cyan}➜ %s${reset}\n" "$@"
 
 : "${EMPSLV:=reshopdev}"
 
+: "${GMSLO:=2}"
+
 exec_gams() {
    local gms_name=$1
    shift
    set +e
-   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=2 keep=1 optfile=1 emp="$EMPSLV" "$@"
+   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo="$GMSLO" keep=1 optfile=1 emp="$EMPSLV" "$@"
    local status=$?
    if [ $status != 0 ]; then
       e_error "${gms_name} with args has failed: status = ${status}"
@@ -72,8 +74,9 @@ run_all_gms() {
    bname="$(basename "$1")"
    e_header "Running tests in $bname"
 
-   rm -rf tmp_testxx
-   mkdir tmp_testxx
+   TMPDIR=tmp_testxx-"$EMPSLV"
+   rm -rf "$TMPDIR"
+   mkdir "$TMPDIR"
 
    # To silence GAMS
    export DEBUG_PGAMS=0
@@ -81,15 +84,15 @@ run_all_gms() {
    # Start tests
    for f in *.gms
    do
-      cp "$f" tmp_testxx
+      cp "$f" "$TMPDIR"
       e_subcase "Running $f"
-      cd tmp_testxx;
+      cd "$TMPDIR";
       exec_gams "$(basename "$f")"
       cd ..
    done
    
    if [[ $# -eq 1 || ($# -ge 2 && $2 != "keep") ]]; then
-      rm -rf tmp_testxx
+      rm -rf "$TMPDIR"
    fi
    
    popd > /dev/null

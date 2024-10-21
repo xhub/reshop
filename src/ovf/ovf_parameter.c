@@ -7,25 +7,26 @@
 
 
 
-int ovf_fill_params(OvfParamList * params, size_t ovf_idx)
+int ovf_fill_params(OvfParamList **params, size_t ovf_idx)
 {
+
    const OvfParamDefList* paramdefs;
    A_CHECK(paramdefs, ovf_getparamdefs(ovf_idx));
 
    unsigned param_size = *paramdefs->s;
    const OvfParamDef * const * p = paramdefs->p;
 
-   params->size = param_size;
+   OvfParamList *params_;
+   CALLOCBYTES_(params_, OvfParamList, sizeof(OvfParamList)+(param_size*sizeof(OvfParam)));
+   *params = params_;
+   params_->size = param_size;
+
    if (param_size > 0) {
-      /* CALLOC serves as initialization */
-      CALLOC_(params->p, OvfParam, param_size);
 
       for (unsigned i = 0; i < param_size; ++i) {
-         params->p[i].def = p[i];
+         params_->p[i].def = p[i];
       }
-   } else {
-      params->p = NULL;
-   }
+   } 
 
    return OK;
 }

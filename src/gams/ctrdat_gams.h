@@ -11,13 +11,13 @@
 #include "cfgmcc.h"
 #include "gdxcc.h"
 
-struct gams_modeldata;
+typedef struct gams_modeldata GmsModelData;
 
 /** GAMS-specific container data */
 typedef struct ctrdata_gams {
 
    bool owndct;                          /**< If true, owns the dct object   */
-   bool owning_handles;
+   bool owning_handles;                  /**< If true, owns the GAMS objects, except dct */
    bool initialized;
 
    struct equvar_eval equvar_eval;      /**< Evaluation of variables by equations */
@@ -33,8 +33,8 @@ typedef struct ctrdata_gams {
    cfgHandle_t cfg;
 } GmsContainerData;
 
-int gcdat_init(GmsContainerData *gms, struct gams_modeldata *mdldat) NONNULL;
-int gcdat_loadmdl(GmsContainerData *gms, struct gams_modeldata *mdldat) NONNULL;
-void gcdat_rel(GmsContainerData *gms) NONNULL;
+int gcdat_init_withdct(GmsContainerData *gms, GmsModelData *mdldat) NONNULL;
+int gcdat_loadmdl(GmsContainerData *gms, GmsModelData *mdldat) NONNULL;
+void gcdat_free_handles(GmsContainerData *gms) NONNULL;
 
 #endif

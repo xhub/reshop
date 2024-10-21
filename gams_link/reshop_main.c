@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "reshop_gams_common.h"
 #include "reshop-gams.h"
 #include "reshop_priv.h"
 
@@ -220,8 +221,6 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
    /* TODO(GAMS review): do we need this? */
    gevTerminateInstall(jh->eh);
 
-   jh->timeinfo.start_readyapi = gevTimeDiffStart(jh->eh);
-
   /* ----------------------------------------------------------------------
    * Read and process options
    * ---------------------------------------------------------------------- */
@@ -290,8 +289,6 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
       gevLogStat(jh->eh, "*** ReSHOP ERROR: Could not fill the model");
       rc = 1; goto _exit;
    }
-
-   jh->timeinfo.end_readyapi = gevTimeDiffStart(jh->eh);
 
 _exit:
 

@@ -81,14 +81,14 @@ static void gams_deallocdata(Container *ctr)
    }
 
    if (gms->owning_handles) {
-      gcdat_rel(gms);
+      gcdat_free_handles(gms);
    }
 
-
-   FREE(gms->sos_group);
-   FREE(gms->rhsdelta);
-   FREE(gms->equvar_eval.pairs);
-   FREE(gms);
+   free(gms->sos_group);
+   free(gms->rhsdelta);
+   free(gms->equvar_eval.pairs);
+   free(gms->equvar_eval.var2evals);
+   free(gms);
 
    ctr->data = NULL;
 }

@@ -193,7 +193,7 @@ int ge_prep_jacdata(Container * restrict ctr, struct jacdata * restrict jacdata)
 _exit:
 
    for (size_t i = 0; i < ctr->n; ++i) {
-      sd_tool_dealloc(adt[i]);
+      sd_tool_free(adt[i]);
    }
    FREE(adt);
 

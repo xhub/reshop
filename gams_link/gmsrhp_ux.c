@@ -83,6 +83,31 @@ int main(int argc, char** argv)
 
    }
 
+   const char *ldpath = getenv("RHP_LDPATH");
+   if (ldpath) {
+      const char *ld_library_path_cur = getenv("LD_LIBRARY_PATH");
+      char *ld_library_path = NULL;
+      size_t ldpath_len = strlen(ldpath);
+
+      if (ld_library_path_cur) {
+         size_t len_cur = strlen(ld_library_path_cur);
+         ld_library_path = malloc(sizeof(char) * (len_cur + 2 + ldpath_len));
+         if (!ld_library_path) {
+            (void)fprintf(stderr, "ERROR: could not allocate memory\n");
+            rc = 1;
+            goto _exit;
+         }
+
+         strcpy(ld_library_path, ld_library_path_cur);
+         strcat(ld_library_path, ":");
+         strcat(ld_library_path, ldpath);
+
+         setenv("LD_LIBRARY_PATH", ld_library_path, 1);
+      } else {
+         setenv("LD_LIBRARY_PATH", ldpath, 1);
+      }
+
+   }
 // TODO MACOS
 #endif
 
@@ -138,7 +163,7 @@ _exit:
    if (mdl) { rhp_mdl_free(mdl); }
 
    if (rc) {
-      (void)fprintf(stderr, "*** ReSHOP exited with rc = %u", rc);
+      (void)fprintf(stderr, "*** ReSHOP exited with rc = %u\n", rc);
    }
 
    return rc;

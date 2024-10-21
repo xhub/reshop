@@ -720,10 +720,6 @@ int ctr_prepare_export(Container *ctr_src, Container *ctr_dst)
 
    S_CHECK(ctr_compress_vars_check(ctr_src->n, total_n, skip_var));
 
-  /* ----------------------------------------------------------------------
-   * Get the new modeltype
-   * ---------------------------------------------------------------------- */
-
    ctr_dst->status |= CtrEquVarInherited;
 
    return OK;

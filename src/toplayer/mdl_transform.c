@@ -41,7 +41,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
       return OK;
    }
 
-   Model *mdl4fooc = mdl;
+   Model *mdl4fooc = NULL;
 
    if (empdag->roots.len > 1) {
       TO_IMPLEMENT("EMPDAG with multiple roots: need to implement DAG filtering");
@@ -58,6 +58,8 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
       S_CHECK(mdl_checkmetadata(mdl));
 
       empdag = &mdl->empinfo.empdag;
+   } else {
+      mdl4fooc = mdl_borrow(mdl);
    }
 
    daguid_t root = empdag->uid_root;
@@ -173,7 +175,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
       return status;
    }
 
-   mdl_linkmodels(mdl4fooc, mdl_fooc);
+   mdl_linkmodels_noborrow(mdl4fooc, mdl_fooc);
 
    return OK;
 }
@@ -343,7 +345,8 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
    * We prepare the model, including fops for the lower level part
    * ---------------------------------------------------------------------- */
  
-   mdl_linkmodels(mdl_rhp_for_fooc, mdl_mpec);
+   mdl_linkmodels_noborrow(mdl_rhp_for_fooc, mdl_mpec);
+
    S_CHECK(mdl_prepare_fooc(mdl_rhp_for_fooc, mdl_mpec));
 
    Fops *fops_lower = fops_subdag_activevars_new(mdl_rhp_for_fooc, lower_uid);
@@ -354,7 +357,8 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
 
    mdl_rhp_for_fooc->ctr.fops = fops_old;
    fops_lower->freedata(fops_lower->data);
-   
+   free(fops_lower);
+
   /* ----------------------------------------------------------------------
    * Now we add the upper level problem. We need to update mp_upper to the
    * one in the temporary fooc model to get the changes there

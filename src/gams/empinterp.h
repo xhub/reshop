@@ -357,6 +357,8 @@ typedef struct DualLabelArray {
  * --------------------------------------------------------------------- */
 
 #define DagRegisterEntry LinkLabel
+#define dagregentry_free linklabel_free
+
 
 typedef struct DagRegister {
    unsigned len;

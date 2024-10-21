@@ -573,7 +573,7 @@ int rctr_deactivate_equ(Container *ctr, rhp_idx ei)
       fops_active_init(ctr->fops, ctr);
    } else if (ctr->fops->type != FopsActive) {
       error("[container] ERROR: cannot deactivate equation with filter ops of "
-            "type %s\n", fopstype_name(ctr->fops->type));
+            "type %s\n", fopstype2str(ctr->fops->type));
    }
 
    return fops_deactivate_equ(ctr->fops->data, ei);
@@ -592,7 +592,7 @@ int rctr_deactivate_var(Container *ctr, rhp_idx vi)
       fops_active_init(ctr->fops, ctr);
    } else if (ctr->fops->type != FopsActive) {
       error("[container] ERROR: cannot deactivate equation with filter ops of "
-            "type %s\n", fopstype_name(ctr->fops->type));
+            "type %s\n", fopstype2str(ctr->fops->type));
    }
 
    return fops_deactivate_var(ctr->fops->data, vi);

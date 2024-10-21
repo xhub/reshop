@@ -393,8 +393,8 @@ static int imm_ovf_setparam(Interpreter* restrict interp, void *ovfdef_data, uns
                          OvfArgType type, OvfParamPayload payload)
 {
    OvfDef *ovfdef = ovfdef_data;
-   assert(i < ovfdef->params.size);
-   OvfParam * restrict param = &ovfdef->params.p[i];
+   assert(i < ovfdef->params->size);
+   OvfParam * restrict param = &ovfdef->params->p[i];
 
    param->type = type;
    if (param->def->get_vector_size) {

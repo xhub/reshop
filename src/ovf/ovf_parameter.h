@@ -39,7 +39,12 @@ typedef struct ovf_param {
    };
 } OvfParam;
 
-int ovf_fill_params(OvfParamList * params, size_t ovf_idx) NONNULL;
+typedef struct ovf_param_list {
+    unsigned size;
+    struct ovf_param p[];
+} OvfParamList;
+
+int ovf_fill_params(OvfParamList **params, size_t ovf_idx) NONNULL;
 void ovf_param_print(const struct ovf_param *p, unsigned mode) NONNULL;
 void ovf_param_dealloc(OvfParam *p);
 

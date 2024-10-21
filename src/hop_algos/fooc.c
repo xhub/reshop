@@ -1242,11 +1242,11 @@ add_multiplier_terms:
                                                 vi_primal2ei_F));
 
 _exit:
-  sd_tool_dealloc(sd_objequ);
+  sd_tool_free(sd_objequ);
 
   if (sd_cequ) {
     for (size_t i = 0; i < cons_nl_size; ++i) {
-      sd_tool_dealloc(sd_cequ[i]);
+      sd_tool_free(sd_cequ[i]);
     }
   }
 
@@ -1390,6 +1390,12 @@ static int fooc_mcp_primal_vi(Model *mdl_mcp, MathPrgm *mp,
 
 _exit:
 
+   if (sd_cequ) {
+      for (unsigned i = 0; i < nl_cons_size; ++i) {
+         sd_tool_free(sd_cequ[i]);
+      }
+
+   }
   FREE(sd_cequ);
   FREE(var_in_mp);
 

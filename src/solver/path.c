@@ -103,7 +103,7 @@ static int load_pathlib(Model *mdl)
          for (unsigned i = 0, len = ARRAY_SIZE(path_libnames); i < len; ++i) {
             errormsg(path_libnames[i]); errormsg(" ");
          }
-         errormsg("[PATH] Use the option 'pathlib_name' to set the path to the PATH library\n");
+         errormsg("\n[PATH] Use the option 'pathlib_name' to set the path to the PATH library\n");
          return Error_SystemError;
       }
 

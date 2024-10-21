@@ -327,7 +327,7 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
 
    if (!rarc) {
       assert(cpydat->type == CopyExprNone);
-      cpydat_child->rarc = NULL;
+      // TT cpydat_child->rarc = NULL;
       EMPDAG_DEBUG("MP(%s) has no reverse arc\n", mp_getname(mp_child));
       return OK;
    }

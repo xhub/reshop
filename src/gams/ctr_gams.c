@@ -52,7 +52,7 @@ int gams_chk_ctr(const Container *ctr, const char *fn)
    return gams_chk_ctrdata(ctr, fn);
 }
 
-static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
+static int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
 {
    char buffer[GMS_SSSIZE];
 
@@ -160,9 +160,9 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict gm
       return Error_GamsCallFailed;
    }
 
+   gms->owndct = false;
    gms->owning_handles = true;
    gms->initialized = true;
-   gms->solvelink = 0; /* This is not a valid value */
 
    return OK;
 }
@@ -174,11 +174,20 @@ static int gcdat_new(GmsContainerData * restrict gms, GmsModelData * restrict gm
  *
  * @return          the error code
  */
-int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
+int gcdat_init_withdct(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
 {
    char buffer[GMS_SSSIZE];
 
-   S_CHECK(gcdat_new(gms, gmdldat));
+  /* ----------------------------------------------------------------------
+   * The GmsContainerData is always initialized. If it is already there,
+   * delete it first
+   * ---------------------------------------------------------------------- */
+
+   if (gms->owning_handles) {
+      gcdat_free_handles(gms);
+   }
+
+   S_CHECK(gcdat_init(gms, gmdldat));
 
    GAMS_CHECK1(dctCreate, &gms->dct, buffer);
    gms->owndct = true;
@@ -193,7 +202,7 @@ int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict gmdld
 {
    char buf[GMS_SSSIZE];
 
-   S_CHECK(gcdat_new(gms, gmdldat));
+   S_CHECK(gcdat_init(gms, gmdldat));
 
    if (gmoLoadDataLegacy(gms->gmo, buf)) {
       error("[GAMS] ERROR: Loading model data failed with message '%s'\n", buf);
@@ -201,6 +210,8 @@ int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict gmdld
    }
 
    gmoNameModel(gms->gmo, buf);
+
+   assert(!gms->dct && !gms->owndct);
    gms->dct = gmoDict(gms->gmo);
 
    if (!gms->dct) {
@@ -211,7 +222,7 @@ int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict gmdld
 
    gevGetStrOpt(gms->gev, gevNameScrDir, gmdldat->scrdir);
 
-   trace_process("[GAMS] Loaded GMO model named '%s' with %u vars and %u equs "
+   trace_process("[GAMS] Loaded GAMS/GMO model named '%s' with %u vars and %u equs "
                  "from %s\n", buf, gmoN(gms->gmo), gmoM(gms->gmo),
                  gmdldat->gamscntr);
 
@@ -291,7 +302,7 @@ void gams_unload_libs(void)
 #endif
 }
 
-void gcdat_rel(GmsContainerData *gms)
+void gcdat_free_handles(GmsContainerData *gms)
 {
    if (gms->cfg) {
       cfgFree(&gms->cfg);
@@ -310,6 +321,8 @@ void gcdat_rel(GmsContainerData *gms)
    }
 
    gms->owning_handles = false;
+   gms->owndct = false;
+   gms->initialized = false;
 }
 
 /**

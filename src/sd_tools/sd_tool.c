@@ -91,7 +91,7 @@ _exit:
    FREE(adt);
    return NULL;
 }
-void sd_tool_dealloc(struct sd_tool *adt)
+void sd_tool_free(struct sd_tool *adt)
 {
    if (adt && adt->ops) {
       adt->ops->deallocdata(adt);

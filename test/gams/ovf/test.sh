@@ -63,6 +63,7 @@ NOCOMP=${NOCOMP:+1}
 NOFAIL=${NOFAIL:+1}
 
 : "${EMPSLV:=reshopdev}"
+: "${GMSLO:=2}"
 
 NUMDIFF_TOL=2e-10
 
@@ -71,12 +72,12 @@ status=0
 exec_gams() {
    local gms_name=$1
    shift
-   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=2 keep=1 optfile=1 emp="$EMPSLV" "$@"
+   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo="$GMSLO" keep=1 optfile=1 emp="$EMPSLV" "$@"
    status=$?
    if [ $status != 0 ]; then
       e_error "$1 with args has failed: status = ${status}"
       env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo=4 keep=1 optfile=1 emp="$EMPSLV" "$@"
-      env RHP_LOG=all gams "${gms_name}" lo=4 keep=1 optfile=1 "$@"
+      env RHP_LOG=all gams "${gms_name}" lo=4 keep=1 optfile=1 emp="$EMPSLV" "$@"
       e_error "gams $gms_name $* FAILED!"
       [ -z ${NO_EXIT_EARLY+x} ] && exit 1;
    fi
@@ -85,10 +86,12 @@ exec_gams() {
 
 pushd "$(dirname "$0")" || exit 1
 
-rm -rf tmp_testxx
-mkdir tmp_testxx
+TMPDIR=tmp_testxx-"$EMPSLV"
 
-cp -r *.gdx ref *.inc tmp_testxx/
+rm -rf "$TMPDIR"
+mkdir "$TMPDIR"
+
+cp -r *.gdx ref *.inc "$TMPDIR"/
 
 #QSF="huber l1 l2 elastic_net hinge vapnik soft_hinge hubnik"
 QSF="huber l1 l2 elastic_net vapnik hubnik huber_scaled hubnik_scaled"
@@ -102,22 +105,22 @@ export DEBUG_PGAMS=0
 
 for i in ${LOSS_GMS}
 do
-    cp "${i}" tmp_testxx
+    cp "${i}" "$TMPDIR"
     e_header "Testing ${i}"
     for qsf in $QSF
     do 
         e_subcase "OVF is ${qsf}"
-        cd tmp_testxx;
+        cd "$TMPDIR";
         exec_gams "$(basename "${i}")" --qs_function="$qsf"
         cd ..
     done
 done
 
-cp test_loss_nl.gms tmp_testxx
+cp test_loss_nl.gms "$TMPDIR"
 e_header "Testing test_loss_nl.gms"
 for qsf in $QSF
 do
-    cd tmp_testxx;
+    cd "$TMPDIR";
     e_subcase "OVF is ${qsf}"
     for v in $(seq 1 5)
     do
@@ -126,7 +129,7 @@ do
     cd ..
 done
 
-pushd tmp_testxx/test_res > /dev/null
+pushd "$TMPDIR"/test_res > /dev/null
 numdiff -h > /dev/null
 if [[ $? == 0 && -z $NOCOMP ]]; then
     [[ -z $NOFAIL ]] && set -e
@@ -156,11 +159,11 @@ fi
 
 for i in $(ls -1 Risk*_ecvar.gms cvarup_OVF.gms crm-multistage{,_max}.gms) # crm-multistage_labels.gms)
 do
-    cp "${i}" tmp_testxx
+    cp "${i}" "$TMPDIR"
     e_header "Testing ${i}"
     for ovf_method in $OVF_METHODS
     do
-        cd tmp_testxx;
+        cd "$TMPDIR";
         e_subcase "${ovf_method}"
         exec_gams $(basename "${i}") --ovf_method="${ovf_method}" --nomacro=1
         if [ $status != 0 ]; then exit $status; fi
@@ -169,7 +172,7 @@ do
 done
 
 if [[ "$#" -eq 0 || ("$#" -ge 1 && $1 != "keep") ]]; then
-    rm -rf tmp_testxx
+    rm -rf "$TMPDIR"
 fi
 
 popd > /dev/null

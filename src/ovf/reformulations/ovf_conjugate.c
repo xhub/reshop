@@ -72,6 +72,24 @@ static int _load_vrepr(void)
    if (!compute_v_repr) {
       if (!libvrepr_handle) {
          libvrepr_handle = open_library(DLL_FROM_NAME("vrepr"), 0);
+
+         if (!libvrepr_handle) {
+            const char *ldpath = getenv("RHP_LDPATH");
+            if (ldpath) {
+               size_t ldpath_len = strlen(ldpath);
+               size_t dll_len = strlen(DLL_FROM_NAME("vrepr"));
+
+               char *dll_fullname = malloc(sizeof(char) * (1 + dll_len + ldpath_len));
+               if (dll_fullname) {
+                  strcpy(dll_fullname, ldpath);
+                  strcat(dll_fullname, DLL_FROM_NAME("vrepr"));
+
+                  libvrepr_handle = open_library(dll_fullname, 0);
+                  free(dll_fullname);
+               }
+            }
+         }
+
          if (!libvrepr_handle) {
             errormsg("[conjugate] ERROR: could not find "DLL_FROM_NAME("vrepr")". "
                      "Some functionalities may not be available\n");

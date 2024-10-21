@@ -509,6 +509,8 @@ int rmdl_presolve(Model *mdl, unsigned backend)
          mdl_solver->ctr.n = mdl_solver->ctr.m = 0;
          mdl_solver->status = 0;
          mdl_solver->ctr.status = 0;
+
+         trace_process("[model] Presolving model stage %5u iter %5u\n",s, i);
          S_CHECK_EXIT(mdl_export(mdl, mdl_solver));
 
          /* TODO(Xhub) URG add option for displaying that  */
@@ -588,15 +590,19 @@ int rmdl_presolve(Model *mdl, unsigned backend)
     * ---------------------------------------------------------------------- */
 
    memcpy(&mdl->empinfo.empdag, &empdag_orig, sizeof(EmpDag));
-   if (cpy_fops) {
-      memcpy(ctr->fops, &fops_orig, sizeof(Fops));
-   }
-
    S_CHECK(mdl_settype(mdl, mdltype));
 
 _exit:
+   if (cpy_fops) {
+      memcpy(ctr->fops, &fops_orig, sizeof(Fops));
+   } else {
+      ctr->fops->type = FopsEmpty;
+      ctr->fops->data = NULL;
+   }
+
    mdl_release(mdl_solver);
 
+   trace_process("[model] End of presolving for %s model '%.*s' #%u\n", mdl_fmtargs(mdl));
    mdl->timings->solve.presolve_wall = get_walltime() - start;
 
    return status;

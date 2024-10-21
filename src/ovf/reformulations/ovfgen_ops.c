@@ -15,7 +15,7 @@ int ovfgen_add_k(OvfDef *ovf, Model *mdl, Equ *e, Avar *y)
    if (ovf->generator->M) {
       SpMat M;
       rhpmat_null(&M);
-      status = ovf->generator->M(ovf_argsize(ovf), (void*)&ovf->params, &M);
+      status = ovf->generator->M(ovf_argsize(ovf), ovf->params, &M);
       if (status == OK) {
          status = rctr_equ_add_quadratic(&mdl->ctr, e, &M, y, -1.0);
       }
@@ -37,7 +37,7 @@ int ovfgen_create_uvar(OvfDef *ovf, Container *ctr, char* name, Avar *uvar)
 
   //TODO OVF: distinguish between the equvar argument and the EMPDAG ones.
 
-   S_CHECK(ovf->generator->var(ctr, ovf_argsize(ovf), (void*)&ovf->params));
+   S_CHECK(ovf->generator->var(ctr, ovf_argsize(ovf), ovf->params));
 
    uvar->type = EquVar_Compact;
    uvar->size = cdat->total_n - uvar->start;
@@ -61,8 +61,8 @@ int ovfgen_get_D(OvfDef *ovf, SpMat *D, SpMat *J)
       return Error_NotImplemented;
    }
 
-   S_CHECK(ovf->generator->D(ovf_argsize(ovf), (void*)&ovf->params, D));
-   S_CHECK(ovf->generator->J(ovf_argsize(ovf), (void*)&ovf->params, J));
+   S_CHECK(ovf->generator->D(ovf_argsize(ovf), ovf->params, D));
+   S_CHECK(ovf->generator->J(ovf_argsize(ovf), ovf->params, J));
 
    return OK;
 }
@@ -70,9 +70,9 @@ int ovfgen_get_D(OvfDef *ovf, SpMat *D, SpMat *J)
 int ovfgen_get_lin_transformation(OvfDef *ovf, SpMat *B, double** b)
 {
    rhpmat_reset(B);
-   if (ovf->generator->B) { S_CHECK(ovf->generator->B(ovf_argsize(ovf), (void*)&ovf->params, B)); }
+   if (ovf->generator->B) { S_CHECK(ovf->generator->B(ovf_argsize(ovf), ovf->params, B)); }
    if (ovf->generator->b) {
-      S_CHECK(ovf->generator->b(ovf_argsize(ovf), (void*)&ovf->params, b));
+      S_CHECK(ovf->generator->b(ovf_argsize(ovf), ovf->params, b));
    }
 
    return OK;
@@ -84,7 +84,7 @@ int ovfgen_get_M(OvfDef *ovf, SpMat *M)
       return Error_NotImplemented;
    }
 
-   S_CHECK(ovf->generator->M(ovf_argsize(ovf), (void*)&ovf->params, M));
+   S_CHECK(ovf->generator->M(ovf_argsize(ovf), ovf->params, M));
 
    return OK;
 }
@@ -98,8 +98,8 @@ int ovfgen_get_set(OvfDef *ovf, SpMat *A, double** b, bool trans)
       if (trans) {
          rhpmat_set_csc(A);
       }
-      S_CHECK(ovf->generator->set_A(ovf_argsize(ovf), (void*)&ovf->params, A));
-      S_CHECK(ovf->generator->set_b(ovf_argsize(ovf), (void*)&ovf->params, b));
+      S_CHECK(ovf->generator->set_A(ovf_argsize(ovf), ovf->params, A));
+      S_CHECK(ovf->generator->set_b(ovf_argsize(ovf), ovf->params, b));
    }
 
    return OK;
@@ -114,8 +114,8 @@ int ovfgen_get_set_nonbox(OvfDef *ovf, SpMat *A, double** b, bool trans)
       if (trans) {
          rhpmat_set_csc(A);
       }
-      S_CHECK(ovf->generator->set_A_nonbox(ovf_argsize(ovf), (void*)&ovf->params, A));
-      S_CHECK(ovf->generator->set_b_nonbox(ovf_argsize(ovf), (void*)&ovf->params, b));
+      S_CHECK(ovf->generator->set_A_nonbox(ovf_argsize(ovf), ovf->params, A));
+      S_CHECK(ovf->generator->set_b_nonbox(ovf_argsize(ovf), ovf->params, b));
    }
 
    return OK;
@@ -128,13 +128,13 @@ int ovfgen_get_set_0(OvfDef *ovf, SpMat *A_0, double **b_0, double **shift_u)
     *  same time */
    if (ovf->generator->u_shift) {
       if (ovf->generator->set_A && ovf->generator->set_b_0) {
-         S_CHECK(ovf->generator->set_A(ovf_argsize(ovf), (void*)&ovf->params, A_0));
-         S_CHECK(ovf->generator->u_shift(ovf_argsize(ovf), (void*)&ovf->params, shift_u));
-         S_CHECK(ovf->generator->set_b_0(ovf_argsize(ovf), (void*)&ovf->params, A_0, *shift_u, b_0));
+         S_CHECK(ovf->generator->set_A(ovf_argsize(ovf), ovf->params, A_0));
+         S_CHECK(ovf->generator->u_shift(ovf_argsize(ovf), ovf->params, shift_u));
+         S_CHECK(ovf->generator->set_b_0(ovf_argsize(ovf), ovf->params, A_0, *shift_u, b_0));
       }
    } else if (ovf->generator->set_A && ovf->generator->set_b) {
-       S_CHECK(ovf->generator->set_A(ovf_argsize(ovf), (void*)&ovf->params, A_0));
-       S_CHECK(ovf->generator->set_b(ovf_argsize(ovf), (void*)&ovf->params, b_0));
+       S_CHECK(ovf->generator->set_A(ovf_argsize(ovf), ovf->params, A_0));
+       S_CHECK(ovf->generator->set_b(ovf_argsize(ovf), ovf->params, b_0));
    }
 
    return OK;
@@ -153,14 +153,14 @@ void ovfgen_get_ppty(OvfDef *ovf, struct ovf_ppty *ovf_ppty)
 
 int ovfgen_get_cone(OvfDef *ovf, unsigned idx, enum cone *cone, void **cone_data)
 {
-   (*cone) = ovf->generator->set_cones(ovf_argsize(ovf), (void*)&ovf->params, idx, cone_data);
+   (*cone) = ovf->generator->set_cones(ovf_argsize(ovf), ovf->params, idx, cone_data);
 
    return OK;
 }
 
 int ovfgen_get_cone_nonbox(OvfDef *ovf, unsigned idx, enum cone *cone, void **cone_data)
 {
-   (*cone) = ovf->generator->set_cones_nonbox(ovf_argsize(ovf), (void*)&ovf->params, idx, cone_data);
+   (*cone) = ovf->generator->set_cones_nonbox(ovf_argsize(ovf), ovf->params, idx, cone_data);
 
    return OK;
 }
@@ -173,7 +173,7 @@ size_t ovfgen_size_u(OvfDef *ovf, size_t n_args)
 double ovfgen_get_var_lb(OvfDef *ovf, size_t vidx)
 {
    if (ovf->generator->var_ppty->get_lb) {
-      return ovf->generator->var_ppty->get_lb((void*)&ovf->params, vidx);
+      return ovf->generator->var_ppty->get_lb(ovf->params, vidx);
    }
 
    return -INFINITY;
@@ -182,7 +182,7 @@ double ovfgen_get_var_lb(OvfDef *ovf, size_t vidx)
 double ovfgen_get_var_ub(OvfDef *ovf, size_t vidx)
 {
    if (ovf->generator->var_ppty->get_ub) {
-      return ovf->generator->var_ppty->get_ub((void*)&ovf->params, vidx);
+      return ovf->generator->var_ppty->get_ub(ovf->params, vidx);
    }
 
    return INFINITY;

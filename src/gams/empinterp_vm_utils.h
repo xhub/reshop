@@ -120,12 +120,12 @@
 #define AS_MPOBJ(value)      AS_OBJ(MathPrgm*, (value))
 #define AS_NASHOBJ(value)    AS_OBJ(Nash*, (value))
 #define AS_OVFOBJ(value)     AS_OBJ(OvfDef*, (value))
-#define AS_GMSSYMITER(value) AS_OBJ(void *, (value))
-#define AS_REGENTRY(value)   AS_OBJ(void *, (value))
+#define AS_GMSSYMITER(value) AS_OBJ(VmGmsSymIterator *, (value))
+#define AS_REGENTRY(value)   AS_OBJ(DagRegisterEntry *, (value))
 
 // TODO: If we move LinkLabels to their own array storage rather than globals
 // We can kill this as we never read them from the stack
-#define AS_ARCOBJ(value)     AS_OBJ(void *, (value))
+#define AS_ARCOBJ(value)     AS_OBJ(LinkLabels *, (value))
 
 
 #define BOOL_VAL(b)         ((b) ? TRUE_VAL : FALSE_VAL)

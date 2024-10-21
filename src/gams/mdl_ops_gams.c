@@ -43,7 +43,8 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
                                    GmsContainerData * restrict gms)
 {
    char buf[GMS_SSSIZE];
-   GmsContainerData gmstmp = {.owndct = false};
+   GmsContainerData gmstmp;
+   memset(&gmstmp, 0, sizeof(gmstmp));
    GmsModelData mdldatatmp;
 
    gevGetStrOpt(gms->gev, gevNameScrDir, buf);
@@ -55,14 +56,14 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
    gevGetCurrentSolver(gmstmp.gev, gmstmp.gmo, buf);
 
    if (!strcasecmp(buf, "path") && !strcasecmp(buf, "pathvi")) {
-      gcdat_rel(&gmstmp);
+      gcdat_free_handles(&gmstmp);
       return OK;
    }
 
    if (!gmoDictionary(gmstmp.gmo)) {
       trace_solreport("[GAMS] WARNING: no dictionary in the GAMS EMP control file. "
                       "Values can't be reported and some may be missing\n");
-      gcdat_rel(&gmstmp);
+      gcdat_free_handles(&gmstmp);
       return OK;
    }
 
@@ -125,7 +126,7 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
        * Close the GMO
        * ------------------------------------------------------------------- */
 
-   gcdat_rel(&gmstmp);
+   gcdat_free_handles(&gmstmp);
    return OK;
 }
 
@@ -476,9 +477,20 @@ skip:
          break;
       }
 
-      trace_stack("[GAMS] Solving %s model '%.*s' #%u with solver=\"%s\", "
-                  "gamsdir=\"%s\", gamscntr=\"%s\"\n", mdl_fmtargs(mdl),
-                  mdldat->solvername, mdldat->gamsdir, mdldat->gamscntr);
+      const char *solvelink_env = mygetenv("RHP_SOLVELINK");
+      if (solvelink_env) {
+         errno = 0;
+         char *endptr;
+         long val = strtol(solvelink_env, &endptr, 10);
+         if (errno == 0 && val < INT_MAX && val > 0) {
+            solvelink = (int)val;
+         }
+      }
+      myfreeenvval(subsolver_log);
+
+      trace_stack("[GAMS] Solving %s model '%.*s' #%u with solver='%s', "
+                  "gamsdir='%s', gamscntr='%s', sl=%d\n", mdl_fmtargs(mdl),
+                  mdldat->solvername, mdldat->gamsdir, mdldat->gamscntr, solvelink);
       int status_jmp = RESHOP_SETJMP_INTERNAL_START;
       if (status_jmp == OK) {
          rc = gevCallSolver(gms->gev,

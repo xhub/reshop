@@ -11,6 +11,7 @@
 #include "ctr_rhp.h"
 #include "equ_modif.h"
 #include "filter_ops.h"
+#include "itostr.h"
 #include "lequ.h"
 #include "macros.h"
 #include "mathprgm.h"
@@ -130,6 +131,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    Cone *cones_u = NULL;
    void **cones_u_data = NULL;
    unsigned *z_bnd_revidx = NULL;
+   char *ovf_name_idx = NULL;
 
    const unsigned n_u = ops->size_u(ovfd, n_args);
 
@@ -146,6 +148,13 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    MALLOC_EXIT(u_shift, double, 2*n_u);
    var_ubnd = &u_shift[n_u];
    MALLOC_EXIT(z_bnd_revidx, unsigned, n_u);
+
+   /* NAMING: this should not exists */
+   MALLOC(ovf_name_idx, char, ovf_namelen + 22);
+   strcpy(ovf_name_idx, ovf_name);
+   strcat(ovf_name_idx, "_");
+   unsignedtostr((unsigned)vi_ovf, sizeof(unsigned), &ovf_name_idx[strlen(ovf_name_idx)], 20, 10);
+   unsigned ovf_name_idxlen = strlen(ovf_name_idx);
 
    for (size_t i = 0; i < n_u; ++i) {
       /*  TODO(xhub) allow more general cones here */
@@ -285,7 +294,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
        * Otherwise, we use a trick and the multiplier belongs to the dual cone
        * ------------------------------------------------------------------- */
 
-      NEWNAME(z_name, ovf_name, ovf_namelen, "_z");
+      NEWNAME(z_name, ovf_name_idx, ovf_name_idxlen, "_z");
       cdat_varname_start(cdat, z_name);
       for (unsigned j = 0; j < n_z; ++j) {
          enum cone cone;
@@ -325,7 +334,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
        *   z_bnd_revidx of size c_end-c_bnd_start maps the index of c to the index of u
        * ------------------------------------------------------------------- */
 
-      NEWNAME(z_name, ovf_name, ovf_namelen, "_zbnd");
+      NEWNAME(z_name, ovf_name_idx, ovf_name_idxlen, "_zbnd");
       cdat_varname_start(cdat, z_name);
       z_bnd_start = cdat->total_n;
       c_bnd_start = idx_z;
@@ -366,7 +375,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    if (is_quad) {
       w_start = cdat->total_n;
       char *w_name;
-      NEWNAME(w_name, ovf_name, ovf_namelen, "_w");
+      NEWNAME(w_name, ovf_name_idx, ovf_name_idxlen, "_w");
       cdat_varname_start(cdat, w_name);
 
       S_CHECK_EXIT(rctr_add_free_vars(ctr, n_u, &w_var));
@@ -599,7 +608,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
     * --------------------------------------------------------------------- */
 
    char *equ_name;
-   NEWNAME(equ_name, ovf_name, ovf_namelen, "_set");
+   NEWNAME(equ_name, ovf_name_idx, ovf_name_idxlen, "_set");
    cdat_equname_start(cdat, equ_name);
    /* Keep track of the   */
    size_t idx_z_bnd = z_bnd_start;
@@ -794,6 +803,7 @@ _exit:
    FREE(b_lin);
    FREE(mat_u_tilde);
    FREE(z_bnd_revidx);
+   free(ovf_name_idx);
 
    rhpmat_free(&At);
    rhpmat_free(&D);

@@ -171,6 +171,16 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
    return OK;
 }
 
+/**
+ * @brief Load a model from a ReSHOP control file
+ *
+ * @warning This assumes that the model is a reshop model.
+ * It will try to load the empinfo and reshop options
+ *
+ * @param  cntrfile  the GAMS control file 
+ *
+ * @return           the error code
+ */
 struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
 {
    char buffer[2048];
@@ -213,6 +223,8 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
    SN_CHECK_EXIT(gcdat_loadmdl(mdl->ctr.data, mdl->data));
 
    rhp_gms_set_gamsprintops(mdl);
+
+   SN_CHECK_EXIT(gmdl_loadrhpoptions(mdl));
 
    SN_CHECK_EXIT(rhp_gms_fillmdl(mdl));
 

@@ -58,7 +58,7 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
    assert(mdl->backend == RHP_BACKEND_GAMS_GMO && mdl_dst->backend == RHP_BACKEND_GAMS_GMO);
    char buffer[GMS_SSSIZE];
 
-   S_CHECK(gmdl_cdat_setup(mdl_dst, mdl));
+   S_CHECK(gmdl_cdat_create(mdl_dst, mdl));
 
    GmsContainerData *gmsdst = mdl_dst->ctr.data;
    GmsContainerData *gmssrc = mdl->ctr.data;

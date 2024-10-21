@@ -684,6 +684,7 @@ void scratchdbl_init(DblScratch *scratch)
 void scratchdbl_empty(DblScratch *scratch)
 {
    FREE(scratch->data);
+   scratch->size = 0;
 }
 
 int scratchdbl_ensure(DblScratch *scratch, unsigned size)

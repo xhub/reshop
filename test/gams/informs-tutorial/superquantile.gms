@@ -11,7 +11,7 @@ $offtext
 * Allow to set another name for reshop
 * Useful when one has the solver provided by the GAMS distributions and a local development version 
 $if not set reformulation $set reformulation fenchel
-$if not set nSamples $set nSamples 1000
+$if not set nSamples $set nSamples 950
 
 SETS i 'realizations set' /1*%nSamples%/
      j 'dimension of x'   /1*2/

@@ -24,17 +24,17 @@ static int _get_param(OvfDef *ovf_def, const char *param_name,
 
 
    struct ovf_param *p = NULL;
-   for (unsigned i = 0; i < ovf_def->params.size; ++i) {
-      if (!strcmp(ovf_def->params.p[i].def->name, param_name)) {
-         p = &ovf_def->params.p[i];
+   for (unsigned i = 0, len = ovf_def->params->size; i < len; ++i) {
+      if (!strcmp(ovf_def->params->p[i].def->name, param_name)) {
+         p = &ovf_def->params->p[i];
       }
    }
    if (!p) {
       error("%s :: Could not find parameter named %s for OVF "
                          "function %s. Possible options are:", __func__,
                          param_name, ovf_getname(ovf_def));
-      for (unsigned i = 0; i < ovf_def->params.size; ++i) {
-         error(" %s", ovf_def->params.p[i].def->name);
+      for (unsigned i = 0; i < ovf_def->params->size; ++i) {
+         error(" %s", ovf_def->params->p[i].def->name);
       }
        errormsg("\n");
       return Error_InvalidValue;

@@ -69,6 +69,9 @@ $offecho
 
 solve cvar_simple min w using emp;
 
+abort$[cvar_simple.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', cvar_simple.solveStat;
+abort$[cvar_simple.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', cvar_simple.modelStat;
+
 $if not dexist test_res $call mkdir test_res
 file res / "test_res/simple_OVF.out" /;
 put res;

@@ -669,9 +669,18 @@ void empvm_free(EmpVm *vm)
 
    for (unsigned i = 0, len = vm->globals.len; i < len; ++i) {
       VmValue val = vm->globals.arr[i];
-      if (IS_PTR(val)) {
+      if (IS_PTR(val) || IS_STR(val)) {
          void *obj = AS_PTR(val);
          free(obj);
+      } else if (IS_ARCOBJ(val)) {
+         LinkLabels *link = AS_ARCOBJ(val);
+         linklabels_free(link);
+      } else if (IS_GMSSYMITER(val)) {
+         VmGmsSymIterator *symiter = AS_GMSSYMITER(val);
+         free(symiter);
+      } else if (IS_REGENTRY(val)) {
+         DagRegisterEntry *regentry = AS_REGENTRY(val);
+         dagregentry_free(regentry);
       }
    }
 

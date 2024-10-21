@@ -192,17 +192,18 @@ int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
 
    gms->owning_handles = false;
    gms->owndct = false;
-
-   gmoIndexBaseSet(gms->gmo, 0);
-
    gms->initialized = true;
 
    MALLOC_(gms->rhsdelta, double, gmoM(gmsh->gh)+1);
+   memset(&gms->equvar_eval, 0, sizeof(gms->equvar_eval));
+   gms->sos_group = NULL;
 
    /* Set some default just for GAMS:
     * - MCF likes the see the PATH output
     */
    O_Output_Subsolver_Log = 1;
+
+   gmoIndexBaseSet(gms->gmo, 0);
 
    return OK;
 }

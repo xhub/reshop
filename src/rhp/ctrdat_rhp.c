@@ -506,6 +506,7 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
 
       FREE(s_subctr->filter_subset);
    }
+
    FREE(cdat->stage_auxmdl);
 
    /*  TODO(xhub) URG this should not depend on the model type */
@@ -555,16 +556,16 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
       FREE(cdat->deleted_equs);
    }
 
-      /* ------------------------------------------------------------------------
+   /* ------------------------------------------------------------------------
    * Free all the loose bits of memory
    * ------------------------------------------------------------------------ */
-      if (cdat->mem2free) {
-         rctrdat_mem2free(cdat->mem2free);
-         FREE(cdat->mem2free);
-      }
+   if (cdat->mem2free) {
+      rctrdat_mem2free(cdat->mem2free);
+      FREE(cdat->mem2free);
+   }
 
-      FREE(cdat->equ_rosetta);
-      FREE(cdat->equ_stage);
+   FREE(cdat->equ_rosetta);
+   FREE(cdat->equ_stage);
    FREE(cdat->equs);
    FREE(cdat->vars);
    FREE(cdat->last_equ);
