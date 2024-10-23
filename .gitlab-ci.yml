@@ -29,7 +29,7 @@ build:
   variables:
     USER: "gitlab-runner"
   before_script:
-    - export N_PROCS=$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) PATH="$HOME"/.local/bin
+    - export N_PROCS=$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) PATH="$HOME"/.local/bin:"$PATH"
     - sed -i -e 's|http://deb.debian.org|https://ftps.crans.org|' /etc/apt/sources.list.d/debian.sources
       #    - echo 'Dir::Bin::Methods::ftp "ftp";' | tee -a /etc/apt/apt.conf.d/99local-ftp
     - apt-get update -y
