@@ -78,8 +78,7 @@ static inline unsigned READ_VMINT(EmpVm *vm)
 printout(PO_TRACE_EMPINTERP, "[%s] " fmt, opcodes_name(instr), __VA_ARGS__);
 */
 
-#   define DEBUGVMRUN(...) \
-       printout(PO_TRACE_EMPINTERP, __VA_ARGS__);
+#   define DEBUGVMRUN(...) trace_empinterp(__VA_ARGS__);
 #   define DEBUGVMRUN_EXEC(EXPR) EXPR
 
 #else /* defined(NDEBUG) */
