@@ -84,12 +84,15 @@ gams_test:
   script:
     - bash build/*.run
     - env EMPSLV=reshop bash test/gams/test.sh
-    - pushd "$QA_TMPDIR" > /dev/null && testlib quality && gams quality lo=2 --solver=reshop && popd > /dev/null
-    - pushd "$EMPLIB_TMPDIR" > /dev/null && emplib goempgo && gams goempgo lo=2 --solver=reshop && popd > /dev/null
+    - pushd "$QA_TMPDIR" > /dev/null && testlib quality && gams quality lo=2 --solver=reshop; popd > /dev/null; cp "$QA_TMPDIR"/failures_qa.gms .
+    - pushd "$EMPLIB_TMPDIR" > /dev/null && emplib goempgo && gams goempgo lo=2 --solver=reshop; popd > /dev/null; cp "$EMPLIB_TMPDIR"/failures_emp.gms .
   allow_failure: true
-  paths:
-    - "$QA_TMPDIR"/failures_qa.gms
-    - "$EMPLIB_TMPDIR"/failures_emp.gms
+  artifacts:
+    expire_in: 2 weeks
+    when: always
+    paths:
+      - failures_qa.gms
+      - failures_emp.gms
 
 scan-build:
   stage: scan-build
