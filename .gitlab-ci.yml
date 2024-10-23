@@ -21,6 +21,8 @@ variables:
   GCC_MVER: "14"
   TERM: "xterm-256color"
   COLORTERM: "truecolor"
+  QA_TMPDIR: /tmp/qa
+
 
 build:
   stage: build
@@ -33,13 +35,14 @@ build:
     - apt-get update -y
     - apt-get install graphviz bzip2 makeself pax-utils -y  # bzip2 for gams-c-api, pax-utils for lddtree
     - apt-get install -y python3-numpy python3-scipy swig python3-pytest python3-setuptools python-wheel-common python3-venv python3-dev
+    - pip install --user ----break-system-packages auditwheel
     - 'which ssh-agent || apt-get install openssh-client -y'
     - eval $(ssh-agent -s)
     - wget https://ftp.cs.wisc.edu/math-prog/solvers/path/pathlib/lib_lnx/{libpath50.so,liblusol.so}
   script:
     - mkdir build && cd build
     - cp ../libpath50.so ../liblusol.so .
-    - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=Release -DGAMS_VERSION=$GAMS_MAJVER
+    - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=Release -DGAMS_VERSION=$GAMS_MAJVER -DDISTRIB=1
         -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DBUILD_GAMS_DRIVER=ON -DBUILD_DOCUMENTATION=1 -DGIT_HASH=$CI_COMMIT_SHORT_SHA
         -DBUILD_INSTALLER=1 -DINSTALL_COMMON_MAKESELF=1 -DBUILD_PYTHON=python3 ..
     - make -j$N_PROCS 2>&1 install makeself | tee gcc.log
@@ -81,7 +84,12 @@ gams_test:
   script:
     - bash build/*.run
     - env EMPSLV=reshop bash test/gams/test.sh
+    - pushd "$QA_TMPDIR" > /dev/null && testlib quality && gams quality lo=2 --solver=reshop && popd > /dev/null
+    - pushd "$EMPLIB_TMPDIR" > /dev/null && emplib goempgo && gams goempgo lo=2 --solver=reshop && popd > /dev/null
   allow_failure: true
+  paths:
+    - "$QA_TMPDIR"/failures_qa.gms
+    - "$EMPLIB_TMPDIR"/failures_emp.gms
 
 scan-build:
   stage: scan-build
@@ -118,7 +126,7 @@ cppcheck:
 sanitizer:
   stage: sanitizers
   before_script:
-    - export ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_invalid_pointer_pairs=100
+    - export ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_invalid_pointer_pairs=100:abort_on_error=1
 
   script:
     - mkdir $COMPILER-$SANITIZER && cd $COMPILER-$SANITIZER && cp ../libpath50.so ../liblusol.so .
