@@ -35,7 +35,7 @@ build:
     - apt-get update -y
     - apt-get install graphviz bzip2 makeself pax-utils -y  # bzip2 for gams-c-api, pax-utils for lddtree
     - apt-get install -y python3-numpy python3-scipy swig python3-pytest python3-setuptools python-wheel-common python3-venv python3-dev python3-pip
-    - pip install --user ----break-system-packages auditwheel
+    - pip install --user --break-system-packages auditwheel
     - 'which ssh-agent || apt-get install openssh-client -y'
     - eval $(ssh-agent -s)
     - wget https://ftp.cs.wisc.edu/math-prog/solvers/path/pathlib/lib_lnx/{libpath50.so,liblusol.so}
