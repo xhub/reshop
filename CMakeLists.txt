@@ -228,6 +228,7 @@ include_directories ("${PROJECT_BINARY_DIR}")
 include_directories ("external")
 include_directories ("external/itostr")
 include_directories ("external/gamslink")
+include_directories ("common")
 
 #This is for reshop_config.h and others
 include_directories ("${CMAKE_BINARY_DIR}/generated/")
@@ -257,6 +258,8 @@ LIST(APPEND RESHOP_C_FILES "external/open_lib.c")
 LIST(APPEND RESHOP_C_FILES "external/itostr/itostr.c")
 FILE(GLOB_RECURSE GEN_C_FILES ${CMAKE_BINARY_DIR}/generated/*.c)
 LIST(APPEND RESHOP_C_FILES ${GEN_C_FILES})
+FILE(GLOB_RECURSE RESHOP_COMMON_FILES "common/*.c")
+LIST(APPEND RESHOP_C_FILES ${RESHOP_COMMON_FILES})
 
 
 SET(EXTRA_LIBS ${CMAKE_DL_LIBS})

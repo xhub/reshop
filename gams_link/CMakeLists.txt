@@ -10,7 +10,7 @@ set (RESHOP_GAMSLINK_LIB ${RESHOP_GAMSLINK_LIB} PARENT_SCOPE)
 
 list(APPEND RESHOP_GAMSLINK_LIB_C_FILES "reshop_main.c"
                                         "reshop_misc.c"
-                                         "${CMAKE_SOURCE_DIR}/src/gams/shared/reshop_gams_optfile.c")
+                                         "${CMAKE_SOURCE_DIR}/common/reshop_gams_optfile.c")
 
 if (NOT GAMS_C_FILES)
   MESSAGE(FATAL_ERROR "GAMS_C_FILES must be defined before this project!")
@@ -31,7 +31,7 @@ set_source_files_properties(${GAMS_C_FILES} PROPERTIES INCLUDE_DIRECTORIES
 list(APPEND RESHOP_GAMSLINK_LIB_C_FILES ${GAMS_C_FILES})
 
 set_source_files_properties(${RESHOP_GAMSLINK_LIB_C_FILES} PROPERTIES INCLUDE_DIRECTORIES
-                            "${CMAKE_SOURCE_DIR}/src/gams/shared")
+                            "${CMAKE_SOURCE_DIR}/common")
 
 add_library(${RESHOP_GAMSLINK_LIB} SHARED ${RESHOP_GAMSLINK_LIB_C_FILES})
 
