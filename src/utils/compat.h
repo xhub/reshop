@@ -86,7 +86,11 @@ void myfreeenvval(const char *envval);
  *   sub(/)/, "\")", $6);
  *   print "__asm__(\".symver " $7 "," $7 "@" substr($6,2)";"
  *   }'*/
+
+/* libc 2.14 */
 __asm__(".symver memcpy,memcpy@GLIBC_2.2.5");
+
+/* libm 2.27 */
 __asm__(".symver exp2f,exp2f@GLIBC_2.2.5");
 __asm__(".symver pow10f,pow10f@GLIBC_2.2.5");
 __asm__(".symver pow10l,pow10l@GLIBC_2.2.5");
@@ -103,12 +107,19 @@ __asm__(".symver exp,exp@GLIBC_2.2.5");
 __asm__(".symver log2,log2@GLIBC_2.2.5");
 __asm__(".symver logf,logf@GLIBC_2.2.5");
 __asm__(".symver log,log@GLIBC_2.2.5");
+
+/* libc 2.34 */
 __asm__(".symver dlopen,dlopen@GLIBC_2.2.5");
 __asm__(".symver dlsym,dlsym@GLIBC_2.2.5");
 __asm__(".symver dlerror,dlerror@GLIBC_2.2.5");
 __asm__(".symver dlclose,dlclose@GLIBC_2.2.5");
+
+/* libm 2.38 */
 __asm__(".symver fmod,fmod@GLIBC_2.2.5");
+
+/* libc 2.38 */
 __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
+
 #endif
 
 #ifndef __has_feature         // Optional of course.
@@ -282,7 +293,7 @@ __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
 #endif
 
 /* ----------------------------------------------------------------------
- * Variably modified types are very iseful, but older compiler are lost here
+ * Variably modified types are very useful, but older compilers are lost here
  * ---------------------------------------------------------------------- */
 
 // Note: Newer LLVM-based intel compiler define __INTEL_LLVM_COMPILER
