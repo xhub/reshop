@@ -17,7 +17,7 @@ int ovf_fill_params(OvfParamList **params, size_t ovf_idx)
    const OvfParamDef * const * p = paramdefs->p;
 
    OvfParamList *params_;
-   CALLOCBYTES_(params_, OvfParamList, sizeof(OvfParamList)+(param_size*sizeof(OvfParam)));
+   CALLOCFLEX_(params_, OvfParamList, sizeof(OvfParamList)+(param_size*sizeof(OvfParam)));
    *params = params_;
    params_->size = param_size;
 

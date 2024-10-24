@@ -331,6 +331,8 @@ static int imm_nash_new(Interpreter *interp, Nash **nash)
    trace_empinterp("[empinterp] line %u: new Nash(%s) #%u\n", interp->linenr,
                    empdag_getnashname(empdag, (*nash)->id), (*nash)->id);
 
+   free(labelname);
+
    return OK;
 }
 

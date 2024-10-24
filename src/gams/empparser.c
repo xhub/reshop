@@ -1222,8 +1222,6 @@ int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
 
    if (skipws(buf, p)) { goto _err_missing_rparent; }
 
-   pos = *p;
-
    Token kw = {.type = TOK_UNSET };
    if (tok_untilcharnoEOL(&kw, interp->buf, '=', p)) {
       goto _err_missing_equal;
@@ -2760,7 +2758,7 @@ NONNULL static int parse_vi_kkt(Interpreter *interp, unsigned *p)
    return OK;
 }
 
-NONNULL static
+NONNULL_AT(1,2) static
 int parse_MPargs_gmsvars_list(Interpreter * restrict interp, unsigned * restrict p,
                               void *ovfdef)
 {
@@ -2979,7 +2977,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       break;
    case TOK_GMS_VAR: {
       if (has_lparent) {
-         S_CHECK(parse_MPargs_gmsvars_list(interp, p, mp_ccf));
+         S_CHECK(parse_MPargs_gmsvars_list(interp, p, ovfdef));
       } else {
          
          S_CHECK(interp->ops->ovf_addarg(interp, ovfdef));
@@ -3574,9 +3572,7 @@ int parse_equilibrium(Interpreter *interp)
     * --------------------------------------------------------------------- */
 
    unsigned equil_id;
-   char *name;
-   A_CHECK(name, strdup("equilibrium"));
-   S_CHECK(empdag_addnashnamed(empdag, name, &equil_id));
+   S_CHECK(empdag_addnashnamed(empdag, "equilibrium", &equil_id));
    S_CHECK(empdag_setroot(empdag, nashid2uid(equil_id)));
 
    trace_empinterp("[empinterp] line %u: Found 'equilibrium' keyword. Adding Nash root node\n",
@@ -4666,7 +4662,7 @@ int parse_bilevel(Interpreter *interp, unsigned *p)
 
          if (toktype_is_dagnode_kw || toktype == TOK_DUALEQU) {
 
-            S_CHECK(empdag_addnashnamed(empdag, strdup("lower level Nash"), &nash_lower));
+            S_CHECK(empdag_addnashnamed(empdag, "lower level Nash", &nash_lower));
             S_CHECK(empdag_mpCTRLnashbyid(empdag, mpid_upper, nash_lower))
             S_CHECK(empdag_nashaddmpbyid(empdag, nash_lower, mpid_last));
 
@@ -4865,7 +4861,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
       root = r;
 
    } else {
-      S_CHECK(empdag_addnashnamed(empdag, strdup("Equilibrium"), &root));
+      S_CHECK(empdag_addnashnamed(empdag, "equilibrium", &root));
 
       MathPrgm *mp;
       S_CHECK(create_base_mp(interp, "OPT MP", &mp));

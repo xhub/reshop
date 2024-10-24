@@ -584,7 +584,7 @@ int gms_exportempinfo(Model *mdl_gms)
       goto _check_emp_probtype;
     }
   } else {
-_check_emp_probtype: ; /* TODO URG why do we need a semicolon? */
+_check_emp_probtype: ; 
       ModelType probtype;
       S_CHECK(mdl_gettype(mdl_gms, &probtype));
       assert(probtype != MdlType_none);

@@ -810,7 +810,7 @@ _exit:
 
    free((void*)child_nlnodes);
 
-   FREE(workY);
+   free(workY);
 
    DEBUG_DISPLAY_OBJEQU(dfsdat->mdl, mp_dual)
 
@@ -860,7 +860,7 @@ int ccflib_equil(Model *mdl)
 
      if (primal_parents->len == 0) {
          Nash *equil;
-         A_CHECK(equil, empdag_newnashnamed(empdag, strdup("CCF equilibrium reformulation")));
+         A_CHECK(equil, empdag_newnashnamed(empdag, "CCF equilibrium reformulation"));
 
          /* ----------------------------------------------------------------------
           * If MP was a root, then put the MPE as root at its place.
@@ -894,7 +894,7 @@ int ccflib_equil(Model *mdl)
           * ---------------------------------------------------------------------- */
 
          Nash *equil;
-         A_CHECK(equil, empdag_newnashnamed(empdag, strdup("CCF equilibrium reformulation")));
+         A_CHECK(equil, empdag_newnashnamed(empdag, "CCF equilibrium reformulation"));
 
          S_CHECK(empdag_nashaddmpbyid(empdag, equil->id, mpid));
          dfsdat.nashid = equil->id;

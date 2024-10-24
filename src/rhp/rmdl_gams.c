@@ -609,7 +609,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
       CMatElt *vtmp = cdat->vars[i];
       Var *v = &ctr_src->vars[i];
 
-      S_CHECK(ctr_copyvarname(ctr_src, i, buffer, sizeof(buffer)));
+      S_CHECK_EXIT(ctr_copyvarname(ctr_src, i, buffer, sizeof(buffer)));
       gams_fix_equvar_names(buffer);
 
       /* dct, symName, symTyp, symDim, userInfo, symTxt  */

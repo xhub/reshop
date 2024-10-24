@@ -95,6 +95,7 @@ static int load_pathlib(Model *mdl)
       while (!libpath_handle && ii <= ARRAY_SIZE(path_libnames) && ii > 0) {
          ii--;
          libname = path_libnames[ii];
+         copy_libpath_fname = false;
          libpath_handle = open_library_nofail(libname, 0);
       }
 
@@ -115,12 +116,13 @@ static int load_pathlib(Model *mdl)
 #define IMPORT_FUNC(RTYPE, FN_NAME, ...) \
 *(void **) (&FN_NAME) = get_function_address(PLUGIN_HANDLE, #FN_NAME); \
 if (!FN_NAME) { \
-   error("%s :: Could not find function named "#FN_NAME" in %s." \
+   error("[PATH] ERROR: Could not find function named "#FN_NAME" in %s." \
             "Some functionalities may not " \
-            "be available\n", __func__, LIBNAME); \
+            "be available\n", LIBNAME); \
    return Error_SystemError; }
 
 #include "path_func.h"
+      if (copy_libpath_fname) { free((char*)libname); }
    }
 
    return OK;

@@ -199,10 +199,16 @@ int interp_create_buf(Interpreter *interp)
    }
 
    SYS_CALL(fseek(fptr, 0L, SEEK_END));
-   size_t size = ftell(fptr);
-   SYS_CALL(fseek(fptr, 0L, SEEK_SET)); // rewind to start
+   long size = ftell(fptr);
+   if (size < 0) {
+      perror("ftell");
+      error("[empinterp] ERROR: ftell returned value %ld on file '%s'\n", size, fname);
+      goto _exit;
+   }
 
-   MALLOC_EXIT(interp->buf, char, size+1);
+   SYS_CALL(fseek(fptr, 0L, SEEK_SET)); // rewind to start
+ 
+   MALLOC_EXIT(interp->buf, char, (size_t)size+1);
 
    UNUSED size_t read = fread(interp->buf, sizeof(char), size, fptr);
 
@@ -210,7 +216,8 @@ int interp_create_buf(Interpreter *interp)
 #if !defined(_WIN32)
    if (read < size) {
       error("[empinterp] Could not read file '%s'.\n", fname);
-      return Error_RuntimeError;
+      status = Error_RuntimeError;
+      goto _exit;
    }
 #endif
 

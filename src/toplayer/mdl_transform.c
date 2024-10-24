@@ -134,7 +134,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
       /* HACK: rework this for the general case */
 
       if (mp->type == MpTypeVi && mp->vi.has_kkt) {
-         A_CHECK(nash, empdag_newnashnamed(empdag, strdup("nash_vi_kkt")));
+         A_CHECK(nash, empdag_newnashnamed(empdag, "nash_vi_kkt"));
          nashid_t nashid = nash->id;
 
          mpid_t mpid_vi = mp->id;

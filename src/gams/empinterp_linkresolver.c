@@ -57,6 +57,12 @@ static void labeldat_print(LabelDat *labeldat, dctHandle_t dct, unsigned mode)
 static daguid_t dagregister_find(const DagRegister *dagreg, LabelDat *labeldat)
 {
    const char * restrict labelname = labeldat->label;
+
+   if (!labelname) {
+      errormsg("[empdag] ERROR: label is NULL!\n");
+      return Error_NullPointer;
+   }
+
    uint16_t labelname_len = labeldat->label_len;
    uint8_t edge_dim = labeldat->dim;
    int *uels = labeldat->uels;

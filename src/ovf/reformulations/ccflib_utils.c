@@ -23,8 +23,8 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    OvfOpsData ovfd =  instancedat->ovfd;
    Model *mdl = mp_instance->mdl;
 
-   Avar y;
-   S_CHECK(ops->create_uvar(ovfd, &mdl->ctr, y_name, &y));
+   S_CHECK(ops->create_uvar(ovfd, &mdl->ctr, y_name, &instancedat->y));
+   Avar *y = &instancedat->y;
 
 
    S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
@@ -40,11 +40,11 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    S_CHECK(cdat_equname_end(cdat));
 
    /*  Add -k(y) */
-   ops->add_k(ovfd, mdl, eobj, &y);
+   ops->add_k(ovfd, mdl, eobj, y);
 
    S_CHECK(mp_setobjequ(mp_instance, objequ));
 
-   S_CHECK(mp_addvars(mp_instance, &y));
+   S_CHECK(mp_addvars(mp_instance, y));
 
    SpMat A;
    rhpmat_null(&A);
@@ -58,7 +58,7 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
 
    /* Last, add the (non-box) constraints on u */
    if (A.ppty) {
-      S_CHECK_EXIT(ovf_add_polycons(mdl, ovfd, &y, ops, &A, s, mp_instance, "ccflib"));
+      S_CHECK_EXIT(ovf_add_polycons(mdl, ovfd, y, ops, &A, s, mp_instance, "ccflib"));
    }
 
    unsigned nargs_maps;
@@ -72,7 +72,7 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
       OvfOpsData ovfd_mp = {.ccfdat = &ccfdat};
       S_CHECK_EXIT(reformulation_equil_compute_inner_product(OvfType_Ccflib, ovfd_mp, mdl,
                                                         &instancedat->B, instancedat->b,
-                                                        &objequ, &y, NULL));
+                                                        &objequ, y, NULL));
    }
 
 _exit:

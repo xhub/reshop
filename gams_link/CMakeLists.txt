@@ -69,11 +69,13 @@ elseif(APPLE)
    target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE "-Wl,-rpath,@loader_path/")
 endif()
 
+configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig.yaml.in @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig_valgrind.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig_valgrind.yaml @ONLY)
+
 if (BUILD_INSTALLER)
    SET(GAMS_SCRIPTNAME "gmsgenus.run")
    SET(GAMS_EXENAME "gmsgenux.out")
 
-   configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig.yaml.in @ONLY)
    if (CMAKE_SYSTEM_NAME MATCHES "Linux")
       SET(IS_LINUX 1)
    elseif (APPLE)

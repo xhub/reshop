@@ -169,6 +169,8 @@ static void* nash_newobj(VmData *data, unsigned argc, const VmValue *values)
 
    SN_CHECK(vm_common_nodeinit(data, nashid2uid(nash->id), regentry));
 
+   free(label);
+
    return nash;
 }
 

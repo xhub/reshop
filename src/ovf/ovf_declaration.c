@@ -360,7 +360,7 @@ static int preprocess_ovfargs(Model *mdl, OvfDef *ovf_def, mpid_t mpid)
             error("[OVF] ERROR in OVF %s: variable '%s' is already affected to "
                   "the MP(%s), it should not\n", ovf_getname(ovf_def),
                   mdl_printvarname(mdl, vi), mpid_getname(mdl, vmpid));
-            status = Error_EMPIncorrectInput;
+            status = status != OK ? Error_EMPIncorrectInput : status;
             continue;
          }
 
@@ -369,7 +369,7 @@ static int preprocess_ovfargs(Model *mdl, OvfDef *ovf_def, mpid_t mpid)
             error("[OVF] ERROR in OVF %s: equation '%s' is already affected to "
                   "the MP(%s), it should not\n", ovf_getname(ovf_def),
                   mdl_printvarname(mdl, ei), mpid_getname(mdl, empid));
-            status = Error_EMPIncorrectInput;
+            status = status != OK ? Error_EMPIncorrectInput : status;
             continue;
          }
 
@@ -398,7 +398,7 @@ static int preprocess_ovfargs(Model *mdl, OvfDef *ovf_def, mpid_t mpid)
             error("[OVF] ERROR in OVF %s: variable '%s' is already affected to "
                   "the MP(%s), it should not\n", ovf_getname(ovf_def),
                   mdl_printvarname(mdl, vi), mpid_getname(mdl, vmpid));
-            status = Error_EMPIncorrectInput;
+            status = status != OK ? Error_EMPIncorrectInput : status;
             continue;
          }
       }
@@ -425,7 +425,7 @@ static int preprocess_ovfargs(Model *mdl, OvfDef *ovf_def, mpid_t mpid)
                error("[OVF] ERROR in OVF %s: equation '%s' is already affected to "
                      "the MP(%s), it should not\n", ovf_getname(ovf_def),
                      mdl_printequname(mdl, ei), mpid_getname(mdl, empid));
-               status = Error_EMPIncorrectInput;
+               status = status != OK ? Error_EMPIncorrectInput : status;
                continue;
             }
             emd[ei].mp_id = mpid;
@@ -456,7 +456,7 @@ static int preprocess_ovfargs(Model *mdl, OvfDef *ovf_def, mpid_t mpid)
          error("[OVF] ERROR: the variable '%s' appears in a non-linear fashion "
                "in the equation '%s'. This is currently not supported.\n",
                   ctr_printvarname(&mdl->ctr, vi), ctr_printequname(&mdl->ctr, ei));
-         status = Error_NotImplemented;
+         status = status != OK ? Error_EMPIncorrectInput : status;
 
       } else { /* TODO(xhub) is this well tested?  */
          eidx[i] = IdxNA;
@@ -526,7 +526,7 @@ static int preprocess_ccflibargs(Model *mdl, OvfDef *ovf_def, MathPrgm *mp)
             error("[OVF] ERROR in OVF %s: variable '%s' is already affected to "
                   "the MP(%s), it should not\n", ovf_getname(ovf_def),
                   mdl_printvarname(mdl, vi), mpid_getname(mdl, vmpid));
-            status = Error_EMPIncorrectInput;
+            status = status != OK ? Error_EMPIncorrectInput : status;
             continue;
          }
       }
@@ -550,7 +550,7 @@ static int preprocess_ccflibargs(Model *mdl, OvfDef *ovf_def, MathPrgm *mp)
             error("[OVF] ERROR in OVF %s: equation '%s' is already affected to "
                   "the MP(%s), it should not\n", ovf_getname(ovf_def),
                   mdl_printequname(mdl, ei), mpid_getname(mdl, empid));
-            status = Error_EMPIncorrectInput;
+            status = status != OK ? Error_EMPIncorrectInput : status;
             continue;
          }
 
@@ -565,7 +565,7 @@ static int preprocess_ccflibargs(Model *mdl, OvfDef *ovf_def, MathPrgm *mp)
          error("[MP/CCFLIB] ERROR: the variable '%s' appears in a non-linear fashion "
                "in the equation '%s'. This is currently not supported.\n",
                   ctr_printvarname(&mdl->ctr, vi), ctr_printequname(&mdl->ctr, ei));
-         status = Error_NotImplemented;
+         status = status != OK ? Error_EMPIncorrectInput : status;
 
       } else if (iter) { /* TODO(xhub) TEST  */
 
@@ -577,17 +577,16 @@ static int preprocess_ccflibargs(Model *mdl, OvfDef *ovf_def, MathPrgm *mp)
          do {
             error("\t%s\n", mdl_printequname(mdl, ei));
             S_CHECK(ctr_var_iterequs(&mdl->ctr, vi, &iter, &jacval, &ei, &nlflag));
-         }
-         while (iter);
+         } while (iter);
 
-         status = Error_EMPIncorrectInput;
+         status = status != OK ? Error_EMPIncorrectInput : status;
       } else {
          error("[MP/CCFLIB] ERROR in MP(%s): the defining variable '%s' appears in "
                "%s, but the later is not an equality constraint, rather has type "
                "%s and cone %s\n",
                mp_getname(mp), mdl_printvarname(mdl, vi), mdl_printequname(mdl, ei),
                equtype_name(ctr_equ_type(&mdl->ctr, ei)), cone_name(ctr_equ_cone(&mdl->ctr, ei)));
-         status = Error_EMPIncorrectInput;
+         status = status != OK ? Error_EMPIncorrectInput : status;
       }
    }
 

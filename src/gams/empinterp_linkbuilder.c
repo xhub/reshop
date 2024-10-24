@@ -198,7 +198,7 @@ int dualslabel_add(DualsLabel* dualslabel, int *uels, uint8_t nuels, mpid_t mpid
    unsigned num_children = dualslabel->mpid_duals.len, max_children = dualslabel->mpid_duals.max;
 
    if (num_children >= max_children) {
-      unsigned size = max_children = MAX(2*max_children, num_children + 10);
+      unsigned size = MAX(2*max_children, num_children + 10);
       if (num_var > 0) {
          size_t size_data = (num_var*size);
          REALLOC_(dualslabel->uels_var, int, size_data);

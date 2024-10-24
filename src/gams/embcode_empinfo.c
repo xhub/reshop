@@ -14,14 +14,13 @@
 #include "gamsapi_utils.h"
 #include "macros.h"
 #include "mathprgm.h"
-#include "mathprgm_data.h"
 #include "mathprgm_priv.h"
 #include "ovf_parameter.h"
 #include "status.h"
 
 #include "gmdcc.h"
 
-NONNULL static
+NONNULL_AT(1) static
 int embcode_register_basename(Interpreter *interp, DagRegisterEntry *regentry)
 {
    S_CHECK(dagregister_add(&interp->dagregister, regentry));

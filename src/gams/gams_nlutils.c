@@ -1,3 +1,5 @@
+#include "reshop_config.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -21,8 +23,8 @@ static uint32_t read_field(FILE* f)
 {
    uint8_t len;
    IO_READ(fread(&len, sizeof(uint8_t), 1, f), "");
-   switch (len)
-   {
+
+   switch (len) {
    case 0:
    {
       uint8_t buf;
@@ -47,7 +49,7 @@ static uint32_t read_field(FILE* f)
    return INT32_MAX;
 
 _exit:
-   return 0;
+   return INT32_MAX;
 }
 
 struct gams_opcodes_file* gams_read_opcode(const char* filename, double **pool)
@@ -97,11 +99,13 @@ struct gams_opcodes_file* gams_read_opcode(const char* filename, double **pool)
             IO_READ(fread(&len, sizeof(opcode), 3, f), filename);
             goto _end;
          }
-         else
+         else {
             goto _exit;
+         }
       }
 
       len = read_field(f);
+      if (len == INT32_MAX) { goto _exit; }
 
       if (max_equ <= equ_indx)
       {
@@ -138,6 +142,8 @@ struct gams_opcodes_file* gams_read_opcode(const char* filename, double **pool)
             goto _exit;
          }
          val = read_field(f);
+         if (val == INT32_MAX) { goto _exit; }
+
          instrs[cur_indx] = opcode;
          args[cur_indx] = val;
 
@@ -162,7 +168,8 @@ struct gams_opcodes_file* gams_read_opcode(const char* filename, double **pool)
 
 
    // consume field of nlEnd
-   read_field(f);
+   uint32_t dummy = read_field(f);
+   if (dummy == INT32_MAX) { goto _exit; }
 
    IO_READ(fread(&len, sizeof(len), 1, f), filename);
    if (len) printf("Should be 0: %u :: ", len);
@@ -194,7 +201,7 @@ _end:
       }
    }
 
-   fclose(f);
+   SYS_CALL(fclose(f));
 
    equs->nb_equs = equ_indx;
    equs->len_opcode = cur_indx;
@@ -202,7 +209,7 @@ _end:
    return equs;
 
 _exit:
-   fclose(f);
+   SYS_CALL(fclose(f));
 
    if (equs) {
       if (equs->pool) {

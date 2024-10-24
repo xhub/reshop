@@ -200,9 +200,12 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
       if (!fgets(buffer, sizeof buffer, fptr)) {
          error("[GAMS] ERROR: failed to get %u-th line of control file '%s'\n",
                i, cntrfile);
+         SYS_CALL(fclose(fptr));
          goto _exit;
       }
    }
+
+   SYS_CALL(fclose(fptr));
 
    size_t len = strlen(buffer);
    if (len <= 1) {

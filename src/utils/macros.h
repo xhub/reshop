@@ -47,7 +47,9 @@
 
 #define CALLOCBYTES(ptr,type,bytes) ((ptr) = (type*)calloc(bytes, sizeof(uint8_t))); assert((ptr))
 
-#define CALLOCBYTES_(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
+#define CALLOCFLEX(ptr,type,bytes) ((ptr) = (type*)calloc(1, bytes))
+
+#define CALLOCFLEX_(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
   if (RHP_UNLIKELY(!(ptr))) { return Error_InsufficientMemory; }
 
 #define CALLOCBYTES_NULL(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
@@ -56,7 +58,7 @@
 #define CALLOCBYTES_EXIT(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
    if (RHP_UNLIKELY(!(ptr))) { status = Error_InsufficientMemory; goto _exit; };
 
-#define CALLOCBYTES_EXIT_NULL(ptr,type,bytes) CALLOCBYTES((ptr),type,bytes); \
+#define CALLOCBYTES_EXIT_NULL(ptr,type,bytes) CALLOCFLEX((ptr),type,bytes); \
    if (RHP_UNLIKELY(!(ptr))) { goto _exit; };
 
 

@@ -22,6 +22,7 @@ variables:
   TERM: "xterm-256color"
   COLORTERM: "truecolor"
   QA_TMPDIR: /tmp/qa
+  EMPLIB_TMPDIR: /tmp/emplib
 
 
 build:
@@ -68,6 +69,7 @@ build:
       - libpath50.so
       - liblusol.so
       - build/makeself
+      - build/gamsconfig_valgrind.yaml
       - "build/*.run"
 
 gams_test:
@@ -77,12 +79,14 @@ gams_test:
     pull_policy: [always, always, always, if-not-present]
 
   before_script:
-    - export RESHOP_MAKESELF_UNATTENDED=1
+    - export RESHOP_MAKESELF_UNATTENDED=1 GAMSDIR=$(dirname $(which gams)) VALGRIND_DIR="$HOME/valgrind"
     - apt-get update
     - apt-get install numdiff wget xz-utils -y
       # - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xf libvrepr.tar.xz -C /tmp/
   script:
-    - bash build/*.run
+    #   - bash build/*.run
+    - cp build/makeself/{gmsrhp_ux.out,libreshop.so} "$GAMSDIR"
+    - cp build/gamsconfig_valgrind.yaml "$GAMSDIR"/gamsconfig.yaml
     - env EMPSLV=reshop bash test/gams/test.sh
     - mkdir -p "$QA_TMPDIR" && pushd "$QA_TMPDIR" > /dev/null && testlib quality && gams quality lo=2 --solver=reshop; popd > /dev/null; cp "$QA_TMPDIR"/failures_qa.gms .
     - mkdir -p "$EMPLIB_TMPDIR" && pushd "$EMPLIB_TMPDIR" > /dev/null && emplib goempgo && gams goempgo lo=2 --solver=reshop; popd > /dev/null; cp "$EMPLIB_TMPDIR"/failures_emp.gms .
@@ -93,6 +97,7 @@ gams_test:
     paths:
       - failures_qa.gms
       - failures_emp.gms
+      - valgrind
 
 scan-build:
   stage: scan-build
@@ -155,6 +160,7 @@ upload:
     - cp -r infer-out/report.html public/report-fbinfer
     - cp *.gms public || true
     - cp build/Testing/Temporary/MemoryChecker*.log public/valgrind/ || true
+    - cp valgrind/* public/valgrind/ || true
     - chmod a+rx -R public
     - chmod 600 $SSH_KEY && sed -i 's/\r$//g' $SSH_KEY
     - scp -i $SSH_KEY -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r public huber@zamok.crans.org:www/reshop-ci

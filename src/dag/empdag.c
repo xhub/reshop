@@ -667,9 +667,13 @@ int empdag_addnashnamed(EmpDag *empdag, const char *name, unsigned *id)
 
    *id = nash->id;
 
+   char *name_cpy = name ? strdup(name) : NULL;
+
+   assert((name_cpy && name) || (!name_cpy && !name));
+
    empdag->finalized = false;
 
-   return dagnash_array_add(&empdag->nashs, nash, name);
+   return dagnash_array_add(&empdag->nashs, nash, name_cpy);
 }
 
 Nash* empdag_newnash(EmpDag *empdag)
@@ -1275,10 +1279,8 @@ int empdag_single_MP_to_Nash(EmpDag* empdag)
    mdl_settype(empdag->mdl, MdlType_emp);
    
    MathPrgm *mp = empdag->mps.arr[0];
-   char *name;
    nashid_t nashid;
-   A_CHECK(name, strdup("equilibrium"));
-   S_CHECK(empdag_addnashnamed(empdag, name, &nashid));
+   S_CHECK(empdag_addnashnamed(empdag, "equilibrium", &nashid));
    S_CHECK(empdag_nashaddmpbyid(empdag, nashid, mp->id));
    S_CHECK(empdag_setroot(empdag, nashid2uid(nashid)));
 

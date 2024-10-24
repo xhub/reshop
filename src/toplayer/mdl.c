@@ -466,6 +466,7 @@ int mdl_ensure_exportdir(Model *mdl)
 
    if (!res) {
       perror("mkdtemp");
+      free(exports_dir_template);
       return Error_SystemError;
    }
 

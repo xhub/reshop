@@ -189,9 +189,10 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
       assert(!mp_parents || empdag_isroot(empdag, mpid2uid(mp->id)));
       S_CHECK(rhp_ensure_mp(mdl, 2));
 
-      char *mpe_ovf_name;
-      IO_CALL(asprintf(&mpe_ovf_name, "%s", ovf_data->name));
-      A_CHECK(nash, empdag_newnashnamed(empdag, mpe_ovf_name));
+      char *nash_ovf_name;
+      IO_CALL(asprintf(&nash_ovf_name, "%s", ovf_data->name));
+      A_CHECK(nash, empdag_newnashnamed(empdag, nash_ovf_name));
+      free(nash_ovf_name);
 
       S_CHECK(empdag_nashaddmpbyid(empdag, nash->id, mp->id));
 
