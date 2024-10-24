@@ -81,7 +81,7 @@ gams_test:
   before_script:
     - export RESHOP_MAKESELF_UNATTENDED=1 GAMSDIR=$(dirname $(which gams)) VALGRIND_DIR="$HOME/valgrind"
     - apt-get update
-    - apt-get install numdiff wget xz-utils -y
+    - apt-get install numdiff wget xz-utils valgrind -y
       # - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xf libvrepr.tar.xz -C /tmp/
   script:
     #   - bash build/*.run
