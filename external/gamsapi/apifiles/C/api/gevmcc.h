@@ -99,6 +99,8 @@ enum gevCallSolverSolveLink {
 #define gevLicense4         "License4"
 #define gevLicense5         "License5"
 #define gevLicense6         "License6"
+#define gevLicense7         "License7"
+#define gevLicense8         "License8"
 #define gevNameParams       "NameParams"
 #define gevNameScenFile     "NameScenFile"
 #define gevNameExtFFile     "NameExtFFile"

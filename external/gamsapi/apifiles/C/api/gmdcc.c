@@ -429,9 +429,9 @@ void * GMD_CALLCONV d_gmdFindSymbolWithAliasPy (gmdHandle_t pgmd, const char *sy
   printAndReturn(gmdFindSymbolWithAliasPy,2,void *)
 }
 
-/** Find symbol by index position
+/** Find symbol by index position excluding alias symbols
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param symPtr Handle to a symbol when reading sequentially
  */
 int  GMD_CALLCONV d_gmdGetSymbolByIndex (gmdHandle_t pgmd, int idx, void **symPtr)
@@ -443,9 +443,9 @@ int  GMD_CALLCONV d_gmdGetSymbolByIndex (gmdHandle_t pgmd, int idx, void **symPt
   printAndReturn(gmdGetSymbolByIndex,2,int )
 }
 
-/** Find symbol by index position (Python)
+/** Find symbol by index position (Python) excluding alias symbols
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param status Indicator for error free execution (true/1 means OK, false/0 means Error)
  */
 void * GMD_CALLCONV d_gmdGetSymbolByIndexPy (gmdHandle_t pgmd, int idx, int *status)
@@ -459,7 +459,7 @@ void * GMD_CALLCONV d_gmdGetSymbolByIndexPy (gmdHandle_t pgmd, int idx, int *sta
 
 /** Find symbol by number position this includes the alias symbols and used GMD_NUMBER
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param symPtr Handle to a symbol when reading sequentially
  */
 int  GMD_CALLCONV d_gmdGetSymbolByNumber (gmdHandle_t pgmd, int idx, void **symPtr)
@@ -473,7 +473,7 @@ int  GMD_CALLCONV d_gmdGetSymbolByNumber (gmdHandle_t pgmd, int idx, void **symP
 
 /** Find symbol by number position this includes the alias symbols and used GMD_NUMBER (Python)
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param status Indicator for error free execution (true/1 means OK, false/0 means Error)
  */
 void * GMD_CALLCONV d_gmdGetSymbolByNumberPy (gmdHandle_t pgmd, int idx, int *status)
@@ -1703,6 +1703,16 @@ int  GMD_CALLCONV d_gmdCallSolverTimed (gmdHandle_t pgmd, const char *solvername
   printAndReturn(gmdCallSolverTimed,2,int )
 }
 
+/** Explicitly close previously opened license session via gmdCallSolver with network or uses license. Returns true on success
+ * @param pgmd gmd object handle
+ */
+int  GMD_CALLCONV d_gmdCloseLicenseSession (gmdHandle_t pgmd)
+{
+  int d_s[]={15};
+  GAMS_UNUSED(pgmd)
+  printAndReturn(gmdCloseLicenseSession,0,int )
+}
+
 /** Copy dense symbol content into dense array
  * @param pgmd gmd object handle
  * @param cube multi-dimensional dense array
@@ -2205,6 +2215,7 @@ XLibraryLoad (const char *dllName, char *errBuf, int errBufSize)
   {int s[]={15,1,3,1,3,21}; CheckAndLoad(gmdUpdateModelSymbol,5,"C__"); }
   {int s[]={15,11}; CheckAndLoad(gmdCallSolver,1,"C__"); }
   {int s[]={15,11,14}; CheckAndLoad(gmdCallSolverTimed,2,"C__"); }
+  {int s[]={15}; CheckAndLoad(gmdCloseLicenseSession,0,"C__"); }
   {int s[]={15,1,8,1,3}; CheckAndLoad(gmdDenseSymbolToDenseArray,4,"C__"); }
   {int s[]={15,1,8,1,2,3,4}; CheckAndLoad(gmdSparseSymbolToDenseArray,6,"C__"); }
   {int s[]={15,1,8,1,2,2,3,4}; CheckAndLoad(gmdSparseSymbolToSqzdArray,7,"C__"); }

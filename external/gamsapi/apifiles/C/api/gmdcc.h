@@ -273,6 +273,7 @@ int  GMD_CALLCONV d_gmdInitUpdate (gmdHandle_t pgmd, void *gmoPtr);
 int  GMD_CALLCONV d_gmdUpdateModelSymbol (gmdHandle_t pgmd, void *gamsSymPtr, int actionType, void *dataSymPtr, int updateType, int *noMatchCnt);
 int  GMD_CALLCONV d_gmdCallSolver (gmdHandle_t pgmd, const char *solvername);
 int  GMD_CALLCONV d_gmdCallSolverTimed (gmdHandle_t pgmd, const char *solvername, double *time);
+int  GMD_CALLCONV d_gmdCloseLicenseSession (gmdHandle_t pgmd);
 int  GMD_CALLCONV d_gmdDenseSymbolToDenseArray (gmdHandle_t pgmd, void *cube, int vDim[], void *symPtr, int field);
 int  GMD_CALLCONV d_gmdSparseSymbolToDenseArray (gmdHandle_t pgmd, void *cube, int vDim[], void *symPtr, void **vDomPtr, int field, int *nDropped);
 int  GMD_CALLCONV d_gmdSparseSymbolToSqzdArray (gmdHandle_t pgmd, void *cube, int vDim[], void *symPtr, void **vDomSqueezePtr, void **vDomPtr, int field, int *nDropped);
@@ -429,19 +430,19 @@ typedef void * (GMD_CALLCONV *gmdFindSymbolWithAliasPy_t) (gmdHandle_t pgmd, con
 GMD_FUNCPTR(gmdFindSymbolWithAliasPy);
 
 typedef int  (GMD_CALLCONV *gmdGetSymbolByIndex_t) (gmdHandle_t pgmd, int idx, void **symPtr);
-/** Find symbol by index position
+/** Find symbol by index position excluding alias symbols
  *
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param symPtr Handle to a symbol when reading sequentially
  */
 GMD_FUNCPTR(gmdGetSymbolByIndex);
 
 typedef void * (GMD_CALLCONV *gmdGetSymbolByIndexPy_t) (gmdHandle_t pgmd, int idx, int *status);
-/** Find symbol by index position (Python)
+/** Find symbol by index position (Python) excluding alias symbols
  *
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param status Indicator for error free execution (true/1 means OK, false/0 means Error)
  */
 GMD_FUNCPTR(gmdGetSymbolByIndexPy);
@@ -450,7 +451,7 @@ typedef int  (GMD_CALLCONV *gmdGetSymbolByNumber_t) (gmdHandle_t pgmd, int idx, 
 /** Find symbol by number position this includes the alias symbols and used GMD_NUMBER
  *
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param symPtr Handle to a symbol when reading sequentially
  */
 GMD_FUNCPTR(gmdGetSymbolByNumber);
@@ -459,7 +460,7 @@ typedef void * (GMD_CALLCONV *gmdGetSymbolByNumberPy_t) (gmdHandle_t pgmd, int i
 /** Find symbol by number position this includes the alias symbols and used GMD_NUMBER (Python)
  *
  * @param pgmd gmd object handle
- * @param idx index of a symbol in the GMD object / of a key from a record
+ * @param idx index (1-based) of a symbol in the GMD object / of a key from a record
  * @param status Indicator for error free execution (true/1 means OK, false/0 means Error)
  */
 GMD_FUNCPTR(gmdGetSymbolByNumberPy);
@@ -1240,6 +1241,13 @@ typedef int  (GMD_CALLCONV *gmdCallSolverTimed_t) (gmdHandle_t pgmd, const char 
  * @param time 
  */
 GMD_FUNCPTR(gmdCallSolverTimed);
+
+typedef int  (GMD_CALLCONV *gmdCloseLicenseSession_t) (gmdHandle_t pgmd);
+/** Explicitly close previously opened license session via gmdCallSolver with network or uses license. Returns true on success
+ *
+ * @param pgmd gmd object handle
+ */
+GMD_FUNCPTR(gmdCloseLicenseSession);
 
 typedef int  (GMD_CALLCONV *gmdDenseSymbolToDenseArray_t) (gmdHandle_t pgmd, void *cube, int vDim[], void *symPtr, int field);
 /** Copy dense symbol content into dense array
