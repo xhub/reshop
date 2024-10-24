@@ -193,6 +193,8 @@ static void gams_deallocdata(Model *mdl)
             error("%s :: scrdir %s was not deleted\n", __func__, buffer);
          }
 
+         debug("[GAMS] deleted directory '%s'\n", buffer);
+
          mdldat->delete_scratch = false;
       }
    }
@@ -683,8 +685,9 @@ static int gams_copysolveoptions(Model *mdl, const Model *mdl_src)
       S_CHECK(mdl_getoption(mdl_src, "solver_option_file_number", &val.i));
       gmoOptFileSet(gms_dst->gmo, val.i);
 
-      mdl_getoption(mdl_src, "keep_files", &val.b);
-      gevSetIntOpt(gms_dst->gev, gevKeep, val.b);
+      /* TODO: GG #15 */
+      //mdl_getoption(mdl_src, "keep_files", &val.b);
+      //gevSetIntOpt(gms_dst->gev, gevKeep, val.b);
       mdl_getoption(mdl_src, "rtol", &val.d);
       gevSetDblOpt(gms_dst->gev, gevOptCR, val.d);
       mdl_getoption(mdl_src, "atol", &val.d);

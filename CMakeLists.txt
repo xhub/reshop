@@ -64,7 +64,7 @@ endif ()
 find_program( MEMORYCHECK_COMMAND valgrind )
 # Use --gen-suppressions=all to help create proper suppression file
 #set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full --track-origins=yes --gen-suppressions=all" )
-set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full --track-origins=yes" )
+set(MEMORYCHECK_COMMAND_OPTIONS "-q --trace-children=yes --leak-check=full --track-origins=yes" )
 set(MEMORYCHECK_SUPPRESSIONS_FILE "${CMAKE_SOURCE_DIR}/cmake/valgrind.supp")
 
 # This has to come AFTER setting the valgrind options and before adding the
