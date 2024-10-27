@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "equvar_data.h"
 #include "rhpidx.h"
 

@@ -100,14 +100,14 @@
 ALLOC_SIZE(2) MALLOC_ATTR_SIMPLE
 static inline void *myrealloc(void *ptr, size_t size)
 {
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ > 11)
 #pragma GCC diagnostic ignored "-Wuse-after-free"
 #endif
    void* oldptr = ptr;
    void *newptr  = realloc(ptr, size); /* NOLINT(bugprone-suspicious-realloc-usage) */
    if (RHP_UNLIKELY(!newptr && errno == ENOMEM && oldptr)) { free(oldptr); }
    return newptr;
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ > 11)
 #pragma GCC diagnostic pop
 #endif
 }

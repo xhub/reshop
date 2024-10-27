@@ -1,6 +1,8 @@
+include(CMakeDetermineCompiler)
 include(CheckCCompilerFlag)
 
-if ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" MATCHES "GNU")
+if ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" MATCHES "GNU" OR
+    "${CMAKE_COMPILER_IS_GNUCC}") # for cmake 3.22 on ubuntu 22.04 
   set(C_COMPILER_GNU_LIKE 1)  
 endif()
 

@@ -1,6 +1,8 @@
 #ifndef EMPINTERP_UTILS_H
 #define EMPINTERP_UTILS_H
 
+#include <stdint.h>
+
 #include "compat.h"
 #include "empdag_data.h"
 #include "empinterp_fwd.h"

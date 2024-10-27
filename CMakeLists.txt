@@ -432,7 +432,6 @@ if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
    
    SET(GAMSCNTR_DAT_FILE "${SCRDIR}/gamscntr.dat")
 
-   MESSAGE(STATUS "GAMS SYSDIR (host): ${GAMSDIR}")
    MESSAGE(STATUS "GAMS SYSDIR (target): ${GAMSDIR_TARGET}")
    MESSAGE(STATUS "GAMS CNTR file (target): ${GAMSCNTR_DAT_FILE}")
 endif()
@@ -446,6 +445,7 @@ if(NOT GAMSDIR)
    SET (GAMSDIR "${CMAKE_SOURCE_DIR}/external/gamsapi/")
 endif (NOT GAMSDIR)
 
+MESSAGE(STATUS "GAMS SYSDIR (host): ${GAMSDIR}")
 
 
 #################################################
