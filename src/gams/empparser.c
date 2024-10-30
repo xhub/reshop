@@ -209,7 +209,7 @@ NONNULL static void parser_update_last_kw(Interpreter *interp)
           tok->type == TOK_IDENT); /* We might be trying to parse a label */
 
    interp->last_kw_info.type = tok->type;
-interp->last_kw_info.linenr = interp->linenr;
+   interp->last_kw_info.linenr = interp->linenr;
    interp->last_kw_info.linestart = interp->linestart;
    interp->last_kw_info.start = tok->start;
    interp->last_kw_info.len = tok->len;
@@ -243,32 +243,49 @@ void interp_showerr(Interpreter *interp)
       tok = &interp->cur;
    }
 
-   if (interp->last_kw_info.type == TOK_UNSET || tok->len == 0 || !tok->start) {
-      const char * start = interp->linestart;
-      if (!tok->start || !start) { goto final_error_line; }
-
-      const char * restrict end = strpbrk(tok->start, "\n");
-      if (!end) { end = &tok->start[strlen(tok->start)]; }
-      error("[empparser] line %u follows:\n%.*s\n", interp->linenr, (int)(end-start), start);
-      goto final_error_line;
-   }
-
    errormsg("[empparser] The error occurred while parsing the following statement:\n");
 
-   assert(interp->last_kw_info.linestart);
-   const char * restrict start = interp->last_kw_info.linestart;
-   const char * restrict end = strpbrk(tok->start, "\n");
-   if (!end) { end = &tok->start[strlen(tok->start)]; }
+   const char * restrict start;
+   const char * restrict end;
+   unsigned offset1 = UINT_MAX, offset2 = UINT_MAX;
 
-   assert(end && end-start < INT_MAX);
+  /* ----------------------------------------------------------------------
+   * If we have some keyword info, we print from the last known keyword to the
+   * token
+   * ---------------------------------------------------------------------- */
 
-   ptrdiff_t offsetptr1 = interp->last_kw_info.start - start;
-   assert(offsetptr1 >= 0 && offsetptr1 < INT_MAX);
-   unsigned offset1 = offsetptr1;
+   if (interp->last_kw_info.type != TOK_UNSET) {
+
+      start = interp->last_kw_info.linestart; assert(start);
+      end = tok->start ? strpbrk(tok->start, "\n") : NULL;
+      if (!end) {
+         end = tok->start ? &tok->start[strlen(tok->start)] : &start[strlen(start)];
+      }
+
+      ptrdiff_t offsetptr1 = interp->last_kw_info.start - start;
+      assert(offsetptr1 >= 0 && offsetptr1 < INT_MAX);
+      offset1 = offsetptr1;
+
+   } else { /* No keyword, we just print the current line and the token, if we have it */
+
+      start = interp->linestart;
+      if (!start) { goto final_error_line; }
+
+      end = strpbrk(start, "\n");
+      if (!end) { end = &start[strlen(start)]; }
+
+   } 
+
+   assert(start && end && end-start < INT_MAX);
+
+  /* ----------------------------------------------------------------------
+   * Prepare the printing of the last lexeme
+   * ---------------------------------------------------------------------- */
 
    ptrdiff_t offsetptr2;
-   unsigned offset2;
-   if (tok->linenr == interp->linenr) {
+   if (!tok->start || !interp->linestart) {
+      offset2 = UINT_MAX-1;
+   } else if (tok->linenr == interp->linenr) {
       offsetptr2 = tok->start - interp->linestart;
       assert(offsetptr2 >= 0 && offsetptr2 < INT_MAX);
       offset2 = offsetptr2;
@@ -277,38 +294,33 @@ void interp_showerr(Interpreter *interp)
       assert(offsetptr2 >= 0 && offsetptr2 < INT_MAX);
       offset2 = offsetptr2;
    } else {
-      offset2 = UINT_MAX;
+      offset2 = UINT_MAX-1;
    }
 
+   if (offset1 != UINT_MAX) {
+      error("%*slast keyword\n", offset1, "");
 
-   /* 'c' specifier does not allow for maximum precision, at least one space is
-    * printed */
-   if (offset1 > 0) {
-      error("%*clast keyword\n", offset1, ' ');
-   } else {
-      errormsg("last keyword\n");
+      error("%*s", offset1+1, "v");
+      for (unsigned i = 0, len = interp->last_kw_info.len-1; i < len; ++i) errormsg("~");
+      errormsg("\n");
    }
 
-   error("%*s", offset1+1, "v");
-   for (unsigned i = 0; i < interp->last_kw_info.len-1; ++i) errormsg("~");
-   errormsg("\n");
+   /* Print the actual line(s) */
    error("%.*s\n", (int)(end-start), start);
 
-   if (offset2 == UINT_MAX) {
+   if (offset2 == UINT_MAX-1) {
       error("[empinterp] ERROR: the line number of the last token is %u, but "
             "the interpreter is at line %u, cannot print detailed information\n",
             tok->linenr, interp->linenr);
       goto final_error_line;
    }
 
-   error("%*s", offset2+1, "^");
-   for (unsigned i = 0; i < tok->len-1; ++i) errormsg("~");
-   errormsg("\n");
+   if (offset2 != UINT_MAX) {
+      error("%*s", offset2+1, "^");
+      for (unsigned i = 0; i < tok->len-1; ++i) errormsg("~");
+      errormsg("\n");
 
-   if (offset2 > 0) {
-      error("%*clast lexeme\n", offset2, ' ');
-   } else {
-      errormsg("last lexeme\n");
+      error("%*slast lexeme\n", offset2, "");
    }
 
    if (interp->pre.type == TOK_UNSET) { goto final_error_line; }
