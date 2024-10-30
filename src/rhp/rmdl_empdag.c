@@ -176,11 +176,14 @@ typedef struct {
 NONNULL static inline int arcVFdata2copyexprdat(CopyExprDat *cpydat)
 {
    assert(cpydat->type == CopyExprNone);
+   /* Initializa the coeff to 1. */
+   cpydat->coeff = 1.;
 
    ArcVFData *arc = cpydat->rarc;
    switch (arc->type) {
    case ArcVFBasic:
-      memcpy(&cpydat->single.bdat, &arc->basic_dat, sizeof(arc->basic_dat));
+      assert(isfinite(arc->basic_dat.cst));
+      memcpy(&cpydat->single.bdat, &arc->basic_dat, sizeof(ArcVFBasicData));
       cpydat->type = CopyExprSingle;
       break;
    case ArcVFMultipleBasic: {
@@ -215,8 +218,9 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
       return OK;
    case CopyExprSingle: {
       CopyExprSingleDat *cpydat_single = &cpydat->single;
-      assert(isfinite(cpydat->coeff));
-      double cst = arcdat->cst * cpydat->coeff;
+      double coeff = cpydat->coeff; 
+      assert(isfinite(coeff));
+      double cst = arcdat->cst * coeff;
       //printf("\n\nDEBUG: cst is %e\n\n", cst);
       rhp_idx vi = arcdat->vi;
       NlNode *nlnode = cpydat_single->nlnode;
@@ -547,7 +551,7 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
          CopyExprDat *cpydat = &cpy_expr.arr[j];
 
          // HACK coeff should be NAN;
-         CopyExprDat cpydat_child_template = {.type = CopyExprNone, .rarc = NULL, .coeff = 1.};
+         CopyExprDat cpydat_child_template = {.type = CopyExprNone, .rarc = NULL, .coeff = NAN};
          S_CHECK(copy_expr_arc_parent(mdl, mp_parent, cpydat, &cpydat_child_template));
 
          /* Need to get the type of arc*/
@@ -590,6 +594,7 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
                   arcVF_subei(cpydat_child->rarc, IdxObjFunc, objequ_big);
                }
                S_CHECK(arcVFdata2copyexprdat(cpydat_child));
+               assert(isfinite(cpydat_child->coeff));
             }
 
             rhp_idx objequ = mp_getobjequ(mp_child);
@@ -635,7 +640,6 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       * Re-assign the variables and equations in the new big MP
       * ---------------------------------------------------------------------- */
 
-      
       rhp_idx *vars_bigmp_arr = vars_bigmp->arr;
       for (unsigned j = 0, len = vars_bigmp->len; j < len; ++j) {
          rhp_idx vi = vars_bigmp_arr[j];

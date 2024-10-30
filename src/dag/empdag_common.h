@@ -371,6 +371,15 @@ bool arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
 
 int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new);
 
+/**
+ * @brief Subsitute ei in an arcVF
+ *
+ * @param  arc 
+ * @param  ei_old  the old equation index
+ * @param  ei_new  the new equation index
+ *
+ * @return         the error code
+ */
 NONNULL static inline
 int arcVF_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new)
 {

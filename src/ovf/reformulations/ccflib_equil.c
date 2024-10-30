@@ -743,6 +743,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
 
          S_CHECK_EXIT(daguidarray_rm(&rarcs[mpid_child], mpid_dual));
 
+         assert(Varc_primal2dual.type != ArcVFUnset);
          ArcVFData Varc_primal_parent2child;
          S_CHECK_EXIT(arcVF_copy(&Varc_primal_parent2child, &Varc_primal2dual));
          Varc_primal_parent2child.mpid_child = mpid_child;
