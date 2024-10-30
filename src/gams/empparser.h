@@ -29,6 +29,7 @@ bool tok_untilwsorchar(Token *tok, const char * restrict buf, char c,
                        unsigned * restrict pos) NONNULL;
 
 const char* toktype2str(TokenType type);
+const char* toktype2category(TokenType type);
 int tok2ident(Token * restrict tok, IdentData * restrict ident) NONNULL;
 
 NONNULL int consume_valfn_kwd(Interpreter *interp, unsigned *p);

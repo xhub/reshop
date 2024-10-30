@@ -506,6 +506,9 @@ extern const struct interp_ops interp_ops_compiler;
 int gmssym_iterator_init(Interpreter* restrict interp) NONNULL;
 int parser_filter_set(Interpreter* restrict interp, unsigned i, int val) NONNULL;
 
+int empinterp_process_statements(Interpreter * restrict interp,
+                                 unsigned * restrict p,
+                                 TokenType toktype) NONNULL;
 int empinterp_finalize(Interpreter *interp) NONNULL;
 
 static inline unsigned emptok_getlinenr(const Token *tok)

@@ -494,7 +494,7 @@ int embcode_process_empinfo(void *gmdobj, const char *scrdir, const char *fname)
 
    /* TODO(xhub) do we want to continue or error if we have an error */
 
-   S_CHECK_EXIT(process_statements(&interp, &p, toktype))
+   S_CHECK_EXIT(empinterp_process_statements(&interp, &p, toktype))
 
    toktype = parser_getcurtoktype(&interp);
    if (toktype != TOK_EOF) {

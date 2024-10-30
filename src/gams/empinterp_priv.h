@@ -16,7 +16,7 @@
 #include "list_generic.inc"
 
 void interp_showerr(Interpreter *interp) NONNULL;
-int process_statements(Interpreter * restrict interp, unsigned * restrict p,
+int process_statement(Interpreter * restrict interp, unsigned * restrict p,
                         TokenType toktype) NONNULL;
 
 const char * identtype2str(IdentType type);

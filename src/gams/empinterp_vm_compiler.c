@@ -1943,7 +1943,7 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
    S_CHECK(advance(interp, p, &toktype))
 
    while (toktype != TOK_EOF && toktype != delimiter_endloop) {
-      S_CHECK(process_statements(interp, p, toktype));
+      S_CHECK(process_statement(interp, p, toktype));
       toktype = parser_getcurtoktype(interp);
    }
 

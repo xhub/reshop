@@ -468,7 +468,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
 
    /* TODO(xhub) do we want to continue or error if we have an error */
 
-   S_CHECK_EXIT(process_statements(&interp, &p, toktype))
+   S_CHECK_EXIT(empinterp_process_statements(&interp, &p, toktype))
 
    toktype = parser_getcurtoktype(&interp);
    if (toktype != TOK_EOF) {

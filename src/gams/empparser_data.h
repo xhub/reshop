@@ -53,13 +53,13 @@ typedef enum emptok_type {
    TOK_INTEGER, /* not parsable for now, useful for VM */
    TOK_REAL,
    /* GAMS-specific data */
-   TOK_GMS_ALIAS,
+   TOK_GMS_ALIAS,  /* Start of the GAMS keyword */
    TOK_GMS_EQU,
    TOK_GMS_MULTISET,
    TOK_GMS_PARAM,
    TOK_GMS_SET,
    TOK_GMS_UEL,
-   TOK_GMS_VAR,
+   TOK_GMS_VAR,     /* End of the GAMS keyword  */
    /* Operators */
    TOK_DEFVAR,
    /* Conditionals */

@@ -363,6 +363,32 @@ const char * toktype2str(TokenType type)
    return "ERROR: token type out of range";
 }
 
+const char* toktype2category(TokenType type)
+{
+   if (type <= TOKRANGE_MDL_KW_END) return "reserved modeling keyword";
+   assert(type >= TOKRANGE_OTHER_KW_START);
+   if (type <= TOKRANGE_OTHER_KW_END) return "reserved keyword";
+   assert(type >= TOKRANGE_PROBTYPE_START);
+   if (type <= TOKRANGE_PROBTYPE_END) return "problem type";
+
+   assert(type >= TOKRANGE_OTHER_START);
+
+   switch (type) {
+   case TOK_GMS_ALIAS:     return "GAMS alias";
+   case TOK_GMS_EQU:       return "GAMS equation";
+   case TOK_GMS_MULTISET:  return "GAMS multidimensional set";
+   case TOK_GMS_PARAM:     return "GAMS parameter";
+   case TOK_GMS_SET:       return "GAMS set";
+   case TOK_GMS_UEL:       return "GAMS UEL";
+   case TOK_GMS_VAR:       return "GAMS variable";
+
+   default:
+      if (type <= TOKRANGE_OTHER_END) return "unknown keyword";
+   }
+
+   return "ERROR: erronous token type";
+}
+
 void tok_payloadprint(const Token *tok, unsigned mode,
                        const Model *mdl)
 {
@@ -4491,7 +4517,7 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
    unsigned identname_len = emptok_getstrlen(&interp->cur);
 
    TokenType toktype;
-   S_CHECK(advance(interp, p, &toktype));
+   S_CHECK(advance(interp, p, &toktype))
 
    GmsIndicesData gmsindices;
    gmsindices_init(&gmsindices);
@@ -4854,7 +4880,7 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
 
       return runtime_error(interp->linenr);
    }
-   
+ 
   /* ----------------------------------------------------------------------
    * This is the meat of the function
    * The first time a dualequ is parsed, we need to create a Nash node as an
@@ -5101,7 +5127,31 @@ int labdeldef_parse_statement(Interpreter* restrict interp, unsigned* restrict p
 
 }
 
-static inline int expect_statement(Interpreter * restrict interp)
+static inline bool potential_labeldef(Interpreter *interp, unsigned * restrict p)
+{
+   unsigned _p;
+   const char * restrict buf = interp->buf;
+
+   _p = (*p);
+
+   while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
+
+   /* TODO: improve. This just looks for a ':' in the same line */
+   while (notEOL(buf[_p]) && buf[_p] != ':') _p++;
+
+   return buf[_p] == ':';
+}
+
+static inline int parser_err_labelname(Interpreter * restrict interp)
+{
+   Token *tok = &interp->cur;
+   error("[empinterp] ERROR: the token '%.*s' cannot be used as a label! It "
+         "is a %s\n", tok_fmtargs(tok), toktype2category(tok->type));
+ 
+   return Error_EMPIncorrectSyntax;
+}
+
+static inline int expect_statement(Interpreter * restrict interp, unsigned *p)
 {
    switch (interp->cur.type) {
    case TOK_BILEVEL:
@@ -5128,89 +5178,89 @@ static inline int expect_statement(Interpreter * restrict interp)
    case TOK_VISOL:
       return OK;
    default:
+      if (potential_labeldef(interp, p)) {
+         return parser_err_labelname(interp);
+      }
+
       parser_err(interp, "expecting a statement");
       return Error_EMPIncorrectSyntax;
    }
 }
 
-int process_statements(Interpreter * restrict interp, unsigned * restrict p,
-                       TokenType toktype)
+int process_statement(Interpreter * restrict interp, unsigned * p, TokenType toktype)
 {
-   int status = OK;
-
-   S_CHECK(expect_statement(interp));
-
-   while (true) {
+   S_CHECK(expect_statement(interp, p));
 
    switch (toktype) {
    case TOK_EOF:
-      goto _exit;
+   return OK;
    case TOK_BILEVEL:
-      S_CHECK_EXIT(parse_bilevel(interp, p));
+      S_CHECK(parse_bilevel(interp, p));
       break;
    case TOK_DAG:
-      S_CHECK_EXIT(parse_DAG(interp, p));
+      S_CHECK(parse_DAG(interp, p));
       break;
    case TOK_DEFVAR:
-      S_CHECK_EXIT(parse_defvar(interp, p));
+      S_CHECK(parse_defvar(interp, p));
       break;
    case TOK_DEFFN:
-      S_CHECK_EXIT(parse_deffn_or_implicit(interp, p));
+      S_CHECK(parse_deffn_or_implicit(interp, p));
       break;
    case TOK_DUALEQU:
-      S_CHECK_EXIT(parse_dualequ(interp, p));
+      S_CHECK(parse_dualequ(interp, p));
       break;
    case TOK_DUALVAR:
-      S_CHECK_EXIT(parse_dualvar(interp, p));
+      S_CHECK(parse_dualvar(interp, p));
       break;
    case TOK_EQUILIBRIUM:
-      S_CHECK_EXIT(parse_equilibrium(interp));
-      S_CHECK_EXIT(advance(interp, p, &toktype));
+      S_CHECK(parse_equilibrium(interp));
+      S_CHECK(advance(interp, p, &toktype));
       break;
    case TOK_EXPLICIT:
-      TO_IMPLEMENT_EXIT("EMPINFO EXPLICIT")
+      TO_IMPLEMENT("EMPINFO EXPLICIT")
    case TOK_GDXIN:
-      S_CHECK_EXIT(parse_gdxin(interp, p));
+      S_CHECK(parse_gdxin(interp, p));
       break;
    case TOK_IMPLICIT:
-      S_CHECK_EXIT(parse_deffn_or_implicit(interp, p));
+      S_CHECK(parse_deffn_or_implicit(interp, p));
       break;
    case TOK_LOOP:
-      S_CHECK_EXIT(parse_loop(interp, p));
+      S_CHECK(parse_loop(interp, p));
       break;
    case TOK_LOAD:
-      S_CHECK_EXIT(parse_load(interp, p));
+      S_CHECK(parse_load(interp, p));
       break;
    case TOK_MAX:
    case TOK_MIN:
    case TOK_VI:
-      S_CHECK_EXIT(parse_mp(interp, p));
+      S_CHECK(parse_mp(interp, p));
       break;
    case TOK_MODELTYPE:
-      S_CHECK_EXIT(parse_modeltype(interp, p));
+      S_CHECK(parse_modeltype(interp, p));
       break;
    case TOK_NASH:
-      S_CHECK_EXIT(parse_Nash(interp, p));
+      S_CHECK(parse_Nash(interp, p));
       break;
    case TOK_OVF:
-      S_CHECK_EXIT(parse_ovf(interp, p));
+      S_CHECK(parse_ovf(interp, p));
       break;
    case TOK_SHAREDEQU:
-      TO_IMPLEMENT_EXIT("EMPINFO SHAREDEQU")
+      TO_IMPLEMENT("EMPINFO SHAREDEQU")
    case TOK_VALFN:
-      TO_IMPLEMENT_EXIT("EMPINFO VALFN")
+      TO_IMPLEMENT("EMPINFO VALFN")
    case TOK_VISOL:
-      TO_IMPLEMENT_EXIT("EMPINFO VISOL")
+      TO_IMPLEMENT("EMPINFO VISOL")
    case TOK_IDENT: {
       interp_save_tok(interp);
       unsigned p2 = *p;
-      S_CHECK_EXIT(peek(interp, &p2, &toktype));
+      S_CHECK(peek(interp, &p2, &toktype));
+
       switch (toktype) {
       case TOK_DEFVAR:
          *p = p2;
          parser_cpypeek2cur(interp);
-         S_CHECK_EXIT(parse_defvar(interp, p));
-         goto _next;
+         S_CHECK(parse_defvar(interp, p));
+         TO_IMPLEMENT("defined variable needs attention");
       default: ;
       }
 
@@ -5221,19 +5271,35 @@ int process_statements(Interpreter * restrict interp, unsigned * restrict p,
        * TODO: we could be in a declaration and just parsed a label
        * ------------------------------------------------------------ */
 
-      S_CHECK_EXIT(parse_labeldef(interp, p));
+      S_CHECK(parse_labeldef(interp, p));
 
       break;
    }
    default:
-     goto _exit;
-   }
-_next:
-   toktype = parser_getcurtoktype(interp);
+     error("[empparser] ERROR: expected a statement, but got a token of type %s\n",
+           toktype2str(toktype));
+      return Error_EMPIncorrectSyntax;
    }
 
-_exit:
-   return status;
+   return OK;
+}
+
+int empinterp_process_statements(Interpreter * restrict interp, unsigned * restrict p,
+                       TokenType toktype)
+{
+   while (toktype != TOK_EOF && toktype != TOK_UNSET) {
+      S_CHECK(process_statement(interp, p, toktype));
+      toktype = parser_getcurtoktype(interp);
+   }
+
+   if (toktype == TOK_EOF) {
+      return OK;
+   }
+
+   error("[empinterp] ERROR: Parsing failed, got extra token '%.*s' of type %s\n",
+         tok_fmtargs(&interp->cur), toktype2str(toktype));
+
+   return Error_EMPIncorrectSyntax;
 }
 
 
