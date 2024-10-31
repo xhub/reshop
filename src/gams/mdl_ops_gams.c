@@ -287,7 +287,7 @@ static int gams_solve(Model *mdl)
 
       gmoNameOptFileSet(gms->gmo, optname);
 
-      /* Reset optname to the directory name */
+      /* Reset optname to the scratch directory */
       optname[len_scrdir] = '\0';
 
       size_t mdlname_len = mdl_getnamelen(mdl);
@@ -329,6 +329,10 @@ static int gams_solve(Model *mdl)
 
       S_CHECK(gams_solve(mdl));
 
+      int offset;
+      printout(PO_INFO, "[GAMS] %n%s model '%.*s' #%u was dumped via convert as %s" DIRSEP "%s-%u.gms\n",
+               &offset, mdl_fmtargs(mdl), optname, mdlname, mdl->id);
+
 #if defined(__linux__) || defined(__APPLE__)
 
 #if defined(__GNUC__)
@@ -337,7 +341,7 @@ static int gams_solve(Model *mdl)
 #endif
 
      char *cmd;
-      int ret = asprintf(&cmd, "sed -n -e 'y/(),-/____/' -e 's:^ *\\([exbi][0-9][0-9]*\\) \\(.*\\):s/\\1/\\2/g:gp' "
+      int ret = asprintf(&cmd, "sed -n -e 'y/(),-/____/' -e 's:^ *\\([exbi][0-9][0-9]*\\)  \\(.*\\):s/\\1/\\2/g:gp' "
                          "'%s" DIRSEP "dict-%s-%u.txt' | sed -n '1!G;h;$p' > '%s" DIRSEP "%s-%u.sed'",
                          optname, mdlname, mdl->id, optname, mdlname, mdl->id);
 
@@ -351,10 +355,15 @@ static int gams_solve(Model *mdl)
       if (ret == -1) { goto skip; }
       ret = system(cmd);
       FREE(cmd);
+
+      printout(PO_INFO, "%*sA version with approximate names was created at %s" DIRSEP "%s-%u-named.gms\n",
+               offset, "", optname, mdlname, mdl->id);
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
-skip:
+
+skip: ; /* Skipping the generation */
+
 #endif
       /* ------------------------------------------------------------------
        * Restore the original solver name

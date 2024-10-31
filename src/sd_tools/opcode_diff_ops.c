@@ -643,6 +643,7 @@ static int opcode_diff_alloc_fromequ(struct sd_tool *sd_tool, Container *ctr, co
 
    if (e->tree && e->tree->root) {
       /* TODO(Xhub) fix this horrible thing: we just need the ctr for the memory */
+      // HACK ARENA
       S_CHECK(nltree_buildopcode(ctr, e, &instrs_tmp, &args_tmp, &codelen));
    } else {
       codelen = 0;
@@ -663,6 +664,9 @@ static int opcode_diff_alloc_fromequ(struct sd_tool *sd_tool, Container *ctr, co
      FREE(sd_tool->data);
    }
 
+   // HACK ARENA
+   ctr_relmem(ctr);
+
    return OK;
 }
 
@@ -682,6 +686,7 @@ static int opcode_diff_alloc(struct sd_tool *sd_tool, Container *ctr, rhp_idx ei
    int *instrs_tmp;
    int *args_tmp;
 
+   // HACK ARENA
    S_CHECK(gctr_genopcode(ctr, ei, &diff_data->len, &instrs_tmp, &args_tmp));
 
    /* ----------------------------------------------------------------------
@@ -704,6 +709,9 @@ static int opcode_diff_alloc(struct sd_tool *sd_tool, Container *ctr, rhp_idx ei
    } else {
      FREE(sd_tool->data);
    }
+
+   // HACK ARENA
+   ctr_relmem(ctr);
 
    return OK;
 }

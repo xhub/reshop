@@ -130,6 +130,9 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
             A_CHECK(tree, nltree_buildfromgams(len, instrs, args));
          }
 
+         // HACK ARENA
+         ctr_relmem_recursive(&mdl->ctr);
+
          /* No need to free instrs or args, it comes from a container workspace */
          goto end;
       }

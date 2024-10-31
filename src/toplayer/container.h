@@ -62,7 +62,7 @@ typedef struct container {
    unsigned n;                  /**< number of (active) variables */
 
    struct {
-      void *mem;                /**< pointer to workspace memory             */
+      uint8_t *mem;                /**< pointer to workspace memory             */
       size_t size;              /**< size of the workspace memory            */
       bool inuse;               /**< true if the memory is inuse (for debugging) */
    } workspace;                 /**< workspace memory area                   */
@@ -201,7 +201,8 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
 
 void *ctr_getmem(Container *ctr, size_t size) ALLOC_SIZE(2);
 void *ctr_ensuremem(Container *ctr, size_t cur_size, size_t extra_size);
-void ctr_relmem(Container *ctr);
+void ctr_relmem(Container *ctr) NONNULL;
+void ctr_relmem_recursive(Container *ctr) NONNULL;
 void ctr_memclean(struct ctrmem *ctrmem);
 
 /* ----------------------------------------------------------------------

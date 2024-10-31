@@ -357,7 +357,7 @@ int gctr_getopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
 
       assert(max_codelen > 0);
 
-      struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
+      struct ctrmem working_mem = {.ptr = NULL, .ctr = ctr};
       A_CHECK(working_mem.ptr, ctr_getmem(ctr, max_codelen*2*sizeof(int)));
       *instrs = (int *)working_mem.ptr;
       *args = &(*instrs)[max_codelen];
@@ -466,6 +466,7 @@ int gctr_genopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
       Equ *e = &ctr->equs[ei];
       if (e->tree && e->tree->root) {
          /* TODO(Xhub) fix this horrible thing: we just need the ctr for the memory */
+         // HACK ARENA
          S_CHECK(nltree_buildopcode(ctr, e, instrs, args, codelen));
       } else {
          *codelen = 0;

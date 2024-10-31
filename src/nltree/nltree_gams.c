@@ -1048,11 +1048,10 @@ _child_expected_error:
  *
  * @return               the error code
  */
-int nltree_buildopcode(Container *ctr, const Equ * e, int **instrs,
-                        int **args, int *codelen)
+int nltree_buildopcode(Container *ctr, const Equ *e, int **instrs, int **args,
+                       int *codelen)
 {
-   assert(e->tree);
-   assert(e->tree->root);
+   assert(e->tree && e->tree->root);
 
    /* ----------------------------------------------------------------------
     * Get an upper bound of the opcode length and get a memory large enough to
@@ -1071,7 +1070,7 @@ int nltree_buildopcode(Container *ctr, const Equ * e, int **instrs,
       return OK;
    }
 
-   struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
+   struct ctrmem working_mem = {.ptr = NULL, .ctr = ctr};
    A_CHECK(working_mem.ptr, (int*)ctr_getmem(ctr, (2*sizeof(int)*nlcode_size_ub)));
    *instrs = (int*)working_mem.ptr;
    *args = &(*instrs)[nlcode_size_ub];

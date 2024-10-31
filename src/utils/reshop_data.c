@@ -173,17 +173,24 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
 
    int * restrict sarr = dat_src->arr, * restrict darr = dat->arr;
 
-   int b1 = sarr[0], b2 = darr[0], e1 = sarr[slen-1], e2 = darr[dlen-1];
+   int sfirst = sarr[0], dfirst = darr[0], send = sarr[slen-1], dend = darr[dlen-1];
 
-   if (b1 <= b2) {
-      if (e1 <= b2) {
+   /* This is the index of the last element in dat->arr that has been written to */
+   unsigned darr_lastelt = dlen;
+
+   //printf("DEBUG: slen = %3u; dlen = %3u\n", slen, dlen);
+
+   if (sfirst <= dfirst) {
+      if (send <= dfirst) {
          memmove(&darr[slen], darr, dlen*sizeof(int));
          memcpy(darr, sarr, slen*sizeof(int));
+
+         assert(chk_sorted_intarray(dat->arr, dat->len));
 
          return OK;
       }
 
-      unsigned idx = bin_insert_int(sarr, slen, b2);
+      unsigned idx = bin_insert_int(sarr, slen, dfirst);
       memmove(&darr[idx], darr, idx*sizeof(int));
       memcpy(darr, sarr, idx*sizeof(int));
 
@@ -191,16 +198,20 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       slen -= idx;
       sarr = &sarr[idx];
       darr = &darr[idx];
+
+      //printf("DEBUG: slen = %3u; dlen = %3u; offset = %3u\n", slen, dlen, idx);
    } 
 
-   if (e1 >= e2) {
-      if (b1 >= e2) {
+   if (send >= dend) {
+      if (sfirst >= dend) {
          memcpy(&darr[dlen], sarr, slen*sizeof(int));
+
+         assert(chk_sorted_intarray(dat->arr, dat->len));
 
          return OK;
       }
 
-      unsigned idx = bin_insert_int(sarr, slen, e2); assert(idx < slen);
+      unsigned idx = bin_insert_int(sarr, slen, dend); assert(idx < slen);
 
       /* Insert the last slen-idx elements of sarr at the end of dlen */
       unsigned cpy_len = slen-idx;
@@ -209,6 +220,9 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       /* We don't update dlen as we can ignore the bits we just copied in the
        * subsequent search */
       slen = idx;
+      darr_lastelt += cpy_len;
+
+      //printf("DEBUG: slen = %3u; dlen = %3u; offset = %3u\n", slen, dlen, idx);
    }
 
    assert(dat->len >= darr-dat->arr);
@@ -224,17 +238,24 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       // HACK: offset < slen or offset <= slen?
       while (offset < slen && sarr[offset] <= v) { offset++; }
 
-      assert((darr-dat->arr) + dlen == dat->len);
+      //printf("DEBUG: slen = %3u; dlen = %3u; offset = %3u; idx = %3u; darr_lastelt = %3u\n",
+      //       slen, dlen, offset, idx, darr_lastelt);
 
-      memmove(&darr[offset], darr, (dlen-offset)*sizeof(int));
+      assert(dlen >= idx);
+      dlen -= idx;
+      darr_lastelt -= idx;
+
+      assert((darr-dat->arr) + offset + darr_lastelt <= dat->len);
+
+      /* We have to make space for an insertion of offset elements in dlen */
+      memmove(&darr[offset], darr, (darr_lastelt)*sizeof(int));
       memcpy(darr, sarr, offset*sizeof(int));
 
-      assert(dlen >= idx+offset);
-      dlen -= idx+offset;
 
       darr += offset;
       sarr += offset;
       slen -= offset;
+      assert(darr_lastelt + (darr-dat->arr) <= dat->len);
    }
 
 

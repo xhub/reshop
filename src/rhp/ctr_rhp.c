@@ -105,6 +105,9 @@ int rctr_getnl(const Container* ctr, Equ *e)
       S_CHECK(gctr_getopcode(ctr_up, ei_up, &len, &instrs, &args));
       S_CHECK(equ_nltree_fromgams(e, len, instrs, args));
 
+      // HACK ARENA
+      ctr_relmem_recursive(ctr_up);
+
       /* No need to free instrs or args, it comes from a container workspace */
       break;
    }

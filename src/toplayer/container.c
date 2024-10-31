@@ -29,21 +29,6 @@ static void dealloc_(Container *ctr)
       return;
    }
 
-   if (ctr->ops) {
-      ctr->ops->deallocdata(ctr);
-   }
-
-   if (ctr->vars) {
-      FREE(ctr->vars);
-   }
-
-   if (ctr->equs) {
-      for (size_t i = 0; i < (size_t)ctr->m; i++) {
-         equ_free(&ctr->equs[i]);
-      }
-      FREE(ctr->equs);
-   }
-
    if (ctr->workspace.inuse) {
       error("%s ERROR: workspace memory was still tagged as used\n", __func__);
    }
@@ -64,6 +49,24 @@ static void dealloc_(Container *ctr)
       ctr->fops->freedata(ctr->fops->data);
       FREE(ctr->fops);
    }
+
+   /* IMPORTANT: do this last to still habe the GAMS object valid */
+   if (ctr->ops) {
+      ctr->ops->deallocdata(ctr);
+   }
+
+   // HACK: in rctr_deallocdata, we do dealloc  ctr->equs ...
+   if (ctr->vars) {
+      FREE(ctr->vars);
+   }
+
+   if (ctr->equs) {
+      for (size_t i = 0; i < (size_t)ctr->m; i++) {
+         equ_free(&ctr->equs[i]);
+      }
+      FREE(ctr->equs);
+   }
+
 }
 
 /**
@@ -316,6 +319,7 @@ int ctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
  */
 void *ctr_getmem(Container *ctr, size_t size)
 {
+   assert(size>0);
 #ifdef RHP_HAS_CLEANUP
    if (ctr->workspace.inuse) {
       error("%s :: workspace memory already in use\n", __func__);
@@ -332,8 +336,11 @@ void *ctr_getmem(Container *ctr, size_t size)
 #ifdef RHP_HAS_CLEANUP
    ctr->workspace.inuse = true;
 #endif
-   VALGRIND_MAKE_MEM_UNDEFINED(ctr->workspace.mem, size);
-   VALGRIND_MAKE_MEM_NOACCESS(&ctr->workspace.mem[size], 1);
+
+   MEMORY_UNDEF(ctr->workspace.mem, size);
+   MEMORY_UNPOISON(ctr->workspace.mem, size);
+   MEMORY_POISON(&ctr->workspace.mem[size], ctr->workspace.size+1-size);
+
    return ctr->workspace.mem;
 }
 
@@ -358,9 +365,10 @@ void *ctr_ensuremem(Container *ctr, size_t cur_size, size_t extra_size)
       REALLOC_NULL(ctr->workspace.mem, uint8_t, ctr->workspace.size+1);
    }
 
-   UNUSED size_t size = ctr->workspace.size;
-   VALGRIND_MAKE_MEM_UNDEFINED(&ctr->workspace.mem[cur_size], size-cur_size);
-   VALGRIND_MAKE_MEM_NOACCESS(&ctr->workspace.mem[size], 1);
+   MEMORY_UNDEF(&ctr->workspace.mem[cur_size], ctr->workspace.size-cur_size);
+   MEMORY_UNPOISON(ctr->workspace.mem, cur_size+extra_size);
+   MEMORY_POISON(&ctr->workspace.mem[cur_size+extra_size],
+                 ctr->workspace.size-(cur_size+extra_size)+1);
 
    return ctr->workspace.mem;
 }
@@ -375,7 +383,22 @@ void ctr_relmem(Container *ctr)
 #ifdef RHP_HAS_CLEANUP
    ctr->workspace.inuse = false;
 #endif
-   VALGRIND_MAKE_MEM_NOACCESS(ctr->workspace.mem, ctr->workspace.size+1);
+
+   MEMORY_POISON(ctr->workspace.mem, ctr->workspace.size+1);
+}
+
+/**
+ * @brief Mark memory workspace as released
+ *
+ * @param ctr  the container object
+ */
+void ctr_relmem_recursive(Container *ctr)
+{
+#ifdef RHP_HAS_CLEANUP
+   if (ctr->workspace.inuse) { ctr_relmem(ctr); return; }
+
+   if (ctr->ctr_up) { ctr_relmem_recursive(ctr->ctr_up); return; }
+#endif
 }
 
 double ctr_poolval(Container *ctr, unsigned idx)

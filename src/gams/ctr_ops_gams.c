@@ -75,8 +75,7 @@ static void gams_deallocdata(Container *ctr)
    if (!gms) { return; }
 
    if (!gms->initialized) {
-      FREE(gms);
-      ctr->data = NULL;
+      FREE(ctr->data);
       return;
    }
 

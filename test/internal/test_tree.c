@@ -155,7 +155,8 @@ static int _check_no_diff(const int *instrs1, const int *args1, const int *instr
             i++; j += 2;
             continue;
          }
-         else if (i+1 < codelen1 && isdiveq(instrs2[j],
+
+         if (i+1 < codelen1 && isdiveq(instrs2[j],
                            instrs1[i], instrs1[i+1])) {
             i += 2; ++j;
          }
@@ -206,6 +207,10 @@ static int _run_ex(Container *ctr, const int *instrs1, const int *args1)
    if (status) goto _exit;
 
    status = _check_no_diff(instrs1, args1, instrs2, args2);
+
+   // HACK ARENA
+   ctr_relmem(ctr);
+
    if (status != OK) goto _exit;
 
    equbis = equ_copy(equ2, 0, NULL);
@@ -228,6 +233,9 @@ static int _run_ex(Container *ctr, const int *instrs1, const int *args1)
    rhp_idx var_list[10];
    unsigned var_len = _get_10_var(instrs3, args3, var_list, 3);
 //   equter = equ_copy(equ2, var_len, var_list);
+
+   // HACK ARENA
+   ctr_relmem(ctr);
 
 
    for (size_t i = 0; i < 8; ++i) {
@@ -260,6 +268,10 @@ static int _run_ex(Container *ctr, const int *instrs1, const int *args1)
          }
 
          equ_dealloc(&equter);
+
+         // HACK ARENA
+         ctr_relmem(ctr);
+
       }
 
       equ_dealloc(&small_equ);

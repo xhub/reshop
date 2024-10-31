@@ -138,15 +138,16 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
    /* TODO(xhub) document that coeff  */
    coeff = .5*lcoeff;
 
+   struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
+
    if (mat->ppty & EMPMAT_EYE) {
       bool is_diag = false;
-      double *vals;
+      double *vals = NULL;
       unsigned nb_blocks = 0;
 
       if (mat->ppty & EMPMAT_BLOCK) {
          assert(mat->block);
          nb_blocks = mat->block->number;
-         struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
          A_CHECK(working_mem.ptr, ctr_getmem(ctr, sizeof(double) * nb_blocks));
          vals = (double*)working_mem.ptr;
 

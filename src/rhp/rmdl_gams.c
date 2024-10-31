@@ -899,6 +899,9 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
       GMSCHK_EXIT(gmoDirtySetRowFNLInstr(gmo, ei_gmo, codelen, instrs, args, NULL,
                                         nlpool, nlpool_len));
 
+      // HACK ARENA: we need to release memory here, just in case if was used
+      ctr_relmem_recursive(ctr_src);
+
    }
 
 
@@ -976,7 +979,11 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
     * ---------------------------------------------------------------------- */
 
    gmoDictSet(gmo, dct);
+   gmoDictionarySet(gmo, 1);
+
    GMSCHK_BUF_EXIT(gmoCompleteData, gmo, buffer);
+   assert(gmoDictionary(gmo));
+   assert(gmoDict(gmo));
 
    /* Some checks  */
    assert(gmoM(gmo) == ctr_gms->m && gmoN(gmo) == ctr_gms->n);

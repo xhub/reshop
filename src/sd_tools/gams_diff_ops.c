@@ -127,6 +127,7 @@ static int gams_diff_alloc(struct sd_tool *sd_tool, Container *ctr, rhp_idx ei)
    int *instrs_tmp;
    int *args_tmp;
 
+   // HACK ARENA
    S_CHECK(gctr_genopcode(ctr, ei, &diff_data->len, &instrs_tmp, &args_tmp));
 
    /* ----------------------------------------------------------------------
@@ -149,6 +150,9 @@ static int gams_diff_alloc(struct sd_tool *sd_tool, Container *ctr, rhp_idx ei)
    } else {
      FREE(sd_tool->data);
    }
+
+   // HACK ARENA
+   ctr_relmem(ctr);
 
    /* ----------------------------------------------------------------------
     * Ensure that the external library is loaded
