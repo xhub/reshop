@@ -462,6 +462,13 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
    }
 
    S_CHECK_EXIT(advance(&interp, &p, &toktype));
+   toktype = parser_getcurtoktype(&interp);
+
+   if (toktype == TOK_ERROR || toktype == TOK_UNSET) {
+      error("[empinterp] ERROR: first token has type %s\n", toktype2str(toktype));
+      status = Error_EMPRuntimeError;
+      goto _exit;
+   }
 
    mdl_settype(mdl, MdlType_emp);
    mdl->empinfo.empdag.has_resolved_arcs = false; /* disable check in mp_finalize */
@@ -475,9 +482,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
       status = parser_err(&interp,
                           "unexpected superfluous token, no further token were expected.");
       goto _exit;
-
    }
-   
 
 _exit:
    if (status != OK) {
