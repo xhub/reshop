@@ -156,6 +156,8 @@ static inline TokenType ident2toktype(IdentType type)
    case IdentVector:
    case IdentParam:
       return TOK_GMS_PARAM;
+   case IdentUEL:
+      return TOK_GMS_UEL;
    case IdentNotFound:
       return TOK_IDENT;
    default:
