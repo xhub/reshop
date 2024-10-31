@@ -217,8 +217,8 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
    * Reuse the dictionary
    * ---------------------------------------------------------------------- */
 
-   dctHandle_t dctsrc = gmsdst->dct;
-   gmoDictSet(gmodst, dctsrc);
+   gmoDictSet(gmodst, gmoDict(gmosrc));
+   gmoDictionarySet(gmodst, gmoDictionary(gmosrc));
 
    gmoPriorOptSet(gmodst, gmoPriorOpt(gmosrc));
    gmoScaleOptSet(gmodst, gmoScaleOpt(gmosrc));
