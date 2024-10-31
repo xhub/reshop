@@ -106,11 +106,31 @@ macro(SET_C_WARNINGS _TARGETS)
       add_c_options("-ftrivial-auto-var-init=pattern" ${_TARGETS})
     endif()
 
-      # See https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html#-fstrict-flex-arrays
-   add_c_options("-fstrict-flex-arrays=3" ${_TARGETS})
-  endif()
+    # See https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html#-fstrict-flex-arrays
+    add_c_options("-fstrict-flex-arrays=3" ${_TARGETS})
+
+    # We want to keep fortify cost low, except when compiling for development 
+    if (DISTRIB)
+       set(FORTIFY_LEVEL 2)
+    else()
+       set(FORTIFY_LEVEL 3)
+    endif()
+
+    # From https://github.com/nextcloud/desktop
+    if (CMAKE_BUILD_TYPE)
+       string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
+       if (CMAKE_BUILD_TYPE_LOWER MATCHES "(release|relwithdebinfo|minsizerel)" AND (NOT "${CMAKE_C_FLAGS}" MATCHES "FORTIFY_SOURCE=[3-9]"))
+          # add_c_options("-Wp,-U_FORTIFY_SOURCE,-D_FORTIFY_SOURCE=${FORTIFY_LEVEL}" ${_TARGETS})
+          check_c_compiler_flag("-Wp,-U_FORTIFY_SOURCE-D_FORTIFY_SOURCE=${FORTIFY_LEVEL}" WITH_FORTIFY_SOURCE)
+          if (WITH_FORTIFY_SOURCE)
+             set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wp,-U_FORTIFY_SOURCE,-D_FORTIFY_SOURCE=${FORTIFY_LEVEL}")
+          endif (WITH_FORTIFY_SOURCE)
+       endif()
+    endif()
+  endif(NOT C_COMPILER_GNU_LIKE)
 endmacro()
 
+# This is needed as the intel compiler by default does not have proper a math/FP setting
 if(CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
    if("x${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
       add_compile_options(/fp:precise)
