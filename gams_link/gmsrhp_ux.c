@@ -14,6 +14,51 @@
 
 #endif
 
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <windows.h>
+#include <processenv.h>
+
+#include "macros.h"
+#include "printout.h"
+
+const char * mygetenv(const char *envvar)
+{
+   DWORD bufsize = 4096;
+   char *envval;
+   MALLOC_NULL(envval, char, bufsize);
+
+   DWORD ret = GetEnvironmentVariableA(envvar, envval, bufsize);
+
+   if (ret == 0) {
+      FREE(envval);
+      return NULL;
+   }
+
+   if (ret > bufsize) {
+      bufsize = ret;
+      REALLOC_NULL(envval, char, bufsize);
+      ret = GetEnvironmentVariableA(envvar, envval, bufsize);
+
+      if (!ret) { FREE(envval); return NULL; }
+   }
+
+   return envval;
+}
+
+void myfreeenvval(const char *envval)
+{
+   if (envval) { free((char*)envval); }
+}
+
+#else
+
+#define mygetenv getenv
+#define myfreeenvval(X)
+
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,11 +84,15 @@ int main(int argc, char** argv)
       return 1;
    }
 
+   const char *silent_env = mygetenv("RHP_DRIVER_SILENT");
+   bool silent = silent_env;
+   myfreeenvval(silent_env);
+
 
    mdl = rhp_gms_newfromcntr(argv[1]);
 
    if (!mdl) {
-      (void)fprintf(stderr, "*** ReSHOP ERROR! Could not load model in control file %s\n", argv[1]);
+      if (!silent) { (void)fprintf(stderr, "*** ReSHOP ERROR! Could not load model in control file %s\n", argv[1]); }
       goto _exit;
    }
 
@@ -113,7 +162,7 @@ int main(int argc, char** argv)
 
    mdl_solver = rhp_getsolvermdl(mdl);
    if (!mdl_solver) {
-      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: couldn't create solver model object\n");
+      if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: couldn't create solver model object\n"); }
       gevLogStatPChar(gev, msg);
       goto _exit;
    }
@@ -121,8 +170,8 @@ int main(int argc, char** argv)
    /* Process the solver model (reformulations, ...) */
    rc = rhp_process(mdl, mdl_solver);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: EMP transformation failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
+      if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: EMP transformation failed! Error message is %s (%d)\n",
+               rhp_status_descr(rc), rc); }
       gevLogStatPChar(gev, msg);
       goto _exit;
    }
@@ -133,8 +182,8 @@ int main(int argc, char** argv)
    /* Process the solver model  */
    rc = rhp_solve(mdl_solver);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: solve failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
+      if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: solve failed! Error message is %s (%d)\n",
+               rhp_status_descr(rc), rc); }
       gevLogStatPChar(gev, msg);
       goto _exit;
    }
@@ -142,8 +191,8 @@ int main(int argc, char** argv)
    /* Perform the postprocessing  */
    rc = rhp_postprocess(mdl_solver);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: postprocessing failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
+      if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: postprocessing failed! Error message is %s (%d)\n",
+               rhp_status_descr(rc), rc); }
       gevLogStatPChar(gev, msg);
       goto _exit;
    }
@@ -163,7 +212,7 @@ _exit:
    if (mdl) { rhp_mdl_free(mdl); }
 
    if (rc) {
-      (void)fprintf(stderr, "*** ReSHOP exited with rc = %u\n", rc);
+      if (!silent) { (void)fprintf(stderr, "*** ReSHOP exited with rc = %u\n", rc); }
    }
 
    return rc;

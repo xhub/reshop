@@ -7,7 +7,8 @@ Contributor: Olivier Huber, from the EMPLIB example zerofunc.18
 
 $offtext
 
-
+* Do not report failures on stderr
+$setenv RHP_DRIVER_SILENT 1
 
 free variables y, z;
 free variable obj;

@@ -20,6 +20,9 @@ Contributors: Youngdae Kim (10.27.2016):   initial version
 
 $offtext
 
+* Do not report failures on stderr
+$setenv RHP_DRIVER_SILENT 1
+
 set i commodities / 1*3 /;
 
 parameters
