@@ -269,6 +269,22 @@ if (APPLE OR UNIX)
 endif (APPLE OR UNIX)
 
 
+# TODO: move this to a separate file?
+function(cpy4test libname)
+if (BUILD_TESTING)
+   add_custom_command(TARGET ${libname} POST_BUILD
+       # Clean previous install otherwise pip install may do nothing
+       COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/swig
+       COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/test
+       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${libname}> ${CMAKE_BINARY_DIR}/swig
+       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${libname}> ${CMAKE_BINARY_DIR}/test
+       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+       COMMENT "Copy ${libname} library"
+       VERBATIM)
+endif()
+endfunction()
+
+
 #################################################
 # Process options that change library content
 #################################################
@@ -502,16 +518,6 @@ endif ()
 
 
 set (LIBNAMES "${RESHOP_LIBNAME}")
-
-function(cpy4test libname)
-   add_custom_command(TARGET ${libname} POST_BUILD
-       # Clean previous install otherwise pip install may do nothing
-       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${libname}> ${CMAKE_BINARY_DIR}/swig
-       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${libname}> ${CMAKE_BINARY_DIR}/test
-       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-       COMMENT "Copy ${libname} library"
-       VERBATIM)
-endfunction()
 
 # Always copy reshop
 cpy4test("${RESHOP_LIBNAME}")
