@@ -213,9 +213,11 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
 
    switch (cpydat->type) {
    case CopyExprNone:
+
       cpydat_child->coeff = 1.;
       memcpy(&cpydat_child->single.bdat, arcdat, sizeof (*arcdat));
       return OK;
+
    case CopyExprSingle: {
       CopyExprSingleDat *cpydat_single = &cpydat->single;
       double coeff = cpydat->coeff; 
@@ -255,12 +257,15 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
 
          if (valid_vi(vi)) {
             S_CHECK(rctr_nltree_add_bilin(ctr, dtree, &addr, cst, vi, IdxNA));
-         } else if (isfinite(cst) && cst != 1.) {
+         } else if (cst != 1.) {
             S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
          }
 
          S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, NAN));
          cpydat_child->single.nlnode = *addr;
+
+         /* The constant is already propagated through the tree */
+         cpydat_child->coeff = 1.;
 
         return OK;
       }
@@ -279,7 +284,8 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
 
          /* If the equation is just a constant, just add the term vi * cst */
          if (lequ_len == 0 && (!e->tree || !e->tree->root)) {
-            return rctr_equ_addlvar(&mdl->ctr, e, vi, ecst);
+            cpydat_child->coeff = cst;
+            return rctr_equ_addlvar(&mdl->ctr, e, vi, cst*ecst);
          }
 
 
@@ -294,14 +300,17 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
 
          if (valid_vi(vi)) {
             S_CHECK(rctr_nltree_add_bilin(&mdl->ctr, dtree, &addr, cst, vi, IdxNA));
-         } else if (isfinite(cst) && cst != 1.) {
+         } else if (cst != 1.) {
             S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
          }
 
          S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, NAN));
          cpydat_child->single.nlnode = *addr;
 
-      } else {
+         /* The constant is already propagated through the tree */
+         cpydat_child->coeff = 1.;
+
+      } else { /* vi not valid */
 
          if (valid_vi(objvar)) {
             S_CHECK(rctr_equ_add_map(ctr, e, eobj->idx, objvar, cst));
@@ -309,6 +318,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
             S_CHECK(rctr_equ_add_equ_coeff(ctr, e, eobj, cst));
          }
 
+         /* Propagate the constant */
          cpydat_child->coeff = cst;
       }
       break;
@@ -321,6 +331,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
    default:
       return error_runtime();
    }
+
    return OK;
 }
 
@@ -345,6 +356,7 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
 
    if (objequ == IdxNA) {
       assert(mp_child->mdl->empinfo.empdag.mps.Varcs[mp_child->id].len > 0);
+      cpydat_child->coeff = 1.;
       return OK;
    }
 
@@ -550,15 +562,16 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
          /* Now copy the MP objequ at the right spots */
          CopyExprDat *cpydat = &cpy_expr.arr[j];
 
-         // HACK coeff should be NAN;
          CopyExprDat cpydat_child_template = {.type = CopyExprNone, .rarc = NULL, .coeff = NAN};
          S_CHECK(copy_expr_arc_parent(mdl, mp_parent, cpydat, &cpydat_child_template));
+         assert(isfinite(cpydat_child_template.coeff) || cpydat_child_template.type == CopyExprNone);
 
          /* Need to get the type of arc*/
          VarcArray *varcs = &mps->Varcs[mpid_];
          ArcVFData *varcs_arr = varcs->arr;
 
-         for (unsigned k = 0, lenv = varcs->len; k < lenv; ++k) {
+
+         for (unsigned k = 0, lenk = varcs->len; k < lenk; ++k) {
             ArcVFData *arc = &varcs_arr[k];
             cpydat_child_template.rarc = arc;
 
