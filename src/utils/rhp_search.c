@@ -86,14 +86,14 @@ _exit:
 }
 
 /**
- * @brief Simple binary search
+ * @brief Simple binary search to find where an element could be inserted in an array
  *
  * @param arr  sorted array to the searched
  * @param n    number of elements in the array
  * @param elt  the element to be searched
  *
- * @return     if the element is found in the array: its index in the array
- *             otherwise: UINT_MAX
+ * @return     if the element is found in the array: its index
+ *             otherwise: the place where it would be inserted
  */
 unsigned bin_insert_int(const int * restrict arr, unsigned n, int elt)
 {
@@ -104,17 +104,17 @@ unsigned bin_insert_int(const int * restrict arr, unsigned n, int elt)
       i = (min + max) / 2;
 
       if (elt <= arr[i]) {
-         if (i == 0) { return 0; }
-         if (elt >= arr[i-1]) { return i; }
+         if (RHP_UNLIKELY(i == 0)) { return 0; }  // should be at the start of the list
+         if (elt >= arr[i-1]) { return i; }       // we have elt ∈ [arr[i-1], arr[i]]
          max = i - 1;
       } else if (elt >= arr[i]) {
-         min = i + 1;
+         min = i + 1;                             // We choose not to put an extra branch
       } else {
-         return i;
+         return i;                                // This is an exact match
       }
    }
 
-   assert(elt >= arr[n-1]);
+   assert(elt > arr[n-1]);
    return n;
 }
 

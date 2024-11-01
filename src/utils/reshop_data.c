@@ -169,6 +169,7 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
    if (dat->len > dat->max) {
       dat->max = MAX(2*dat->max, dat->len+1);
       REALLOC_(dat->arr, int, dat->max);
+      MEMORY_POISON(dat->arr + dat->len, dat->max-dat->len);
    }
 
    int * restrict sarr = dat_src->arr, * restrict darr = dat->arr;
@@ -191,7 +192,7 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       }
 
       unsigned idx = bin_insert_int(sarr, slen, dfirst);
-      memmove(&darr[idx], darr, idx*sizeof(int));
+      memmove(&darr[idx], darr, dlen*sizeof(int));
       memcpy(darr, sarr, idx*sizeof(int));
 
       assert(idx < slen);
@@ -305,6 +306,19 @@ unsigned rhp_int_findsorted(const IntArray *dat, int val)
 
    if (dat->len == 0) { return UINT_MAX; }
    return bin_search_int(dat->arr, dat->len, val);
+}
+
+void rhp_int_print(const IntArray *dat, unsigned mode)
+{
+   unsigned len = dat->len;
+   if (len == 0) { printout(mode, "()\n"); return; }
+   if (len == 1) { printout(mode, "( %d )\n", dat->arr[0]); return; }
+
+   printout(mode, "( %d", dat->arr[0]);
+   for (unsigned i = 1; i < len; ++i) {
+      printout(mode, " %d", dat->arr[i]);
+   }
+   printout(mode, ")\n");
 }
 
 int rhp_int_rmsorted(IntArray *dat, int v)

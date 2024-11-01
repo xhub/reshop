@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "compat.h"
+#include "mem-debug.h"
 #include "status.h"
 
 //#define ABS(a)          (((a) >= 0)  ? (a) : (-(a)))

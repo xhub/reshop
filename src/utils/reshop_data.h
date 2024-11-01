@@ -54,6 +54,7 @@ int rhp_int_extend_except_sorted(IntArray * restrict dat,
                                  int val) NONNULL;
 unsigned rhp_int_find(const IntArray *dat, int v) NONNULL;
 unsigned rhp_int_findsorted(const IntArray *dat, int val) NONNULL;
+void rhp_int_print(const IntArray *dat, unsigned mode) NONNULL;
 int rhp_int_reserve(IntArray *dat, unsigned size) NONNULL;
 int rhp_int_rmsorted(IntArray *dat, int v) NONNULL;
 int rhp_int_rmsortednofail(IntArray *dat, int v) NONNULL;
