@@ -50,34 +50,6 @@ tlsvar void* plugin_pathvi_handle = NULL;
 #endif
 
 
-#ifndef NDEBUG
-UNUSED static void _output_equs(Model *mdl)
-{
-   char* dot_print_dir = getenv("RHP_DOT_PRINT_DIR");
-   char *fname;
-
-   Container *ctr = &mdl->ctr;
-
-   if (dot_print_dir) {
-      for (unsigned i = 0; i < (unsigned)ctr->m; ++i) {
-         if (!ctr->equs[i].tree) {
-            continue;
-         }
-         int res = asprintf(&fname, "%s" DIRSEP "equ%d.dot", dot_print_dir, i);
-         if (res < 0) {
-           error("%s :: asprintf() failed\n", __func__);
-           return;
-         }
-         nltree_print_dot(ctr->equs[i].tree, fname, ctr);
-         free(fname);
-      }
-   }
-}
-#else
-#define _output_equs(X) 
-#endif
-
-
 /**
  * @brief  Solve a generalized equation
  *
@@ -91,8 +63,6 @@ static int solve_mcp(Model *mdl, struct jacdata *jacdata)
 
    S_CHECK(rmdl_export_latex(mdl, __func__));
    S_CHECK(mdl_export_gms(mdl, __func__));
-
-  _output_equs(mdl);
 
    switch (mdldata->solver) {
    case RMDL_SOLVER_GAMS:

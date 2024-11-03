@@ -1427,7 +1427,7 @@ static int rctr_equvarcounts(Container *ctr)
 }
 
 
-const struct container_ops ctr_ops_rhp = {
+const struct ctr_ops ctr_ops_rhp = {
    .allocdata      = rctr_allocdata,
    .deallocdata    = rctr_deallocdata,
    .copyequname    = rctr_copyequname_v,
@@ -1501,7 +1501,7 @@ UNUSED static int rctr_copyequname(const Container *ctr, int i, char *str, unsig
 }
 
 
-const struct container_ops ctr_ops_julia = {
+const struct ctr_ops ctr_ops_julia = {
    .allocdata      = rctr_allocdata,
    .deallocdata    = rctr_deallocdata,
    .copyequname    = rctr_copyequname_s,

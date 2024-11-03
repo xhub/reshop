@@ -207,11 +207,11 @@ int rhp_nltree_arithm(NlTree *tree, NlNode ***node,
    S_CHECK(_chk_tree_node_v2(tree, node, __func__));
 
    switch (opcode) {
-   case NLNODE_ADD:
-   case NLNODE_SUB:
-   case NLNODE_MUL:
-   case NLNODE_DIV:
-   case NLNODE_UMIN:
+   case NlNode_Add:
+   case NlNode_Sub:
+   case NlNode_Mul:
+   case NlNode_Div:
+   case NlNode_Umin:
    {
       NlNode *lnode;
       A_CHECK(lnode, nlnode_alloc_fixed_init(tree, nb));
@@ -262,17 +262,17 @@ int rhp_nltree_call(Model *mdl, NlTree *tree,
    lnode->value = opcode;
    switch (n_args) {
    case 1:
-      lnode->op = NLNODE_CALL1;
+      lnode->op = NlNode_Call1;
       break;
    case 2:
-      lnode->op = NLNODE_CALL2;
+      lnode->op = NlNode_Call2;
       break;
    case 0:
       error("%s :: the number of argument has to be non-zero\n",
                __func__);
       return Error_InvalidValue;
    default:
-      lnode->op = NLNODE_CALLN;
+      lnode->op = NlNode_CallN;
    }
 
    /* ----------------------------------------------------------------------
@@ -313,7 +313,7 @@ int rhp_nltree_cst(Model *mdl, NlTree* tree, NlNode ***node,
 
    A_CHECK(lnode, nlnode_alloc_nochild(tree));
    (**node) = lnode;
-   lnode->op = NLNODE_CST;
+   lnode->op = NlNode_Cst;
    lnode->oparg = NLNODE_OPARG_UNSET;
    lnode->value = pool_idx;
 

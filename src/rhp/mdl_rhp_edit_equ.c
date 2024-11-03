@@ -393,11 +393,11 @@ int rmdl_equ_flip(Model *mdl, rhp_idx ei, rhp_idx *ei_new)
    if (e->tree && e->tree->root) {
       NlNode *lnode, *root = e->tree->root;
 
-      if (root->op == NLNODE_UMIN) {
+      if (root->op == NlNode_Umin) {
          e->tree->root = root->children[0];
       } else {
          A_CHECK(lnode, nlnode_alloc_fixed_init(e->tree, 1));
-         nlnode_default(lnode, NLNODE_UMIN);
+         nlnode_default(lnode, NlNode_Umin);
          lnode->children[0] = root;
           e->tree->root = lnode;
       }

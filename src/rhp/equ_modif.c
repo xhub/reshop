@@ -194,14 +194,14 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
           * TODO(xhub) this doesn't look very good.
           * ------------------------------------------------------------------*/
          if (*addr) {
-            assert(topnode->op == NLNODE_ADD);
+            assert(topnode->op == NlNode_Add);
             /*  TODO(xhub) this part needs quite a bit of crappy logic to
              *  work */
             // S_CHECK(nlnode_reserve(e->tree, topnode, nb_blocks));
             assert(topnode == *addr);
          } else {
             A_CHECK(topnode, nlnode_alloc(e->tree, 0));
-            nlnode_default(topnode, NLNODE_ADD);
+            nlnode_default(topnode, NlNode_Add);
             *addr = topnode;
          }
 
@@ -324,7 +324,7 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
                                      Avar *uvar, const SpMat *B, const double *b,
                                      double *coeffs, Avar * restrict args, Aequ* eqn)
 {
-   assert(addnode->op == NLNODE_ADD);
+   assert(addnode->op == NlNode_Add);
 
    /* TODO: this relies on u always being nonlinear. This could fail. Also the
     * quadratic case is not handled well*/
@@ -402,7 +402,7 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
          nlnode_print_now(addnode->children[idx_c]);
 
          /* Make sure that we don't have just one child for the node  */
-         if (addnode->children[idx_c]->op == NLNODE_ADD) {
+         if (addnode->children[idx_c]->op == NlNode_Add) {
             S_CHECK(nltree_check_add(addnode->children[idx_c]));
          }
 
@@ -415,14 +415,14 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
 
       /* TODO: document */
       if (*addr) {
-         assert((*addr)->op == NLNODE_ADD || (*addr)->op == __OPCODE_LEN);
+         assert((*addr)->op == NlNode_Add || (*addr)->op == __OPCODE_LEN);
          if ((*addr)->op == __OPCODE_LEN) {
-            nlnode_default(*addr, NLNODE_ADD);
+            nlnode_default(*addr, NlNode_Add);
          }
          S_CHECK(nlnode_reserve(tree, *addr, 2*row_len));
       } else {
          A_CHECK(*addr, nlnode_alloc_fixed_init(tree, row_len));
-         nlnode_default(*addr, NLNODE_ADD);
+         nlnode_default(*addr, NlNode_Add);
       }
 
       NlNode *add_node = *addr;
@@ -463,9 +463,9 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
 
             /* Save this node since we need to check it afterwards  */
             NlNode *l_add_node = *addr;
-            assert(l_add_node->op == NLNODE_ADD);
+            assert(l_add_node->op == NlNode_Add);
 
-            S_CHECK(rctr_nltree_copy_map(ctr, tree, addr, &ctr->equs[ei], vi, mcoeff));
+            S_CHECK(rctr_nltree_copy_map_old(ctr, tree, addr, &ctr->equs[ei], vi, mcoeff));
 
             /* TODO: it is unclear that this still works is needed */
             if (l_add_node != *addr) {
@@ -475,7 +475,7 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
       }
 
       /* Make sure that we don't have just one child for the node  */
-      if (add_node->op == NLNODE_ADD) {
+      if (add_node->op == NlNode_Add) {
          S_CHECK(nltree_check_add(add_node));
       }
 
@@ -813,7 +813,7 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
       }
 
       A_CHECK(*addr, nlnode_alloc_fixed_init(tree, args_idx_len));
-      nlnode_default(*addr, NLNODE_ADD);
+      nlnode_default(*addr, NlNode_Add);
 
       NlNode *add_node = *addr;
 
@@ -887,7 +887,7 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
 
             /* Do a final sanity check: it may happen that the equation consists
              * only of 1 */
-            if (*addr && (*addr)->op == NLNODE_ADD) {
+            if (*addr && (*addr)->op == NlNode_Add) {
                S_CHECK(nltree_check_add(*addr));
             }
          }

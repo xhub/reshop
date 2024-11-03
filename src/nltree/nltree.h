@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "compat.h"
 #include "rhp_fwd.h"
@@ -152,7 +153,7 @@ int nltree_eval(Container *ctr, NlTree *tree, double *val);
 int nltree_evalat(NlTree *tree, const double *x, double *arr, double *val) NONNULL;
 int nltree_find_add_node(NlTree *tree, NlNode ***raddr, NlPool *pool, double *coeff);
 
-void nltree_print_dot(const NlTree* tree, const char* filename, const Container *ctr);
+void nltree_print_dot(const NlTree* tree, FILE *f, const Model *mdl) NONNULL_AT(1,2);
 int nltree_replacevarbycst(NlTree* tree, rhp_idx vi, unsigned pool_idx) NONNULL;
 int nltree_replacevarbytree(NlTree* tree, rhp_idx vi, const NlTree* subtree) NONNULL;
 int nltree_ensure_add_node(NlTree *tree, NlNode **node, unsigned size, unsigned *offset) NONNULL;

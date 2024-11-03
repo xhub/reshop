@@ -7,6 +7,7 @@
 #include "mdl_priv.h"
 #include "ovfinfo.h"
 #include "printout.h"
+#include "rhp_dot_exports.h"
 
 
 #define errmc(...) \
@@ -604,7 +605,7 @@ int mdl_finalize(Model *mdl)
 
    mdl_setfinalized(mdl);
 
-   return OK;
+   return dot_export_equs(mdl);
 }
 
 int mdl_checkobjequvar(const Model *mdl, rhp_idx objvar, rhp_idx objequ)

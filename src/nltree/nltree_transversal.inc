@@ -41,17 +41,17 @@ VISIT_NODE(const NlNode * restrict node,
 
    switch (key) {
 
-      case NLNODE_ADD:
+      case NlNode_Add:
          VISIT_N_CHILDREN(ADD);
          break;
-      case NLNODE_SUB:
+      case NlNode_Sub:
          VISIT_N_CHILDREN(SUB);
          break;
-      case NLNODE_MUL:
+      case NlNode_Mul:
          VISIT_N_CHILDREN(MUL);
          break;
 
-      case NLNODE_UMIN:
+      case NlNode_Umin:
       {
          bool dummy = true;
          UMIN_PRE(node, ctr, env);
@@ -64,7 +64,7 @@ VISIT_NODE(const NlNode * restrict node,
       }
          return OK;
 
-      case NLNODE_DIV:
+      case NlNode_Div:
       {
          /*  DIV is a weird case */
          bool is_first = true;
@@ -85,7 +85,7 @@ VISIT_NODE(const NlNode * restrict node,
          return OK;
       }
 
-      case NLNODE_CALL1:
+      case NlNode_Call1:
          assert(node->value <= fndummy);
          CALL1_PRE(node, ctr, env);
          S_CHECK(VISIT_NODE(node->children[0], ctr, env));
@@ -93,7 +93,7 @@ VISIT_NODE(const NlNode * restrict node,
          CALL1_POST(node, ctr, env);
          return OK;
 
-      case NLNODE_CALL2:
+      case NlNode_Call2:
          assert(node->value <= fndummy);
          CALL2_PRE(node, ctr, env);
          S_CHECK(VISIT_NODE(node->children[0], ctr, env));
@@ -102,13 +102,13 @@ VISIT_NODE(const NlNode * restrict node,
          CALL2_POST(node, ctr, env);
          return OK;
 
-      case NLNODE_VAR:
+      case NlNode_Var:
          VAR_PRE(node, ctr, env);
          VAR_IN(node, ctr, env);
          VAR_POST(node, ctr, env);
          return OK;
 
-      case NLNODE_CST:
+      case NlNode_Cst:
          CST_PRE(node, ctr, env);
          CST_IN(node, ctr, env);
          CST_POST(node, ctr, env);

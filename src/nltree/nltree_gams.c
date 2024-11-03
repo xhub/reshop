@@ -39,35 +39,35 @@ static enum NLNODE_OP get_op_class(int opcode)
    switch (opcode) {
       case nlPushI:
       case nlPushZero:
-         return NLNODE_CST;
+         return NlNode_Cst;
       case nlPushV:
-         return NLNODE_VAR;
+         return NlNode_Var;
       case nlAddV:
       case nlAddI:
       case nlAdd:
       case nlMulIAdd:
-         return NLNODE_ADD;
+         return NlNode_Add;
       case nlSubV:
       case nlSubI:
       case nlSub:
-         return NLNODE_SUB;
+         return NlNode_Sub;
       case nlMulV:
       case nlMulI:
       case nlMul:
-         return NLNODE_MUL;
+         return NlNode_Mul;
       case nlDivV:
       case nlDivI:
       case nlDiv:
-         return NLNODE_DIV;
+         return NlNode_Div;
 
       case nlUMin:
       case nlUMinV:
-         return NLNODE_UMIN;
+         return NlNode_Umin;
 
       case nlCallArg1:
-         return NLNODE_CALL1;
+         return NlNode_Call1;
       case nlCallArg2:
-         return NLNODE_CALL2;
+         return NlNode_Call2;
          /*  This is legit since in the greedy approach  */
       case nlStore:
          return __OPCODE_LEN;
@@ -126,8 +126,8 @@ static size_t _greedy_build(const int * restrict instrs, const int *args,
       int instr = instrs[k];
       enum NLNODE_OP iclass = get_op_class(instr);
       if ((op_class == iclass) && (nlMulIAdd != instr)) { k++; }
-      else if ((op_class == NLNODE_ADD) &&
-            ((iclass == NLNODE_CST) || (iclass == NLNODE_VAR)) &&
+      else if ((op_class == NlNode_Add) &&
+            ((iclass == NlNode_Cst) || (iclass == NlNode_Var)) &&
             (nlMulIAdd == instrs[k+1])) { k += 2; }
       else { break; }
    }
@@ -153,7 +153,7 @@ static size_t _nltree_getsizeopcode(const Equ *e)
     * --------------------------------------------------------------------- */
 
    const NlNode *node = e->tree->root;
-   if (node->op == NLNODE_ADD && count_children(node) == 0) {
+   if (node->op == NlNode_Add && count_children(node) == 0) {
       return 0;
    }
 
@@ -173,13 +173,13 @@ static size_t _nltree_getsizeopcode(const Equ *e)
 static int _gams_opcode(enum NLNODE_OP code)
 {
    switch (code) {
-      case NLNODE_VAR:
+      case NlNode_Var:
          return nlPushV;
-      case NLNODE_CALL1:
+      case NlNode_Call1:
          return nlCallArg1;
-      case NLNODE_CALL2:
+      case NlNode_Call2:
          return nlCallArg2;
-      case NLNODE_CALLN:
+      case NlNode_CallN:
          return nlCallArgN;
       default:
          assert(0);
@@ -348,7 +348,7 @@ skip_k_incr:
             {
                S_CHECK_EXIT(nlnode_add_child(curnode, nlnode_alloc_nochild(tree), i));
                nb_nodes++;
-               curnode->children[i]->op = NLNODE_CST;
+               curnode->children[i]->op = NlNode_Cst;
                curnode->children[i]->oparg = optype;
                curnode->children[i]->value = args[kk];
                break;
@@ -356,7 +356,7 @@ skip_k_incr:
             case NLNODE_OPARG_VAR: {
                S_CHECK_EXIT(nlnode_add_child(curnode, nlnode_alloc_nochild(tree), i));
                nb_nodes++;
-               curnode->children[i]->op = NLNODE_VAR;
+               curnode->children[i]->op = NlNode_Var;
                curnode->children[i]->oparg = optype;
                curnode->children[i]->value = args[kk];
                break;
@@ -365,7 +365,7 @@ skip_k_incr:
                // mulI part
                NlNode *tmpnode = nlnode_alloc_fixed(tree, 1);
                nb_nodes++;
-               tmpnode->op = NLNODE_MUL;
+               tmpnode->op = NlNode_Mul;
                tmpnode->oparg = optype;
                if (inner_prod_case) nlnode_print_now(tmpnode);
                tmpnode->value = args[kk];
@@ -485,20 +485,20 @@ _exit:
 static void _translate_instr(enum NLNODE_OP key, int *instr,
                              enum NLNODE_OP child_opcode)
 {
-   bool doV = child_opcode == NLNODE_VAR ? true : false;
-   bool doI = child_opcode == NLNODE_CST ? true : false;
+   bool doV = child_opcode == NlNode_Var ? true : false;
+   bool doI = child_opcode == NlNode_Cst ? true : false;
    switch (key)
    {
-      case NLNODE_ADD:
+      case NlNode_Add:
          *instr = doV ? nlAddV : doI ? nlAddI : nlAdd;
          break;
-      case NLNODE_SUB:
+      case NlNode_Sub:
          *instr = doV ? nlSubV : doI ? nlSubI : nlSub;
          break;
-      case NLNODE_MUL:
+      case NlNode_Mul:
          *instr = doV ? nlMulV : doI ? nlMulI : nlMul;
          break;
-      case NLNODE_DIV:
+      case NlNode_Div:
          *instr = doV ? nlDivV : doI ? nlDivI : nlDiv;
          break;
       default:
@@ -515,13 +515,13 @@ int process_arithm_child(const NlNode * restrict child,
                          int key)
 {
    enum NLNODE_OP op = child->op;
-   if (op == NLNODE_VAR || op == NLNODE_CST) {
+   if (op == NLNODE_VAR || op == NlNode_Cst) {
       _translate_instr(key, &instrs[indx], op);
       args[indx] = child->value;
       return indx+1;
    }
 
-   if (child->oparg == NLNODE_OPARG_FMA && key == NLNODE_ADD && child->op == NLNODE_MUL) {
+   if (child->oparg == NLNODE_OPARG_FMA && key == NLNODE_ADD && child->op == NlNode_Mul) {
       assert(child->children_max == 1 && child->children[0]);
       instrs[indx] = nlMulIAdd;
       args[indx] = child->value;
@@ -559,14 +559,14 @@ static NONNULL int arithm_last_children(const NlNode * restrict children[2],
          indx++;
          return build_gams_opcode_v2(child0, instrs, args, indx);
 
-      } else if (key != NLNODE_ADD && child1->children_max != 1) {
+      } else if (key != NlNode_Add && child1->children_max != 1) {
          error("%s :: unsupported case: ", __func__);
          nlnode_print(child1, PO_ERROR, true);
          return -Error_UnExpectedData;
       }
       break;
    case NLNODE_OPARG_FMA:
-      if (key == NLNODE_ADD && child1->op == NLNODE_MUL) {
+      if (key == NlNode_Add && child1->op == NlNode_Mul) {
          assert(child1->children_max == 1);
          instrs[indx] = nlMulIAdd;
          args[indx] = child1->value;
@@ -607,7 +607,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
 
    switch (key) {
 
-   case NLNODE_VAR:
+   case NlNode_Var:
       if (node->children_max > 0) { goto _no_child_error; }
 
       instrs[indx] = _gams_opcode(key);
@@ -615,7 +615,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
       indx++;
       break;
 
-   case NLNODE_CST:
+   case NlNode_Cst:
       if (node->children_max > 0) { goto _no_child_error; }
 
       if (node->value > 0) {
@@ -629,7 +629,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
       indx++;
       break;
 
-   case NLNODE_DIV: {
+   case NlNode_Div: {
 
       /* ---------------------------------------------------------------------
        * SUB and DIV require 2 children, either be local + 1 child or 2 children
@@ -651,8 +651,8 @@ int build_gams_opcode_v2(const NlNode * restrict node,
       bool optype_has_instr;
       switch(optype) {
       case NLNODE_OPARG_CST: case NLNODE_OPARG_VAR: {
-         assert(key == NLNODE_ADD || key == NLNODE_MUL);
-         enum NLNODE_OP op = optype == NLNODE_OPARG_CST ? NLNODE_CST : NLNODE_VAR;
+         assert(key == NlNode_Add || key == NlNode_Mul);
+         enum NLNODE_OP op = optype == NLNODE_OPARG_CST ? NlNode_Cst : NlNode_Var;
          _translate_instr(key, &instrs[indx], op);
          args[indx] = node->value;
          indx++;
@@ -702,9 +702,9 @@ int build_gams_opcode_v2(const NlNode * restrict node,
       return build_gams_opcode_v2(children[0], instrs, args, indx);
    }
 
-   case NLNODE_ADD:
-   case NLNODE_MUL: {
-   case NLNODE_SUB:
+   case NlNode_Add:
+   case NlNode_Mul: {
+   case NlNode_Sub:
       if (node->children_max == 0) { goto _child_expected_error; }
 
       /* ---------------------------------------------------------------------
@@ -728,7 +728,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
       enum NLNODE_OPARG optype = node->oparg;
       switch(optype) {
       case NLNODE_OPARG_CST: case NLNODE_OPARG_VAR: {
-         enum NLNODE_OP op = optype == NLNODE_OPARG_CST ? NLNODE_CST : NLNODE_VAR;
+         enum NLNODE_OP op = optype == NLNODE_OPARG_CST ? NlNode_Cst : NlNode_Var;
          _translate_instr(key, &instrs[indx], op);
          args[indx] = node->value;
          indx++;
@@ -772,7 +772,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
                indx = build_gams_opcode_v2(node->children[idx0], instrs, args, indx);
                goto _exit;
             }
-         } else if (key == NLNODE_ADD && idx0 >= 0) {
+         } else if (key == NlNode_Add && idx0 >= 0) {
 #ifndef NDEBUG
             printout(PO_DEBUG, "%s: NLNODE_ADD with only 1 child!\n", __func__);
 #endif
@@ -797,7 +797,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
           * --------------------------------------------------------------------- */
 
          if (child->children_max == 0) {
-            assert(child->op == NLNODE_CST || child->op == NLNODE_VAR);
+            assert(child->op == NlNode_Cst || child->op == NlNode_Var);
             _translate_instr(key, &instrs[indx], child->op);
             args[indx] = child->value;
             indx++;
@@ -810,7 +810,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
           * --------------------------------------------------------------------- */
 
          if (child->oparg == NLNODE_OPARG_FMA) { 
-            if (child->op == NLNODE_MUL) {/* parent is an ADD node, child is MUL*/
+            if (child->op == NlNode_Mul) {/* parent is an ADD node, child is MUL*/
                assert(child->children_max == 1 && child->children[0]);
                instrs[indx] = nlMulIAdd;
                args[indx] = child->value;
@@ -866,7 +866,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
             indx++;
             break;
 
-         } else if (key != NLNODE_ADD && child1->children_max != 1) {
+         } else if (key != NlNode_Add && child1->children_max != 1) {
             error("%s :: unsupported case: ", __func__);
             nlnode_print(child1, PO_ERROR, true);
             indx = -Error_UnExpectedData;
@@ -874,7 +874,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
          }
       goto default_;
       case NLNODE_OPARG_FMA:
-         if (key == NLNODE_ADD && child1->op == NLNODE_MUL) {
+         if (key == NlNode_Add && child1->op == NlNode_Mul) {
             assert(child1->children_max == 1);
             instrs[indx] = nlMulIAdd;
             args[indx] = child1->value;
@@ -912,7 +912,7 @@ default_:
       break;
    }
 
-   case NLNODE_UMIN:
+   case NlNode_Umin:
       if (node->value > 0) { /*  we have a variable */
         if (node->children_max > 0) { goto _no_child_error; }
 
@@ -933,7 +933,7 @@ default_:
       }
       break;
 
-   case NLNODE_CALL1:
+   case NlNode_Call1:
       if (node->children_max != 1) { goto _one_child_error; }
       assert(node->children[0]);
 
@@ -945,7 +945,7 @@ default_:
       if (indx < 0) goto _exit;
       break;
 
-   case NLNODE_CALL2:
+   case NlNode_Call2:
       if (node->children_max != 2) { goto _two_children_error; }
       assert(node->children[0] && node->children[1]);
 
@@ -962,7 +962,7 @@ default_:
       if (indx < 0) goto _exit;
       break;
 
-   case NLNODE_CALLN:
+   case NlNode_CallN:
       if (node->children_max <= 2) { goto _at_least_3_children_error; }
 
       instrs[indx] = _gams_opcode(key);
@@ -1095,9 +1095,9 @@ int nltree_buildopcode(Container *ctr, const Equ *e, int **instrs, int **args,
 
    indx = build_gams_opcode_v2(e->tree->root, linstrs, largs, indx);
 
-   assert(indx <= nlcode_size_ub);
-
    if (indx >= 0) {
+      assert(indx <= nlcode_size_ub);
+
       linstrs[indx] = nlHeader;
       largs[indx] = indx+1;
       indx++;

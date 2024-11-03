@@ -259,7 +259,7 @@ int empdag_export(Model *mdl)
    }
    myfreeenvval(empdag_dotdir);
 
-   if (optvalb(mdl, Options_Display_EmpDag) || optvalb(mdl, Options_Export_EmpDag)) {
+   if (optvalb(mdl, Options_Display_EmpDag) || optvalb(mdl, Options_Save_EmpDag)) {
       if (mdl_ensure_exportdir(mdl) != OK) {
          error("%s ERROR: could not create an export dir", __func__);
       } else {

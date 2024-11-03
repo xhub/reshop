@@ -86,7 +86,7 @@ int nlnode_dup(NlNode** new_node, const NlNode* node, NlTree* tree)
     * TODO: GITLAB 74
     * ---------------------------------------------------------------------- */
 
-   if (tree->v_list && (node->op == NLNODE_VAR || node->oparg == NLNODE_OPARG_VAR)) {
+   if (tree->v_list && (node->op == NlNode_Var || node->oparg == NLNODE_OPARG_VAR)) {
       rhp_idx vidx = VIDX_R(node->value);
       for (size_t i = 0; i < tree->v_list->idx; ++i) {
          if (vidx == tree->v_list->pool[i]) {
@@ -127,7 +127,7 @@ _no_add: ;
        * If the child is of the variable type, 
        * ---------------------------------------------------------------- */
 
-      if (tree->vt && !tree->vt->done && child->op == NLNODE_VAR) {
+      if (tree->vt && !tree->vt->done && child->op == NlNode_Var) {
          unsigned vt_idx = _vartree_match(tree->vt, child->value);
 
          if (vt_idx != UINT_MAX) {
@@ -168,7 +168,7 @@ int nlnode_dup_rosetta(NlNode** new_node, const NlNode* node,
     * TODO(xhub) make v_list a sorted avar
     * ---------------------------------------------------------------------- */
 
-   if (tree->v_list && (node->op == NLNODE_VAR || node->oparg == NLNODE_OPARG_VAR)) {
+   if (tree->v_list && (node->op == NlNode_Var || node->oparg == NLNODE_OPARG_VAR)) {
       rhp_idx vi = rosetta[VIDX_R(node->value)]; assert(valid_vi(vi));
       S_CHECK(vlist_add(tree->v_list, vi));
    }
@@ -197,7 +197,7 @@ int nlnode_dup_rosetta(NlNode** new_node, const NlNode* node,
        * If the child is of the variable type, 
        * ---------------------------------------------------------------- */
 
-      if (tree->vt && !tree->vt->done && node->children[i]->op == NLNODE_VAR) {
+      if (tree->vt && !tree->vt->done && node->children[i]->op == NlNode_Var) {
          const NlNode* child = node->children[i];
          unsigned vt_idx = _vartree_match(tree->vt, child->value);
 
@@ -216,7 +216,7 @@ int nlnode_dup_rosetta(NlNode** new_node, const NlNode* node,
 
 static NONNULL int _nlnode_getallvars(NlTree *tree, NlNode *node)
 {
-   if (node->op == NLNODE_VAR || node->oparg == NLNODE_OPARG_VAR) {
+   if (node->op == NlNode_Var || node->oparg == NLNODE_OPARG_VAR) {
       S_CHECK(vlist_add(tree->v_list, VIDX_R(node->value)));
    }
 
@@ -249,7 +249,7 @@ int nltree_getallvars(NlTree *tree)
 
 int nlnode_apply_rosetta(NlNode *node, struct vlist *v_list, const rhp_idx * restrict rosetta)
 {
-   if (node->op == NLNODE_VAR || node->oparg == NLNODE_OPARG_VAR) {
+   if (node->op == NlNode_Var || node->oparg == NLNODE_OPARG_VAR) {
       node->value = VIDX(rosetta[VIDX_R(node->value)]);
 
       /* ----------------------------------------------------------------------

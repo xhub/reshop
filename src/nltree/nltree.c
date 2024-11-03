@@ -11,6 +11,7 @@
 #include "cmat.h"
 #include "compat.h"
 #include "container.h"
+#include "mdl.h"
 #include "nltree.h"
 #include "nltree_priv.h"
 #include "equ.h"
@@ -28,8 +29,8 @@ typedef double(*fnarg1)(double x1);
 typedef double(*fnarg2)(double x1, double x2);
 
 
-const char * const opcode_names[] = { "CST", "VAR", "ADD", "SUB", "MUL", "DIV",
-                                     "CALL1", "CALL2", "CALLN", "UMIN", "UNKNOWN"};
+const char * const opcode_names[] = { "Cst", "Var", "Add", "Sub", "Mul", "Div",
+                                     "Call1", "Call2", "CallN", "Umin", "UNKNOWN"};
 
 const char * const oparg_names[] = { "NONE", "CST", "VAR", "FMA", "LINEAR" };
 
@@ -269,7 +270,7 @@ int nltree_umin(NlTree *tree, NlNode ** restrict *node)
 
    A_CHECK(lnode, nlnode_alloc_fixed_init(tree, 1));
    (**node) = lnode;
-   nlnode_default(lnode, NLNODE_UMIN);
+   nlnode_default(lnode, NlNode_Umin);
 
    *node = &lnode->children[0];
 
@@ -455,10 +456,10 @@ static int _nlnode_replacevarbycst(NlNode* node, rhp_idx vi,
       NlNode *child =  node->children[i];
       unsigned op = child->op;
 
-      if (op == NLNODE_VAR && child->value == lvi) {
-          child->op = NLNODE_CST;
+      if (op == NlNode_Var && child->value == lvi) {
+          child->op = NlNode_Cst;
           child->value = pool_idx;
-      } else if (op == NLNODE_VAR || op == NLNODE_CST) {
+      } else if (op == NlNode_Var || op == NlNode_Cst) {
         continue;
       } else {
          info = _nlnode_replacevarbycst(child, vi, pool_idx);
@@ -486,7 +487,7 @@ static int _nlnode_replacevarbytree(NlNode* node, rhp_idx vidx,
 
       unsigned op = node->children[i]->op;
 
-      if (op == NLNODE_VAR) {
+      if (op == NlNode_Var) {
          if (node->children[i]->value == lvidx) {
            NlNode *lnode = node->children[i];
            for (unsigned j = 0; j < lnode->children_max; ++j) {
@@ -503,7 +504,7 @@ static int _nlnode_replacevarbytree(NlNode* node, rhp_idx vidx,
               S_CHECK(nlnode_dup(&lnode->children[j], subnode->children[j], tree));
            }
          } else { continue; }
-      } else if (op == NLNODE_CST) { continue;
+      } else if (op == NlNode_Cst) { continue;
       } else if (node->oparg == NLNODE_OPARG_VAR) {
          TO_IMPLEMENT("_nlnode_replacevar with variable attached to node is not yet supported");
       } else {
@@ -606,54 +607,65 @@ static void _print_node(const NlNode* node, FILE* f, const Container *ctr)
    char nodestyle[256];
    const char *varname;
 
+   const char ownVarStyle[] = "lightblue1";
+   const char callFnStyle[] = "lightseagreen";
+   const char mulOpStyle[]  = "lightsalmon1";
+
    switch (op) {
-      case NLNODE_CST:
-         snprintf(oparg, sizeof(oparg), "%u\\n%.2e", node->value,
+   case NlNode_Cst:
+      (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
+               ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
+      nodestyle[0] = 0;
+      break;
+   case NlNode_Var:
+      varname = ctr ? ctr_printvarname(ctr, node->value-1) : "??";
+      (void)snprintf(oparg, sizeof(oparg), "%u\\n %s", node->value, varname);
+      (void)snprintf(nodestyle, 255, ",color=%s", ownVarStyle);
+      break;
+   case NlNode_Call1:
+   case NlNode_Call2:
+   case NlNode_CallN:
+      (void)snprintf(oparg, sizeof(oparg), "(%u): %s", node->value, func_code_name[node->value]);
+      (void)snprintf(nodestyle, 255, ",color=%s", callFnStyle);
+      break;
+   case NlNode_Mul:
+      if (node->oparg == NLNODE_OPARG_FMA) {
+         (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
+                  ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
+         (void)snprintf(nodestyle, 255, ",color=%s", mulOpStyle);
+         break;
+      }
+   FALLTHRU
+   case NlNode_Add:
+   case NlNode_Sub:
+   case NlNode_Div:
+      switch (node->oparg) {
+      case NLNODE_OPARG_CST:
+         (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
                   ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
          nodestyle[0] = 0;
-         break;
-      case NLNODE_VAR:
+         goto print;
+      case NLNODE_OPARG_VAR:
          varname = ctr ? ctr_printvarname(ctr, node->value-1) : "??";
-         snprintf(oparg, sizeof(oparg), "%u\\n %s", node->value, varname);
-         snprintf(nodestyle, 255, ",style=filled,color=lightblue1");
-         break;
-      case NLNODE_CALL1:
-      case NLNODE_CALL2:
-         snprintf(oparg, sizeof(oparg), "(%u): %s", node->value, func_code_name[node->value]);
-         snprintf(nodestyle, 255, ",style=filled,color=lightseagreen");
-         break;
-      case NLNODE_MUL:
-         if (node->oparg == NLNODE_OPARG_FMA) {
-            snprintf(oparg, sizeof(oparg), "%u\\n%.2e", node->value,
-                     ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
-            snprintf(nodestyle, 255, ",style=filled,color=lightsalmon1");
-            break;
-         }
-      FALLTHRU
-      case NLNODE_ADD:
-      case NLNODE_SUB:
-      case NLNODE_DIV:
-         switch (node->oparg) {
-         case NLNODE_OPARG_CST:
-            snprintf(oparg, sizeof(oparg), "%u\\n%.2e", node->value,
-                     ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
-            nodestyle[0] = 0;
-            goto print;
-         case NLNODE_OPARG_VAR:
-            varname = ctr ? ctr_printvarname(ctr, node->value-1) : "??";
-            snprintf(oparg, sizeof(oparg), "%u\\n %s", node->value, varname);
-            snprintf(nodestyle, 255, ",style=filled,color=lightblue1");
-            goto print;
-         case NLNODE_OPARG_FMA:
-            snprintf(oparg, sizeof(oparg), "%u", node->value);
-            snprintf(nodestyle, 255, ",style=filled,color=lightsalmon1");
-            goto print;
-         default: ;
-         }
-      FALLTHRU
-      default:
-         nodestyle[0] = 0;
-         snprintf(oparg, sizeof(oparg), "%u", node->value);
+         (void)snprintf(oparg, sizeof(oparg), "%u\\n %s", node->value, varname);
+         (void)snprintf(nodestyle, 255, ",color=%s", ownVarStyle);
+         goto print;
+      case NLNODE_OPARG_FMA:
+         oparg[0] = '\0';
+         //(void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
+         //               ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
+         (void)snprintf(nodestyle, 255, ",color=%s", mulOpStyle);
+         goto print;
+      default: ;
+      }
+   FALLTHRU
+   default:
+      nodestyle[0] = 0;
+      if (node->value > 0) {
+         (void)snprintf(oparg, sizeof(oparg), "%u", node->value);
+      } else {
+         oparg[0] = '\0';
+      }
    }
 print:
    fprintf(f, " A%p [label=\"%s %s\" %s];\n", (void*)node, opcode_names[op], oparg, nodestyle);
@@ -691,32 +703,22 @@ static void print_node_graph(const NlNode* node, FILE* f, const Container *ctr)
    }
 }
 
-void nltree_print_dot(const NlTree* tree, const char* fname, const Container *ctr)
+void nltree_print_dot(const NlTree* tree, FILE* f, const Model *mdl)
 {
    UNUSED int status = OK;
-   if (!tree || !tree->root) return;
+   if (!tree->root) return;
 
-   FILE* f = fopen(fname, "w");
+   IO_CALL_EXIT(fputs(" subgraph cluster_nltree { \n label = \"NL tree\"", f));
+//   IO_CALL_EXIT(fputs(" style=filled; bgcolor=lightgreen;\n", f));
 
-   if (!f) {
-      error("%s :: Could not create file named '%s'\n", __func__, fname);
-      return;
-   }
-
-   IO_CALL_EXIT(fputs("digraph structs {\n node [shape=record];\n", f));
-
-   print_node_graph(tree->root, f, ctr);
+   print_node_graph(tree->root, f, mdl ? &mdl->ctr : NULL);
 
    print_edges(tree->root, f);
-
-   IO_CALL_EXIT(fputs("label=\"NlTree for equation ", f));
-   IO_CALL_EXIT(fputs(ctr_printequname(ctr, tree->idx), f));
-   IO_CALL_EXIT(fputs("\"\n", f));
 
    IO_CALL_EXIT(fputs("}", f));
 
 _exit:
-   SYS_CALL(fclose(f));
+   return;
 }
 
 int nltree_alloc_var_list(NlTree* tree)
@@ -812,12 +814,12 @@ int nltree_mul_cst_x(NlTree* tree, NlNode ** restrict *node, NlPool *pool, doubl
    }
 
    if (fabs(coeff - 1.) < DBL_EPSILON) {
-     *new_node = false;
+      *new_node = false;
       return OK;
    }
 
    if (fabs(coeff + 1.) < DBL_EPSILON) {
-     *new_node = true;
+      *new_node = true;
       S_CHECK(nltree_umin(tree, node));
       return OK;
    }
@@ -828,7 +830,7 @@ int nltree_mul_cst_x(NlTree* tree, NlNode ** restrict *node, NlPool *pool, doubl
 
    A_CHECK(lnode, nlnode_alloc_fixed_init(tree, 1));
    (**node) = lnode;
-   lnode->op = NLNODE_MUL;
+   lnode->op = NlNode_Mul;
    lnode->oparg = NLNODE_OPARG_CST;
    unsigned idx = pool_getidx(pool, coeff);
    if (idx == UINT_MAX) {
@@ -871,9 +873,9 @@ int nltree_scal(Container *ctr, NlTree* tree, double coeff)
     * ---------------------------------------------------------------------- */
 
    switch (root->op) {
-   case NLNODE_UMIN:
+   case NlNode_Umin:
       if (root->oparg == NLNODE_OPARG_UNSET) {
-         nlnode_default(root, NLNODE_MUL);
+         nlnode_default(root, NlNode_Mul);
          unsigned pidx = rctr_poolidx(ctr, -coeff);
          if (pidx == UINT_MAX) { return -Error_InsufficientMemory; }
          root->value = pidx;
@@ -882,7 +884,7 @@ int nltree_scal(Container *ctr, NlTree* tree, double coeff)
    FALLTHRU
    default:
       A_CHECK(tree->root, nlnode_alloc_fixed(tree, 1));
-      nlnode_default(tree->root, NLNODE_MUL);
+      nlnode_default(tree->root, NlNode_Mul);
       unsigned pidx = rctr_poolidx(ctr, coeff);
       if (pidx == UINT_MAX) { return -Error_InsufficientMemory; }
       tree->root->value = pidx;
@@ -897,21 +899,21 @@ int nltree_scal_umin(Container *ctr, NlTree *tree)
    NlNode * restrict root = tree->root;
 
    switch (root->op) {
-   case NLNODE_UMIN:
+   case NlNode_Umin:
       if (root->oparg == NLNODE_OPARG_VAR) {
-         root->op = NLNODE_VAR;
+         root->op = NlNode_Var;
          root->oparg = NLNODE_OPARG_UNSET;
       } else {
          tree->root = root->children[0];
       }
       return OK;
-   case NLNODE_VAR:
-      root->op = NLNODE_UMIN;
+   case NlNode_Var:
+      root->op = NlNode_Umin;
       root->oparg = NLNODE_OPARG_VAR;
       return OK;
    default:
       A_CHECK(tree->root, nlnode_alloc_fixed(tree, 1));
-      nlnode_default(tree->root, NLNODE_UMIN);
+      nlnode_default(tree->root, NlNode_Umin);
       tree->root->children[0] = root;
    }
 
@@ -939,7 +941,7 @@ int nltree_mul_cst_add_node(NlTree* tree, NlNode ***node, NlPool *pool,
 {
    assert(node && *node && **node
           && "the node argument must point to a valid node object");
-   assert((**node)->op == NLNODE_ADD);
+   assert((**node)->op == NlNode_Add);
 
    NlNode **caddr = &(**node)->children[*idx];
    assert(!*caddr);
@@ -995,7 +997,7 @@ int rctr_nltree_add_bilin(Container *ctr, NlTree* tree, NlNode ** restrict *node
       }
 
       A_CHECK(lnode, nlnode_alloc_fixed_init(tree, 2));
-      nlnode_default(lnode, NLNODE_MUL);
+      nlnode_default(lnode, NlNode_Mul);
 
       if (coeff == -1.) {
          S_CHECK(nltree_umin(tree, node));
@@ -1014,7 +1016,7 @@ int rctr_nltree_add_bilin(Container *ctr, NlTree* tree, NlNode ** restrict *node
       A_CHECK(lnode, nlnode_alloc_fixed_init(tree, 1));
       /* IMPORTANT: the node assignment must happen as soon as possible  */
       (**node) = lnode;
-      lnode->op = NLNODE_MUL;
+      lnode->op = NlNode_Mul;
       lnode->oparg = NLNODE_OPARG_VAR;
       lnode->value = VIDX(v1);
       /* We need to manually add the variable in the model */
@@ -1022,7 +1024,7 @@ int rctr_nltree_add_bilin(Container *ctr, NlTree* tree, NlNode ** restrict *node
    } else {
       A_CHECK(lnode, nlnode_alloc_fixed_init(tree, 2));
       /* TODO(xhub) if coeff != 1., store it there?  */
-      nlnode_default(lnode, NLNODE_MUL);
+      nlnode_default(lnode, NlNode_Mul);
       /* IMPORTANT: the node assignment must happen as soon as possible  */
       (**node) = lnode;
 
@@ -1102,7 +1104,7 @@ int rctr_nltree_opcall1(Container *ctr, NlTree* tree,
    NlNode *lnode;
    A_CHECK(lnode, nlnode_alloc_fixed(tree, 1));
    (**node) = lnode;
-   lnode->op = NLNODE_CALL1;
+   lnode->op = NlNode_Call1;
    lnode->value = fnidx;
    lnode->oparg = NLNODE_OPARG_UNSET;
 
@@ -1210,13 +1212,13 @@ int nltree_add_cst(Container *ctr, NlTree* tree, NlNode ***node,
    /* If **node exists (and is of the right type, then we */
    if (**node) {
       lnode = **node;
-      assert(lnode->op == NLNODE_ADD || lnode->op == __OPCODE_LEN);
+      assert(lnode->op == NlNode_Add || lnode->op == __OPCODE_LEN);
 
       if (lnode->op == __OPCODE_LEN) {
-         nlnode_default(lnode, NLNODE_ADD);
+         nlnode_default(lnode, NlNode_Add);
       }
 
-      if (lnode->op != NLNODE_ADD) {
+      if (lnode->op != NlNode_Add) {
          error("%s :: node is of type %d, which is not OPCODE_ADD\n",
                   __func__, lnode->op);
          return Error_Inconsistency;
@@ -1245,7 +1247,7 @@ int nltree_add_cst(Container *ctr, NlTree* tree, NlNode ***node,
 
          A_CHECK(lnode->children[offset], nlnode_alloc_nochild(tree));
 
-         lnode->children[offset]->op = NLNODE_CST;
+         lnode->children[offset]->op = NlNode_Cst;
          lnode->children[offset]->oparg = NLNODE_OPARG_CST;
          /* TODO(Xhub) this node is not of the right type, and we loose some
           * memory, but oh well  */
@@ -1255,14 +1257,14 @@ int nltree_add_cst(Container *ctr, NlTree* tree, NlNode ***node,
    } else {
       A_CHECK(lnode, nlnode_alloc_fixed_init(tree, 1));
       (**node) = lnode;
-      lnode->op = NLNODE_ADD;
+      lnode->op = NlNode_Add;
       lnode->oparg = NLNODE_OPARG_CST;
       lnode->value = pool_idx;
 
       *node = &lnode->children[0];
    }
 
-   assert((lnode->op == NLNODE_CST && lnode->children_max == 0) || lnode->oparg == NLNODE_OPARG_CST);
+   assert((lnode->op == NlNode_Cst && lnode->children_max == 0) || lnode->oparg == NLNODE_OPARG_CST);
 
    return OK;
 
@@ -1329,7 +1331,7 @@ int nltree_add_var(Container *ctr, NlTree* tree, NlNode ***node, rhp_idx vi,
    A_CHECK(lnode, nlnode_alloc_init(tree, 1));
    (**node) = lnode;
    if (!need_umin && !need_mulc) {
-      lnode->op = NLNODE_ADD;
+      lnode->op = NlNode_Add;
       lnode->oparg = NLNODE_OPARG_VAR;
       lnode->value = VIDX(vi);
       goto _chain_node;
@@ -1350,12 +1352,12 @@ int nltree_add_var(Container *ctr, NlTree* tree, NlNode ***node, rhp_idx vi,
 
    /* Add the variable  */
    assert(lnode);
-   lnode->op = NLNODE_VAR;
+   lnode->op = NlNode_Var;
    lnode->oparg = NLNODE_OPARG_UNSET;
    lnode->value = VIDX(vi);
 
 _chain_node:
-   assert(lnode->op == NLNODE_ADD && lnode->children_max > 0 && !lnode->children[0]);
+   assert(lnode->op == NlNode_Add && lnode->children_max > 0 && !lnode->children[0]);
    *node = &lnode->children[0];
 
    S_CHECK(cmat_equ_add_nlvar(ctr, tree->idx, vi, NAN));
@@ -1395,7 +1397,7 @@ int rctr_nltree_var(Container *ctr, NlTree* tree, NlNode ***node, rhp_idx vi,
 
    A_CHECK(lnode, nlnode_alloc_nochild(tree));
    (**node) = lnode;
-   lnode->op = NLNODE_VAR;
+   lnode->op = NlNode_Var;
    lnode->oparg = NLNODE_OPARG_UNSET;
    lnode->value = VIDX(vi);
 
@@ -1424,10 +1426,10 @@ int nltree_ensure_add_node(NlTree *tree, NlNode **node, unsigned size, unsigned 
    NlNode *lnode = *node;
    if (lnode) {
       if (lnode->op == __OPCODE_LEN) {
-         nlnode_default(lnode, NLNODE_ADD);
+         nlnode_default(lnode, NlNode_Add);
          S_CHECK(nlnode_reserve(tree, lnode, size));
          *offset = 0;
-      } else if (lnode->op == NLNODE_ADD) {
+      } else if (lnode->op == NlNode_Add) {
          /* ----------------------------------------------------------------
           * This is a bit dangerous since we are going to change a node that we
           * may want to reference later. This requires a thoro solution of not
@@ -1443,14 +1445,14 @@ int nltree_ensure_add_node(NlTree *tree, NlNode **node, unsigned size, unsigned 
       } else {
          NlNode *add_node;
          A_CHECK(add_node, nlnode_alloc_init(tree, size+1));
-         nlnode_default(add_node, NLNODE_ADD);
+         nlnode_default(add_node, NlNode_Add);
          add_node->children[0] = lnode;
          *offset = 1;
          *node = add_node;
       }
    } else {
       A_CHECK(*node, nlnode_alloc_init(tree, size));
-      nlnode_default(*node, NLNODE_ADD);
+      nlnode_default(*node, NlNode_Add);
       *offset = 0;
    }
 
@@ -1474,10 +1476,10 @@ int nltree_ensure_add_node_inplace(NlTree *tree, NlNode **node, unsigned size, u
    NlNode *lnode = *node;
    if (lnode) {
       if (lnode->op == __OPCODE_LEN) {
-         nlnode_default(lnode, NLNODE_ADD);
+         nlnode_default(lnode, NlNode_Add);
          S_CHECK(nlnode_reserve(tree, lnode, size));
          *offset = 0;
-      } else if (lnode->op == NLNODE_ADD) {
+      } else if (lnode->op == NlNode_Add) {
          /* ----------------------------------------------------------------
           * This is a bit dangerous since we are going to change a node that we
           * may want to reference later. This requires a thoro solution of not
@@ -1493,7 +1495,7 @@ int nltree_ensure_add_node_inplace(NlTree *tree, NlNode **node, unsigned size, u
       } else {
          NlNode *node_dup;
          A_CHECK(node_dup, nlnode_dup_norecur(lnode, tree));
-         nlnode_default(lnode, NLNODE_ADD);
+         nlnode_default(lnode, NlNode_Add);
          S_CHECK(nlnode_reserve(tree, lnode, size+1));
          lnode->children[0] = node_dup;
          *offset = 1;
@@ -1501,7 +1503,7 @@ int nltree_ensure_add_node_inplace(NlTree *tree, NlNode **node, unsigned size, u
       }
    } else {
       A_CHECK(*node, nlnode_alloc_init(tree, size));
-      nlnode_default(*node, NLNODE_ADD);
+      nlnode_default(*node, NlNode_Add);
       *offset = 0;
    }
 
@@ -1563,7 +1565,7 @@ static int nltree_add_expr_common(NlTree *tree, const NlNode *node,
 
    S_CHECK(nltree_find_add_node(tree, &add_node, pool, &lcst));
 
-   if (node->op == NLNODE_ADD) {
+   if (node->op == NlNode_Add) {
       /* TODO(xhub) fix it! children_max is not what we want */
       children_from_node = node->children_max;
    } else {
@@ -1613,7 +1615,7 @@ int nltree_add_nlexpr(NlTree *tree, NlNode *node, NlPool *pool, double cst)
     * TODO(Xhub) SUB would also work with a umin on the children
     * ---------------------------------------------------------------------- */
 
-   if (node->op == NLNODE_ADD) {
+   if (node->op == NlNode_Add) {
       for (unsigned i = 0; i < children_from_node; ++i) {
          if (!node->children[i]) { continue; }
          S_CHECK(nlnode_dup(&lnode->children[offset], node->children[i], tree));
@@ -1722,16 +1724,16 @@ int rctr_nltree_copy_to(Container *ctr, NlTree *tree, NlNode **dstnode, NlNode *
     * TODO(Xhub) SUB would also work with a umin on the children
     * ---------------------------------------------------------------------- */
       NlNode *lnode = *dstnode;
-      assert(lnode->op == NLNODE_ADD);
+      assert(lnode->op == NlNode_Add);
 
-      unsigned nchildren = srcnode->op == NLNODE_ADD ? srcnode->children_max : 1;
+      unsigned nchildren = srcnode->op == NlNode_Add ? srcnode->children_max : 1;
 
       /* ----------------------------------------------------------------------
        * Take into account the coefficient that defined F(x). If it is not finite,
        * it indicates that it does not exists, so skip that part
        * ---------------------------------------------------------------------- */
 
-      if (srcnode->op == NLNODE_ADD) {
+      if (srcnode->op == NlNode_Add) {
 
          NlNode **add_node = dstnode;
          if (isfinite(cst)) {
@@ -1793,7 +1795,7 @@ int rctr_equ_add_nlexpr_full(Container *ctr, NlTree *tree, const NlNode *node,
     * TODO(Xhub) SUB would also work with a umin on the children
     * ---------------------------------------------------------------------- */
 
-   if (node->op == NLNODE_ADD) {
+   if (node->op == NlNode_Add) {
       for (unsigned i = 0; i < children_from_node; ++i) {
          if (!node->children[i]) { continue; }
          S_CHECK(nlnode_dup_rosetta(&lnode->children[offset], node->children[i], tree, rosetta));
@@ -1836,7 +1838,7 @@ int nltree_bootstrap(Equ *e, unsigned n_nodes_estimate,
 
    e->tree->idx = e->idx;
    e->tree->root = nlnode_alloc_init(e->tree, n_add_children_estimate);
-   nlnode_default(e->tree->root, NLNODE_ADD);
+   nlnode_default(e->tree->root, NlNode_Add);
 
    return OK;
 }
@@ -2020,7 +2022,7 @@ static int _nltree_put_add_node(NlTree *tree, NlNode **addr)
 
    /* \TODO(xhub) add an optional param to reserve more node if needed */
    A_CHECK(add_node, nlnode_alloc(tree, 2));
-   nlnode_default(add_node, NLNODE_ADD);
+   nlnode_default(add_node, NlNode_Add);
    add_node->children[0] = *addr;
    add_node->children[1] = NULL;
 
@@ -2053,7 +2055,7 @@ int nltree_find_add_node(NlTree *tree, NlNode *** restrict raddr, NlPool *pool,
    if (!node) {
       A_CHECK(tree->root, nlnode_alloc_init(tree, 1));
       (*raddr) = &tree->root;
-      nlnode_default(tree->root, NLNODE_ADD);
+      nlnode_default(tree->root, NlNode_Add);
       return OK;
    }
 
@@ -2063,7 +2065,7 @@ int nltree_find_add_node(NlTree *tree, NlNode *** restrict raddr, NlPool *pool,
 
    while(node) {
       switch (node->op) {
-      case NLNODE_UMIN:
+      case NlNode_Umin:
          if (isfinite(*coeff)) {
             *coeff *= -1.;
             addr = &node->children[0];
@@ -2073,13 +2075,13 @@ int nltree_find_add_node(NlTree *tree, NlNode *** restrict raddr, NlPool *pool,
             S_CHECK(_nltree_put_add_node(tree, addr));
             goto _end;
          }
-      case NLNODE_ADD:
+      case NlNode_Add:
          /* TODO(xhub) check that this is OK  */
          goto _end;
       case __OPCODE_LEN:
          /*  TODO(xhub) do something here */
          goto _to_be_reworked;
-      case NLNODE_MUL:
+      case NlNode_Mul:
          if (isfinite(*coeff) && node->oparg == NLNODE_OPARG_CST
                 && node->children_max == 1) {
            assert(node->children[0]);
@@ -2089,15 +2091,15 @@ int nltree_find_add_node(NlTree *tree, NlNode *** restrict raddr, NlPool *pool,
            break;
          }
          FALLTHRU
-      case NLNODE_CALL1:
-      case NLNODE_CALL2:
-      case NLNODE_CALLN:
+      case NlNode_Call1:
+      case NlNode_Call2:
+      case NlNode_CallN:
       /* -------------------------------------------------------------------- 
        * This is possible and correct whenever we have a NL expression
        * with a linear part. If the latter is injected before any NL term, we
        * end up with the root node being a VAR node
        * -------------------------------------------------------------------- */
-      case NLNODE_VAR:
+      case NlNode_Var:
 
          /* -----------------------------------------------------------------
           * In this case we have no choice but to insert an ADD node
@@ -2106,14 +2108,14 @@ int nltree_find_add_node(NlTree *tree, NlNode *** restrict raddr, NlPool *pool,
          S_CHECK(_nltree_put_add_node(tree, addr));
          goto _end;
 
-      case NLNODE_SUB:
+      case NlNode_Sub:
 
          /* -----------------------------------------------------------------
           * Switch the node to an ADD node
           * @warning: we are changing an existing node
           * ----------------------------------------------------------------- */
 
-         node->op = NLNODE_ADD;
+         node->op = NlNode_Add;
 
          switch (node->oparg) {
          case NLNODE_OPARG_CST:
@@ -2125,7 +2127,7 @@ int nltree_find_add_node(NlTree *tree, NlNode *** restrict raddr, NlPool *pool,
 
             A_CHECK(*laddr, nlnode_alloc_nochild(tree));
             NlNode * restrict lnode = *laddr;
-            lnode->op = NLNODE_CST;
+            lnode->op = NlNode_Cst;
             lnode->oparg = NLNODE_OPARG_UNSET;
             lnode->value = node->value;
 
@@ -2142,7 +2144,7 @@ int nltree_find_add_node(NlTree *tree, NlNode *** restrict raddr, NlPool *pool,
 
             A_CHECK(*laddr, nlnode_alloc_nochild(tree));
             NlNode * restrict lnode = *laddr;
-            lnode->op = NLNODE_VAR;
+            lnode->op = NlNode_Var;
             lnode->oparg = NLNODE_OPARG_UNSET;
             lnode->value = node->value;
 
@@ -2188,10 +2190,10 @@ _to_be_reworked:
          A_CHECK(node, nlnode_alloc_fixed_init(tree, 1));
          (*addr) = node;
       }
-      nlnode_default(node, NLNODE_UMIN);
+      nlnode_default(node, NlNode_Umin);
       A_CHECK(node->children[0], nlnode_alloc_init(tree, 2));
       (*raddr) = &node->children[0];
-      nlnode_default(node->children[0], NLNODE_ADD);
+      nlnode_default(node->children[0], NlNode_Add);
       *coeff = 1.;
       return OK;
    }
@@ -2203,7 +2205,7 @@ _to_be_reworked:
 
    if (*addr) {
       if ((*addr)->op == __OPCODE_LEN) {
-         nlnode_default(*addr, NLNODE_ADD);
+         nlnode_default(*addr, NlNode_Add);
          S_CHECK(nlnode_reserve(tree, *addr, 2));
       } else {
       /* ---------------------------------------------------------------------
@@ -2213,11 +2215,11 @@ _to_be_reworked:
       }
    } else {
       A_CHECK(*addr, nlnode_alloc_fixed_init(tree, 2));
-      nlnode_default(*addr, NLNODE_ADD);
+      nlnode_default(*addr, NlNode_Add);
    }
 
 _end:
-   assert(*addr && (*addr)->op == NLNODE_ADD);
+   assert(*addr && (*addr)->op == NlNode_Add);
    (*raddr) = addr;
 
    return OK;
@@ -2234,7 +2236,7 @@ _end:
  */
 int nltree_check_add(NlNode *node)
 {
-   assert(node->op == NLNODE_ADD);
+   assert(node->op == NlNode_Add);
    unsigned nb_operand;
    unsigned valid_child_idx = 0;
    bool has_oparg_cst = false;
@@ -2272,7 +2274,7 @@ int nltree_check_add(NlNode *node)
    if (nb_operand == 1) {
       if (has_oparg_cst) {
          assert(node->value > 0);
-         node->op = NLNODE_CST;
+         node->op = NlNode_Cst;
          node->oparg = NLNODE_OPARG_UNSET;
 
          /* TODO(Xhub) this node is not of the right type, and we loose some
@@ -2280,7 +2282,7 @@ int nltree_check_add(NlNode *node)
          node->children_max = 0;
       } else if (has_oparg_var) {
          assert(node->value > 0);
-         node->op = NLNODE_VAR;
+         node->op = NlNode_Var;
          node->oparg = NLNODE_OPARG_UNSET;
 
          /* TODO(Xhub) this node is not of the right type, and we loose some

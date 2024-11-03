@@ -741,7 +741,7 @@ unsigned equ_get_nladd_estimate(Equ *e)
 
    if (e->tree && e->tree->root) {
       NlNode *root = e->tree->root;
-      if (root->op == NLNODE_ADD) {
+      if (root->op == NlNode_Add) {
          res += root->children_max;
       } else {
          res += 1;

@@ -8,6 +8,7 @@
 
 enum rhp_options_enum {
    Options_Display_EmpDag,
+   Options_Display_Equations,
    Options_Display_OvfDag,
    Options_Display_Timings,
    Options_Dump_Scalar_Models,
@@ -20,9 +21,9 @@ enum rhp_options_enum {
    Options_SolveSingleOptAs,
    Options_Subsolveropt,
    Options_Time_Limit,
-   Options_Export_EmpDag,
-   Options_Export_OvfDag,
-   Options_Last = Options_Export_OvfDag,
+   Options_Save_EmpDag,
+   Options_Save_OvfDag,
+   Options_Last = Options_Save_OvfDag,
 };
 
 extern tlsvar struct option rhp_options[];

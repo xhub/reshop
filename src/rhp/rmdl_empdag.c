@@ -261,8 +261,8 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
             S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
          }
 
-         S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, NAN));
          cpydat_child->single.nlnode = *addr;
+         S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, 1.));
 
          /* The constant is already propagated through the tree */
          cpydat_child->coeff = 1.;
@@ -304,7 +304,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
             S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
          }
 
-         S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, NAN));
+         S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, 1.));
          cpydat_child->single.nlnode = *addr;
 
          /* The constant is already propagated through the tree */

@@ -4,7 +4,7 @@
 /** 
  *  @file container_ops.h
  *
- *  @brief Common operations on algebraic container
+ *  @brief Common operations on an algebraic container
  *
  */
 
@@ -14,7 +14,7 @@
 #include "mdl_data.h"
 #include "rhp_fwd.h"
 
-typedef struct container_ops {
+typedef struct ctr_ops {
    int (*allocdata)(Container *ctr);
    void (*deallocdata)(Container *ctr);
    int (*copyvarname)(const Container *ctr, rhp_idx vi, char *name, unsigned len);
@@ -80,10 +80,10 @@ typedef struct container_ops {
    int (*setvarval)(Container *ctr, rhp_idx vi, double val);
 } CtrOps;
 
+
 extern const CtrOps ctr_ops_gams;
 extern const CtrOps ctr_ops_rhp;
 extern const CtrOps ctr_ops_julia;
-
 
 #endif // !CONTAINER_OPS_H
 

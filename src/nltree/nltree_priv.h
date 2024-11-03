@@ -27,16 +27,16 @@ typedef enum NLNODE_OPARG {
 
 /** Type of operation */
 typedef enum NLNODE_OP {
-   NLNODE_CST,      /**< numerical constant */
-   NLNODE_VAR,      /**< variable */
-   NLNODE_ADD,      /**< Addition */
-   NLNODE_SUB,      /**< Substitution */
-   NLNODE_MUL,      /**< Multiplication */
-   NLNODE_DIV,      /**< Division */
-   NLNODE_CALL1,    /**< function call with 1 argument */
-   NLNODE_CALL2,    /**< function call with 2 arguments  */
-   NLNODE_CALLN,    /**< function call with an arbitrary number of argument */
-   NLNODE_UMIN,     /**< unitary minus */
+   NlNode_Cst,      /**< numerical constant */
+   NlNode_Var,      /**< variable */
+   NlNode_Add,      /**< Addition */
+   NlNode_Sub,      /**< Substitution */
+   NlNode_Mul,      /**< Multiplication */
+   NlNode_Div,      /**< Division */
+   NlNode_Call1,    /**< function call with 1 argument */
+   NlNode_Call2,    /**< function call with 2 arguments  */
+   NlNode_CallN,    /**< function call with an arbitrary number of argument */
+   NlNode_Umin,     /**< unitary minus */
    __OPCODE_LEN
 } NlNodeOp;
 
@@ -208,8 +208,8 @@ static inline int nlnode_next_child(NlTree *tree, NlNode*** node)
    assert(node && *node && **node);
    unsigned offset = 0; /* init just for compiler warnings */
 
-   if ((**node)->op != NLNODE_ADD && (**node)->op != NLNODE_SUB
-    && (**node)->op != NLNODE_MUL && (**node)->op != NLNODE_DIV) {
+   if ((**node)->op != NlNode_Add && (**node)->op != NlNode_Sub
+    && (**node)->op != NlNode_Mul && (**node)->op != NlNode_Div) {
       error("%s :: unsupported node of type %d", __func__,
                (**node)->op);
       return Error_Inconsistency;
@@ -232,7 +232,7 @@ static inline void nlnode_setvar(NlNode *node, rhp_idx vi)
 {
    assert(node && valid_vi(vi));
 
-   node->op = NLNODE_VAR;
+   node->op = NlNode_Var;
    node->oparg = NLNODE_OPARG_UNSET;
    node->value = VIDX(vi);
 }
@@ -240,7 +240,7 @@ static inline void nlnode_setvar(NlNode *node, rhp_idx vi)
 NONNULL static inline
 int nlnode_mulcst(Container *ctr, NlNode *node, double cst)
 {
-   assert(node->op == NLNODE_MUL);
+   assert(node->op == NlNode_Mul);
    node->oparg = NLNODE_OPARG_CST;
    unsigned idx = rctr_poolidx(ctr, cst);
    if (idx == UINT_MAX) {
@@ -280,7 +280,7 @@ void nlnode_attr_copy_rosetta(NlNode* dst, const NlNode* src, const rhp_idx* ros
    dst->op = src->op;
    dst->oparg = src->oparg;
    dst->ppty = src->ppty;
-   if (src->op == NLNODE_VAR || src->oparg == NLNODE_OPARG_VAR) {
+   if (src->op == NlNode_Var || src->oparg == NLNODE_OPARG_VAR) {
       dst->value = VIDX(rosetta[VIDX_R(src->value)]);
    } else {
       dst->value = src->value;

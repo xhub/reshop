@@ -17,6 +17,7 @@
 // clang-format off
 tlsvar struct option rhp_options[] = {
    [Options_Display_EmpDag]        = { "display_empdag",      "Display EMPDAG as png",                     OptBoolean, { .b = false} },
+   [Options_Display_Equations]     = { "display_equations",   "Display Equations as png",                  OptString,  { .s = ""} },
    [Options_Display_OvfDag]        = { "display_ovfdag",      "Display OVFDAG as png",                     OptBoolean, { .b = false} },
    [Options_Display_Timings]       = { "display_timings",     "Display timing information",                OptBoolean, { .b = false} },
    [Options_Dump_Scalar_Models]    = { "dump_scalar_model",   "Dump every scalar model via convert",       OptBoolean, { .b = false } },
@@ -29,8 +30,8 @@ tlsvar struct option rhp_options[] = {
    [Options_SolveSingleOptAs]      = { "solve_single_opt_as", "How to solve an empdag with a single MP",   OptChoice,  { .i = Opt_SolveSingleOptAsOpt} },
    [Options_Subsolveropt]          = { "subsolveropt",        "Subsolver option file number",              OptInteger, { .i = 0     } },
    [Options_Time_Limit]            = { "time_limit",          "Maximum running time in seconds",           OptInteger, { .i = 3600 } },
-   [Options_Export_EmpDag]         = { "save_empdag",         "Save EMPDAG as png",                        OptBoolean, { .b = false} },
-   [Options_Export_OvfDag]         = { "save_ovfdag",         "Save OVFDAG as png",                        OptBoolean, { .b = false} },
+   [Options_Save_EmpDag]           = { "save_empdag",         "Save EMPDAG as png",                        OptBoolean, { .b = false} },
+   [Options_Save_OvfDag]           = { "save_ovfdag",         "Save OVFDAG as png",                        OptBoolean, { .b = false} },
 };
 // clang-format on
 
@@ -91,11 +92,11 @@ bool optvalb(const Model *mdl, enum rhp_options_enum opt)
    while (*s) { *s = toupper((unsigned char)*s); s++; }
 
    const char *env = mygetenv(env_var);
-   FREE(env_var);
+   free(env_var);
 
    if (env) {
       bool res;
-      /* Lazy way of checking if set to 0*/
+      /* Lazy way of checking if set to 0 */
       if (env[0] == '0') {
          res = false;
       } else {
@@ -232,7 +233,7 @@ char* optvals(const Model *mdl, enum rhp_options_enum opt)
       res = strdup(env);
    }
    myfreeenvval(env);
-   FREE(env_var);
+   free(env_var);
 
    if (!res) {
       res = strdup(o->value.s);

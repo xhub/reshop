@@ -446,11 +446,12 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, SpMat *B,
    return OK;
 }
 
-static int copy_objequ_as_nlnode(CopyExprData *dualobjequdat, Model *mdl,
-                                  Equ *objequ, rhp_idx objvar)
+static int dual_copy_primal_objequ_to_nlnode(CopyExprData *dualobjequdat, Model *mdl,
+                                             Equ *objequ, rhp_idx objvar)
 {
    /* ---------------------------------------------------------------------
-    * This function adds the term
+    * Adds to the dual objective function (at the position given the node) the term
+    *
     * (Bᵀy)ᵢ Π (edge_weight) (objequ(MP))
     *
     * The node field should point to (Bᵀy)ᵢ Π (edge_weight)
@@ -468,8 +469,8 @@ static int copy_objequ_as_nlnode(CopyExprData *dualobjequdat, Model *mdl,
 
    // TODO: to support for primal -> primal node path, an idea is to ensure 
    // an ADD node so that the objequ of grand-children can be copied here as well
-   S_CHECK(rctr_nltree_copy_map(&mdl->ctr, dualobjequdat->equ->tree, dualobjequdat->node,
-                                objequ, objvar, NAN));
+   S_CHECK(rctr_nltree_copy_map_old(&mdl->ctr, dualobjequdat->equ->tree, dualobjequdat->node,
+                                    objequ, objvar, NAN));
 
    return OK;
 }
@@ -513,7 +514,7 @@ static int ccflib_equil_dfs_primal(mpid_t mpid_primal, DfsData *dfsdat, DagMpArr
       Equ *e = &empdag->mdl->ctr.equs[objequ];
       rhp_idx objvar = mp_getobjvar(mp);
 
-      S_CHECK(copy_objequ_as_nlnode(&dfsdat->dual_objequ_dat, empdag->mdl, e, objvar));
+      S_CHECK(dual_copy_primal_objequ_to_nlnode(&dfsdat->dual_objequ_dat, empdag->mdl, e, objvar));
    }
 
    /* Reset the Varcs in the new EMPDAG */

@@ -29,11 +29,11 @@
 #include "toplayer_utils.h"
 
 
-const char * const nodestyle_min   =  "style=filled,color=lightblue1";
-const char * const nodestyle_max   =  "style=filled,color=lightsalmon1";
-const char * const nodestyle_vi    =  "style=filled,color=lightseagreen";
-const char * const nodestyle_dual  =  "style=filled,color=darkorange";
-const char * const nodestyle_nash  =  "style=filled,color=lightgreen";
+const char * const nodestyle_min   =  "color=lightblue1";
+const char * const nodestyle_max   =  "color=lightsalmon1";
+const char * const nodestyle_vi    =  "color=lightseagreen";
+const char * const nodestyle_dual  =  "color=darkorange";
+const char * const nodestyle_nash  =  "color=lightgreen";
 
 const char * const arcstyle_CTRL = "color=\"magenta:invis:magenta\"";
 const char * const arcstyle_NASH = "color=lightgreen, arrowhead=box";
@@ -268,7 +268,8 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
    }
 
    if (hidden_mps) {
-      IO_CALL(fprintf(f, " subgraph cluster_mps_hidden { \n label = \"Defining MPs\"\n%s}\n",
+      IO_CALL(fprintf(f, " subgraph cluster_mps_hidden { \n "
+                      "label = \"Defining MPs\"; bgcolor=\"#ececec\";\n%s}\n",
                       hidden_mps));
       free(hidden_mps);
    }
@@ -299,8 +300,9 @@ static int print_nash_nodes(const struct nash_namedarray* nashs, FILE* f, const 
 
 static int empdag2dot(const EmpDag *empdag, FILE *f)
 {
-   IO_CALL(fputs("digraph structs {\n node [shape=record];\n", f));
-   IO_CALL(fprintf(f, " label=\"EMPDAG for model '%s'\"\n", mdl_getname(empdag->mdl)));
+   IO_CALL(fputs("digraph structs {\n node [shape=\"box\", style=\"filled, rounded\", margin=0.2];\n", f));
+//   IO_CALL(fputs(" edge [headclip=false, tailclip=false];\n", f));
+   IO_CALL(fprintf(f, " label=\"EMPDAG for %s model '%.*s' #%u\"; rankdir=LR;\n", mdl_fmtargs(empdag->mdl)));
 
    S_CHECK(print_mp_nodes(&empdag->mps, f, &empdag->mdl->ctr));
    S_CHECK(print_nash_nodes(&empdag->nashs, f, &empdag->mdl->ctr));

@@ -10,7 +10,7 @@ GETVALUE_DEF(const NlNode * restrict node, double * restrict v)
    switch (node->oparg) {
       case NLNODE_OPARG_CST:
       {
-         if (node->op == NLNODE_CST) {
+         if (node->op == NlNode_Cst) {
             *v = POOL_VAL(node->value);
             DPRINT("%s :: pool %d = %e\n", __func__, _CIDX_R(node->value), *v);
          } else {
@@ -23,9 +23,9 @@ GETVALUE_DEF(const NlNode * restrict node, double * restrict v)
          double vv = VAR_VAL(node->value);
          _DPRINT_VAR(node->value, vv);
 
-         if (node->op == NLNODE_UMIN) {
+         if (node->op == NlNode_Umin) {
             *v = -vv;
-         } else if (node->op == NLNODE_VAR) {
+         } else if (node->op == NlNode_Var) {
             *v = vv;
          } else {
             S_CHECK(EVAL(node, v));
@@ -35,7 +35,7 @@ GETVALUE_DEF(const NlNode * restrict node, double * restrict v)
 
       case NLNODE_OPARG_FMA:
       {
-         if (node->op == NLNODE_MUL) {
+         if (node->op == NlNode_Mul) {
             double vv = POOL_VAL(node->value);
             DPRINT("%s :: pool %d = %e for FMA\n", __func__, _CIDX_R(node->value), vv);
             double vnode;
@@ -63,9 +63,9 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
 
    switch (key) {
 
-      case NLNODE_ADD:
-      case NLNODE_MUL:
-      case NLNODE_SUB:
+      case NlNode_Add:
+      case NlNode_Mul:
+      case NlNode_Sub:
       {
          double vv = 0;
          double v1 = NAN;
@@ -87,15 +87,15 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
             S_CHECK(GET_VALUE(child, &v1));
 
             switch (key) {
-            case NLNODE_ADD:
+            case NlNode_Add:
                DPRINT("%s :: %e + %e = %e\n", __func__, vv, v1, vv+v1);
                vv += v1;
                break;
-            case NLNODE_MUL:
+            case NlNode_Mul:
                DPRINT("%s :: %e * %e = %e\n", __func__, vv, v1, vv*v1);
                vv *= v1;
                break;
-            case NLNODE_SUB:
+            case NlNode_Sub:
                DPRINT("%s :: %e - %e = %e\n", __func__, vv, v1, vv-v1);
                vv -= v1;
                break;
@@ -118,15 +118,15 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
          }
 
          switch (key) {
-         case NLNODE_ADD:
+         case NlNode_Add:
             DPRINT("%s :: %e + %e = %e\n", __func__, vv, v1, vv+v1);
             vv += v1;
             break;
-         case NLNODE_MUL:
+         case NlNode_Mul:
             DPRINT("%s :: %e * %e = %e\n", __func__, vv, v1, vv*v1);
             vv *= v1;
             break;
-         case NLNODE_SUB:
+         case NlNode_Sub:
            DPRINT("%s :: %e - %e = %e\n", __func__, vv, v1, vv-v1);
            vv -= v1;
            break;
@@ -140,7 +140,7 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
          return OK;
       }
 
-      case NLNODE_UMIN:
+      case NlNode_Umin:
          if (node->oparg == NLNODE_OPARG_VAR) /*  we have a variable */ {
             (*val) = - VAR_VAL(node->value);
             DPRINT("%s :: -var %d = %e\n", __func__, VIDX_R(node->value), *val);
@@ -153,10 +153,10 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
                 (void*)node, *val);
          return OK;
 
-      case NLNODE_DIV:
+      case NlNode_Div:
       {
          /*  DIV is a weird case */
-         assert(key != NLNODE_DIV || node->children_max <= 2);
+         assert(key != NlNode_Div || node->children_max <= 2);
          double x1 = NAN, x2 = NAN;
          unsigned char x1_idx;
 
@@ -180,7 +180,7 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
          return OK;
       }
 
-      case NLNODE_CALL1:
+      case NlNode_Call1:
       {
          assert(node->value <= fndummy);
          fnarg1 fn = (fnarg1)func_call[node->value];
@@ -197,7 +197,7 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
          return OK;
       }
 
-      case NLNODE_CALL2:
+      case NlNode_Call2:
       {
          assert(node->value <= fndummy);
          fnarg2 fn = (fnarg2)func_call[node->value];
@@ -215,14 +215,14 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
          return OK;
       }
 
-      case NLNODE_VAR:
+      case NlNode_Var:
          (*val) = VAR_VAL(node->value);
          _DPRINT_VAR(node->value, *val);
          DPRINT("%s :: key = %s @ %p; value = %e\n", __func__, opcode_names[key],
                 (void*)node, *val);
          return OK;
 
-      case NLNODE_CST:
+      case NlNode_Cst:
          (*val) = POOL_VAL(node->value);
          DPRINT("%s :: pool %d = %e\n", __func__, _CIDX_R(node->value), *val);
          DPRINT("%s :: key = %s @ %p; value = %e\n", __func__, opcode_names[key],

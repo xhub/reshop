@@ -180,6 +180,9 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
    unsigned darr_lastelt = dlen;
 
    //printf("DEBUG: slen = %3u; dlen = %3u\n", slen, dlen);
+   //rhp_int_print(dat, PO_INFO);
+   //rhp_int_print(dat_src, PO_INFO);
+
 
    if (sfirst <= dfirst) {
       if (send <= dfirst) {
@@ -200,8 +203,10 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       sarr = &sarr[idx];
       darr = &darr[idx];
 
-      //printf("DEBUG: slen = %3u; dlen = %3u; offset = %3u\n", slen, dlen, idx);
+      //printf("DEBUG: slen = %3u; dlen = %3u; idx = %3u\n", slen, dlen, idx);
    } 
+
+   //rhp_int_print(dat, PO_INFO);
 
    if (send >= dend) {
       if (sfirst >= dend) {
@@ -223,9 +228,10 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       slen = idx;
       darr_lastelt += cpy_len;
 
-      //printf("DEBUG: slen = %3u; dlen = %3u; offset = %3u\n", slen, dlen, idx);
+      //printf("DEBUG: slen = %3u; dlen = %3u; idx = %3u\n", slen, dlen, idx);
    }
 
+   //rhp_int_print(dat, PO_INFO);
    assert(dat->len >= darr-dat->arr);
 
    while (slen > 0) {

@@ -192,14 +192,6 @@ static int _run_ex(Container *ctr, const int *instrs1, const int *args1)
    status = equ_nltree_fromgams(equ2, args1[0], instrs1, args1);
    if (status) goto _exit;
 
-   char *dot_print = getenv("DOT_PRINT");
-   char dotname[256];
-
-   if (dot_print) {
-      sprintf(dotname, "equ%p.dot", (void*)instrs1);
-      nltree_print_dot(equ2->tree, dotname, NULL);
-   }
-
    int *instrs2;
    int *args2;
    int codelen2;
@@ -222,11 +214,6 @@ static int _run_ex(Container *ctr, const int *instrs1, const int *args1)
    status = nltree_buildopcode(ctr, equbis, &instrs3, &args3, &codelen3);
    if (status != OK) goto _exit;
 
-   if (dot_print) {
-      sprintf(dotname, "equ3%p.dot", (void*)instrs1);
-      nltree_print_dot(equbis->tree, dotname, NULL);
-   }
-
    status = _check_no_diff(instrs1, args1, instrs3, args3);
    if (status != OK) goto _exit;
 
@@ -244,11 +231,6 @@ static int _run_ex(Container *ctr, const int *instrs1, const int *args1)
 
       S_CHECK_EXIT(equ_nltree_fromgams(small_equ, size, opcodes[i], args[i]));
 
-      if (dot_print) {
-         sprintf(dotname, "small_equ_%zu.dot", i);
-         nltree_print_dot(small_equ->tree, dotname, NULL);
-      }
-
       for (unsigned j = 0; j < var_len ; ++j)
       {
          rhp_idx vi = var_list[j];
@@ -261,11 +243,6 @@ static int _run_ex(Container *ctr, const int *instrs1, const int *args1)
          int codelend;
 
          S_CHECK_EXIT(nltree_buildopcode(ctr, equter, &instrd, &argsd, &codelend));
-
-         if (dot_print) {
-            sprintf(dotname, "equ%p__var%d_p%zu.dot", (void*)instrd, vi, i);
-            nltree_print_dot(equter->tree, dotname, NULL);
-         }
 
          equ_dealloc(&equter);
 

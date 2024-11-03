@@ -567,6 +567,7 @@ int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, doub
          return Error_RuntimeError;
       }
 
+      assert(isfinite(vi_coeff));
       coeff = -coeff/vi_coeff;
    }
 
@@ -929,7 +930,7 @@ int rctr_equ_submulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
  * 
  * @return        the error code
  */
-int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
+int rctr_nltree_copy_map_old(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
                          rhp_idx vi_map, double coeff)
 {
    /* ---------------------------------------------------------------------
@@ -944,7 +945,9 @@ int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
    if (valid_vi(vi_map) && !isfinite(coeff)) {
       unsigned idx;
       assert(lequ);
-      lequ_find(lequ, vi_map, &coeff, &idx);
+      double vi_coeff;
+
+      lequ_find(lequ, vi_map, &vi_coeff, &idx);
 
       if (idx == UINT_MAX) {
          error("ERROR: variable '%s' not found in equation '%s'\n",
@@ -952,11 +955,10 @@ int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
                ctr_printequname(ctr, esrc->idx));
       }
 
-      assert(isfinite(coeff));
-      coeff = -1./coeff;
+      coeff = -1./vi_coeff;
    }
 
-   assert((valid_vi(vi_map) && isfinite(coeff)) || (!valid_vi(vi_map) && !isfinite(coeff)));
+   assert(isfinite(coeff));
 
    S_CHECK(nltree_reset_var_list(tree));
 
@@ -997,7 +999,7 @@ int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
 
    /* Do a final sanity check: it may happen that the equation consists
     * only of 1 ADD */
-   if (*addr && (*addr)->op == NLNODE_ADD) {
+   if (*addr && (*addr)->op == NlNode_Add) {
       S_CHECK(nltree_check_add(*addr));
    }
 
@@ -1008,6 +1010,93 @@ int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
 
    return OK;
 }
+
+int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
+                         rhp_idx vi_map, double coeff)
+{
+   assert(isfinite(coeff));
+
+   /* ---------------------------------------------------------------------
+    * We have 3 parts to copy:
+    * - linear part
+    * - constant part
+    * - nonlinear part
+    * --------------------------------------------------------------------- */
+
+   Lequ *lequ = esrc->lequ;
+   int min_lequ_len;
+
+   if (valid_vi(vi_map)) {
+      unsigned idx;
+      assert(lequ);
+      double vi_coeff;
+
+      lequ_find(lequ, vi_map, &vi_coeff, &idx);
+
+      if (idx == UINT_MAX) {
+         error("ERROR: variable '%s' not found in equation '%s'\n",
+               ctr_printvarname(ctr, vi_map),
+               ctr_printequname(ctr, esrc->idx));
+      }
+
+      assert(isfinite(vi_coeff));
+      coeff = -coeff/vi_coeff;
+      min_lequ_len = 1;
+   } else {
+      min_lequ_len = 0;
+   }
+
+   S_CHECK(nltree_reset_var_list(tree));
+
+   NlNode **addr;
+   addr = node;
+   /*  Add (sum a_i x_i) */
+   if (lequ && lequ->len > min_lequ_len) {
+      S_CHECK(rctr_nltree_add_lin_term(ctr, tree, &addr, lequ, vi_map, coeff));
+   }
+
+   /* add constant */
+   double cst = equ_get_cst(esrc);
+   if (fabs(cst) > DBL_EPSILON) {
+      S_CHECK(nltree_add_cst(ctr, tree, &addr, cst*coeff));
+   }
+
+   /* --------------------------------------------------------------
+    * node now contains a pointer to the node that contains the expression
+    * -------------------------------------------------------------- */
+
+   S_CHECK(rctr_getnl(ctr, esrc));
+
+   if (esrc->tree && esrc->tree->root) {
+
+      /*  Get the first empty child */
+      if (*addr) {
+         S_CHECK(nlnode_next_child(tree, &addr));
+      }
+
+      /* Add coeff * ( ... )  */
+      /* TODO(xhub) we may end up in a ADD->ADD situation, be careful here */
+      S_CHECK(nltree_mul_cst(tree, &addr, ctr->pool, coeff));
+
+      /* \TODO(xhub) optimize w.r.t. umin */
+      /* Fill in Fnl_i  */
+      S_CHECK(nlnode_dup(addr, esrc->tree->root, tree));
+   }
+
+   /* Do a final sanity check: it may happen that the equation consists
+    * only of 1 ADD */
+   if (*addr && (*addr)->op == NlNode_Add) {
+      S_CHECK(nltree_check_add(*addr));
+   }
+
+   /* keep the model representation consistent */
+   Avar v;
+   avar_setlist(&v, tree->v_list->idx, tree->v_list->pool);
+   S_CHECK(cmat_equ_add_vars(ctr, tree->idx, &v, NULL, true));
+
+   return OK;
+}
+
 
 /**
  * @brief Multiply an equation by a variable and subtract the content to an equation

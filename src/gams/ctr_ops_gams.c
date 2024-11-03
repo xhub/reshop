@@ -1052,7 +1052,7 @@ static int gams_setvartype(Container *ctr, rhp_idx vi, unsigned type)
    return Error_NotImplemented;
 }
 
-const struct container_ops ctr_ops_gams = {
+const struct ctr_ops ctr_ops_gams = {
    .allocdata      = gams_allocdata,
    .deallocdata    = gams_deallocdata,
    .copyequname    = gams_copyequname,

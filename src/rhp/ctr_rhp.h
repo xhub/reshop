@@ -119,8 +119,10 @@ NONNULL int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_m
                              double coeff);
 int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map,
                         double coeff) NONNULL;
-int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node,
+int rctr_nltree_copy_map_old(Container *ctr, NlTree *tree, NlNode **node,
                          Equ *esrc, rhp_idx vi_no, double coeff);
+int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
+                         rhp_idx vi_map, double coeff) NONNULL;
 int rctr_equ_add_nlexpr(Container *ctr, rhp_idx ei, NlNode *node, double cst) NONNULL;
 
 int rctr_set_equascst(Container *ctr, rhp_idx ei) NONNULL;

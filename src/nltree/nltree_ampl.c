@@ -13,16 +13,16 @@ static int _ampl_translate_opcode(FILE *stream, enum NLNODE_OP key)
 
    switch (key) {
 
-   case NLNODE_ADD:
+   case NlNode_Add:
       ampl_opcode = OPPLUS;
       break;
-   case NLNODE_SUB:
+   case NlNode_Sub:
       ampl_opcode = OPMINUS;
       break;
-   case NLNODE_MUL:
+   case NlNode_Mul:
       ampl_opcode = OPMULT;
       break;
-   case NLNODE_DIV:
+   case NlNode_Div:
       ampl_opcode = OPDIV;
       break;
    default:
@@ -314,14 +314,14 @@ static int _build_ampl_opcode(const NlNode *node, FILE *stream,
 
    switch (key) {
 
-      case NLNODE_VAR:
+      case NlNode_Var:
          if (node->children_max > 0) {
            goto _no_child_error;
          }
          fprintf(stream, "v%u\n", VIDX_R(node->value));
          break;
 
-      case NLNODE_CST:
+      case NlNode_Cst:
          if (node->children_max > 0) {
            goto _no_child_error;
          }
@@ -333,10 +333,10 @@ static int _build_ampl_opcode(const NlNode *node, FILE *stream,
          }
          break;
 
-      case NLNODE_ADD:
-      case NLNODE_SUB:
-      case NLNODE_MUL:
-      case NLNODE_DIV:
+      case NlNode_Add:
+      case NlNode_Sub:
+      case NlNode_Mul:
+      case NlNode_Div:
       {
          bool valid_optype = (node->oparg == NLNODE_OPARG_CST ||
                               node->oparg == NLNODE_OPARG_VAR);
@@ -345,7 +345,7 @@ static int _build_ampl_opcode(const NlNode *node, FILE *stream,
          size_t explore_indx = 0;
 
          if (nb_children > 2) {
-            if (key != NLNODE_ADD) {
+            if (key != NlNode_Add) {
                error("%s :: node has more then 2 children\n",
                                __func__);
             } else {
@@ -377,7 +377,7 @@ static int _build_ampl_opcode(const NlNode *node, FILE *stream,
                   break;
                   /*  TODO(Xhub) this is really weird */
                }
-               if (key != NLNODE_ADD && child->children_max != 1) {
+               if (key != NlNode_Add && child->children_max != 1) {
                   error("%s :: unsupported case: ", __func__);
                   nlnode_print(child, PO_ERROR, true);
                   status = Error_UnExpectedData;
@@ -387,7 +387,7 @@ static int _build_ampl_opcode(const NlNode *node, FILE *stream,
             }
             case NLNODE_OPARG_FMA:
             {
-               if (key == NLNODE_ADD) {
+               if (key == NlNode_Add) {
                   assert(child->children_max == 1);
                   fputs("o" MACRO_STR(OPMULT) "\n", stream);
                   S_CHECK_EXIT(_ampl_cst(stream, child, ctr));
@@ -433,7 +433,7 @@ _default1:
             if (node->children[1]->children_max == 0) {
               S_CHECK_EXIT(_ampl_optype(stream, node->children[1], ctr));
                break;
-            } else if (key != NLNODE_ADD && node->children[1]->children_max != 1) {
+            } else if (key != NlNode_Add && node->children[1]->children_max != 1) {
                error("%s :: unsupported case: ", __func__);
                nlnode_print(node->children[1], PO_ERROR, true);
                status = Error_UnExpectedData;
@@ -441,7 +441,7 @@ _default1:
             }
             goto _default2;
          case NLNODE_OPARG_FMA:
-            if (key == NLNODE_ADD) {
+            if (key == NlNode_Add) {
                assert(node->children[1]->children_max == 1);
                fputs("o" MACRO_STR(OPMULT) "\n", stream);
                S_CHECK_EXIT(_ampl_cst(stream, node->children[1], ctr));
@@ -501,7 +501,7 @@ _skip_child_1:
          break;
       }
 
-      case NLNODE_UMIN:
+      case NlNode_Umin:
          if (node->value > 0) /*  we have a variable */
          {
            if (node->children_max > 0) {
@@ -520,7 +520,7 @@ _skip_child_1:
          }
          break;
 
-      case NLNODE_CALL1:
+      case NlNode_Call1:
          if (node->children_max != 1) {
            goto _one_child_error;
          }
@@ -529,7 +529,7 @@ _skip_child_1:
          S_CHECK_EXIT(_build_ampl_opcode(node->children[0], stream, ctr));
          break;
 
-      case NLNODE_CALL2:
+      case NlNode_Call2:
          if (node->children_max != 2) {
            goto _two_children_error;
          }
@@ -540,7 +540,7 @@ _skip_child_1:
          S_CHECK_EXIT(_build_ampl_opcode(node->children[0], stream, ctr));
          break;
 
-      case NLNODE_CALLN:
+      case NlNode_CallN:
          if (node->children_max <= 2) {
            goto _at_least_3_children_error;
          }
