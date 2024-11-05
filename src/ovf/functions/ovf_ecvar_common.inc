@@ -48,12 +48,12 @@ static int FN(gen_b_0)(unsigned n, const void* env, SpMat *mat,
                     double *u_shift, double **vals)
 {
    const struct ovf_param_list *p = (const struct ovf_param_list *) env;
-   const struct ovf_param *alpha = ovf_find_param("tail", p);
-   const struct ovf_param *lambda = ovf_find_param("risk_wt", p);
+   const struct ovf_param *tail = ovf_find_param("tail", p);
+   const struct ovf_param *risk_wt = ovf_find_param("risk_wt", p);
    const struct ovf_param *probs = ovf_find_param("probabilities", p);
 
-   OVF_CHECK_PARAM(alpha, Error_OvfMissingParam);
-   OVF_CHECK_PARAM(lambda, Error_OvfMissingParam);
+   OVF_CHECK_PARAM(tail, Error_OvfMissingParam);
+   OVF_CHECK_PARAM(risk_wt, Error_OvfMissingParam);
    OVF_CHECK_PARAM(probs, Error_OvfMissingParam);
 
    MALLOC_(*vals, double, 2*n+1);
@@ -73,12 +73,12 @@ static int FN(gen_b_0)(unsigned n, const void* env, SpMat *mat,
       lvals[i] = -lvals[i];
    }
 
-   assert(alpha->type == ARG_TYPE_SCALAR);
+   assert(tail->type == ARG_TYPE_SCALAR);
    for (unsigned i = n, j = 0; i < 2*n; ++i, ++j) {
       double pval = risk_measure_get_probability(probs, j);
-      double minus_wpval = (lambda->val - 1.)*pval;
+      double minus_wpval = (risk_wt->val - 1.)*pval;
       lvals[j] += minus_wpval;
-      lvals[i] += (lambda->val*pval) / TAIL_VAL(alpha->val) - minus_wpval;
+      lvals[i] += (risk_wt->val*pval) / TAIL_VAL(tail->val) - minus_wpval;
    }
 
    lvals[2*n] += 1.;
@@ -91,29 +91,27 @@ static int FN(gen_b_0)(unsigned n, const void* env, SpMat *mat,
 static double FN(var_lb)(const void* env, unsigned indx)
 {
    const struct ovf_param_list *p = (const struct ovf_param_list *) env;
-   const struct ovf_param *lambda = ovf_find_param("risk_wt", p);
+   const struct ovf_param *risk_wt = ovf_find_param("risk_wt", p);
    const struct ovf_param *probs = ovf_find_param("probabilities", p);
 
-   OVF_CHECK_PARAM(lambda, Error_OvfMissingParam);
+   OVF_CHECK_PARAM(risk_wt, Error_OvfMissingParam);
    OVF_CHECK_PARAM(probs, Error_OvfMissingParam);
 
-   double m_lambda = 1.- lambda->val;
-   return m_lambda*risk_measure_get_probability(probs, indx);
+   return (1.-risk_wt->val)*risk_measure_get_probability(probs, indx);
 }
 
 static double FN(var_ub)(const void* env, unsigned indx)
 {
    const struct ovf_param_list *p = (const struct ovf_param_list*) env;
-   const struct ovf_param *alpha = ovf_find_param("tail", p);
-   const struct ovf_param *lambda = ovf_find_param("risk_wt", p);
-   const struct ovf_param *probs = ovf_find_param("probabilities", p);
+   const struct ovf_param *tail = ovf_find_param("tail", p);
+   const struct ovf_param *risk_wt = ovf_find_param("risk_wt", p);
+   const struct ovf_param *prob = ovf_find_param("probabilities", p);
 
-   OVF_CHECK_PARAM(alpha, Error_OvfMissingParam);
-   OVF_CHECK_PARAM(lambda, Error_OvfMissingParam);
-   OVF_CHECK_PARAM(probs, Error_OvfMissingParam);
+   OVF_CHECK_PARAM(tail, Error_OvfMissingParam);
+   OVF_CHECK_PARAM(risk_wt, Error_OvfMissingParam);
+   OVF_CHECK_PARAM(prob, Error_OvfMissingParam);
 
-   double m_lambda = 1.- lambda->val;
-   double pval = risk_measure_get_probability(probs, indx);
+   double pr = risk_measure_get_probability(prob, indx);
 
-   return (lambda->val/TAIL_VAL(alpha->val) + m_lambda)*pval;
+   return (risk_wt->val/TAIL_VAL(tail->val) + (1.- risk_wt->val))*pr;
 }

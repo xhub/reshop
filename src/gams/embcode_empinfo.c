@@ -8,6 +8,8 @@
 #include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
+#include "empinterp_vm.h"
+#include "empinterp_vm_compiler.h"
 #include "empparser_priv.h"
 #include "empparser_utils.h"
 #include "fs_func.h"
@@ -32,10 +34,24 @@ static int emb_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned * p
 {
   /* ----------------------------------------------------------------------
    * In EMBCODE mode, we do not read symbols. We just fake it for the
-   * reminder of the code
+   * reminder of the code.
+   *
+   * However, we still need to parse the conditional if present
    * ---------------------------------------------------------------------- */
 
    interp->cur.symdat.read = true;
+
+   unsigned p2 = *p;
+   TokenType toktype;
+   S_CHECK(peek(interp, &p2, &toktype));
+
+   if (toktype == TOK_CONDITION) {
+      *p = p2;
+      parser_cpypeek2cur(interp);
+      S_CHECK(vm_parse_condition(interp, p));
+//      S_CHECK(advance(interp, p, &toktype))
+   }
+
    return OK;
 }
 

@@ -88,16 +88,16 @@ static double FN(var_ub)(const void* env, unsigned indx)
 {
    const struct ovf_param_list *p = (const struct ovf_param_list*) env;
    const struct ovf_param *probs = ovf_find_param("probabilities", p);
-   const struct ovf_param *alpha = ovf_find_param("tail", p);
+   const struct ovf_param *tail = ovf_find_param("tail", p);
 
    OVF_CHECK_PARAM(probs, SNAN);
-   OVF_CHECK_PARAM(alpha, SNAN);
+   OVF_CHECK_PARAM(tail, SNAN);
 
    double val;
-   switch(alpha->type) {
+   switch(tail->type) {
    case ARG_TYPE_SCALAR:
    {
-      double valtmp = TAIL_VAL(alpha->val);
+      double valtmp = TAIL_VAL(tail->val);
       if (probs->type != ARG_TYPE_UNSET) {
          if (probs->type == ARG_TYPE_SCALAR) {
             val = probs->val/valtmp;
@@ -120,7 +120,7 @@ static double FN(var_ub)(const void* env, unsigned indx)
       break;
    }
    default:
-       error("%s :: unsupported parameter type %d\n", __func__, alpha->type);
+       error("%s :: unsupported parameter type %d\n", __func__, tail->type);
        return NAN;
    }
 

@@ -1023,7 +1023,7 @@ static int regentry_init(Interpreter * restrict interp, const char *labelname,
 static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
                            Compiler *c, Tape *tape, bool do_emit_not)
 {
-   assert(parser_getcurtoktype(interp) == TOK_IDENT);
+   assert(parser_getcurtoktype(interp) == TOK_IDENT || parser_getcurtoktype(interp) == TOK_GMS_SET);
 
    begin_scope(c, __func__);
 
@@ -1250,10 +1250,11 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
       return Error_EMPIncorrectInput;
    }
 
-   if (toktype== TOK_LPAREN) { 
+   if (toktype == TOK_LPAREN) { 
       need_rparent = true;
       S_CHECK(advance(interp, p, &toktype));
-      PARSER_EXPECTS(interp, "a GAMS set or NOT", TOK_IDENT, TOK_NOT, TOK_SAMEAS);
+      PARSER_EXPECTS(interp, "a GAMS set or NOT", TOK_IDENT, TOK_NOT, TOK_SAMEAS,
+                     TOK_GMS_SET, TOK_GMS_MULTISET);
 
    }
 
@@ -1282,7 +1283,7 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
             emit_not = true;
             S_CHECK(advance(interp, p, &toktype));
             PARSER_EXPECTS(interp, "a GAMS set or logical operator",
-                           TOK_IDENT, TOK_SAMEAS);
+                           TOK_IDENT, TOK_SAMEAS, TOK_GMS_SET); //HACK GMSSYMB
          }
 
          if (toktype == TOK_SAMEAS) {
@@ -1391,6 +1392,9 @@ void empvm_compiler_free(Compiler* c)
 
    empvm_free(c->vm);
 
+   jumps_free(&c->falsey_jumps);
+   jumps_free(&c->truey_jumps);
+
    free(c);
 }
 
@@ -1414,12 +1418,27 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
 {
    assert(parser_getcurtoktype(interp) == TOK_CONDITION);
 
+  /* ----------------------------------------------------------------------
+   * We are at the position
+   *
+   *         v
+   *    ident$(condition(set))
+   * or
+   *    ident$(NOT condition(set))
+   * etc
+   *
+   * We disable reading GAMS symbols as we are constructing a condition expression
+   *
+   * ---------------------------------------------------------------------- */
+
    trace_empparser("[empcompiler] line %u: parsing condition\n", interp->linenr);
+
+   interp->read_gms_symbol = false;
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
 
-   PARSER_EXPECTS(interp, "a GAMS set or '('", TOK_IDENT, TOK_LPAREN);
+   PARSER_EXPECTS(interp, "a GAMS set or '('", TOK_IDENT, TOK_LPAREN, TOK_GMS_SET);
 
       /* Note great to make this distinction here. Can't find something nicer */
    if (toktype == TOK_LPAREN) {
@@ -1434,6 +1453,11 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
    //S_CHECK(emit_jump(tape, OP_JUMP_IF_FALSE, &jump.addr));
    S_CHECK(emit_jump(tape, OP_JUMP, &jump.addr));
    S_CHECK(jumps_add_verbose(&c->falsey_jumps, jump));
+
+   /* Re-enable reading GAMS symbols */
+   interp->read_gms_symbol = true;
+
+   trace_empparser("[empcompiler] line %u: condition parsed\n", interp->linenr);
 
    /* Resolve all remaining jumps linked to a true condition */
    return patch_jumps(&c->truey_jumps, tape, c->scope_depth+1);
@@ -1518,6 +1542,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
 
    if (toktype == TOK_CONDITION) {
       *p = p2;
+      parser_cpypeek2cur(interp);
       S_CHECK(parse_condition(interp, p, c, tape));
    }
 
@@ -1715,6 +1740,19 @@ int vm_add_Varc_dual(Interpreter * interp, UNUSED unsigned *p)
    return emit_byte(tape, OP_VARC_DUAL);
 }
 
+// This is most likely used from the embmode
+int vm_parse_condition(Interpreter * restrict interp, unsigned * restrict p)
+{
+   assert(parser_getcurtoktype(interp) == TOK_CONDITION);
+
+   Compiler *c = interp->compiler;
+   EmpVm *vm = c->vm;
+   Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
+   Tape * const tape = &tape_;
+
+   return parse_condition(interp, p, c, tape);
+}
+
 NONNULL static
 int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p,
                     LinkType linktype)
@@ -1816,6 +1854,7 @@ static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
 static int parse_loopiters_operator(Interpreter * restrict interp, unsigned * restrict p,
                                     Compiler *c, LoopIterators *iterators)
 {
+   interp->read_gms_symbol = false;
    /* We get the set/sets to iterate over */
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
@@ -1885,6 +1924,7 @@ static int parse_loopiters_operator(Interpreter * restrict interp, unsigned * re
 
    }
 
+   interp->read_gms_symbol = true;
    return OK;
 }
 
@@ -2751,8 +2791,7 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
    if (toktype == TOK_CONDITION) {
       *p = p2;
       S_CHECK(parse_condition(interp, p, c, tape));
-
-}
+   }
 
    /* ---------------------------------------------------------------------
     * Main body of the loop: just perform the test and jump out of the loop

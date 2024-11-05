@@ -210,20 +210,18 @@ int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
 
 int rhp_rc2gmosolvestat(int rc)
 {
-   enum gmoSolverStatus sstat;
-
    /* TODO(GAMS review) When should one use gmoModelStat_ErrorUnknown? */
 
    switch (rc) {
    case Error_EMPIncorrectInput:
    case Error_EMPIncorrectSyntax:
-      sstat = gmoSolveStat_SetupErr;
-      break;
+   case Error_IncompleteModelMetadata:
+      return gmoSolveStat_SetupErr;
+   case Error_NotImplemented:
+      return gmoSolveStat_Solver;
    default:
-      sstat = gmoSolveStat_InternalErr;
+      return gmoSolveStat_InternalErr;
    }
-
-   return sstat;
 }
 
 

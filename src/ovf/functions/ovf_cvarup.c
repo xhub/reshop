@@ -10,7 +10,7 @@
 #include "status.h"
 
 #define OVF_NAME cvarup
-#define TAIL_VAL(X) (1. - X)
+#define TAIL_VAL(X) (X)
 
 #include "ovf_cvar_common.inc"
 

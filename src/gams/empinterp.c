@@ -56,6 +56,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 {
    interp->health = PARSER_OK;
    interp->peekisactive = false;
+   interp->read_gms_symbol = true;
    interp->err_shown = false;
    interp->linenr = 1;
    interp->read = 0;
@@ -324,7 +325,6 @@ static int interp_loadgmdparams(Interpreter *interp)
    GMD_CHK(gmdInfo, gmd, GMD_NRSYMBOLS, &nsymbols, NULL, NULL);
 
    Lequ v;
-   lequ_init(&v);
    char param_name[GMS_SSSIZE];
 
    trace_empinterp("[empinterp] Loading parameters from GMD: ");
@@ -359,6 +359,7 @@ static int interp_loadgmdparams(Interpreter *interp)
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &nrecs, NULL, NULL);
       assert(nrecs > 0);
 
+      lequ_init(&v);
       S_CHECK(lequ_reserve(&v, nrecs))
 
       bool has_next;

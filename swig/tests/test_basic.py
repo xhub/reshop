@@ -462,7 +462,7 @@ def test_cvar():
 
     d = 1 + np.arange(4.0)
     p = (0.125, 0.25, 0.5, 0.125)
-    theta = 1 - 0.15
+    tail = 0.15
 
     rhp.mdl_resize(mdl, len(d) + 1, len(d) + 1)
 
@@ -485,7 +485,7 @@ def test_cvar():
     ovf_def = rhp.ovf_add(mdl, "cvarup", rho[0], v_arg_cvar)
 
     # Set the tail percentage for the cvar
-    rhp.ovf_param_add_scalar(ovf_def, "tail", theta)
+    rhp.ovf_param_add_scalar(ovf_def, "tail", tail)
     # Set the probabilities for each event.
     # Warning, the order in p and v_arg_cvar must be the same!
     rhp.ovf_param_add_vector(ovf_def, "probabilities", p)
@@ -508,7 +508,7 @@ def test_cvarlo():
 
     d = 1 + np.arange(4.0)
     p = (0.125, 0.25, 0.5, 0.125)
-    theta = 1 - 0.15
+    tail = 0.15
 
     rhp.mdl_resize(mdl, len(d) + 1, len(d) + 1)
 
@@ -531,7 +531,7 @@ def test_cvarlo():
     ovf_def = rhp.ovf_add(mdl, "cvarlo", rho[0], v_arg_cvar)
 
     # Set the tail percentage for the cvar
-    rhp.ovf_param_add_scalar(ovf_def, "tail", theta)
+    rhp.ovf_param_add_scalar(ovf_def, "tail", tail)
     # Set the probabilities for each event.
     # Warning, the order in p and v_arg_cvar must be the same!
     rhp.ovf_param_add_vector(ovf_def, "probabilities", p)
@@ -547,7 +547,7 @@ def test_cvarlo():
     solve(mdl, mdl_solver)
 
     assert rhp.mdl_getvarsval(mdl, rho) == approx(
-        ((0.125 * d[0] + 0.025 * d[1]) / (1 - theta),)
+        ((0.125 * d[0] + 0.025 * d[1]) / (1 - tail),)
     )
 
 
@@ -556,7 +556,7 @@ def test_cvarcons():
 
     d = 1 + np.arange(4.0)
     p = (0.125, 0.25, 0.5, 0.125)
-    theta = 1 - 0.15
+    tail = 0.15
 
     rhp.mdl_resize(mdl, len(d) + 2, len(d) + 2)
 
@@ -583,7 +583,7 @@ def test_cvarcons():
     ovf_def = rhp.ovf_add(mdl, "cvarup", rho[0], v_arg_cvar)
 
     # Set the tail percentage for the cvar
-    rhp.ovf_param_add_scalar(ovf_def, "tail", theta)
+    rhp.ovf_param_add_scalar(ovf_def, "tail", tail)
     # Set the probabilities for each event.
     # Warning, the order in p and v_arg_cvar must be the same!
     rhp.ovf_param_add_vector(ovf_def, "probabilities", p)
@@ -607,7 +607,7 @@ def test_cvarconsfail():
 
     d = 1 + np.arange(4.0)
     p = (0.125, 0.25, 0.5, 0.125)
-    theta = 1 - 0.15
+    tail = 0.15
 
     rhp.mdl_resize(mdl, len(d) + 2, len(d) + 2)
 
@@ -634,7 +634,7 @@ def test_cvarconsfail():
     ovf_def = rhp.ovf_add(mdl, "cvarup", rho[0], v_arg_cvar)
 
     # Set the tail percentage for the cvar
-    rhp.ovf_param_add_scalar(ovf_def, "tail", theta)
+    rhp.ovf_param_add_scalar(ovf_def, "tail", tail)
     # Set the probabilities for each event.
     # Warning, the order in p and v_arg_cvar must be the same!
     rhp.ovf_param_add_vector(ovf_def, "probabilities", p)

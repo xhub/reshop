@@ -38,8 +38,6 @@ raprob(s)$(ord(s)<>1)=0.08;
 *Can test CVar is working by commenting out this and setting lambda=0
 *prob(s)=raprob(s);
 
-parameter alpha    cvar probability;
-alpha = 0.1;
 parameter lambda    cvar weight (>0 and <1 chosen by user) = 0.9;
 lambda = 0.2;
 
@@ -51,8 +49,7 @@ lambdaH(h) = lambda;
 parameter lambdaC;
 lambdaC = lambda;
 
-scalar theta;
-theta = 1. - alpha;
+scalar tail cvar tail /0.1/;
 
 parameter futurecostoffset  offset to add to hydro cost-to-go;
 futurecostoffset = 30.0 ;
@@ -189,9 +186,9 @@ cvarconstraintc(s).. yc(s) =g= ( - Dem(consume2(s))  );
 model hydro /all / ;
 
 file empinfo /'%emp.info%'/
-put empinfo 'OVF ecvarup CVaRt yt ' theta lambda /;
-put empinfo 'OVF ecvarup CVaRh yh ' theta lambda /;
-put empinfo 'OVF ecvarup CVaRc yc ' theta lambda /;
+put empinfo 'OVF ecvarup CVaRt yt ' tail lambda /;
+put empinfo 'OVF ecvarup CVaRh yh ' tail lambda /;
+put empinfo 'OVF ecvarup CVaRc yc ' tail lambda /;
 putclose empinfo;
 
 uh1.up(h)=b(h);
@@ -378,14 +375,14 @@ $ifthen not set IMPLICIT
 $endif
  put tpobjdef(t);
 );
-put / 'OVF ecvarup CVaRc ycp ' theta lambdaC /;
+put / 'OVF ecvarup CVaRc ycp ' tail lambdaC /;
 loop(h, put / "OVF ecvarup " CVaRhp(h);
 loop(s, put yhp(s,h));
- put theta lambdaH(h) /;
+ put tail lambdaH(h) /;
 )
 loop(t, put / "OVF ecvarup " CVaRtp(t);
 loop(s, put ytp(s,t);)
- put theta lambdaT(t) /;
+ put tail lambdaT(t) /;
 );
 putclose empinfo /;
 

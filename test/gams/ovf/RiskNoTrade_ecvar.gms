@@ -39,8 +39,6 @@ parameter raprob(s)  probability ;
 raprob('1')= 0.28 ;
 raprob(s)$(ord(s)<>1)=0.08;
 
-parameter alpha    cvar probability;
-alpha = 0.1;
 parameter lambda    cvar weight (>0 and <1 chosen by user) = 0.9;
 lambda = 0.2;
 
@@ -51,8 +49,7 @@ lambdaH(h) = lambda;
 parameter lambdaC;
 lambdaC = lambda;
 
-scalar theta;
-theta = 1. - alpha;
+scalar theta cvar tail / 0.1 /;
 
 parameter futurecostoffset  offset to add to hydro cost-to-go;
 futurecostoffset = 30.0 ;

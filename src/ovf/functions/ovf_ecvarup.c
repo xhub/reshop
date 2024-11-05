@@ -6,7 +6,7 @@
 #include "ovf_risk_measure_common.h"
 
 #define OVF_NAME ecvarup
-#define TAIL_VAL(X) (1. - X)
+#define TAIL_VAL(X) (X)
 
 #include "ovf_ecvar_common.inc"
 

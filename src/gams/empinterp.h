@@ -392,6 +392,7 @@ typedef struct {
 typedef struct interpreter {
    enum parser_health health;
    bool peekisactive;
+   bool read_gms_symbol;
    bool err_shown;               /**< Error message already shown */
    unsigned linenr;
    size_t read;

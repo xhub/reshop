@@ -54,6 +54,7 @@ int vm_add_Ctrl_edge(Interpreter * interp, unsigned * restrict p, const char* ar
                      unsigned argname_len, GmsIndicesData* gmsindices) NONNULL;
 
 int vm_add_Varc_dual(Interpreter * interp, UNUSED unsigned *p) NONNULL;
+int vm_parse_condition(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
 
 int empvm_finalize(Interpreter *interp) NONNULL;
 

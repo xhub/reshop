@@ -10,11 +10,7 @@ Set v / v1, v2 /;
 
 alias(r,parent);
 
-Scalar alpha;
-alpha = 0.2;
-
-Scalar thetaval;
-thetaval = 1. - alpha;
+Scalar tail / 0.2 /;
 
 Scalar hinit;
 hinit = 100;
@@ -80,13 +76,13 @@ model hydro_conj /obj, defStateCons0, defStateCons1, defStateCons2, defConj1, de
 
 
 file empinfo /'%emp.info%'/
-put empinfo 'OVF cvarlo theta1 argTheta1' thetaval /;
+put empinfo 'OVF cvarlo theta1 argTheta1' tail /;
 loop(parent,
   put empinfo 'OVF cvarlo ' theta2(parent);
   loop(r,
     put empinfo argTheta2(r,parent);
   )
-  put thetaval /;
+  put tail /;
   )
 putclose empinfo;
 

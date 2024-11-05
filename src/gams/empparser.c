@@ -774,6 +774,21 @@ static inline bool skipws(const char * restrict buf, unsigned * restrict p)
    return buf[_p] == '\0' || buf[_p] == EOF;
 }
 
+static inline bool potential_labeldef(Interpreter *interp, const unsigned * restrict p)
+{
+   unsigned _p;
+   const char * restrict buf = interp->buf;
+
+   _p = (*p);
+
+   while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
+
+   /* TODO: improve. This just looks for a ':' in the same line */
+   while (notEOL(buf[_p]) && buf[_p] != ':') _p++;
+
+   return buf[_p] == ':';
+}
+
 static inline bool parser_skipws(Interpreter *interp, unsigned * restrict p)
 {
    unsigned _p;
@@ -1045,12 +1060,12 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
    /* Consume closing quote */
    (*p)++;
 
-   tok->type = TOK_GMS_UEL;
-
    if (tok->len == 1 && tok->start[0] == '*') {
       *toktype = TOK_STAR;
       return OK;
    }
+
+   tok->type = TOK_GMS_UEL;
 
    IdentData *ident = &tok->symdat.ident;
    ident_init(ident, tok);
@@ -1082,7 +1097,7 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
    }
 
    *toktype = TOK_GMS_UEL;
-   ident->idx = uelidx;
+   ident->idx = tok->payload.idx = uelidx;
    ident->type = IdentUEL;
 
    return OK;
@@ -1879,6 +1894,7 @@ static inline bool toktype_dagnode_kw(TokenType toktype)
  */
 static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
 {
+   assert(interp->read_gms_symbol);
    /* From the current token get all the symbol info */
    S_CHECK(tok2ident(&interp->cur, &interp->gms_sym_iterator.ident));
 
@@ -1942,7 +1958,11 @@ int advance(Interpreter * restrict interp, unsigned * restrict p,
    FALLTHRU
    case TOK_GMS_EQU:
    case TOK_GMS_VAR:
-      return read_gms_symbol(interp, p);
+      if (interp->read_gms_symbol) {
+         return read_gms_symbol(interp, p);
+      } else {
+         return OK;
+      }
    default:
       return OK;
    }
@@ -2536,6 +2556,7 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
    case IdentVector: {
       unsigned p2 = *p;
       S_CHECK_EXIT(peek(interp, &p2, &toktype));
+      OvfArgType ovfargtype = ARG_TYPE_VEC;
 
       if (interp->ops->type == InterpreterOpsImm && toktype != TOK_CONDITION) {
 
@@ -2558,37 +2579,65 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
          if (toktype == TOK_LPAREN) {
             *p = p2;
             S_CHECK_EXIT(advance(interp, p, &toktype));
-            parser_expect(interp, "a 1D set", TOK_IDENT);
+            PARSER_EXPECTS(interp, "a 1D set", TOK_IDENT, TOK_SINGLE_QUOTE);
 
-            IdentData *ident_set = &interp->cur.symdat.ident;
-            if (ident_set->type != IdentSet) {
-               return runtime_error(interp->linenr);
-            }
-            char *identstr_set = tok_dupident(&interp->cur);
-            unsigned idxset = namedints_findbyname_nocase(&interp->globals.sets, identstr_set);
-            free(identstr_set);
+            if (toktype == TOK_IDENT) {
+               IdentData *ident_set = &interp->cur.symdat.ident;
+               if (ident_set->type != IdentSet) {
+                  return runtime_error(interp->linenr);
+               }
+               char *identstr_set = tok_dupident(&interp->cur);
+               unsigned idxset = namedints_findbyname_nocase(&interp->globals.sets, identstr_set);
+               free(identstr_set);
 
-            if (idxset == UINT_MAX) {
-               error("[empinterp] unexpected runtime error: couldn't find set '%.*s'\n",
-                     tok_fmtargs(&interp->cur));
-               return Error_RuntimeError;
-            }
+               if (idxset == UINT_MAX) {
+                  error("[empinterp] unexpected runtime error: couldn't find set '%.*s'\n",
+                        tok_fmtargs(&interp->cur));
+                  return Error_RuntimeError;
+               }
 
-            IntArray *set = &interp->globals.sets.list[idxset];
+               IntArray *set = &interp->globals.sets.list[idxset];
 
-            for (unsigned i = 0, len = set->len; i < len; ++i) {
+               for (unsigned i = 0, len = set->len; i < len; ++i) {
+                  unsigned pos = UINT_MAX;
+                  lequ_find(vec, set->arr[i], &scratch->data[i], &pos);
+
+                  if (pos == UINT_MAX) {
+                     error("[empinterp] ERROR line %u: UEL %d is not in parameter %s\n",
+                           interp->linenr, set->arr[i], identstr);
+                     return Error_EMPIncorrectInput;
+                  }
+                }
+            } else {
+               S_CHECK(parser_asUEL(interp, p, '\'', &toktype));
+
+               switch (toktype) {
+               case TOK_STAR: TO_IMPLEMENT_EXIT("'*'");
+               case TOK_UNSET: error("[empinterp] ERROR: unknown UEL '%.*s'", tok_fmtargs(&interp->cur));
+                  status = Error_EMPIncorrectInput;
+                  goto _exit;
+               case TOK_GMS_UEL:
+                  break;
+               default: runtime_error(interp->linenr);
+               }
+
+               int uelidx = interp->cur.payload.idx;
+
                unsigned pos = UINT_MAX;
-               lequ_find(vec, set->arr[i], &scratch->data[i], &pos);
+               // HACK factorize with above
+               lequ_find(vec, uelidx, &payload->val, &pos);
+               ovfargtype = ARG_TYPE_SCALAR;
 
                if (pos == UINT_MAX) {
                   error("[empinterp] ERROR line %u: UEL %d is not in parameter %s\n",
-                        interp->linenr, set->arr[i], identstr);
+                        interp->linenr, uelidx, identstr);
                   return Error_EMPIncorrectInput;
                }
-             }
+ 
+            }
 
             S_CHECK_EXIT(advance(interp, p, &toktype));
-            parser_expect(interp, "a 1D set", TOK_RPAREN);
+            parser_expect(interp, "Closing parenthesis", TOK_RPAREN);
          } else {
 
             if (size_vector != UINT_MAX && vec->len != size_vector) {
@@ -2602,8 +2651,10 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
             memcpy(scratch->data, vec->coeffs, size_vector * sizeof(double));
          }
 
-         payload->vec = scratch->data;
-         *type = ARG_TYPE_VEC;
+         *type = ovfargtype;
+         if (ovfargtype == ARG_TYPE_VEC) {
+            payload->vec = scratch->data;
+         } 
 
          break;
       }
@@ -3357,11 +3408,14 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
           * be a declaration on the next line. If we have a '(', then we seek
           * to parse until we are over all the indices and then check for ':'
           * ---------------------------------------------------------------- */
+         if (potential_labeldef(interp, p)) {
+//            *p = interp->cur.start - interp->buf; /* we need to reset p */
+            goto exit_while;
+         }
+
          unsigned p2 = *p;
          S_CHECK(peek(interp, &p2, &toktype));
-         if (toktype == TOK_COLON) {
-            goto exit_while;
-         } else if (toktype == TOK_LPAREN) {
+         if (toktype == TOK_LPAREN) {
             if (skip_gmsindices(interp->buf, &p2)) {
                error("[empparser] while parsing the indices of '%.*s', got "
                      "end-of-file\n", emptok_getstrlen(&interp->cur),
@@ -3389,7 +3443,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
             if (toktype == TOK_COLON) { goto exit_while; }
          }
  
-/* ----------------------------------------------------------------
+         /* ----------------------------------------------------------------
           * We have a MP or Nash in the constraints
           * ---------------------------------------------------------------- */
          interp_save_tok(interp);
@@ -5125,21 +5179,6 @@ int labdeldef_parse_statement(Interpreter* restrict interp, unsigned* restrict p
       return runtime_error(interp->linenr);
    }
 
-}
-
-static inline bool potential_labeldef(Interpreter *interp, unsigned * restrict p)
-{
-   unsigned _p;
-   const char * restrict buf = interp->buf;
-
-   _p = (*p);
-
-   while (notEOL(buf[_p]) && isspace(buf[_p])) _p++;
-
-   /* TODO: improve. This just looks for a ':' in the same line */
-   while (notEOL(buf[_p]) && buf[_p] != ':') _p++;
-
-   return buf[_p] == ':';
 }
 
 static inline int parser_err_labelname(Interpreter * restrict interp)

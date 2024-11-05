@@ -10,11 +10,7 @@ Set v / v1, v2 /;
 
 alias(r,parent);
 
-Scalar alpha;
-alpha = 0.2;
-
-Scalar thetaval;
-thetaval = 1. - alpha;
+Scalar tail / 0.2 /;
 
 Scalar hinit;
 hinit = 100;
@@ -107,9 +103,9 @@ load parent
 
 *loop(parent$(sameas('r2', parent)),
 loop(parent,
-  OVF cvarup theta2(parent) argTheta2('*',parent) 0.8
+  OVF cvarup theta2(parent) argTheta2('*',parent) 0.2
 )
-OVF cvarup theta1 argTheta1 0.8
+OVF cvarup theta1 argTheta1 0.2
 $offecho
 
 hydro_emp.optfile = 2
@@ -125,9 +121,9 @@ loop(parent,
   loop(r,
     put empinfo argTheta2(r,parent);
   )
-  put thetaval /;
+  put tail /;
   )
-put empinfo 'OVF cvarup theta1 argTheta1' thetaval /;
+put empinfo 'OVF cvarup theta1 argTheta1' tail /;
 putclose empinfo;
 
 
