@@ -22,8 +22,8 @@ Variable z(i);
 * Probabilities
 Parameter p(i) /1 .125, 2 .25, 3 .5, 4 .125/;
 
-SCALAR theta;
-theta = 1-.15;
+SCALAR tail;
+tail = .15;
 
 * END PROBLEM DATA DEFINITION
 
@@ -44,7 +44,7 @@ model cvar_simple /all/;
 
 file empinfo /'%emp.info%'/;
 empinfo.nd = 10;
-put empinfo /'OVF cvarup rho z ' theta; loop(i, put p(i));
+put empinfo /'OVF cvarup rho z ' tail; loop(i, put p(i));
 putclose /;
 
 

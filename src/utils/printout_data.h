@@ -56,9 +56,9 @@ enum printout_modes {
    TTY_VVV           = PO_LEVEL_VVV   | PO_TTY,
    TTY_DEBUG         = PO_LEVEL_DEBUG | PO_TTY,
 
-   PO_NONTRACING     = 0xFF,
+   PO_MASK_NONTRACING     = 0xFF,
 
-   PO_STACK               = 0x100,   /**< Display stack-related info                         */
+   PO_BACKEND             = 0x100,   /**< Display backend info                               */
    PO_TRACE_REFCNT        = 0x200,   /**< Trace the refcnt changes                           */
    PO_TRACE_EMPINTERP     = 0x400,   /**< Trace the interpretation of an empinfo file        */
    PO_TRACE_EMPPARSER     = 0x800,   /**< Trace the parsing of empinfo file                  */
@@ -67,6 +67,7 @@ enum printout_modes {
    PO_TRACE_CONTAINER     = 0x4000,  /**< Trace the model representation changes             */
    PO_TRACE_EMPDAG        = 0x8000,  /**< Trace the EMPDAG definition                        */
    PO_TRACE_FOOC          = 0x10000, /**< Trace the FOOC computations                        */
+   PO_TRACE_CCF           = 0x20000, /**< Trace the CCF processing                           */
 
 };
 

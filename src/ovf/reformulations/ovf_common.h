@@ -30,7 +30,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_dat,
                     MathPrgm **mp_ovf) NONNULL;
 
 int ovf_compat_types(const char *ovf_name, const char *ovf_varname, RhpSense mp_sense,
-                     bool ovf_sup) NONNULL;
+                     RhpSense ovf_sense) NONNULL;
 
 int ovf_replace_var(Model *mdl, rhp_idx ovf_vidx, void **jacptr,
                     double *jacval, rhp_idx *ei, unsigned extra_vars) NONNULL;
@@ -51,8 +51,8 @@ int ovf_process_indices(Model *mdl, Avar *args, rhp_idx *eis) NONNULL;
       strcat(VAR, SUFFIX);
 
 #define EMPMAT_GET_CSR_SIZE(M, i, size) \
-if (M.ppty & EMPMAT_EYE) { size += 1; } else { \
-   size += M.csr->p[i+1] - M.csr->p[i]; }
+if ((M).ppty & EMPMAT_EYE) { (size) += 1; } else { \
+   (size) += (M).csr->p[(i)+1] - (M).csr->p[i]; }
 
 #define COPY_VALS(M, i, vals, indx, offset, size,  offset_var) { \
    if (M.ppty & EMPMAT_EYE) { if (!(M.ppty & EMPMAT_BLOCK)) { if (M.csr->nnzmax == 0) { vals[offset] = 1.; } else {\
@@ -82,7 +82,7 @@ typedef struct ovf_ops {
    int (*get_D)(OvfOpsData ovfd, SpMat *D, SpMat *J);
    int (*get_equ)(OvfOpsData ovfd, Model *mdl, void **iterator, rhp_idx vi_ovf,
                   double *ovf_coeff, rhp_idx *ei_new, unsigned n_z);
-   int (*get_lin_transformation)(OvfOpsData ovfd,  SpMat *B, double **b);
+   int (*get_affine_transformation)(OvfOpsData ovfd, SpMat *B, double **b);
    int (*get_M)(OvfOpsData ovfd, SpMat *M);
    int (*get_mp_and_sense)(OvfOpsData ovfd, Model *mdl, rhp_idx vi_ovf, MathPrgm **mp, RhpSense *sense);
    const char* (*get_name)(OvfOpsData ovfd);
@@ -95,7 +95,7 @@ typedef struct ovf_ops {
    double (*get_var_lb)(OvfOpsData ovfd, size_t vidx);
    double (*get_var_ub)(OvfOpsData ovfd, size_t vidx);
    void   (*get_ppty)(OvfOpsData ovfd, struct ovf_ppty *ovf_ppty);
-   size_t (*size_u)(OvfOpsData ovfd, size_t n_args);
+   size_t (*size_y)(OvfOpsData ovfd, size_t n_args);
    void (*trimmem)(OvfOpsData ovfd);
 } OvfOps;
 

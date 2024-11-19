@@ -145,7 +145,7 @@ static int ovfdef_get_equ(UNUSED OvfOpsData ovfd, Model *mdl, void **iterator,
    return ovf_replace_var(mdl, vi_ovf, iterator, ovf_coeff, ei_new, n_z);
 }
 
-static size_t ovfdef_size_u(OvfOpsData ovfd, size_t n_args)
+static size_t ovfdef_size_y(OvfOpsData ovfd, size_t n_args)
 {
    OvfDef *ovf = ovfd.ovf;
 
@@ -191,7 +191,7 @@ const OvfOps ovfdef_ops = {
    .get_cone_nonbox = ovfdef_get_cone_nonbox,
    .get_D = ovfdef_get_D,
    .get_equ = ovfdef_get_equ,
-   .get_lin_transformation = ovfdef_get_lin_transformation,
+   .get_affine_transformation = ovfdef_get_lin_transformation,
    .get_M = ovfdef_get_M,
    .get_mp_and_sense = ovfdef_get_mp_and_sense,
    .get_name = ovfdef_get_name,
@@ -203,7 +203,7 @@ const OvfOps ovfdef_ops = {
    .get_var_lb = ovfdef_get_var_lb,
    .get_var_ub = ovfdef_get_var_ub,
    .get_ppty = ovfdef_get_ppty,
-   .size_u = ovfdef_size_u,
+   .size_y = ovfdef_size_y,
    .trimmem = ovf_trimmem,
 };
 

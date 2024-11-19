@@ -3547,6 +3547,7 @@ int c_switch_to_immmode(Interpreter *interp)
 void empvm_compiler_setgmd(Interpreter * restrict interp)
 {
    interp->compiler->vm->data.gmd = interp->gmd;
+   interp->compiler->vm->data.gmddct = interp->gmddct;
 }
 
 int hack_scalar2vmdata(Interpreter *interp, unsigned idx)

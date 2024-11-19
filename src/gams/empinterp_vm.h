@@ -231,6 +231,7 @@ typedef struct {
    Model *mdl;
    void *dct;
    void *gmd;
+   void *gmddct;             /**< GMD version of the DCT */
    Interpreter *interp;
    CompilerGlobals *globals;
    DagRegister *dagregister;

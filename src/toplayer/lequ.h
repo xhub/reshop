@@ -13,7 +13,7 @@
 #include "rhp_fwd.h"
 
 void lequ_free(Lequ *lequ);
-Lequ *lequ_new(int maxlen) MALLOC_ATTR(lequ_free,1);
+Lequ *lequ_new(unsigned maxlen) MALLOC_ATTR(lequ_free,1);
 Lequ *lequ_new_from_data(unsigned len, const rhp_idx *vis, const double *coeffs)
 MALLOC_ATTR(lequ_free,1);
 

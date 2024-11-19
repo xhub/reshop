@@ -11,6 +11,7 @@
 #include "ovf_common.h"
 #include "printout.h"
 #include "status.h"
+#include "var.h"
 
 static void ydat_empty(yData *ydat)
 {
@@ -19,26 +20,130 @@ static void ydat_empty(yData *ydat)
    FREE(ydat->cones_y);
    FREE(ydat->cones_y_data);
    FREE(ydat->tilde_y);
+   FREE(ydat->mult_ub_revidx);
 }
 
-static NONNULL int ydat_init(yData *ydat, unsigned n_y)
+static NONNULL int ydat_init(yData *ydat)
 {
    int status;
 
-   memset(ydat, 0, sizeof(*ydat));
+   unsigned n_y = ydat->n_y;
+   assert(n_y != 0);
+
+   memset(ydat, 0, sizeof(yData));
+   ydat->n_y = n_y;
+
+   MALLOC_EXIT(ydat->tilde_y, double, 2*n_y);
+   ydat->var_ub = &ydat->tilde_y[n_y];
    MALLOC_EXIT(ydat->cones_y, Cone, n_y);
    MALLOC_EXIT(ydat->cones_y_data, void*, n_y);
-   MALLOC_EXIT(ydat->tilde_y, double, 2*n_y);
+   ydat->mult_ub_revidx = NULL;
 
-   ydat->var_ub = &ydat->tilde_y[n_y];
 
    ydat->has_shift = false;
+   ydat->shift_quad_cst = 0.;
 
    return OK;
 
 _exit:
    ydat_empty(ydat);
    return status;
+}
+
+int fenchel_find_yshift(CcfFenchelData *fdat)
+{
+   yData *ydat = &fdat->primal.ydat;
+   const OvfOps *ops = fdat->ops;
+   OvfOpsData ovfd = fdat->ovfd;
+
+   for (unsigned i = 0, n_y = fdat->primal.ydat.n_y; i < n_y; ++i) {
+      /*  TODO(xhub) allow more general cones here */
+      ydat->cones_y_data[i] = NULL;
+      double lb = ops->get_var_lb(ovfd, i);
+      double ub = ops->get_var_ub(ovfd, i);
+
+      bool lb_finite = isfinite(lb);
+      bool ub_finite = isfinite(ub);
+
+      /* Let's be on the safe side   */
+      if (lb_finite && ub_finite) {
+
+         /* Check whether we have an equality constraint  */
+         if (fabs(ub - lb) < DBL_EPSILON) {
+
+            if (fabs(lb) < DBL_EPSILON) {
+               ydat->tilde_y[i] = 0.;
+            } else {
+               ydat->tilde_y[i] = lb;
+               ydat->has_shift = true;
+            }
+
+            fdat->primal.has_set = true;
+            ydat->cones_y[i] = CONE_0;
+            ydat->var_ub[i] = NAN;
+            continue;
+
+         }
+
+         if (ub < lb) {
+            error("[ccflib/fenchel] ERROR: the bounds on the %u-th variable are not consistent: "
+                  "lb = %e > %e = ub\n", i, lb, ub);
+            return Error_InvalidValue;
+         }
+      }
+
+      if (lb_finite) {
+         fdat->primal.has_set = true;
+         ydat->cones_y[i] = CONE_R_PLUS;
+
+         if (fabs(lb) < DBL_EPSILON) {
+            ydat->tilde_y[i] = 0.;
+         } else {
+            ydat->tilde_y[i] = lb;
+            ydat->has_shift = true;
+         }
+
+         if (ub_finite) {
+            ydat->var_ub[i] = ub;
+            ydat->n_y_ub++;
+         } else {
+            ydat->var_ub[i] = NAN;
+         }
+
+      } else if (ub_finite) {
+
+         fdat->primal.has_set = true;
+         ydat->cones_y[i] = CONE_R_MINUS;
+         ydat->var_ub[i] = NAN;
+
+         if (fabs(ub) < DBL_EPSILON) {
+            ydat->tilde_y[i] = 0.;
+         } else {
+            ydat->tilde_y[i] = ub;
+            ydat->has_shift = true;
+         }
+
+      } else {
+         ydat->cones_y[i] = CONE_R;
+         ydat->var_ub[i] = NAN;
+         ydat->tilde_y[i] = 0.;
+      }
+   }
+
+   if (ydat->n_y_ub > 0) {
+      MALLOC_(ydat->mult_ub_revidx, unsigned, ydat->n_y_ub);
+   }
+
+   if (RHP_UNLIKELY(O_Output & PO_TRACE_CCF)) {
+      if (ydat->has_shift) {
+         trace_ccf("[ccf/fenchel] Found shift for the primal variables:\n");
+         for (unsigned i = 0, n_y = fdat->primal.ydat.n_y; i < n_y; ++i) {
+            trace_ccf("\t[%5u] %e\n", i, ydat->tilde_y[i]);
+         }
+      }
+   }
+
+   return OK;
 }
 
 int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
@@ -52,10 +157,17 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
    unsigned n_args;
    S_CHECK(ops->get_nargs(ovfd, &n_args));
 
-   const unsigned n_y = ops->size_y(ovfd, n_args);
+   unsigned n_y = ops->size_y(ovfd, n_args);
+   fdat->primal.ydat.n_y = n_y;
    fdat->nargs = n_args;
 
-   if (n_y == 0) {
+   rhp_idx vi_ovf = ops->get_ovf_vidx(ovfd);
+   fdat->vi_ovf = vi_ovf;
+
+   RhpSense sense_parent;
+   S_CHECK(ops->get_mp_and_sense(ovfd, mdl, vi_ovf, &fdat->mp, &sense_parent));
+
+   if (fdat->primal.ydat.n_y == 0) {
       const char *ovf_name = ops->get_name(ovfd);
       error("[ccflib/primal] the number of variable associated with the CCF '%s' "
             "of type %s is 0. This should never happen\n."
@@ -64,32 +176,64 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
       return Error_UnExpectedData;
    }
 
-   S_CHECK(ydat_init(&fdat->ydat, n_y));
-
    rhpmat_null(&fdat->At);
    rhpmat_null(&fdat->D);
+   rhpmat_null(&fdat->M);
    rhpmat_null(&fdat->J);
    rhpmat_null(&fdat->B_lin);
 
-   fdat->a = NULL;
+   fdat->dual.a = NULL;
+   fdat->dual.ub = NULL;
    fdat->b_lin = NULL;
+   fdat->tmpvec = NULL;
+   fdat->equ_gen = NULL;
+   fdat->equvar_basename = NULL;
 
-   /* We look for A and c such that A y - c belongs to K
+   OvfPpty ovf_ppty;
+   ops->get_ppty(ovfd, &ovf_ppty);
+   fdat->primal.is_quad = ovf_ppty.quad;
+   fdat->primal.has_set = false;
+   fdat->primal.sense = ovf_ppty.sense;
+
+   /* ---------------------------------------------------------------------
+    * Test compatibility between OVF and problem type
+    * --------------------------------------------------------------------- */
+
+   S_CHECK(ovf_compat_types(ops->get_name(ovfd), ops->get_name(ovfd), sense_parent, ovf_ppty.sense));
+
+   /* Initial variables */
+   S_CHECK(ydat_init(&fdat->primal.ydat));
+   avar_init(&fdat->dual.vars.v);
+   avar_init(&fdat->dual.vars.w);
+   avar_init(&fdat->dual.vars.s);
+
+  /* ----------------------------------------------------------------------
+   * Determine \tilde{y} such that y - \tilde{y} ∈ K_y
+   * ---------------------------------------------------------------------- */
+
+   /* WARNING, this needs to be called before getting all the matrices */
+   S_CHECK(fenchel_find_yshift(fdat));
+
+   /* We look for A and c such that A y - a belongs to K_y
     * We ask for the CSC version of A to easily iterate of the rows of A^T */
    rhpmat_set_csc(&fdat->At);
-   S_CHECK(ops->get_set_nonbox(ovfd, &fdat->At, &fdat->a, true));
+   S_CHECK(ops->get_set_nonbox(ovfd, &fdat->At, &fdat->dual.a, true));
 
    /* Get the Cholesky factorization of M = D^TJD */
    S_CHECK(ops->get_D(ovfd, &fdat->D, &fdat->J));
 
-   unsigned n_cons, n_v = 0;
+   if (fdat->primal.is_quad) {
+      S_CHECK(ops->get_M(ovfd, &fdat->M));
+   }
+
+   unsigned nrows_A, ncols_A = 0;
 
    if (fdat->At.ppty) {
-     fdat->has_set = true;
-     S_CHECK_EXIT(rhpmat_get_size(&fdat->At, &n_v, &n_cons));
-     assert(n_v > 0 && n_cons > 0);
+     fdat->primal.has_set = true;
+     S_CHECK_EXIT(rhpmat_get_size(&fdat->At, &ncols_A, &nrows_A));
+     assert(ncols_A > 0 && nrows_A > 0);
 
-   } else if (!fdat->has_set) {
+   } else if (!fdat->primal.has_set) {
 
       if (fdat->D.ppty) {
          unsigned dummy1, dummy2;
@@ -102,7 +246,9 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
          goto _exit;
       }
    }
-   return OK;
+
+   fdat->primal.ncons = ncols_A;
+
 
    /* Check whether we have B_lin or b_lin  */
    S_CHECK_EXIT(ops->get_affine_transformation(ovfd, &fdat->B_lin, &fdat->b_lin));
@@ -128,117 +274,31 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
       }
    }
 
-   REALLOC(fdat->a, double, nb_vars);
-   CALLOC(fdat->tmpvec, double, MAX(n_y, n_v));
+   CALLOC_(fdat->dual.ub, double, fdat->primal.ydat.n_y_ub);
+   CALLOC(fdat->tmpvec, double, MAX(n_y, ncols_A));
 
 _exit:
    return status;
 }
 
-int fenchel_find_yshift(CcfFenchelData *fdat)
-{
-   yData *ydat = &fdat->ydat;
-   const OvfOps *ops = fdat->ops;
-   OvfOpsData ovfd = fdat->ovfd;
-
-   for (unsigned i = 0, n_y = fdat->ydat.n_y; i < n_y; ++i) {
-      /*  TODO(xhub) allow more general cones here */
-      ydat->cones_y_data[i] = NULL;
-      double lb = ops->get_var_lb(ovfd, i);
-      double ub = ops->get_var_ub(ovfd, i);
-
-      bool lb_fin = isfinite(lb);
-      bool ub_fin = isfinite(ub);
-
-      /* Let's be on the safe side   */
-      if (lb_fin && ub_fin) {
-
-         /* Check whether we have an equality constraint  */
-         if (fabs(ub - lb) < DBL_EPSILON) {
-            if (fabs(lb) < DBL_EPSILON) {
-               ydat->tilde_y[i] = 0.;
-            } else {
-               ydat->tilde_y[i] = lb;
-               ydat->has_shift = true;
-            }
-
-            fdat->has_set = true;
-            ydat->cones_y[i] = CONE_0;
-            ydat->var_ub[i] = NAN;
-            continue;
-
-         }
-      } else if (ub < lb) {
-         error("[ccflib/fenchel] ERROR: the bounds on the %u-th variables are not consistent: "
-               "lb = %e > %e = ub\n", i, lb, ub);
-         return Error_InvalidValue;
-      }
-
-      if (lb_fin) {
-         fdat->has_set = true;
-         ydat->cones_y[i] = CONE_R_PLUS;
-
-         if (fabs(lb) < DBL_EPSILON) {
-            ydat->tilde_y[i] = 0.;
-         } else {
-            ydat->tilde_y[i] = lb;
-            ydat->has_shift = true;
-         }
-
-         if (ub_fin) {
-            ydat->var_ub[i] = ub;
-            ydat->n_y_ub++;
-         } else {
-            ydat->var_ub[i] = NAN;
-         }
-
-      } else if (ub_fin) {
-
-         fdat->has_set = true;
-         ydat->cones_y[i] = CONE_R_MINUS;
-         ydat->var_ub[i] = NAN;
-
-         if (fabs(ub) < DBL_EPSILON) {
-            ydat->tilde_y[i] = 0.;
-         } else {
-            ydat->tilde_y[i] = ub;
-            ydat->has_shift = true;
-         }
-
-      } else {
-         ydat->cones_y[i] = CONE_R;
-         ydat->var_ub[i] = NAN;
-         ydat->tilde_y[i] = 0.;
-      }
-   }
-
-   return OK;
-}
-
 int fenchel_apply_yshift(CcfFenchelData *fdat)
 {
-   yData *ydat = &fdat->ydat;
+   yData *ydat = &fdat->primal.ydat;
    if (!ydat->has_shift) { return OK; }
 
-   int status = OK;
    const OvfOps *ops = fdat->ops;
    OvfOpsData ovfd = fdat->ovfd;
-
-   SpMat M;
-   rhpmat_null(&M);
-
-   double quad_cst = NAN;
 
    /* -------------------------------------------------------------
     * 1.a Perform a -= A tilde_y  for the nonbox polyhedral constraints
     * ------------------------------------------------------------- */
 
-   S_CHECK(rhpmat_atxpy(&fdat->At, fdat->ydat.tilde_y, fdat->tmpvec));
+   S_CHECK(rhpmat_atxpy(&fdat->At, fdat->primal.ydat.tilde_y, fdat->tmpvec));
 
-   for (unsigned i = 0; i < c_bnd_start; ++i) {
-      fdat->a[i] -= fdat->tmpvec[i];
+   double *a = fdat->dual.a;
+   for (unsigned i = 0, end = fdat->primal.ncons; i < end; ++i) {
+      a[i] -= fdat->tmpvec[i];
    }
-   memset(fdat->tmpvec, 0, c_bnd_start*sizeof(double));
 
    /* -------------------------------------------------------------
        * 1.b 
@@ -249,25 +309,32 @@ int fenchel_apply_yshift(CcfFenchelData *fdat)
        * v_bnd_revidx
        * ------------------------------------------------------------- */
 
-   rhp_idx * restrict v_bnd_revidx = fdat->vdat.revidx_v_ub;
-   for (unsigned i = fdat->c_bnd_start, end = fdat->c_end, j = 0; i < end; ++i, ++j) {
-      c[i] -= fdat->ydat.tilde_y[v_bnd_revidx[j]];
+   unsigned * restrict w_revidx = fdat->primal.ydat.mult_ub_revidx;
+   double * restrict ub = fdat->dual.ub;
+   for (unsigned i = 0, end = fdat->primal.ydat.n_y_ub; i < end; ++i) {
+      ub[i] -= fdat->primal.ydat.tilde_y[w_revidx[i]];
    }
 
    /* -------------------------------------------------------------
        * Add -.5 <tilde_y, M tilde_y> to the RHS to take into account M
        * ------------------------------------------------------------- */
 
-   if (fdat->is_quad) {
+   if (fdat->primal.is_quad) {
+      SpMat M;
+      rhpmat_null(&M);
+
       S_CHECK(ops->get_M(ovfd, &M));
 
-      quad_cst = .5 * rhpmat_evalquad(&M, ydat->tilde_y);
+      double quad_cst = .5 * rhpmat_evalquad(&M, ydat->tilde_y);
+      rhpmat_free(&M);
 
       if (!isfinite(quad_cst)) {
          error("[ccflib:fenchel] ERROR: the quadratic constant "
                "from the shift is not finite: val = %f\n", quad_cst);
          return Error_MathError;
       }
+
+      fdat->primal.ydat.shift_quad_cst = quad_cst;
    }
 
    return OK;
@@ -286,10 +353,10 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
     *
     * - s has the same size as v when there is a quadratic part
     * --------------------------------------------------------------------- */
-   unsigned n_v = fdat->vdat.n_v;
-   unsigned n_vars = fdat->ydat.n_y_ub + n_v;
-   if (fdat->is_quad) {
-      n_vars += fdat->ydat.n_y;
+   unsigned ncons = fdat->primal.ncons;
+   unsigned n_vars = fdat->primal.ydat.n_y_ub + ncons;
+   if (fdat->primal.is_quad) {
+      n_vars += fdat->primal.ydat.n_y;
    }
 
    if (n_vars == 0) {
@@ -315,25 +382,23 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
    OvfOpsData ovfd = fdat->ovfd;
    MathPrgm *mp = fdat->mp;
 
-   unsigned start_new_vars = cdat->total_n;
-
    /* NAMING: this should not exists */
-   char *ovf_name_idx = NULL;
+   char *equvar_basename = NULL;
    const char *ovf_name = ops->get_name(ovfd);
    size_t ovf_namelen = strlen(ovf_name);
 
-   MALLOC_(ovf_name_idx, char, ovf_namelen + 26);
-   strcpy(ovf_name_idx, ovf_name);
-   strcat(ovf_name_idx, "_");
-   strcat(ovf_name_idx, fdat->type == OvfType_Ovf ? "ovf" : "ccf");
-   strcat(ovf_name_idx, "_");
-   unsignedtostr((unsigned)fdat->idx, sizeof(unsigned), &ovf_name_idx[strlen(ovf_name_idx)], 20, 10);
-   unsigned ovf_name_idxlen = strlen(ovf_name_idx);
-   fdat->equvar_basename = ovf_name_idx;
+   MALLOC_(equvar_basename, char, ovf_namelen + 26);
+   strcpy(equvar_basename, ovf_name);
+   strcat(equvar_basename, "_");
+   strcat(equvar_basename, fdat->type == OvfType_Ovf ? "ovf" : "ccf");
+   strcat(equvar_basename, "_");
+   unsignedtostr((unsigned)fdat->vi_ovf, sizeof(unsigned), &equvar_basename[strlen(equvar_basename)], 20, 10);
+   unsigned ovf_name_idxlen = strlen(equvar_basename);
+   fdat->equvar_basename = equvar_basename;
 
    /* Add the v variable */
-   unsigned v_start = 0, v_bnd_start = 0, c_bnd_start = 0, c_end = 0; /* init for cwarn */
-   if (fdat->has_set) {
+   unsigned v_start = 0, w_start = 0; /* init for cwarn */
+   if (fdat->primal.has_set) {
       v_start = cdat->total_n;
       unsigned n_v_actual = 0;
       char *v_name;
@@ -346,13 +411,13 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
        * Otherwise, we use a trick and the multiplier belongs to the dual cone
        * ------------------------------------------------------------------- */
 
-      NEWNAME2(v_name, ovf_name_idx, ovf_name_idxlen, "_v");
+      NEWNAME2(v_name, equvar_basename, ovf_name_idxlen, "_v");
       cdat_varname_start(cdat, v_name);
 
-      double * restrict a = fdat->a;
-      RhpSense sense = fdat->sense;
+      double * restrict a = fdat->dual.a;
+      RhpSense sense = fdat->primal.sense;
 
-      for (unsigned j = 0; j < n_v; ++j) {
+      for (unsigned j = 0; j < ncons; ++j) {
          enum cone cone;
          void *cone_data;
          S_CHECK(ops->get_cone_nonbox(ovfd, j, &cone, &cone_data));
@@ -378,6 +443,7 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
       }
 
       cdat_varname_end(cdat);
+      avar_setcompact(&fdat->dual.vars.v, n_v_actual, v_start);
 
       /* -------------------------------------------------------------------
        * Add the multipliers for the upper bounds
@@ -386,19 +452,20 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
        * Otherwise, we use a trick and the multiplier belongs to the dual cone
        *
        * OUTPUT:
-       *   c filled from c_bnd_start until ...
+       *   c filled from a_bnd_start until ...
        *   v_bnd_revidx of size c_end-c_bnd_start maps the index of c to the index of u
        * ------------------------------------------------------------------- */
 
-      NEWNAME2(v_name, ovf_name_idx, ovf_name_idxlen, "_vbnd");
+      NEWNAME2(v_name, equvar_basename, ovf_name_idxlen, "_vbnd");
       cdat_varname_start(cdat, v_name);
-      v_bnd_start = cdat->total_n;
-      c_bnd_start = n_v_actual;
+      w_start = cdat->total_n;
 
-      double * restrict yvar_ub = fdat->ydat.var_ub;
-      unsigned n_y = fdat->ydat.n_y;
+      double * restrict yvar_ub = fdat->primal.ydat.var_ub;
+      double * restrict ub = fdat->dual.ub;
+      unsigned n_y = fdat->primal.ydat.n_y;
 
-      for (unsigned i = 0, j = 0; i < n_y; ++i) {
+      unsigned n_w_actual = 0;
+      for (unsigned i = 0; i < n_y; ++i) {
          if (isfinite(yvar_ub[i])) {
             rhp_idx vi = IdxNA;
 
@@ -415,39 +482,34 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
             assert(valid_vi(vi));
             if (mp) { S_CHECK(mp_addvar(mp, vi)); }
 
-            a[n_v_actual] = yvar_ub[i];
-            v_bnd_revidx[j] = i;
-            j++;
-            n_v_actual++;
+            ub[n_w_actual] = yvar_ub[i];
+            fdat->primal.ydat.mult_ub_revidx[n_w_actual] = i;
+            n_w_actual++; assert(n_w_actual <= fdat->primal.ydat.n_y_ub);
          }
       }
 
+      assert(n_w_actual == fdat->primal.ydat.n_y_ub);
       cdat_varname_end(cdat);
-
-      c_end = n_v_actual;
-      n_v = cdat->total_n - v_start;
+      avar_setcompact(&fdat->dual.vars.w, fdat->primal.ydat.n_y_ub, w_start);
    }
 
    /* Add the s variable if needed  */
-   if (fdat->is_quad) {
-      unsigned s_start = cdat->total_n;
+   if (fdat->primal.is_quad) {
       char *s_name;
-      NEWNAME2(s_name, ovf_name_idx, ovf_name_idxlen, "_s");
+      NEWNAME2(s_name, equvar_basename, ovf_name_idxlen, "_s");
       cdat_varname_start(cdat, s_name);
 
-      unsigned n_y = fdat->ydat.n_y;
-      S_CHECK(rctr_add_free_vars(ctr, n_y, &fdat->s_var));
+      unsigned n_y = fdat->primal.ydat.n_y;
+      S_CHECK(rctr_add_free_vars(ctr, n_y, &fdat->dual.vars.s));
       if (mp) {
-         S_CHECK(mp_addvars(mp, &fdat->s_var));
+         S_CHECK(mp_addvars(mp, &fdat->dual.vars.s));
       }
 
       cdat_varname_end(cdat);
    }
 
-   avar_setcompact(&fdat->vdat.v, n_v, v_start);
-
    /* Reserve n_v+2 equations (new obj function + constraints + evaluation) */
-   S_CHECK(rctr_reserve_equs(ctr, n_v+2));
+   S_CHECK(rctr_reserve_equs(ctr, ncons+2));
 
    return OK;
 }
@@ -456,42 +518,45 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
 {
    Container *ctr = &mdl->ctr;
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
-   const OvfOps *ops = fdat->ops;
-   OvfOpsData ovfd = fdat->ovfd;
    MathPrgm *mp = fdat->mp;
 
    /* ---------------------------------------------------------------------
     * Perform the computation of   M tilde_y
     * --------------------------------------------------------------------- */
 
-   if (fdat->ydat.has_shift && fdat->is_quad) {
-      S_CHECK(rhpmat_atxpy(&fdat->M, fdat->ydat.tilde_y, fdat->tmpvec));
+   unsigned n_y = fdat->primal.ydat.n_y;
+   memset(fdat->tmpvec, 0, sizeof(double)*n_y);
+
+   if (fdat->primal.ydat.has_shift && fdat->primal.is_quad) {
+      S_CHECK(rhpmat_atxpy(&fdat->M, fdat->primal.ydat.tilde_y, fdat->tmpvec));
    }
 
    char *equ_name;
    unsigned ovf_name_idxlen = strlen(fdat->equvar_basename);
    NEWNAME2(equ_name, fdat->equvar_basename, ovf_name_idxlen, "_set");
    cdat_equname_start(cdat, equ_name);
+
    /* Keep track of the   */
-   rhp_idx idx_v_bnd = fdat->vdat.start_vi_v_ub;
+   rhp_idx w_curvi = fdat->dual.vars.w.start;
+   rhp_idx v_start = fdat->dual.vars.v.start;
+   rhp_idx s_start = fdat->dual.vars.s.start;
 
-   rhp_idx v_start = fdat->vdat.v.start;
-   rhp_idx s_start = fdat->s_var.start;
-
-   RhpSense sense = fdat->sense;
+   RhpSense sense = fdat->primal.sense;
 
    SpMat * restrict At = &fdat->At, * restrict D = &fdat->D;
    SpMat * restrict B_lin = &fdat->B_lin;
-   bool has_set = fdat->has_set;
-   bool is_quad = fdat->is_quad;
+   bool has_set = fdat->primal.has_set;
+   bool is_quad = fdat->primal.is_quad;
 
-   double * restrict var_ub = fdat->ydat.var_ub;
-   unsigned n_y = fdat->ydat.n_y;
+   double * restrict var_ub = fdat->primal.ydat.var_ub;
 
    MALLOC_(fdat->equ_gen, bool, n_y);
    bool *equ_gen = fdat->equ_gen;
 
-   fdat->ei_start = cdat->total_n;
+   rhp_idx ei_cons_start = cdat->total_m;
+
+   Cone * restrict cones_y = fdat->primal.ydat.cones_y;
+   void * restrict *cones_y_data = fdat->primal.ydat.cones_y_data;
 
    for (unsigned i = 0; i < n_y; ++i) {
       rhp_idx ei_new = IdxNA;
@@ -506,10 +571,10 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
 
       switch (sense) {
       case RhpMax:
-         S_CHECK(cone_polar(fdat->ydat.cones_y[i], fdat->ydat.cones_y_data[i], &equ_cone, &equ_cone_data));
+         S_CHECK(cone_polar(cones_y[i], cones_y_data[i], &equ_cone, &equ_cone_data));
          break;
       case RhpMin:
-         S_CHECK(cone_dual(fdat->ydat.cones_y[i], fdat->ydat.cones_y_data[i], &equ_cone, &equ_cone_data));
+         S_CHECK(cone_dual(cones_y[i], cones_y_data[i], &equ_cone, &equ_cone_data));
          break;
       default: return error_runtime();
       }
@@ -540,7 +605,7 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
       size_t size_At = 0;
       size_t size_d = 0;
 
-      if (fdat->has_set && At->ppty) {
+      if (fdat->primal.has_set && At->ppty) {
          /*  TODO(xhub) we need the row of the transpose of A, hence the
           *  column? */
          EMPMAT_GET_CSR_SIZE(*At, i, size_At);
@@ -563,7 +628,7 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
       }
       size_t size_new_lequ = size_At + size_d;
 
-      /* */
+      /* │Add - M tilde_y to the constant part */
       equ_add_cst(e, -fdat->tmpvec[i]);
 
       if (isfinite(var_ub[i])) {
@@ -592,6 +657,8 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
 
       /* --------------------------------------------------------------------
        * Add - A^T v - D s into the linear equation le
+       *
+       * TODO: what happens if not all v are generated?
        * -------------------------------------------------------------------- */
 
       unsigned offset = 0;
@@ -611,14 +678,34 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
        * -------------------------------------------------------------------- */
 
       if (isfinite(var_ub[i])) {
-          S_CHECK(lequ_add(le, idx_v_bnd, -1));
-          idx_v_bnd++;
+          S_CHECK(lequ_add(le, w_curvi, -1));
+          w_curvi++;
       }
 
    }
 
    /* All the equations have been added  */
    cdat_equname_end(cdat);
+   aequ_setcompact(&fdat->dual.cons, cdat->total_m - ei_cons_start, ei_cons_start);
 
+   return OK;
+}
 
+void fdat_empty(CcfFenchelData *fdat)
+{
+   rhpmat_free(&fdat->At);
+   rhpmat_free(&fdat->D);
+   rhpmat_free(&fdat->J);
+   rhpmat_free(&fdat->M);
+   rhpmat_free(&fdat->B_lin);
+
+   FREE(fdat->dual.a);
+   FREE(fdat->dual.ub);
+   FREE(fdat->b_lin);
+   FREE(fdat->tmpvec);
+
+   FREE(fdat->equ_gen);
+   FREE(fdat->equvar_basename);
+
+   ydat_empty(&fdat->primal.ydat);
 }

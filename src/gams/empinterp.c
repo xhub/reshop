@@ -4,7 +4,6 @@
 #include "ctrdat_gams.h"
 #include "empinfo.h"
 #include "empinterp.h"
-#include "empinterp_linkbuilder.h"
 #include "empinterp_linkresolver.h"
 #include "empinterp_priv.h"
 #include "empinterp_vm_compiler.h"
@@ -78,6 +77,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 
    interp->gmdcpy = NULL;
    interp->gmd = NULL;
+   interp->gmddct = NULL;
    interp->gmd_fromgdx = false;
    interp->gmd_own = false;
 
@@ -407,6 +407,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
    trace_empinterp("[empinterp] Processing file '%s'\n", empinfo_fname);
 
    int status = OK;
+   char *gdxfullname = NULL;
 
    Interpreter interp;
    empinterp_init(&interp, mdl, empinfo_fname);
@@ -426,6 +427,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
          return Error_EMPRuntimeError;
       }
 
+      GMD_CHK(gmdSelectRecordStorage, gmd, NULL, 2);
       GMD_CHK(gmdInitFromGDX, gmd, gmd_fname);
 
       if (O_Output & PO_TRACE_EMPINTERP) {
@@ -440,11 +442,42 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
       interp.gmd = gmd;
       interp.gmd_fromgdx = true;
       interp.gmd_own = true;
-      empvm_compiler_setgmd(&interp);
 
       S_CHECK_EXIT(interp_loadgmdsets(&interp));
       S_CHECK_EXIT(interp_loadgmdparams(&interp));
    }
+
+#ifdef USE_GMD_EQUVAR 
+   if (interp.mdl && interp.dct) {
+      GmsContainerData *gms = (GmsContainerData *)mdl->ctr.data;
+      dctHandle_t dct = gms->dct; assert(dct);
+      char msg[GMS_SSSIZE];
+
+      GmsModelData *gmdldat = (GmsModelData *)mdl->data;
+      const char *scrdir = gmdldat->scrdir;
+      const char *gdxname = "dctgdx.dat"; 
+      IO_CALL_EXIT(asprintf(&gdxfullname, "%s%s", scrdir, gdxname));
+
+      // this returns void ...
+      dctWriteGDX(dct, gdxfullname, msg);
+
+      gmdHandle_t gmddct;
+      if (!gmdCreate(&gmddct, msg, sizeof(msg))) {
+         error("[empinterp] ERROR: cannot create GMD object: %s\n", msg);
+         status = Error_EMPRuntimeError;
+         goto _exit;
+      }
+
+      // 2 if for a tree storage
+      GMD_CHK(gmdSelectRecordStorage, gmddct, NULL, 2);
+      GMD_CHK(gmdInitFromGDX, gmddct, gdxfullname);
+      interp.gmddct = gmddct;
+
+   }
+#endif
+
+   /* TODO: weird place and too specific */
+   empvm_compiler_setgmd(&interp);
 
    /* ---------------------------------------------------------------------
     * Phase I: parse for keywords and if there is a DAG, create the nodes
@@ -515,6 +548,7 @@ _exit:
    }
 
    empinterp_free(&interp);
+   free(gdxfullname);
 
    return status;
 }

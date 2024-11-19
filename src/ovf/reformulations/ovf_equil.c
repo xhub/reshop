@@ -218,7 +218,7 @@ int ovf_equil(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 
    /* What kind of F and k?  */
    /* Check whether we have B or b  */
-   S_CHECK(op->get_lin_transformation(ovfd, &B, &b));
+   S_CHECK(op->get_affine_transformation(ovfd, &B, &b));
 
    unsigned n_u;
    /* Get the indices of F(x)  */

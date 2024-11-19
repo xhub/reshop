@@ -270,10 +270,11 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
  * @return             the error code
  */
 int ovf_compat_types(const char *ovf_name, const char *ovf_varname, RhpSense mp_sense,
-                     bool ovf_sup)
+                     RhpSense ovf_sense)
 {
    /* MpMin and OVF sup or MpMax and OVF min are valid */
-   if (!((mp_sense == RhpMin && ovf_sup) || (mp_sense == RhpMax && !ovf_sup))) {
+   if (!((mp_sense == RhpMin && ovf_sense == RhpMax) ||
+         (mp_sense == RhpMax && ovf_sense == RhpMin))) {
       size_t i = 0;
 
       /* -------------------------------------------------------------------
@@ -291,10 +292,10 @@ int ovf_compat_types(const char *ovf_name, const char *ovf_varname, RhpSense mp_
          ++i;
       }
 
-      error("%s :: unsupported problem types: the OVF %s (var name %s)"
-                         " of type %s is used in a %s optimization problem.\n"
-                         "This is unsupported for now", __func__, ovf_name, ovf_varname,
-                         ovf_sup ? "SUP" : "INF", sense2str(mp_sense));
+      error("[OVF] ERROR: unsupported problem types: the OVF %s (var name %s)"
+            " of type %s is used in a %s optimization problem.\n"
+            "This is unsupported for now", ovf_name, ovf_varname,
+            sense2str(ovf_sense), sense2str(mp_sense));
       return Error_EMPIncorrectSyntax;
    }
 

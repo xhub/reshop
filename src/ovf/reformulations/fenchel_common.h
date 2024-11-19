@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "cones.h"
+#include "equ.h"
 #include "mdl_data.h"
 #include "ovfinfo.h"
 #include "rhp_LA.h"
@@ -11,21 +12,37 @@
 
 typedef struct {
    double * restrict tilde_y;      /**< change in y to make it belong to a cone*/
-   double * restrict var_ub;
+   double * restrict var_ub;       /**< upper bounds of y, after shift        */
    Cone   * restrict cones_y;
    void  ** restrict cones_y_data;
+   unsigned * restrict mult_ub_revidx;  /**< reverse index on the upper bound */
    bool has_shift;       /**< True if we shift y to make it fit in a cone     */
-   unsigned n_y_ub;
-   unsigned n_y;
-   double quad_cst;      /**< Quadratic constant -1/2 <tilde_y, M tilde_y>    */
+   unsigned n_y_ub;      /**< Number of upper bound contraints of y, after shift */
+   unsigned n_y;         /**< Size of y                                       */
+   double shift_quad_cst;      /**< Quadratic constant -1/2 <tilde_y, M tilde_y>    */
 } yData;
 
 typedef struct  {
-   unsigned n_v;
-   rhp_idx start_vi_v_ub;
-   rhp_idx *revidx_v_ub;
-   Avar v;
-} vData;
+   Avar v;                /**< multiplier on the constraints */
+   Avar w;                /**< multiplier on the upper bound of y */
+   Avar s;                /**< Dual variable s, for quadratic part            */
+} DualVars;
+
+typedef struct {
+   double *a;              /**< The cost vector for the dual (v variable)     */
+   double *ub;             /**< The cost vector for the dual (w variable)     */
+   DualVars vars;
+   Aequ cons;
+} CcfFenchelDual;
+
+
+typedef struct {
+   bool has_set;
+   bool is_quad;
+   RhpSense sense;
+   unsigned ncons;        /**< The number of constraints (conic inclusion)*/
+   yData ydat;            /**< Primal variable y */
+} CcfFenchelPrimal;
 
 typedef struct {
    SpMat At;
@@ -33,21 +50,13 @@ typedef struct {
    SpMat J;
    SpMat M;
    SpMat B_lin;
-   double *a;              /**< The cost vector for the dual                  */
    double *b_lin;
    double *tmpvec;         /**< Temporary vector for matrix-vector products   */
-   bool has_set;
-   bool is_quad;
-   RhpSense sense;
+   CcfFenchelPrimal primal;
+   CcfFenchelDual dual;
    OvfType type;
-   unsigned nvars;
    unsigned nargs;
-   rhp_idx vi_start;
-   rhp_idx ei_start;
-   rhp_idx idx;           /**< Index number, either variable or MP index      */
-   yData ydat;            /**< Primal variable y */
-   vData vdat;            /**< Dual variable v, multiplier on constraints     */
-   Avar s_var;            /**< Dual variable s, for quadratic part            */
+   rhp_idx vi_ovf;        /**< OVF variable index      */
    bool *equ_gen;         /**< marker for generated equations                 */
    const OvfOps *ops;
    MathPrgm *mp;          /**< MathPrgm linked to the Ccf                     */

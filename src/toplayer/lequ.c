@@ -26,14 +26,17 @@ DBGUSED static inline bool _all_finite(size_t len, const double *vals)
 }
 
 
-UNUSED static bool lequ_chk_idxs(Lequ *le, Avar *v) {
+UNUSED static bool lequ_chk_idxs(Lequ *le, Avar *v)
+{
    switch (v->type) {
+
    case EquVar_Compact:
       for (size_t i = 0; i < v->size; ++i) {
          bool res = lequ_debug_hasvar(le, v->start + i);
          if (res) { return !res; }
       }
       break;
+
    case EquVar_List:
       for (size_t i = 0; i < v->size; ++i) {
          bool res = lequ_debug_hasvar(le, v->list[i]);
@@ -41,13 +44,14 @@ UNUSED static bool lequ_chk_idxs(Lequ *le, Avar *v) {
       }
       break;
    default:
+
       return false;
    }
 
    return true;
 }
 
-Lequ *lequ_new(int maxlen)
+Lequ *lequ_new(unsigned maxlen)
 {
    Lequ *lequ;
 
@@ -162,6 +166,7 @@ int lequ_add_unique(Lequ *lequ, rhp_idx vi, double value)
  */
 int lequ_adds(Lequ * restrict lequ, Avar * restrict v, const double * restrict values)
 {
+   assert(v->type < EquVar_Unset);
    unsigned len = v->size;
    unsigned old_len = lequ->len;
    S_CHECK(lequ_reserve(lequ, len));

@@ -190,7 +190,7 @@ static int ccflib_get_cone_nonbox(OvfOpsData ovfd, unsigned idx, enum cone *cone
    return ovfgen_get_cone_nonbox(ovf, idx, cone, cone_data);
 }
 
-static size_t ccflib_size_u(OvfOpsData ovfd, size_t n_args)
+static size_t ccflib_size_y(OvfOpsData ovfd, size_t n_args)
 {
    OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
 
@@ -253,7 +253,7 @@ const struct ovf_ops ccflib_ops = {
    .get_cone_nonbox = ccflib_get_cone_nonbox,
    .get_D = ccflib_get_D,
    .get_equ = ccflib_get_equ,
-   .get_lin_transformation = ccflib_get_lin_transformation,
+   .get_affine_transformation = ccflib_get_lin_transformation,
    .get_M = ccflib_get_M,
    .get_mp_and_sense = ccflib_get_mp_and_sense,
    .get_name = ccflib_get_name,
@@ -265,7 +265,7 @@ const struct ovf_ops ccflib_ops = {
    .get_var_lb = ccflib_get_var_lb,
    .get_var_ub = ccflib_get_var_ub,
    .get_ppty = ccflib_get_ppty,
-   .size_u = ccflib_size_u,
+   .size_y = ccflib_size_y,
    .trimmem = ccflib_trimmem,
 };
 

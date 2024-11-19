@@ -408,6 +408,7 @@ typedef struct interpreter {
 
    void *dct;
    void *gmd;
+   void *gmddct;        /**< HACK: test if loading the DCT as GMD helps with slicing */
    bool gmd_fromgdx;
    bool gmd_own;
 

@@ -454,6 +454,16 @@ static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
    switch (type) {
    case IdentVar:
    case IdentEqu:
+#ifdef USE_GMD_EQUVAR 
+      if (vmdata->gmddct) {
+         char symname[GMS_SSSIZE];
+         memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
+         symname[symiter->ident.lexeme.len] = 0;
+         status = gmd_read(vmdata->gmddct, vmdata->dct, &data, symname);
+      } else {
+         status = dct_read_equvar(dct, &data);
+      }
+#endif
       status = dct_read_equvar(dct, &data);
       break;
    case IdentSet:

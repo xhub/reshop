@@ -1334,11 +1334,21 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mpid, AnalysisData *data)
          /* A variable from a descendent VF MP cannot be present in the equation */
          if (is_child_Varcs(&mps->Varcs[mpid], mp_var)) {
             report_error_futurevar(dfsdata->empdag, vi, ei, mp_var, mpid);
+            num_err++;
             continue;
          }
 
+         DagUidArray *rarcs = &mps->rarcs[mpid];
+
+         if (rarcs->len > 1) {
+            error("[empdag] ERROR: MP(%s) has %u parents, we only support at most one for now.\n",
+                  empdag_getmpname(dfsdata->empdag, mpid), rarcs->len);
+            num_err++;
+            break;
+         }
+
          /* The parent MP owns the variable: VF and CTRL subcases */
-         if (is_parent(&mps->rarcs[mpid], mp_var, &uid)) {
+         if (is_parent(rarcs, mp_var, &uid)) {
 
             if (rarcTypeVF(uid)) {
                mp_ppty->num_history++;
@@ -1423,7 +1433,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mpid, AnalysisData *data)
             report_error_badlca(dfsdata->empdag, vi, ei, mp_var, mpid, nidx_uid);
             num_err++;
          } else {
-             mp_ppty->num_nashvar++;
+            mp_ppty->num_nashvar++;
          }
 
       } while (iterator);

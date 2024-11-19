@@ -20,7 +20,7 @@ static const struct var_genops cvarlo_varfill  = {
 
 static int cvarlo_gen_var(Container* ctr,  unsigned n, const void* p)
 {
-   return ovf_box(ctr,  n, p, &cvarlo_varfill);
+   return ovf_box(ctr, n, p, &cvarlo_varfill);
 }
 
 const struct ovf_param_def* const OVF_cvarlo_params[] = {&cvar_tail, &risk_measure_probabilities};

@@ -10,10 +10,10 @@
 #include "status.h"
 #include "lequ.h" /* for some debug info  */
 
-struct sp_matrix* rhp_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
+SparseMatrix* rhp_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
 {
-   struct sp_matrix *mat;
-   CALLOC_NULL(mat, struct sp_matrix, 1);
+   SparseMatrix *mat;
+   CALLOC_NULL(mat, SparseMatrix, 1);
 
    mat->m = m;
    mat->n = n;
@@ -33,7 +33,7 @@ _exit:
    return NULL;
 }
 
-void rhp_spfree(struct sp_matrix *m)
+void rhp_spfree(SparseMatrix *m)
 {
    if (!m) { return; }
 
@@ -68,9 +68,9 @@ SpMat* rhpmat_triplet(unsigned n, unsigned m, unsigned nnz,
    CALLOC_NULL(mat, SpMat, 1);
    rhpmat_set_coo(mat);
 
-   MALLOC_EXIT_NULL(mat->triplet, struct sp_matrix, 1);
+   MALLOC_EXIT_NULL(mat->triplet, SparseMatrix, 1);
 
-   struct sp_matrix* csm = mat->triplet;
+   SparseMatrix* csm = mat->triplet;
 
    csm->nnzmax = nnz;
    csm->m = m;
@@ -139,7 +139,7 @@ void rhpmat_copy_row_neg(SpMat* M, unsigned i, double *vals,
       }
       *offset = loffset+1;
    } else {
-      struct sp_matrix *spm = M->csr;
+      SparseMatrix *spm = M->csr;
       assert(spm->p && spm->i && spm->x);
       for (RHP_INT j = spm->p[i], k = 0; j < spm->p[i+1]; ++j, ++k) {
          if (fabs(spm->x[j]) > DBL_EPSILON) {
@@ -337,7 +337,7 @@ eye_mat:
  * @param x    the vector
  * @param y    the output
  */
-static void _rhpmat_eye_axpy(const struct sp_matrix *spm, const double * restrict x, double * restrict y)
+static void _rhpmat_eye_axpy(const SparseMatrix *spm, const double * restrict x, double * restrict y)
 {
    double coeff;
    if (spm->nnzmax == 1) {
@@ -357,7 +357,7 @@ static void _rhpmat_eye_axpy(const struct sp_matrix *spm, const double * restric
  * @param x    the vector
  * @param y    the output
  */
-static void _cs_gatxpy(const struct sp_matrix *spm, const double * restrict x, double * restrict y)
+static void _cs_gatxpy(const SparseMatrix *spm, const double * restrict x, double * restrict y)
 {
    for (size_t j = 0; j < (size_t)spm->m; ++j) {
       double xj = x[j];
@@ -369,7 +369,7 @@ static void _cs_gatxpy(const struct sp_matrix *spm, const double * restrict x, d
    }
 }
 
-static void _cs_gaxpy(const struct sp_matrix *spm, const double * restrict x, double * restrict y)
+static void _cs_gaxpy(const SparseMatrix *spm, const double * restrict x, double * restrict y)
 {
    for (size_t j = 0; j < (size_t)spm->m; ++j) {
       for (size_t k = spm->p[j]; k < (size_t)spm->p[j+1]; ++k) {
@@ -411,7 +411,7 @@ int rhpmat_axpy(const SpMat *A, const double * restrict x, double * restrict y)
 
          } else {
             for (size_t i = 0; i < bmat->number; ++i) {
-               struct sp_matrix *spm = bmat->blocks[i];
+               SparseMatrix *spm = bmat->blocks[i];
                unsigned rowstart = bmat->row_starts[i];
                unsigned colstart = bmat->row_starts[i];
                _cs_gaxpy(spm, &x[colstart], &y[rowstart]);
@@ -420,7 +420,7 @@ int rhpmat_axpy(const SpMat *A, const double * restrict x, double * restrict y)
          }
 
       } else {
-         struct sp_matrix *spm = A->csr;
+         SparseMatrix *spm = A->csr;
 
          /* cs_gaxpy or _rhpmat_eye_axpy does y += Ax */
          memset(y, 0, sizeof(double)*spm->m);
@@ -469,7 +469,7 @@ int rhpmat_atxpy(const SpMat *A, const double * restrict x, double * restrict y)
 
          } else {
             for (size_t i = 0; i < bmat->number; ++i) {
-               struct sp_matrix *spm = bmat->blocks[i];
+               SparseMatrix *spm = bmat->blocks[i];
                unsigned rowstart = bmat->row_starts[i];
                unsigned colstart = bmat->row_starts[i];
                _cs_gatxpy(spm, &x[colstart], &y[rowstart]);
@@ -479,7 +479,7 @@ int rhpmat_atxpy(const SpMat *A, const double * restrict x, double * restrict y)
 
 
       } else {
-         struct sp_matrix *spm = A->csr;
+         SparseMatrix *spm = A->csr;
          /* _cs_gatxpy or _rhpmat_eye_axpy does y += Ax */
          memset(y, 0, sizeof(double)*spm->m);
 
@@ -499,7 +499,8 @@ int rhpmat_atxpy(const SpMat *A, const double * restrict x, double * restrict y)
    return OK;
 }
 
-static inline double _evalquad_csr(const struct sp_matrix *spm, const double * x)
+static inline double csr_evalquad(const SparseMatrix * restrict spm,
+                                  const double * restrict x)
 {
    double res = 0.;
 
@@ -522,7 +523,7 @@ static inline double _evalquad_csr(const struct sp_matrix *spm, const double * x
    return res;
 }
 
-static inline double _evalquad_speye(const double *x, unsigned len_x)
+static inline double speye_evalquad(const double *x, unsigned len_x)
 {
    double res = 0.;
 
@@ -533,14 +534,19 @@ static inline double _evalquad_speye(const double *x, unsigned len_x)
    return res;
 }
 
+/**
+ * @brief Evaluates the quadratic form at x
+ *
+ * @param m  the matrix M
+ * @param x  the vector x
+ *
+ * @return   the value <Mx, x>, or NAN if an error occured
+ */
 double rhpmat_evalquad(const SpMat *m, const double *x)
 {
-   assert(x);
-   assert(m);
-
    double res = 0.;
    if (!m->ppty) {
-      return res;
+      return NAN;
    }
 
    if (m->ppty & EMPMAT_BLOCK) {
@@ -548,12 +554,12 @@ double rhpmat_evalquad(const SpMat *m, const double *x)
       struct block_spmat* bmat = m->block;
       if (m->ppty & EMPMAT_EYE) {
          for (size_t i = 0; i < bmat->number; ++i) {
-            struct sp_matrix *spm = bmat->blocks[i];
+            SparseMatrix *spm = bmat->blocks[i];
             if (spm->nnzmax == 0) {
-               res += _evalquad_speye(x, spm->m);
+               res += speye_evalquad(x, spm->m);
             } else {
                assert(spm->nnzmax == 1);
-               res += spm->x[0]*_evalquad_speye(x, spm->m);
+               res += spm->x[0]*speye_evalquad(x, spm->m);
             }
 
          }
@@ -562,26 +568,26 @@ double rhpmat_evalquad(const SpMat *m, const double *x)
       }
 
       for (size_t i = 0; i < bmat->number; ++i) {
-         struct sp_matrix *spm = bmat->blocks[i];
+         SparseMatrix *spm = bmat->blocks[i];
          unsigned start = bmat->row_starts[i];
          assert(!bmat->col_starts || start == bmat->col_starts[i]);
-         res += _evalquad_csr(spm, &x[start]);
+         res += csr_evalquad(spm, &x[start]);
       }
    } else if (m->ppty & EMPMAT_EYE) {
 
       assert(m->ppty & EMPMAT_CSR || m->ppty & EMPMAT_BLOCK);
       if (m->csr->nnzmax == 0) {
-         res = _evalquad_speye(x, m->csr->m);
+         res = speye_evalquad(x, m->csr->m);
          goto _end;
       } else {
          assert(m->csr->nnzmax == 1);
-         res = m->csr->x[0]*_evalquad_speye(x, m->csr->m);
+         res = m->csr->x[0]*speye_evalquad(x, m->csr->m);
          goto _end;
       }
 
    } else if (m->ppty & EMPMAT_CSR) {
 
-      res = _evalquad_csr(m->csr, x);
+      res = csr_evalquad(m->csr, x);
 
    } else {
 
@@ -590,7 +596,7 @@ double rhpmat_evalquad(const SpMat *m, const double *x)
    }
 
 _end:
-   return .5*res;
+   return res;
 }
 
 bool rhpmat_is_square(SpMat* m)

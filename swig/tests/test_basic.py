@@ -547,7 +547,7 @@ def test_cvarlo():
     solve(mdl, mdl_solver)
 
     assert rhp.mdl_getvarsval(mdl, rho) == approx(
-        ((0.125 * d[0] + 0.025 * d[1]) / (1 - tail),)
+        ((0.125 * d[0] + 0.025 * d[1]) / (tail),)
     )
 
 

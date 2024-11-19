@@ -442,7 +442,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
    MALLOC_EXIT(csts, double, n_u);
 
    /* Check whether we have B or b  */
-   S_CHECK_EXIT(op->get_lin_transformation(ovfd, &B, &b));
+   S_CHECK_EXIT(op->get_affine_transformation(ovfd, &B, &b));
 
    /* Get the indices of F(x)  */
    Avar *ovf_args;

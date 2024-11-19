@@ -22,12 +22,12 @@ f2.. x1 - 3*x2 =e= 2;
 x1.lo = 0;
 v.lo = 0; v.up = 1;
 
-file myinfo /'%emp.info%'/;
-put myinfo
-"n1: min obj + n2.valFn x1 x2 f0 f2"
-"* support function"
-"n2: max maxz v supp"
-putclose myinfo;
+embeddedCode ReSHOP:
+n1: min obj + n2.valFn x1 x2 f0 f2
+* support function
+n2: max maxz v supp
+root: Nash(n1,n2)
+endembeddedCode
 
 model enlpemp /all/;
 solve enlpemp using emp;

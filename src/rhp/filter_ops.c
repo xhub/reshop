@@ -532,11 +532,15 @@ FilterSubset* filter_subset_new(unsigned vlen, Avar vars[vlen], unsigned elen,
    SN_CHECK_EXIT(aequ_setblock(&fs->equs,  elen));
 
    for (unsigned i = 0; i < vlen; ++i) {
-      SN_CHECK_EXIT(avar_extend(&fs->vars, &vars[i]));
+      Avar *v = &vars[i];
+      if (v->size == 0) { continue; }
+      SN_CHECK_EXIT(avar_extend(&fs->vars, v));
    }
 
    for (unsigned i = 0; i < elen; ++i) {
-      SN_CHECK_EXIT(aequ_extendandown(&fs->equs, &equs[i]));
+      Aequ *e = &equs[i];
+      if (e->size == 0) { continue; }
+      SN_CHECK_EXIT(aequ_extendandown(&fs->equs, e));
    }
 
    fs->nlpoolvars.offset_vars_pool = UINT_MAX;

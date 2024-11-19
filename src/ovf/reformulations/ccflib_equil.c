@@ -668,8 +668,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
     * VF arguments or variables */
    if (n_arcs > 0 && nargs_maps > 0) {
       error("[ccflib/equil:dual] ERROR: Mixture of %u MP children and %u "
-            "variable arguments, this is not supported yet\n",
-            n_arcs, nargs_maps);
+            "variable arguments, this is not supported yet\n", n_arcs, nargs_maps);
       return Error_NotImplemented;
    }
 

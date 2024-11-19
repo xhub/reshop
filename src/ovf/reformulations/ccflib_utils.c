@@ -65,7 +65,7 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    S_CHECK_EXIT(ops->get_nargs(ovfd, &nargs_maps));
 
 
-   S_CHECK_EXIT(ops->get_lin_transformation(ovfd, &instancedat->B, &instancedat->b));
+   S_CHECK_EXIT(ops->get_affine_transformation(ovfd, &instancedat->B, &instancedat->b));
 
    if (nargs_maps > 0) {
       CcflibData ccfdat = {.mp = mp_ccflib, .mpid_dual = MpId_NA};
