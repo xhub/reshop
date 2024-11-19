@@ -52,7 +52,7 @@
 static inline const char *get_mode_color(unsigned mode)
 {
    switch (mode) {
-   case PO_STACK:
+   case PO_BACKEND:
       return ANSI_COLOR_BLUE;
    case PO_TRACE_REFCNT:
       return COLOR_REFCNT;
@@ -330,13 +330,13 @@ _exit:
 static inline bool do_print(unsigned mode, bool *mode_has_color)
 {
    /* This is normal output */
-   if ( !(mode & ~PO_NONTRACING) && (mode & PO_MASK_LEVEL) <= (O_Output & PO_MASK_LEVEL) ) {
+   if ( !(mode & ~PO_MASK_NONTRACING) && (mode & PO_MASK_LEVEL) <= (O_Output & PO_MASK_LEVEL) ) {
       *mode_has_color = false;
       return true;
    }
 
    switch (mode) {
-   case PO_STACK:
+   case PO_BACKEND:
    case PO_TRACE_REFCNT:
    case PO_TRACE_EMPINTERP:
    case PO_TRACE_EMPPARSER:
@@ -345,6 +345,7 @@ static inline bool do_print(unsigned mode, bool *mode_has_color)
    case PO_TRACE_CONTAINER:
    case PO_TRACE_EMPDAG:
    case PO_TRACE_FOOC:
+   case PO_TRACE_CCF:
       return (O_Output & mode);
    default:
       return false;

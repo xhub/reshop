@@ -31,7 +31,7 @@ static inline int error_runtime(void)
 #define chk_potrace(PO_VAL, ...) if (RHP_UNLIKELY(O_Output & (PO_VAL))) { printout(PO_VAL, __VA_ARGS__); }
 
 
-#define trace_stack(...)          chk_potrace(PO_STACK, __VA_ARGS__)
+#define trace_stack(...)          chk_potrace(PO_BACKEND, __VA_ARGS__)
 #define trace_refcnt(format, ...) printout(PO_TRACE_REFCNT, format, __VA_ARGS__)
 #define trace_empinterp(...)      chk_potrace(PO_TRACE_EMPINTERP, __VA_ARGS__)
 #define trace_empinterpmsg(str)   printstr(PO_TRACE_EMPINTERP, str)
@@ -43,6 +43,7 @@ static inline int error_runtime(void)
 #define trace_solreport(...)      chk_potrace(PO_TRACE_SOLREPORT, __VA_ARGS__)
 #define trace_ctr(...)            chk_potrace(PO_TRACE_CONTAINER, __VA_ARGS__)
 #define trace_fooc(...)           chk_potrace(PO_TRACE_FOOC, __VA_ARGS__)
+#define trace_ccf(...)            chk_potrace(PO_TRACE_CCF, __VA_ARGS__)
 
 #define trace_model               trace_stack
 

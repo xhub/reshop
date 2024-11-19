@@ -18,12 +18,12 @@ const char* rhp_version(void)
 }
 
 
-void rhp_show_stackinfo(unsigned char val)
+void rhp_show_backendinfo(unsigned char val)
 {
   if (val) {
-    O_Output |= PO_STACK;
+    O_Output |= PO_BACKEND;
   } else {
-    O_Output &= ~PO_STACK;
+    O_Output &= ~PO_BACKEND;
   }
 }
 
@@ -99,14 +99,29 @@ void rhp_show_fooctrace(unsigned char val)
   }
 }
 
+void rhp_show_ccftrace(unsigned char val)
+{
+  if (val) {
+    O_Output |= PO_TRACE_CCF;
+  } else {
+    O_Output &= ~PO_TRACE_CCF;
+  }
+}
+
 static void rhp_show_timings(unsigned char val)
 {
    rhp_options[Options_Display_Timings].value.b = val > 0;
 }
 
+static void rhp_show_solver_log(unsigned char val)
+{
+   O_Output_Subsolver_Log = val > 0;
+}
+
 struct log_opt {
    const char *name;
    void (*fn)(unsigned char);
+   const char *help;
 };
 
 int rhp_syncenv(void)
@@ -117,17 +132,20 @@ int rhp_syncenv(void)
    MALLOC_(env_varname, char, optname_maxlen + 5);
 
    struct log_opt log_opts[] = {
-      {"container",        rhp_show_containertrace},
-      {"empdag", rhp_show_empdagtrace},
-      {"empinterp", rhp_show_empinterptrace},
-      {"empparser", rhp_show_empparsertrace},
-      {"fooc", rhp_show_fooctrace},
-      {"process", rhp_show_processtrace},
-      {"refcnt", rhp_show_refcnttrace},
-      {"timings", rhp_show_timings},
-      {"stack", rhp_show_stackinfo},
-      {"solreport", rhp_show_solreporttrace},
+      {"container",   rhp_show_containertrace, "lists algebraic container changes"},
+      {"ccf",         rhp_show_ccftrace,       "lists CCF reformulation information"},
+      {"empdag",      rhp_show_empdagtrace,    "lists EMPDAG actions"},
+      {"empinterp",   rhp_show_empinterptrace, "lists EMP interpreter actions"},
+      {"empparser",   rhp_show_empparsertrace, "lists EMP parser actions"},
+      {"fooc",        rhp_show_fooctrace,      "lists first-order optimality conditions computation information"},
+      {"process",     rhp_show_processtrace,   "lists processing actions"},
+      {"refcnt",      rhp_show_refcnttrace,    "display reference counter information"},
+      {"timings",     rhp_show_timings,        "display timings information"},
+      {"stack",       rhp_show_backendinfo,    "display backend information"},
+      {"solreport",   rhp_show_solreporttrace, "display solution/values reporting actions"},
+      {"solver",      rhp_show_solver_log,     "display solver log"},
    };
+
    const char* loglevel_vals[]   = {"all",   "error", "info",   "v",  "vv",  "vvv"};
    const unsigned loglevel_num[] = {INT_MAX, PO_ERROR, PO_INFO, PO_V, PO_VV, PO_VVV};
    const unsigned n_loglevels = ARRAY_SIZE(loglevel_num);
@@ -184,11 +202,25 @@ int rhp_syncenv(void)
             O_Output |= PO_MAX_VERBOSITY | PO_ALLDEST;
          }
 
+         /* the 'all' keyword does turn on everything */
+         if (!strncmp("help", envopt, 4)) {
+            printf("Help for RHP_LOG values:\n\n");
+            for (unsigned i = 0; i < n_opts; ++i) {
+               /* TODO: do we have access to printf here */
+               printf("\t%20s: %s\n", log_opts[i].name, log_opts[i].help);
+            }
+            printf("\t%20s: enable all options above\n", "all");
+            status = Error_WrongOptionValue;
+            goto _exit;
+         }
+
 _continue:
          if (env_varval[len] == ':') { len++; }
-         else break;
+         else { break; }
       }
     }
+
+_exit:
    myfreeenvval(env_varval);
 
 

@@ -147,12 +147,12 @@ static int gams_allocdata(Model *mdl)
    const char *gamscntr = gams_getgamscntr();
 
    if (gamsdir) {
-     printout(PO_STACK, "[GAMS] gamsdir set to global value '%s'.\n", gamsdir);
+     printout(PO_BACKEND, "[GAMS] gamsdir set to global value '%s'.\n", gamsdir);
      STRNCPY_FIXED(mdldat->gamsdir, gamsdir);
    }
 
    if (gamscntr) {
-     printout(PO_STACK, "[GAMS] gamscntr set to global value '%s'.\n", gamscntr);
+     printout(PO_BACKEND, "[GAMS] gamscntr set to global value '%s'.\n", gamscntr);
      STRNCPY_FIXED(mdldat->gamscntr, gamscntr);
    }
 

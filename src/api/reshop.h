@@ -812,6 +812,8 @@ void rhp_banner(void);
 RHP_PUBLIB
 const char* rhp_version(void);
 RHP_PUBLIB
+void rhp_show_ccftrace(unsigned char val);
+RHP_PUBLIB
 void rhp_show_containertrace(unsigned char val);
 RHP_PUBLIB
 void rhp_show_empdagtrace(unsigned char val);
@@ -828,7 +830,7 @@ void rhp_show_refcnttrace(unsigned char val);
 RHP_PUBLIB
 void rhp_show_solreporttrace(unsigned char val);
 RHP_PUBLIB
-void rhp_show_stackinfo(unsigned char val);
+void rhp_show_backendinfo(unsigned char val);
 RHP_PUBLIB
 int rhp_syncenv(void);
 
