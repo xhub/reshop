@@ -314,6 +314,11 @@ static int avar_block_extend(Avar *v, const Avar *w)
 
 int avar_extend(Avar *v, const Avar *w)
 {
+   if (w->type == EquVar_Unset) {
+      errormsg("ERROR: uninitialized variable used!\n");
+      return Error_RuntimeError;
+   }
+
    switch (v->type) {
    case EquVar_Compact:
    case EquVar_List:

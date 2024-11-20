@@ -454,17 +454,34 @@ static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
    switch (type) {
    case IdentVar:
    case IdentEqu:
-#ifdef USE_GMD_EQUVAR 
+#ifdef RESHOP_EXPERIMENTAL 
       if (vmdata->gmddct) {
          char symname[GMS_SSSIZE];
          memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
          symname[symiter->ident.lexeme.len] = 0;
          status = gmd_read(vmdata->gmddct, vmdata->dct, &data, symname);
+
+         if (status == OK) {
+            if (data.nrecs == 1) {
+            if (type == IdentVar) {
+               avar_setcompact(&vmdata->v, 1, data.itmp);
+            } else {
+               aequ_setcompact(&vmdata->e, 1, data.itmp);
+            }
+            } else {
+            if (type == IdentVar) {
+               avar_setlist(&vmdata->v, data.nrecs, data.iscratch->data);
+            } else {
+               aequ_setlist(&vmdata->e, data.nrecs, data.iscratch->data);
+            }
+            }
+         }
       } else {
          status = dct_read_equvar(dct, &data);
       }
-#endif
+#else
       status = dct_read_equvar(dct, &data);
+#endif
       break;
    case IdentSet:
    case IdentScalar:
@@ -653,6 +670,7 @@ EmpVm* empvm_new(Interpreter *interp)
 
    vm->data.dct = interp->dct;
    vm->data.gmd = interp->gmd;
+   vm->data.gmddct = interp->gmddct;
    vm->data.mdl = interp->mdl;
    vm->data.globals = &interp->globals;
    vm->data.dagregister = &interp->dagregister;

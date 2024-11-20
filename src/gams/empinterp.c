@@ -447,7 +447,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
       S_CHECK_EXIT(interp_loadgmdparams(&interp));
    }
 
-#ifdef USE_GMD_EQUVAR 
+#ifdef RESHOP_EXPERIMENTAL 
    if (interp.mdl && interp.dct) {
       GmsContainerData *gms = (GmsContainerData *)mdl->ctr.data;
       dctHandle_t dct = gms->dct; assert(dct);
@@ -468,10 +468,74 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
          goto _exit;
       }
 
-      // 2 if for a tree storage
+      trace_empinterp("[empinterp] GMDDCT: loading from GDX %s\n", gdxfullname);
+
+      // 2 if for a GTree storage
       GMD_CHK(gmdSelectRecordStorage, gmddct, NULL, 2);
       GMD_CHK(gmdInitFromGDX, gmddct, gdxfullname);
       interp.gmddct = gmddct;
+
+      void *symptr;
+      int symidx_prev = -1;
+
+      for (int i = 0, end = dctNCols(dct); i < end; ++i) {
+         int symidx, symdim, uels[GMS_MAX_INDEX_DIM];
+         dctColUels(dct, i, &symidx, uels, &symdim);
+
+         if (symidx != symidx_prev) {
+            char symname[GMS_SSSIZE];
+            dctSymName(dct, symidx, symname, GMS_SSSIZE);
+
+            GMD_CHK(gmdFindSymbol, gmddct, symname, &symptr);
+            symidx_prev = symidx;
+         }
+
+         char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
+         char *uels_strp[GLOBAL_MAX_INDEX_DIM];
+
+         for (int k = 0; k < symdim; ++k) {
+            uels_strp[k] = uels_str[k];
+            GMD_CHK(gmdGetUelByIndex, gmddct, uels[k], uels_str[k]);
+         }
+
+         void *symiterptr;
+         GMD_FIND_CHK(gmdFindRecord, gmddct, symptr, (const char **)uels_strp, &symiterptr);
+
+         assert(symiterptr);
+         GMD_CHK(gmdSetLevel, gmddct, symiterptr, i);
+
+         gmdFreeSymbolIterator(gmddct, symiterptr);
+      }
+
+      symidx_prev = -1;
+
+      for (int i = 0, end = dctNRows(dct); i < end; ++i) {
+         int symidx, symdim, uels[GMS_MAX_INDEX_DIM];
+         dctRowUels(dct, i, &symidx, uels, &symdim);
+
+         if (symidx != symidx_prev) {
+            char symname[GMS_SSSIZE];
+            dctSymName(dct, symidx, symname, GMS_SSSIZE);
+
+            GMD_CHK(gmdFindSymbol, gmddct, symname, &symptr);
+            symidx_prev = symidx;
+         }
+
+         char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
+         char *uels_strp[GLOBAL_MAX_INDEX_DIM];
+
+         for (int k = 0; k < symdim; ++k) {
+            uels_strp[k] = uels_str[k];
+            GMD_CHK(gmdGetUelByIndex, gmddct, uels[k], uels_str[k]);
+         }
+
+         void *symiterptr;
+         GMD_FIND_CHK(gmdFindRecord, gmddct, symptr, (const char **)uels_strp, &symiterptr);
+
+         GMD_CHK(gmdSetLevel, gmddct, symiterptr, i);
+
+         gmdFreeSymbolIterator(gmddct, symiterptr);
+      }
 
    }
 #endif

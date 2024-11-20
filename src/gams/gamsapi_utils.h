@@ -38,19 +38,22 @@
       error("%*s%s\n", offset42, "", msg42); \
    }
 
-#define GMD_FIND_CHK(func, gmdh, ...) \
-   if (!func(gmdh, __VA_ARGS__)) { \
-      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, buf); \
-      error("[empinterp] ERROR: in the GMD, could not find record for symbol %s", buf); \
-      if (dim > 1 || (dim == 1 && uels[0] > 0)) { \
+#define GMD_FIND_CHK(func, gmdh, symptr, ...) \
+   if (!func(gmdh, symptr, __VA_ARGS__)) { \
+      char buf42[GMS_SSSIZE]; \
+      GMD_CHK(gmdSymbolInfo, gmdh, symptr, GMD_NAME, NULL, NULL, buf42); \
+      error("[empinterp] ERROR: in the GMD, could not find record for symbol %s", buf42); \
+      int dim42 = 0; \
+      GMD_CHK(gmdSymbolInfo, gmdh, symptr, GMD_DIM, &dim42, NULL, NULL); \
+      if (dim42 > 1 || (dim42 == 1 && uels[0] > 0)) { \
          errormsg("("); \
-         for (unsigned i = 0; i < dim; ++i) { \
+         for (unsigned i42 = 0; i42 < dim42; ++i42) { \
             char quote42 = '\''; \
-            int uel42 = uels[i]; \
-            if (uel42 > 0) { GMD_CHK(gmdGetUelByIndex, gmdh, uel42, buf); \
-            } else { strcpy(buf, "'*'"); } \
-            if (i > 0) { errormsg(","); } \
-               error("%c%s%c", quote42, buf, quote42); \
+            int uel42 = uels[i42]; \
+            if (uel42 > 0) { GMD_CHK(gmdGetUelByIndex, gmdh, uel42, buf42); \
+            } else { strcpy(buf42, "'*'"); } \
+            if (i42 > 0) { errormsg(","); } \
+               error("%c%s%c", quote42, buf42, quote42); \
             } \
             errormsg(")"); \
          } \
@@ -58,9 +61,8 @@
       \
       int offset42; \
       error("[gmd] GMD errors: %n\n", &offset42); \
-      char msg42[GMS_SSSIZE]; \
-      gmdGetLastError(gmdh, msg42); \
-      error("%*s%s\n", offset42, "", msg42); \
+      gmdGetLastError(gmdh, buf42); \
+      error("%*s%s\n", offset42, "", buf42); \
       return Error_SymbolNotInTheGamsRim; \
    }
 

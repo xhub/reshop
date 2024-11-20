@@ -1,4 +1,5 @@
 #include "empinterp_symbol_resolver.h"
+#include "empinterp_priv.h"
 #include "empparser.h"
 #include "empinterp_vm_utils.h"
 #include "equ.h"
@@ -232,9 +233,7 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
 
    switch (toktype) {
    case TOK_GMS_VAR:
-      TO_IMPLEMENT("gmd_resolve for variables");
    case TOK_GMS_EQU:
-      TO_IMPLEMENT("gms_resolve for params in immediate mode");
    case TOK_GMS_SET:
    case TOK_GMS_PARAM:
    {
@@ -278,12 +277,23 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
 
          double vals[GMS_VAL_MAX];
          GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
-         if (toktype == TOK_GMS_SET) {
+
+         switch (toktype) {
+         case TOK_GMS_SET:
+         case TOK_GMS_EQU:
+         case TOK_GMS_VAR: {
             double val = vals[GMS_VAL_LEVEL];
             S_CHECK(chk_dbl2int(val, __func__));
             data->itmp = (int)val;
-         } else {
+            break;
+         }
+         case TOK_GMS_PARAM: {
             data->dtmp = vals[GMS_VAL_LEVEL];
+            break;
+         }
+         default:
+            error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
+            return Error_RuntimeError;
          }
 
          data->nrecs = 1;
@@ -308,7 +318,10 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
          rhp_idx i = 0;
          bool has_next;
 
-         if (toktype == TOK_GMS_SET) {
+         switch (toktype) {
+         case TOK_GMS_SET:
+         case TOK_GMS_EQU:
+         case TOK_GMS_VAR: {
 
             S_CHECK(scratchint_ensure(data->iscratch, size));
             rhp_idx *idxs = data->iscratch->data;
@@ -323,8 +336,11 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
                if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
             } while (has_next);
 
+            break;
+         }
 
-         } else {
+
+         case TOK_GMS_PARAM: {
 
             S_CHECK(scratchdbl_ensure(data->dscratch, size));
             double *dbls = data->dscratch->data;
@@ -337,6 +353,11 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
                if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
             } while (has_next);
 
+            break;
+         }
+         default:
+            error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
+            return Error_RuntimeError;
          }
 
          data->nrecs = i;
