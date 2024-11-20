@@ -3,7 +3,7 @@ solverConfig:
       minVersion: 33
       fileType: 102111
       dictType: 5
-      licCodes: 000102030405
+      licCodes: 00010203040506070809
       scriptName: gmsgenus.run
       executableName: gmsgenux.out
       library:

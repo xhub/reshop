@@ -3,7 +3,7 @@ solverConfig:
       minVersion: 33
       fileType: 102111
       dictType: 5
-      licCodes: 000102030405
+      licCodes: 00010203040506070809
       scriptName: @CMAKE_SOURCE_DIR@/gams_link/cfg/valgrind.run
       defName: @CMAKE_SOURCE_DIR@/gams_link/optreshop.def
       modelTypes:
