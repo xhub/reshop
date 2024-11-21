@@ -255,6 +255,14 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
          /* initialize UELs */
          for (unsigned i = 0; i < dim; ++i) {
             uels_strp[i] = uels_str[i];
+
+            /* dctUelLabel chockes on the universal UEL */
+            if (uels[i] == 0) {
+               uels_strp[i] = " "; /* WARNING this is not '*' as of 2024.11.21 */
+               single_record = false;
+               continue;
+            }
+
             if (dct) {
                char quote_[] = " ";
                if (dctUelLabel(dct, uels[i], quote_, uels_strp[i], GLOBAL_UEL_IDENT_SIZE)) {
@@ -265,7 +273,7 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
             } else {
                GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
             }
-            if (uels[i] == 0) { single_record = false; }
+
             if (uels[i] != 0) { data->allrecs = false; }
          }
       } else {
