@@ -271,7 +271,6 @@ static int interp_loadgmdsets(Interpreter *interp)
       void *symiterptr = NULL;
       GMD_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
 
-      bool has_next;
       do {
          char uelstr[GLOBAL_UEL_IDENT_SIZE];
          GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uelstr)
@@ -290,9 +289,9 @@ static int interp_loadgmdsets(Interpreter *interp)
          }
 
          rhp_int_add(&set, uelidx);
-         has_next = gmdRecordHasNext(gmd, symiterptr);
-         if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
-      } while (has_next);
+      } while ( gmdRecordMoveNext(gmd, symiterptr) );
+
+      assert(set.len == nrecs);
 
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, setname);
       S_CHECK(namedints_add(&interp->globals.sets, set, strdup(setname)));
@@ -362,7 +361,6 @@ static int interp_loadgmdparams(Interpreter *interp)
       lequ_init(&v);
       S_CHECK(lequ_reserve(&v, nrecs))
 
-      bool has_next;
       do {
          char uel[GLOBAL_UEL_IDENT_SIZE];
          GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uel)
@@ -376,10 +374,9 @@ static int interp_loadgmdparams(Interpreter *interp)
          GMD_CHK(gmdGetLevel,gmd, symiterptr, &val);
          lequ_add(&v, uelidx, val);
 
-         has_next = gmdRecordHasNext(gmd, symiterptr);
-         if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
-      } while (has_next);
+      } while ( gmdRecordMoveNext(gmd, symiterptr));
 
+      assert(v.len == nrecs);
 
       S_CHECK(namedvec_add(&interp->globals.vectors, v, strdup(param_name)));
 
@@ -447,7 +444,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
       S_CHECK_EXIT(interp_loadgmdparams(&interp));
    }
 
-#ifdef RESHOP_EXPERIMENTAL 
+#ifdef RHP_EXPERIMENTAL 
    if (interp.mdl && interp.dct) {
       GmsContainerData *gms = (GmsContainerData *)mdl->ctr.data;
       dctHandle_t dct = gms->dct; assert(dct);

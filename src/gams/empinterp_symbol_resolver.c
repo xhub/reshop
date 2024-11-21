@@ -316,7 +316,6 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
          S_CHECK(scratchint_ensure(data->iscratch, size));
 
          rhp_idx i = 0;
-         bool has_next;
 
          switch (toktype) {
          case TOK_GMS_SET:
@@ -332,9 +331,7 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
                double val = vals[GMS_VAL_LEVEL];
                S_CHECK(chk_dbl2int(val, __func__));
                idxs[i++] = (int)val;
-               has_next = gmdRecordHasNext(gmd, symiterptr);
-               if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
-            } while (has_next);
+            } while ( gmdRecordMoveNext(gmd, symiterptr) );
 
             break;
          }
@@ -349,9 +346,7 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
                double vals[GMS_VAL_MAX];
                GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
                dbls[i++] = vals[GMS_VAL_LEVEL];
-               has_next = gmdRecordHasNext(gmd, symiterptr);
-               if (has_next) { gmdRecordMoveNext(gmd, symiterptr); }
-            } while (has_next);
+            } while (gmdRecordMoveNext(gmd, symiterptr));
 
             break;
          }
