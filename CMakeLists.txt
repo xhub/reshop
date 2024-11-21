@@ -91,6 +91,9 @@ option(BUILD_PYTHON
 option(DEV_MODE
    "Developper mode (enables extras)" OFF)
 
+option(EXPERIMENTAL
+   "Enable experimental features" OFF)
+
 CMAKE_DEPENDENT_OPTION (WITH_BACKTRACE 
   "Build with backtracing facilities" ON
   "NOT WINDOWS;NOT DISTRIB;DEV_MODE" OFF)
@@ -180,6 +183,9 @@ if(EXTRA_DEBUG_OUTPUT)
    add_compile_definitions (RHP_EXTRA_DEBUG_OUTPUT)
 endif()
 
+if(EXPERIMENTAL)
+   add_compile_definitions (RHP_EXPERIMENTAL)
+endif()
 
 
 #################################################

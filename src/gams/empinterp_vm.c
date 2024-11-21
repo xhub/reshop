@@ -454,7 +454,7 @@ static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
    switch (type) {
    case IdentVar:
    case IdentEqu:
-#ifdef RESHOP_EXPERIMENTAL 
+#ifdef RHP_EXPERIMENTAL 
       if (vmdata->gmddct) {
          char symname[GMS_SSSIZE];
          memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
