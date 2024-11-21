@@ -51,7 +51,7 @@
             char quote42 = '\''; \
             int uel42 = uels[i42]; \
             if (uel42 > 0) { GMD_CHK(gmdGetUelByIndex, gmdh, uel42, buf42); \
-            } else { strcpy(buf42, "'*'"); } \
+            } else { strcpy(buf42, "*"); } \
             if (i42 > 0) { errormsg(","); } \
                error("%c%s%c", quote42, buf42, quote42); \
             } \

@@ -503,7 +503,7 @@ int mp_setobjvar(MathPrgm *mp, rhp_idx vi)
       S_CHECK(mp_addvarchk(mp, vi));
    } else if (mp_id != mp->id) {
       error("[MP] ERROR: Trying to set objective variable of MP(%.*s) (ID #%u) "
-            "to '%s', but the latter belong to MP(%s)", mp_fmtargs(mp),
+            "to '%s', but the latter belong to MP(%s)\n", mp_fmtargs(mp),
             mdl_printvarname(mp->mdl, vi), mpid_getname(mp->mdl, mp_id));
       return Error_EMPRuntimeError;
    }

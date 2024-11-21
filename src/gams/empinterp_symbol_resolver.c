@@ -53,7 +53,7 @@ int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
          for (unsigned i = 0; i < dim; ++i) {
             int uel = uels[i];
             if (uel > 0) { dctUelLabel(dct, uels[i], &quote, buf, sizeof(buf));
-            } else { strcpy(buf, "'*'"); }
+            } else { strcpy(buf, "*"); }
             trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
       }
@@ -225,7 +225,7 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
                      memcpy(buf, err_uel, sizeof(err_uel));
                   }
                } else { GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf); }
-            } else { strcpy(buf, "'*'"); }
+            } else { strcpy(buf, "*"); }
             trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
       }
