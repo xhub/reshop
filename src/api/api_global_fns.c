@@ -7,9 +7,9 @@
 #include "rhp_options.h"
 #include "status.h"
 
-void rhp_banner(void)
+void rhp_print_banner(void)
 {
-  printout(PO_INFO, "ReSHOP %s\n", rhp_git_hash);
+  printout(PO_INFO, "ReSHOP %s by Olivier Huber\n", rhp_git_hash);
 }
 
 const char* rhp_version(void)

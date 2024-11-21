@@ -808,7 +808,7 @@ int rhp_PATH_setfname(const char* fname);
  * Additional display info
  * ------------------------------------------------------------------------ */
 RHP_PUBLIB
-void rhp_banner(void);
+void rhp_print_banner(void);
 RHP_PUBLIB
 const char* rhp_version(void);
 RHP_PUBLIB

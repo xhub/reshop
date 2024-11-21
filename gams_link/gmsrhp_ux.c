@@ -88,7 +88,6 @@ int main(int argc, char** argv)
    bool silent = silent_env;
    myfreeenvval(silent_env);
 
-
    mdl = rhp_gms_newfromcntr(argv[1]);
 
    if (!mdl) {

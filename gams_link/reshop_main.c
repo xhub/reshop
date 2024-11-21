@@ -121,7 +121,7 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
       rc = 1; goto _exit;
    }
 
-   /* TODO(GAMS review): the following 2 GAMS call make no sense */
+   /* Make sure that the pointers in the {gmo,gev}mcc.h are loaded */
 
    if (!gmoGetReady(msg, sizeof(msg))) {
       (void)fprintf(stdout, "%s\n", msg);
@@ -250,6 +250,9 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
       gevLogStat(jh->eh, msg);
       rc = 1; goto _exit;
    }
+
+   /* Print the reshop banner */
+   rhp_print_banner();
 
    if (rhp_syncenv()) {
       gevLogStat(jh->eh, "*** ReSHOP ERROR: Failed to sync with environment variables");

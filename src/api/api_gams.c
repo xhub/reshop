@@ -227,6 +227,9 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
 
    rhp_gms_set_gamsprintops(mdl);
 
+   /* Print the reshop banner, after setting the printops */
+   rhp_print_banner();
+
    SN_CHECK_EXIT(gmdl_loadrhpoptions(mdl));
 
    SN_CHECK_EXIT(rhp_gms_fillmdl(mdl));
