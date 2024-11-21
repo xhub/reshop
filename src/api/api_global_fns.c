@@ -9,7 +9,7 @@
 
 void rhp_print_banner(void)
 {
-  printout(PO_INFO, "ReSHOP %s by Olivier Huber\n", rhp_git_hash);
+  printout(PO_INFO, "ReSHOP %s\t Author: Olivier Huber\n", rhp_git_hash);
 }
 
 const char* rhp_version(void)
