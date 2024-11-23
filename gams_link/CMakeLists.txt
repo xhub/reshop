@@ -38,9 +38,16 @@ add_library(${RESHOP_GAMSLINK_LIB} SHARED ${RESHOP_GAMSLINK_LIB_C_FILES})
 
 # This adds gmsrhp_ux.out
 set(RESHOP_GAMSLINK_EXE "gmsrhp_ux.out")
-add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;"
+
+# For a sanitizer build, we put everything in gmsrhp_ux
+if (CMAKE_BUILD_TYPE MATCHES "san")
+   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;" ${RESHOP_C_FILES})
+   target_link_libraries(${RESHOP_GAMSLINK_EXE} PRIVATE ${EXTRA_LIBS})
+else()
+   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;"
                                       "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgmomcc.c;"
                                       "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgevmcc.c")
+endif()
 
 list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE} ${RESHOP_GAMSLINK_LIB})
 
