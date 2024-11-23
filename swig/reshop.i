@@ -330,9 +330,15 @@ typedef struct rhp_mdl {
    %extend {
       rhp_mdl(unsigned backend) { return rhp_mdl_new(backend); } 
       rhp_mdl(const char *gms_controlfile) {
-         struct rhp_mdl *mdl = rhp_gms_newfromcntr (gms_controlfile);
+         struct rhp_mdl *mdl;
+         int rc = rhp_gms_newfromcntr (gms_controlfile, &mdl);
          if (!mdl) {
             SWIG_exception(SWIG_RuntimeError, "Couldn't create model");
+         }
+
+         if (rc) {
+            rhp_mdl_free(mdl);
+            SWIG_exception(SWIG_RuntimeError, "Couldn't fully load the model");
          }
 
          return mdl;

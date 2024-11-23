@@ -253,7 +253,7 @@ primal: min cost_DE x e2 e3 defcost_DE_CRM
 * Should this work?
 *crm(i)$(not L(i)): max crm_objvar(i) y(i,j) normY(i) crm_objequ(i)
 
-crm(i)$(not L(i)): max crm_objvar(i) y(i,'*') normY(i) crm_objequ(i)
+crm(i)$(not L(i)): max crm_objvar(i) y(i,:) normY(i) crm_objequ(i)
 * TODO: fix the following
 * equil: Nash(primal, crm)
 equil: Nash(primal, crm(i)$(not L(i)))
@@ -309,7 +309,7 @@ primal: min cost_DE x e2 e3 defcost_DE_CRM
 * Should this work?
 *crm(i)$(not L(i)): max crm_objvar(i) y(i,j) normY(i) crm_objequ(i)
 
-crm(i)$(not L(i)): max crm_objvar(i) y(i,'*') normY(i) crm_objequ(i)
+crm(i)$(not L(i)): max crm_objvar(i) y(i,:) normY(i) crm_objequ(i)
 * TODO: fix the following
 * equil: Nash(primal, crm)
 equil: Nash(primal, crm(i)$(not L(i)))

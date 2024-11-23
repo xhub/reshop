@@ -41,6 +41,7 @@ typedef enum IdentType {
    IdentParam,
    IdentUEL,
    IdentUniversalSet,
+   IdentSymbolSlice,
    IdentVar,
    IdentEqu,
    IdentTypeMaxValue,
@@ -58,7 +59,7 @@ typedef struct ident_data {
    IdentType type;      /**< Symbol type                   */
    IdentOrigin origin;  /**< Symbol origin                 */
    uint8_t dim;         /**< Dimension of the symbol       */
-   Lexeme lexeme;       
+   Lexeme lexeme;       /**< Lexeme                        */
    unsigned idx;        /**< 1-based index                 */
    void *ptr;           /**< Pointer associated with symbol */ 
 } IdentData;
@@ -67,7 +68,7 @@ typedef struct ident_data {
 typedef struct gams_symb_data {
    IdentData ident;             /**< Identifier data (symbol name)           */
    bool read;                  /**< true if the object was successfully read */
-   int domindices[GLOBAL_MAX_INDEX_DIM]; /**< Indices of the domains */
+//   int domindices[GLOBAL_MAX_INDEX_DIM]; /**< Indices of the domains */
 } GamsSymData;
 
 

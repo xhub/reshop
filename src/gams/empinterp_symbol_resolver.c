@@ -53,7 +53,7 @@ int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
          for (unsigned i = 0; i < dim; ++i) {
             int uel = uels[i];
             if (uel > 0) { dctUelLabel(dct, uels[i], &quote, buf, sizeof(buf));
-            } else { strcpy(buf, "*"); }
+            } else { strcpy(buf, "wildcard (:)"); }
             trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
       }
@@ -174,10 +174,10 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
 // HACK
 int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, const char *symname)
 {
-   int symnr, *uels;
+   UNUSED int symnr, *uels;
    unsigned dim;
    TokenType toktype;
-   bool compact;
+   bool full_records;
    char buf[GMS_SSSIZE] = " ";
 
    if (data->type == GmsSymIteratorTypeImm) {
@@ -185,29 +185,21 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
       dim = data->symiter.imm.symiter->indices.nargs;
       toktype = data->symiter.imm.toktype;
       uels =  data->symiter.imm.symiter->uels;
-      compact = data->symiter.imm.symiter->compact;
+      full_records = data->symiter.imm.symiter->compact;
    } else if (data->type == GmsSymIteratorTypeVm) {
       symnr = (int)data->symiter.vm->ident.idx;
       dim = data->symiter.vm->ident.dim;
       toktype = ident2toktype(data->symiter.vm->ident.type);
       uels =  data->symiter.vm->uels;
-      compact = data->symiter.vm->compact;
+      full_records = data->symiter.vm->compact;
    } else {
       TO_IMPLEMENT("unknown iterator type");
    }
 
    assert(dim < GMS_MAX_INDEX_DIM);
 
-  /* ----------------------------------------------------------------------
-   * WARNING: this relies on symidx being GMD_NUMBER
-   * ---------------------------------------------------------------------- */
    void *symptr = NULL;
-   if (data->type == GmsSymIteratorTypeVm) {
-       GMD_CHK(gmdFindSymbol, gmd, symname,  &symptr);
-   } else {
-      GMD_CHK(gmdGetSymbolByNumber, gmd, symnr, &symptr);
-   }
-
+   GMD_CHK(gmdFindSymbol, gmd, symname, &symptr);
    if (O_Output & PO_TRACE_EMPINTERP) {
       char quote = '\'';
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, buf);
@@ -225,68 +217,113 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
                      memcpy(buf, err_uel, sizeof(err_uel));
                   }
                } else { GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf); }
-            } else { strcpy(buf, "*"); }
+            } else { strcpy(buf, "wildcard (:)"); }
             trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
       }
    }
 
+   bool equvar;
    switch (toktype) {
    case TOK_GMS_VAR:
    case TOK_GMS_EQU:
+      equvar = true;
    case TOK_GMS_SET:
    case TOK_GMS_PARAM:
-   {
+      break;
+   default:
+      error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
+      return Error_RuntimeError;
+   }
 
-      /* ------------------------------------------------------------------
-       * Return first row/column in the symbol referenced by symindex that
-       * is indexed by the UELs in uelindices (uelindices[k]=0 is wildcard).
-       * Since the routine can fail you should first check rcindex and then
-       * the returned handle.
-       * ------------------------------------------------------------------ */
+  /* ----------------------------------------------------------------------
+   * There are 3 cases:
+   * - full symbol read: by construction, the records of GAMS equvar have
+   *   continuous indices. Then we could just read the index of the first record index
+   *   and be done. THIS IS NOT POSSIBLE RIGHT NOW IN GMD
+   * ---------------------------------------------------------------------- */
 
-      void *symiterptr = NULL;
-      bool single_record = true;
-      data->allrecs = true;
-      char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
-      char *uels_strp[GLOBAL_MAX_INDEX_DIM];
-
-      if (!compact) {
-         /* initialize UELs */
-         for (unsigned i = 0; i < dim; ++i) {
-            uels_strp[i] = uels_str[i];
-
-            /* dctUelLabel chockes on the universal UEL */
-            if (uels[i] == 0) {
-               uels_strp[i] = " "; /* WARNING this is not '*' as of 2024.11.21 */
-               single_record = false;
-               continue;
-            }
-
-            if (dct) {
-               char quote_[] = " ";
-               if (dctUelLabel(dct, uels[i], quote_, uels_strp[i], GLOBAL_UEL_IDENT_SIZE)) {
-                  error("[DCT] Could not find UEL #%d\n", uels[i]);
-                  return Error_EMPRuntimeError;
-               } 
-
-            } else {
-               GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
-            }
-
-            if (uels[i] != 0) { data->allrecs = false; }
-         }
-      } else {
-         single_record = false;
+   if (full_records && equvar && dct && data->type == GmsSymIteratorTypeImm) {
+      int dctsymidx = dctSymIndex(dct, symname);
+      if (dctsymidx <= 0) {
+         error("[DCT] ERROR: could not find symbol '%s'\n", symname);
+         return Error_SymbolNotInTheGamsRim;
       }
 
-      if (single_record) {
-         GMD_FIND_CHK(gmdFindRecord, gmd, symptr, (const char **)uels_strp, &symiterptr);
+      int idx;
+      void *fh = dctFindFirstRowCol(dct, dctsymidx, uels, &idx);
 
-         double vals[GMS_VAL_MAX];
-         GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
+      if (idx < 0) {
+         error("[DCT] ERROR: could not find any record for symbol %s", symname);
+         return Error_SymbolNotInTheGamsRim;
+      }
+ 
+      int size = dctSymEntries(dct, dctsymidx);
+      assert(size >= 0);
 
-         switch (toktype) {
+      dctFindClose(dct, fh);
+
+      if (toktype == TOK_GMS_VAR) {
+         avar_setcompact(data->payload.v, size, idx);
+      } else {
+         aequ_setcompact(data->payload.e, size, idx);
+      }
+
+      return OK;
+   }
+
+  /* ----------------------------------------------------------------------
+   * TODO: use symnr!
+   * ---------------------------------------------------------------------- */
+
+   void *symiterptr = NULL;
+   bool single_record = true;
+   data->allrecs = true;
+   char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
+   char *uels_strp[GLOBAL_MAX_INDEX_DIM];
+
+   if (!full_records) {
+      /* initialize UELs */
+      for (unsigned i = 0; i < dim; ++i) {
+         uels_strp[i] = uels_str[i];
+
+         if (uels[i] == 0) {
+            uels_strp[i] = " ";
+            single_record = false;
+            continue;
+         }
+
+         /* ----------------------------------------------------------------
+          * The uels indices always come from the CMEX gmd. If we read the
+          * DCT gmd, we need to translate.
+          * ---------------------------------------------------------------- */
+
+         if (equvar) {
+            assert(dct);
+            char quote_[] = " ";
+            if (dctUelLabel(dct, uels[i], quote_, uels_strp[i], GLOBAL_UEL_IDENT_SIZE)) {
+               error("[DCT] Could not find UEL #%d\n", uels[i]);
+               return Error_EMPRuntimeError;
+            } 
+
+         } else {
+            GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
+         }
+
+         if (uels[i] != 0) { data->allrecs = false; }
+      }
+   } else {
+      single_record = false;
+   }
+
+   if (single_record) {
+      GMD_FIND_CHK(gmdFindRecord, gmd, symptr, (const char **)uels_strp, &symiterptr);
+
+      double vals[GMS_VAL_MAX];
+      int dummyUelIdx[GLOBAL_MAX_INDEX_DIM];
+      GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, dummyUelIdx, vals);
+
+      switch (toktype) {
          case TOK_GMS_SET:
          case TOK_GMS_EQU:
          case TOK_GMS_VAR: {
@@ -302,78 +339,73 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
          default:
             error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
             return Error_RuntimeError;
-         }
+      }
 
-         data->nrecs = 1;
-      } else { /* Not a single record */
+      data->nrecs = 1;
 
-         if (compact) {
-            GMD_FIND_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
-         } else {
-            GMD_FIND_CHK(gmdFindFirstRecordSlice, gmd, symptr, (const char **)uels_strp, &symiterptr);
-         }
+   } else { /* Not a single record */
 
-         /* ------------------------------------------------------------------
+      if (full_records) {
+         GMD_FIND_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
+      } else {
+         GMD_FIND_CHK(gmdFindFirstRecordSlice, gmd, symptr, (const char **)uels_strp, &symiterptr);
+      }
+
+      /* ------------------------------------------------------------------
           * Returns the number of records stored for a given symbol.
           * ------------------------------------------------------------------ */
 
-         int size;
-         GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &size, NULL, NULL);
-         assert(size >= 0);
+      int size;
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &size, NULL, NULL);
+      assert(size >= 0);
+
+      rhp_idx i = 0;
+
+      switch (toktype) {
+      case TOK_GMS_SET:
+      case TOK_GMS_EQU:
+      case TOK_GMS_VAR: {
 
          S_CHECK(scratchint_ensure(data->iscratch, size));
+         rhp_idx *idxs = data->iscratch->data;
 
-         rhp_idx i = 0;
+         do {
+            double vals[GMS_VAL_MAX];
+            int dummyUelIdx[GLOBAL_MAX_INDEX_DIM];
+            GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, dummyUelIdx, vals);
+            double val = vals[GMS_VAL_LEVEL];
+            S_CHECK(chk_dbl2int(val, __func__));
+            idxs[i++] = (int)val;
+         } while ( gmdRecordMoveNext(gmd, symiterptr) );
 
-         switch (toktype) {
-         case TOK_GMS_SET:
-         case TOK_GMS_EQU:
-         case TOK_GMS_VAR: {
-
-            S_CHECK(scratchint_ensure(data->iscratch, size));
-            rhp_idx *idxs = data->iscratch->data;
-
-            do {
-               double vals[GMS_VAL_MAX];
-               GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
-               double val = vals[GMS_VAL_LEVEL];
-               S_CHECK(chk_dbl2int(val, __func__));
-               idxs[i++] = (int)val;
-            } while ( gmdRecordMoveNext(gmd, symiterptr) );
-
-            break;
-         }
-
-
-         case TOK_GMS_PARAM: {
-
-            S_CHECK(scratchdbl_ensure(data->dscratch, size));
-            double *dbls = data->dscratch->data;
-
-            do {
-               double vals[GMS_VAL_MAX];
-               GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, uels, vals);
-               dbls[i++] = vals[GMS_VAL_LEVEL];
-            } while (gmdRecordMoveNext(gmd, symiterptr));
-
-            break;
-         }
-         default:
-            error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
-            return Error_RuntimeError;
-         }
-
-         data->nrecs = i;
-
+         break;
       }
 
-      gmdFreeSymbolIterator(gmd, symiterptr);
-      break;
+
+      case TOK_GMS_PARAM: {
+
+         S_CHECK(scratchdbl_ensure(data->dscratch, size));
+         double *dbls = data->dscratch->data;
+
+         do {
+            double vals[GMS_VAL_MAX];
+            int dummyUelIdx[GLOBAL_MAX_INDEX_DIM];
+            GMD_CHK(gmdGetRecordRaw, gmd, symiterptr, dim, dummyUelIdx, vals);
+            dbls[i++] = vals[GMS_VAL_LEVEL];
+         } while (gmdRecordMoveNext(gmd, symiterptr));
+
+         break;
+      }
+      default:
+         error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
+         return Error_RuntimeError;
+      }
+
+      data->nrecs = i;
+
    }
-   default:
-      error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
-      return Error_RuntimeError;
-   }
+
+   gmdFreeSymbolIterator(gmd, symiterptr);
 
    if (O_Output & PO_TRACE_EMPINTERP) {
       trace_empinterp("[GMD] Read %u records", data->nrecs);
@@ -393,6 +425,26 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
       } else {
          trace_empinterp("\n");
       }
+   }
+
+   /* HACK: in Imm mode, we expect the content of a variable and equation to be in */
+   if (data->type != GmsSymIteratorTypeImm) { return OK; }
+
+   switch (toktype) {
+   case TOK_GMS_VAR:
+      if (single_record) {
+         avar_setcompact(data->payload.v, 1, data->itmp);
+      } else {
+         avar_setlist(data->payload.v, data->nrecs, data->iscratch->data);
+      }
+      break;
+   case TOK_GMS_EQU:
+      if (single_record) {
+         aequ_setcompact(data->payload.e, 1, data->itmp);
+      } else {
+         aequ_setlist(data->payload.e, data->nrecs, data->iscratch->data);
+      }
+   default: ;
    }
 
    return OK;

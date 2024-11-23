@@ -747,6 +747,7 @@ void scratchint_init(IntScratch *scratch)
 void scratchint_empty(IntScratch *scratch)
 {
    FREE(scratch->data);
+   scratch->size = 0;
 }
 
 int scratchint_ensure(IntScratch *scratch, unsigned size)

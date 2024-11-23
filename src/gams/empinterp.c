@@ -126,15 +126,20 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 
 NONNULL void empinterp_free(Interpreter *interp)
 {
+   tok_free(&interp->cur);
+   tok_free(&interp->peek);
+
    if (interp->pre.type != TOK_UNSET) {
       tok_free(&interp->pre);
    }
+#if 0
    if (interp->cur.type != TOK_UNSET) {
       tok_free(&interp->cur);
    }
    if (interp->peek.type != TOK_UNSET) {
       tok_free(&interp->peek);
    }
+#endif
 
    FREE(interp->buf);
    empvm_compiler_free(interp->compiler);
@@ -157,6 +162,12 @@ NONNULL void empinterp_free(Interpreter *interp)
       gmdHandle_t obj = interp->gmdcpy;
       gmdFree(&obj);
       interp->gmdcpy = NULL;
+   }
+
+   if (interp->gmddct) {
+      gmdHandle_t obj = interp->gmddct;
+      gmdFree(&obj);
+      interp->gmddct = NULL;
    }
 
    aliases_free(&interp->globals.aliases);
@@ -450,14 +461,6 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
       dctHandle_t dct = gms->dct; assert(dct);
       char msg[GMS_SSSIZE];
 
-      GmsModelData *gmdldat = (GmsModelData *)mdl->data;
-      const char *scrdir = gmdldat->scrdir;
-      const char *gdxname = "dctgdx.dat"; 
-      IO_CALL_EXIT(asprintf(&gdxfullname, "%s%s", scrdir, gdxname));
-
-      // this returns void ...
-      dctWriteGDX(dct, gdxfullname, msg);
-
       gmdHandle_t gmddct;
       if (!gmdCreate(&gmddct, msg, sizeof(msg))) {
          error("[empinterp] ERROR: cannot create GMD object: %s\n", msg);
@@ -465,11 +468,29 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
          goto _exit;
       }
 
-      trace_empinterp("[empinterp] GMDDCT: loading from GDX %s\n", gdxfullname);
-
       // 2 if for a GTree storage
       GMD_CHK(gmdSelectRecordStorage, gmddct, NULL, 2);
+
+#ifndef NO_GMDDCT_FROM_GDX
+      GmsModelData *gmdldat = (GmsModelData *)mdl->data;
+
+      const char *scrdir = gmdldat->scrdir;
+      const char *gdxname = "dctgdx.dat"; 
+      IO_CALL_EXIT(asprintf(&gdxfullname, "%s%s", scrdir, gdxname));
+
+      // this returns void ...
+      dctWriteGDX(dct, gdxfullname, msg);
+
+      trace_empinterp("[empinterp] GMDDCT: loading from GDX %s\n", gdxfullname);
+
       GMD_CHK(gmdInitFromGDX, gmddct, gdxfullname);
+#else
+      trace_empinterp("[empinterp] GMDDCT: loading from GMO\n");
+
+      GMD_CHK(gmdInitFromDict, gmddct, gms->gmo);
+      GMD_CHK(gmdInitUpdate, gmddct, gms->gmo);
+#endif
+      
       interp.gmddct = gmddct;
 
       void *symptr;

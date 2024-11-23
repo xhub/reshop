@@ -26,4 +26,6 @@ SmoothingOperatorData * smoothing_operator_data_new(double param) NONNULL;
 int Varc_dual(Model *mdl, unsigned linenr, daguid_t uid_parent, daguid_t uid_child,
               double coeff) NONNULL;
 
+int gmssymiter_fixup_domains(Interpreter * restrict interp, GmsIndicesData *indices) NONNULL;
+
 #endif // !EMPINTERP_UTILS_H

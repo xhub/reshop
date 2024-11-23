@@ -346,7 +346,7 @@ int rhp_empdag_rootsetmpe(struct rhp_mdl *mdl, struct rhp_nash_equilibrium *mpe)
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile);
+int rhp_gms_newfromcntr(const char *cntrfile, struct rhp_mdl **mdlout);
 RHP_PUBLIB
 int rhp_gms_setgamscntr(struct rhp_mdl *mdl, const char *cntrfile);
 RHP_PUBLIB

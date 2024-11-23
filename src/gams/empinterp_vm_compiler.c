@@ -880,16 +880,17 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
 
    assert(iterators->loopobj_gidx < UINT_MAX);
 
-   for (unsigned i = 0, len = indices->nargs; i < len; ++i) {
+   for (unsigned i = 0, len = gmsindices_nargs(indices); i < len; ++i) {
 
       IdentData *idxident = &indices->idents[i];
+
       switch (idxident->type) {
       case IdentUEL:
          assert(idxident->idx < INT_MAX && idxident->idx > 0);
          uels[i] = (int)idxident->idx;
          *compact = false; //TODO: is this the only case where this is false?
          break;
-      case IdentUniversalSet:
+      case IdentSymbolSlice:
          uels[i] = 0;
          break;
       case IdentLoopIterator:
@@ -904,6 +905,7 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
             loopi++;
          }
          break; 
+
       /* -------------------------------------------------------------------
        * We add this ident to the loopiterators
        * ------------------------------------------------------------------- */
@@ -941,6 +943,18 @@ static int gmssymiter_chk_dim(GmsIndicesData *indices, IdentData *ident,
    return OK;
 }
 
+/**
+ * @brief Initialize the iterator for reading a GAMS symbol
+ *
+ * @param       interp           the interpreter
+ * @param       ident            the GAMS symbol ident
+ * @param       indices 
+ * @param       iterators 
+ * @param       tape 
+ * @param[out]  gmssymiter_gidx 
+ *
+ * @return      the error code
+ */
 static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
                            GmsIndicesData *indices, LoopIterators *iterators,
                            Tape * restrict tape, unsigned * gmssymiter_gidx)
@@ -960,6 +974,15 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
    iterators->loopobj_opcode = OP_GMSSYMITER_SETFROM_LOOPVAR;
 
    S_CHECK(gmssymiter_chk_dim(indices, ident, interp->linenr));
+
+  /* ----------------------------------------------------------------------
+   * When reading a GAMS symbol, we want to make sure that when the user
+   * specified a domain as one of the index, then we just subsitute it
+   * with the universal UEL, that is we take a slice
+   * ---------------------------------------------------------------------- */
+   assert(interp->cur.symdat.ident.type == ident->type);
+
+   S_CHECK(gmssymiter_fixup_domains(interp, indices));
 
    return ident_gmsindices_process(indices, iterators, tape, symiter->uels, &symiter->compact);
 }

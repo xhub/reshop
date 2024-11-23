@@ -21,20 +21,28 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
       char quote = toktype == TOK_SINGLE_QUOTE ? '\'' : '"';
       S_CHECK(parser_peekasUEL(interp, p, quote, &toktype));
 
+      // delete once GG #18 is fixed.
+      if (interp->peek.len == 1 && interp->peek.start[0] == '*') {
+         toktype = TOK_COLON;
+      }
+
       if (toktype == TOK_UNSET) {
-         const Token *tok = &interp->cur;
-         error("[empinterp] ERROR line %u: %c%.*s%c is not a UEL\n", interp->linenr,
+         const Token *tok = &interp->peek;
+         error("[empinterp] ERROR line %u: %c%.*s%c is not a UEL. "
+               "All UELs in the empinfo must come from GAMS!\n", interp->linenr,
                quote, tok->len, tok->start, quote);
          return Error_EMPIncorrectSyntax;
       }
 
-      if (toktype != TOK_STAR && toktype != TOK_GMS_UEL) {
+      // delete once GG #18 is fixed.
+      if (toktype != TOK_GMS_UEL && toktype != TOK_COLON) {
          return runtime_error(interp->linenr);
       }
 
    } else {
       //S_CHECK(advance(interp, p, &toktype));
-      PARSER_EXPECTS_PEEK(interp, "A set or variable is required", TOK_GMS_SET, TOK_IDENT);
+      PARSER_EXPECTS_PEEK(interp, "A set or variable is required", TOK_GMS_SET,
+                          TOK_IDENT, TOK_COLON, TOK_STAR);
    }
 
    switch (toktype) {
@@ -45,6 +53,12 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
 
    case TOK_STAR:
       ident->type = IdentUniversalSet;
+      ident->idx = 0; 
+      ident->dim = 0;
+      goto _finalize;
+
+   case TOK_COLON:
+      ident->type = IdentSymbolSlice;
       ident->idx = 0; 
       ident->dim = 0;
       goto _finalize;

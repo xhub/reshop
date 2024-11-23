@@ -177,22 +177,23 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
  * @warning This assumes that the model is a reshop model.
  * It will try to load the empinfo and reshop options
  *
- * @param  cntrfile  the GAMS control file 
+ * @param       cntrfile  the GAMS control file 
+ * @param[out]  mdlout    the model
  *
  * @return           the error code
  */
-struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
+int rhp_gms_newfromcntr(const char *cntrfile, Model **mdlout)
 {
+   int status = OK;
    char buffer[2048];
-   SN_CHECK(chk_arg_nonnull(cntrfile, 1, __func__));
-   
-   Model *mdl;
-   AA_CHECK(mdl, mdl_new(RHP_BACKEND_GAMS_GMO));
 
+   *mdlout = NULL;
+   S_CHECK(chk_arg_nonnull(cntrfile, 1, __func__));
+   
    FILE* fptr = fopen(cntrfile, "r");
    if (!fptr) {
       error("[GAMS] ERROR: couldn't open control file '%s'\n", cntrfile);
-      goto _exit;
+      return Error_RuntimeError;
    }
 
    /* GAMSDIR seems to be on the 29th line */
@@ -201,7 +202,7 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
          error("[GAMS] ERROR: failed to get %u-th line of control file '%s'\n",
                i, cntrfile);
          SYS_CALL(fclose(fptr));
-         goto _exit;
+         return Error_RuntimeError;
       }
    }
 
@@ -211,38 +212,43 @@ struct rhp_mdl *rhp_gms_newfromcntr(const char *cntrfile)
    if (len <= 1) {
       error("[GAMS] ERROR: bogus gamsdir '%s' from control file '%s'\n", buffer,
             cntrfile);
-      return NULL;
+      return Error_RuntimeError;
    }
 
    /* fgets keeps the newline character in, remove it */
    trim_newline(buffer, len);
 
-   SN_CHECK_EXIT(rhp_gms_setgamsdir(mdl, buffer));
+   Model *mdl;
+   A_CHECK(mdl, mdl_new(RHP_BACKEND_GAMS_GMO));
 
-   SN_CHECK_EXIT(rhp_gms_loadlibs(buffer));
+   S_CHECK_EXIT(rhp_gms_setgamsdir(mdl, buffer));
 
-   SN_CHECK_EXIT(rhp_gms_setgamscntr(mdl, cntrfile));
+   S_CHECK_EXIT(rhp_gms_loadlibs(buffer));
 
-   SN_CHECK_EXIT(gcdat_loadmdl(mdl->ctr.data, mdl->data));
+   S_CHECK_EXIT(rhp_gms_setgamscntr(mdl, cntrfile));
+
+   S_CHECK_EXIT(gcdat_loadmdl(mdl->ctr.data, mdl->data));
 
    rhp_gms_set_gamsprintops(mdl);
 
    /* Print the reshop banner, after setting the printops */
    rhp_print_banner();
 
-   SN_CHECK_EXIT(gmdl_loadrhpoptions(mdl));
+   *mdlout = mdl;
 
-   SN_CHECK_EXIT(rhp_gms_fillmdl(mdl));
+   S_CHECK(gmdl_loadrhpoptions(mdl));
 
-   SN_CHECK_EXIT(rhp_gms_readempinfo(mdl, NULL));
+   S_CHECK(rhp_gms_fillmdl(mdl));
 
-   SN_CHECK_EXIT(mdl_check(mdl));
+   S_CHECK(rhp_gms_readempinfo(mdl, NULL));
 
-   return mdl;
+   S_CHECK(mdl_check(mdl));
+
+   return OK;
 
 _exit:
    mdl_release(mdl);
-   return NULL;
+   return status;
 }
 
 /**
@@ -557,6 +563,8 @@ int rhp_gms_writesol2gdx(Model *mdl, const char *gdxname)
 static void gamsprint(void* env, UNUSED unsigned reshop_mode, const char *str)
 {
    gevHandle_t gev = (gevHandle_t)env;
+   if (!gev) { return; }
+
    /* TODO(Xhub) support status and all ...  */
    int mode = LOGMASK;
 

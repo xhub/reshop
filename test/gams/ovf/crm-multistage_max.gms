@@ -96,9 +96,17 @@ $offecho
 
 solve hydro_emp max w using emp;
 
+abort$[hydro_emp.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', hydro_emp.modelStat;
+abort$[hydro_emp.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', hydro_emp.solveStat;
+
 Scalar wL;
 wL = w.l;
 
 solve hydro_conj max w using lp;
 
 abort$[ abs(w.l - wL) > tol ] 'objective funcation value differ', w.l;
+
+abort$[hydro_conj.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', hydro_conj.modelStat;
+abort$[hydro_conj.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', hydro_conj.solveStat;
+
+

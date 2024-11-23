@@ -1,6 +1,7 @@
 
 #include "compat.h"
 #include "empinterp_utils.h"
+#include "empinterp_priv.h"
 #include "empinterp_vm_utils.h"
 #include "empparser.h"
 #include "mathprgm.h"
@@ -9,6 +10,7 @@
 #include "printout.h"
 #include "win-compat.h"
 
+#include "gmdcc.h"
 #include "gamsapi_utils.h"
 
 /**
@@ -74,7 +76,7 @@ int genlabelname(DagRegisterEntry * restrict entry, Interpreter *interp,
 
 
 DagRegisterEntry* regentry_new(const char *basename, unsigned basename_len,
-                               uint8_t dim)
+   uint8_t dim)
 {
    DagRegisterEntry *regentry;
    MALLOCBYTES_NULL(regentry, DagRegisterEntry, sizeof(DagRegisterEntry) + dim*sizeof(int));
@@ -243,4 +245,150 @@ int Varc_dual(Model *mdl, unsigned linenr, daguid_t uid_parent, daguid_t uid_chi
    arc.Varc.basic_dat.vi = IdxNA;
 
    return empdag_addarc(empdag, uid_parent, uid_child, &arc);
+}
+
+int gmssymiter_fixup_domains(Interpreter * restrict interp, GmsIndicesData *indices)
+{
+   IdentData *idents_indices = indices->idents;
+
+   char name[GMS_SSSIZE];
+
+   TokenType toktype = parser_getcurtoktype(interp);
+   if (toktype != TOK_GMS_VAR && toktype != TOK_GMS_EQU) {
+      return OK;
+   }
+
+#ifdef GMDDCT_HAS_DOMAIN_INFO
+   gmdHandle_t gmddct = interp->gmddct;
+   if (gmddct) {
+
+      /* If we don't have a gmd, we can't lookup set */
+      gmdHandle_t gmd = interp->gmd;
+
+      if (!gmd || gmsindices_nargs(indices) == 0) {
+         return OK;
+      }
+
+      unsigned len_ = interp->cur.len;
+      if (len_ >= GMS_SSSIZE) {
+         error("[empinterp] ERROR: '%.*s' is too long, the maximum length is %d\n",
+               tok_fmtargs(&interp->cur), GMS_SSSIZE);
+         return Error_EMPIncorrectSyntax;
+      }
+
+      memcpy(name, interp->cur.start, len_ * sizeof(char));
+      name[len_] = '\0';
+
+      void *symptr;
+      if (!gmdFindSymbol(gmddct, name, &symptr)) {
+         return gmderror(gmddct, "[GMD] ERROR: could not find symbol '%s'\n", name);
+      }
+
+      char dom_names[GMS_MAX_INDEX_DIM][GMS_SSSIZE];
+      char *dom_names_ptrs[GMS_MAX_INDEX_DIM];
+      GDXSTRINDEXPTRS_INIT( dom_names, dom_names_ptrs );
+
+      void *dom_ptrs[GMS_MAX_INDEX_DIM];
+      if (!gmdGetDomain(gmd, symptr, 0, dom_ptrs, dom_names_ptrs)) {
+          return gmderror(gmd, "[GMD] ERROR: could not query the domains of symbol '%s'\n", name);
+      }
+
+
+      for (unsigned i = 0, len = gmsindices_nargs(indices); i < len; ++i)  {
+         IdentData *idx_ident = &idents_indices[i];
+
+         if (idx_ident->type != IdentSet) { continue; }
+
+         // HACK: Right now idx might be a gidx where it is stored.
+         len_ = idx_ident->lexeme.len;
+         if (len_ >= GMS_SSSIZE) {
+            error("[empinterp] ERROR: %s '%.*s' is too long, the maximum length is %d",
+                  ident_fmtargs(idx_ident), GMS_SSSIZE);
+            return Error_EMPIncorrectSyntax;
+         }
+
+         memcpy(name, idx_ident->lexeme.start, len_ * sizeof(char));
+         name[len_] = '\0';
+
+
+         if (dom_ptrs[i]) {
+
+            GMD_CHK(gmdFindSymbol, gmd, name, &symptr);
+
+            int symnr;
+            GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NUMBER, &symnr, NULL, NULL);
+
+            int domnr;
+            if (!gmdSymbolInfo(gmd, dom_ptrs[i], GMD_NUMBER, &domnr, NULL, NULL) || domnr < -1) {
+               return gmderror(gmd, "[GMD] ERROR: could not query number of domain '%s' #%u "
+                               "of symbol '%.*s'\n", dom_names_ptrs[i], i, tok_fmtargs(&interp->cur));
+            }
+
+//            printf("DEBUG: symbol '%.*s': pos %u: %d vs %d\n",
+//                   tok_fmtargs(&interp->cur), i, symnr, domnr);
+
+            if (symnr == domnr) {
+//               printf("DEBUG: symbol '%.*s': subsituting %s '%.*s' with '*'\n",
+//                      tok_fmtargs(&interp->cur), ident_fmtargs(idx_ident));
+               idx_ident->type = IdentSymbolSlice;
+            }
+         } else {
+            if (!strncasecmp(dom_names_ptrs[i], idx_ident->lexeme.start, len_)) {
+//               printf("DEBUG: symbol '%.*s': subsituting %s '%.*s' with '*'\n",
+//                      tok_fmtargs(&interp->cur), ident_fmtargs(idx_ident));
+               idx_ident->type = IdentSymbolSlice;
+            }
+         }
+      }
+      return OK;
+   }
+#endif
+
+   dctHandle_t dct = interp->dct;
+   if (dct) {
+
+      gdxStrIndexPtrs_t dom_strs_ptr;
+      gdxStrIndex_t dom_strs;
+      GDXSTRINDEXPTRS_INIT(dom_strs, dom_strs_ptr);
+
+      unsigned len_ = interp->cur.len;
+      if (len_ >= GMS_SSSIZE) {
+         error("[empinterp] ERROR: '%.*s' is too long, the maximum length is %d\n",
+               tok_fmtargs(&interp->cur), GMS_SSSIZE);
+         return Error_EMPIncorrectSyntax;
+      }
+
+      memcpy(name, interp->cur.start, len_ * sizeof(char));
+      name[len_] = '\0';
+
+      int symnr = dctSymIndex(dct, name);
+
+      if (symnr <= 0) {
+         error("[empinterp] DCT ERROR: could not query the index of symbol %s\n", name);
+         return Error_EMPRuntimeError;
+      }
+
+      int symdim;
+      dct_call_rc(dctSymDomNames, dct, symnr, dom_strs_ptr, &symdim);
+      assert(symdim == gmsindices_nargs(indices) || gmsindices_nargs(indices) == 0);
+
+      for (unsigned i = 0, len = gmsindices_nargs(indices); i < len; ++i)  {
+         IdentData *idx_ident = &idents_indices[i];
+
+         if (idx_ident->type != IdentSet) { continue; }
+
+         // HACK: Right now idx might be a gidx where it is stored.
+         len_ = idx_ident->lexeme.len;
+         if (!strncasecmp(dom_strs_ptr[i], idx_ident->lexeme.start, len_)) {
+//            printf("DEBUG: symbol '%.*s': subsituting %s '%.*s' with '*'\n",
+//                   tok_fmtargs(&interp->cur), ident_fmtargs(idx_ident));
+            idx_ident->type = IdentSymbolSlice;
+         }
+      }
+
+      return OK;
+   }
+
+   error("[empinterp] ERROR: cannot find symbol '%.*s' in any source database", tok_fmtargs(&interp->cur));
+   return Error_RuntimeError;
 }

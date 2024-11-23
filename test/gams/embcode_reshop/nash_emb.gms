@@ -33,7 +33,7 @@ cons(a)..
 model nash / defobj, cons /;
 
 EmbeddedCode ReSHOP:
-n(a): min obj(a) x(a,'*') defobj(a) cons(a)
+n(a): min obj(a) x(a,:) defobj(a) cons(a)
 root: Nash(n(a))
 endEmbeddedCode
 

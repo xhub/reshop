@@ -75,7 +75,7 @@ void myfreeenvval(const char *envval)
 int main(int argc, char** argv)
 {
    struct rhp_mdl *mdl = NULL, *mdl_solver = NULL;
-   int rc = EXIT_FAILURE;
+   int rc;
    char msg[GMS_SSSIZE];
    gmoHandle_t gmo = NULL;
 
@@ -88,13 +88,14 @@ int main(int argc, char** argv)
    bool silent = silent_env;
    myfreeenvval(silent_env);
 
-   mdl = rhp_gms_newfromcntr(argv[1]);
+   rc = rhp_gms_newfromcntr(argv[1], &mdl);
 
    if (!mdl) {
-      if (!silent) { (void)fprintf(stderr, "*** ReSHOP ERROR! Could not load model in control file %s\n", argv[1]); }
+      if (!silent) { (void)fprintf(stderr, "*** ReSHOP ERROR! Could not build model from control file %s\n", argv[1]); }
       goto _exit;
    }
 
+   /* Still try to load GMO to set values */
    gmo = rhp_gms_getgmo(mdl);
    gevHandle_t gev = rhp_gms_getgev(mdl);
    const char *gams_sysdir = rhp_gms_getsysdir(mdl);
@@ -102,7 +103,13 @@ int main(int argc, char** argv)
    if (!gmoGetReadyD(gams_sysdir, msg, sizeof(msg)) ||
        !gevGetReadyD(gams_sysdir, msg, sizeof(msg))) {
       (void)fprintf(stderr, "%s\n", msg);
-      rc = 1; goto _exit;
+      goto _exit;
+   }
+
+   /* If rhp_gms_newfromcntr errored late, we can set the GMO */
+   if (rc) { 
+      if (!silent) { (void)fprintf(stderr, "*** ReSHOP ERROR! Could not load model in control file %s\n", argv[1]); }
+      goto _exit;
    }
 
 #ifdef __linux__
@@ -116,7 +123,6 @@ int main(int argc, char** argv)
          ld_library_path = malloc(sizeof(char) * (len_cur + 2 + len_sysdir));
          if (!ld_library_path) {
             (void)fprintf(stderr, "ERROR: could not allocate memory\n");
-            rc = 1;
             goto _exit;
          }
 
@@ -142,7 +148,6 @@ int main(int argc, char** argv)
          ld_library_path = malloc(sizeof(char) * (len_cur + 2 + ldpath_len));
          if (!ld_library_path) {
             (void)fprintf(stderr, "ERROR: could not allocate memory\n");
-            rc = 1;
             goto _exit;
          }
 
@@ -154,6 +159,8 @@ int main(int argc, char** argv)
       } else {
          setenv("LD_LIBRARY_PATH", ldpath, 1);
       }
+
+      free(ld_library_path);
 
    }
 // TODO MACOS
@@ -197,10 +204,16 @@ int main(int argc, char** argv)
    }
 
 _exit:
+   if (rc) {
+      if (!silent) { (void)fprintf(stderr, "*** ReSHOP exited with rc = %u\n", rc); }
+   }
+
+   /* Special treatment: when we have a GMO, we can return the error via this way */
    if (rc && gmo) {
       gmoSolveStatSet(gmo, gmoSolveStat_InternalErr);
       gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
       /* TODO(GAMS review) would gmoModelStat_ErrorUnknown be better? */
+      rc = 0; /* HACK: this is necessary for the GMO value to be read? */
    } 
 
    if (gmo) {
@@ -209,10 +222,6 @@ _exit:
 
    if (mdl_solver) { rhp_mdl_free(mdl_solver); }
    if (mdl) { rhp_mdl_free(mdl); }
-
-   if (rc) {
-      if (!silent) { (void)fprintf(stderr, "*** ReSHOP exited with rc = %u\n", rc); }
-   }
 
    return rc;
 }

@@ -74,6 +74,9 @@ MODEL hydro_conj /obj, defStateCons0, defStateCons1, defStateCons2, defConj1, de
 
 solve hydro_conj min w using lp;
 
+abort$[hydro_conj.modelStat <> %MODELSTAT.OPTIMAL%]   'solve failed', hydro_conj.modelStat;
+abort$[hydro_conj.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', hydro_conj.solveStat;
+
 
 
 Scalar wRef;
@@ -103,13 +106,16 @@ load parent
 
 *loop(parent$(sameas('r2', parent)),
 loop(parent,
-  OVF cvarup theta2(parent) argTheta2('*',parent) 0.2
+  OVF cvarup theta2(parent) argTheta2(:,parent) 0.2
 )
 OVF cvarup theta1 argTheta1 0.2
 $offecho
 
 hydro_emp.optfile = 2
 solve hydro_emp min w using emp;
+
+abort$[hydro_emp.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', hydro_emp.modelStat;
+abort$[hydro_emp.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', hydro_emp.solveStat;
 
 abort$[ abs(w.l - wRef) > tol ] 'objective function value differ for empinfo2', w.l;
 
@@ -130,9 +136,17 @@ putclose empinfo;
 hydro_emp.optfile = 1
 solve hydro_emp min w using emp;
 
+abort$[hydro_emp.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', hydro_emp.modelStat;
+abort$[hydro_emp.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', hydro_emp.solveStat;
+
 abort$[ abs(w.l - wRef) > tol ] 'objective function value differ', w.l;
 
-* test an empty EMPDAG
+* test an empty EMPDAG. This should FAIL
 putclose empinfo /' '/;
 hydro_emp.optfile = 0;
 solve hydro_emp min w using emp;
+
+abort$[hydro_emp.modelStat <= %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', hydro_emp.modelStat;
+abort$[hydro_emp.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', hydro_emp.solveStat;
+
+

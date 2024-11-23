@@ -76,8 +76,7 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
 
    int symnr;
    if (!gmdSymbolInfo(gmd, symptr, GMD_NUMBER, &symnr, NULL, NULL)) {
-      error("[embcode] ERROR: could not query number of symbol '%s'\n", sym_name);
-      return Error_GamsCallFailed;
+      return gmderror(gmd, "[GMD] ERROR: could not query number of symbol '%s'\n", sym_name);
    }
 
    assert(symnr >= 0);
@@ -91,8 +90,7 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
 
    int symdim;
    if (!gmdSymbolInfo(gmd, symptr, GMD_DIM, &symdim, NULL, NULL)) {
-      error("[embcode] ERROR: could not query dimension of symbol '%s'\n", sym_name);
-      return Error_GamsCallFailed;
+      return gmderror(gmd, "[GMD] ERROR: could not query dimension of symbol '%s'\n", sym_name);
    }
    /* What does a negative value of symdim means? */
    assert(symdim >= 0);
@@ -103,8 +101,7 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
 
    int symtype;
    if (!gmdSymbolInfo(gmd, symptr, GMD_TYPE, &symtype, NULL, NULL)) {
-      error("[embcode] ERROR: could not query type of symbol '%s'\n", sym_name);
-      return Error_GamsCallFailed;
+      return gmderror(gmd, "[GMD] ERROR: could not query type of symbol '%s'\n", sym_name);
    }
 
    if (symdim > 0 && domindices) {
@@ -114,16 +111,20 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
 
       void *dom_ptrs[GMS_MAX_INDEX_DIM];
       if (!gmdGetDomain(gmd, symptr, symdim, dom_ptrs, dom_names_ptrs)) {
-          error("[embcode] ERROR: could not query the domains of symbol '%s'\n", sym_name);
-         return Error_GamsCallFailed;
+          return gmderror(gmd, "[GMD] ERROR: could not query the domains of symbol '%s'\n", sym_name);
       }
 
       for (int i = 0; i < symdim; ++i) {
+
+         if (!dom_ptrs[i]) {
+            domindices[i] = 0;
+            continue;
+         }
+
          // HACK: symnr should be >= 0, but not right now.
          if (!gmdSymbolInfo(gmd, dom_ptrs[i], GMD_NUMBER, &symnr, NULL, NULL) || symnr < -1) {
-            error("[embcode] ERROR: could not query number of domain '%s' #%u "
-                  "of symbol '%s'\n", dom_names_ptrs[i], i, sym_name);
-            return Error_GamsCallFailed;
+            return gmderror(gmd, "[GMD] ERROR: could not query number of domain '%s' #%u "
+                            "of symbol '%s'\n", dom_names_ptrs[i], i, sym_name);
          }
 
          // HACK: symnr should be >= 0, but not right now.
@@ -267,16 +268,22 @@ int resolve_lexeme_as_gms_symbol(Interpreter * restrict interp, Token * restrict
    * ---------------------------------------------------------------------- */
 
    dctHandle_t dct = interp->dct;
-   int *domindices = symdat->domindices;
    IdentData *ident = &symdat->ident;
 
-   if (dct) {
-      S_CHECK(dct_find_symbol(dct, sym_name, ident, domindices));
+  /* ----------------------------------------------------------------------
+   * This would resolve the ident as an equation or variable
+   * ---------------------------------------------------------------------- */
+
+   gmdHandle_t gmddct = interp->gmddct;
+   if (gmddct) {
+      S_CHECK(gmd_find_symbol(gmddct, sym_name, ident, NULL, NULL));
+   } else if (dct) {
+      S_CHECK(dct_find_symbol(dct, sym_name, ident, NULL));
    }
 
    gmdHandle_t gmd = interp->gmd;
    if (symdat->ident.type == IdentNotFound && gmd) {
-      S_CHECK(gmd_find_symbol(gmd, sym_name, ident, interp->gmdcpy, domindices));
+      S_CHECK(gmd_find_symbol(gmd, sym_name, ident, interp->gmdcpy, NULL));
    }
 
    tok->type = ident2toktype(symdat->ident.type);

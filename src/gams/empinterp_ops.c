@@ -127,11 +127,12 @@ static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
 
    GmsSymIterator * restrict symiter = &interp->gms_sym_iterator;
    int * restrict uels = symiter->uels;
-   int * restrict domindices = interp->cur.symdat.domindices;
    IdentData * restrict idents = symiter->indices.idents;
    assert(symiter->indices.nargs == 0 || symiter->indices.nargs == symiter->ident.dim);
 
    dctHandle_t dct = interp->dct;
+
+   S_CHECK(gmssymiter_fixup_domains(interp, &symiter->indices));
 
    for (unsigned i = 0, len = gmsindices_nargs(&symiter->indices); i < len; ++i) {
       IdentData *ident = &idents[i];
@@ -143,28 +144,21 @@ static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
             symiter->compact = false;
          }
          break;
-      case IdentUniversalSet:
+      case IdentSymbolSlice:
          uels[i] = 0;
          break;
       case IdentSet: {
-         char domstr[GMS_SSSIZE];
-         // HACK: domindices come from GMD ...
-         dctDomName(dct, domindices[i], domstr, sizeof(domstr));
-         if (!strncasecmp(domstr, ident->lexeme.start, ident->lexeme.len)) {
-            uels[i] = 0;
-         } else {
-            error("[empinterp] ERROR line %u: subset selection is not implemented yet!\n",
-                  ident->lexeme.linenr);
-            return Error_NotImplemented;
-         }
+         error("[empinterp] ERROR line %u: %s ident '%.*s' found at position %u. "
+               "Subset selection is not implemented yet!\n", ident->lexeme.linenr,
+               ident_fmtargs(ident), i);
+         return Error_NotImplemented;
          }
          break;
       default:
          error("[empinterp] ERROR line %u: while resolving symbol '%.*s', "
                "unsupported ident '%.*s' of type %s at the %u location\n",
-               interp->linenr, emptok_getstrlen(&interp->cur),
-               emptok_getstrstart(&interp->cur), ident->lexeme.len,
-               ident->lexeme.start, identtype2str(ident->type), i);
+               interp->linenr, tok_fmtargs(&interp->cur),
+               lexeme_fmtargs(ident->lexeme), identtype2str(ident->type), i);
          return Error_EMPRuntimeError;
       }
 
@@ -186,7 +180,20 @@ static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
    }
 
    // TODO gmd_resolve
+   
+#ifdef RHP_EXPERIMENTAL 
+   gmdHandle_t gmddct = interp->gmddct;
+   if (gmddct) {
+      char symname[GMS_SSSIZE];
+      memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
+      symname[symiter->ident.lexeme.len] = 0;
+      return gmd_read(gmddct, dct, &data, symname);
+   }
+
    return dct_read_equvar(dct, &data);
+#else
+   return dct_read_equvar(dct, &data);
+#endif
 }
 
 NONNULL static

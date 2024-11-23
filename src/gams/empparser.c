@@ -131,7 +131,7 @@ static const char * const tok_str[] = {
    "'-'",
    "'*'",
    "'/'",
-   "','",
+   "':'",
    "'.'",
    "CONDITION '$'",
    "SINGLE_QUOTE '",
@@ -1060,10 +1060,12 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
    /* Consume closing quote */
    (*p)++;
 
+#ifdef NO_DELETE_STAR_MISTAKE
    if (tok->len == 1 && tok->start[0] == '*') {
       *toktype = TOK_STAR;
       return OK;
    }
+#endif
 
    tok->type = TOK_GMS_UEL;
 
@@ -2036,6 +2038,10 @@ NONNULL static inline int assign_uels(int * restrict uels,
          assert(idxident->idx < INT_MAX && idxident->idx > 0);
          uels[i] = (int)idxident->idx;
          break;
+
+      case IdentSymbolSlice:
+         error("[empinterp] ERROR line %u: ':' not allowed in label\n", linenr);
+         return Error_EMPIncorrectSyntax;
 
       case IdentUniversalSet:
          error("[empinterp] ERROR line %u: '*' not allowed in label\n", linenr);

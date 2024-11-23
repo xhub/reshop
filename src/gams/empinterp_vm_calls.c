@@ -620,10 +620,10 @@ static int vm_ovfparam_update(UNUSED VmData *data, unsigned argc, const VmValue 
 
 static int vm_chk_scalar_var(Avar *v)
 {
-   unsigned dim = avar_size(v);
+   unsigned size = avar_size(v);
 
-   if (dim != 1) {
-      error("[empvm_run] ERROR: expecting a scalar variable, got dim = %u.\n", dim);
+   if (size != 1) {
+      error("[empvm_run] ERROR: expecting a scalar variable, got size = %u.\n", size);
       return Error_EMPIncorrectInput;
    }
 

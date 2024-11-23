@@ -107,7 +107,7 @@ void interp_restore_savedtok(Interpreter *interp)
 NONNULL static inline
 void interp_erase_savedtok(Interpreter *interp)
 {
-   if (interp->cur.type != TOK_UNSET) {
+   if (interp->pre.type != TOK_UNSET) {
       tok_free(&interp->pre);
    }
 

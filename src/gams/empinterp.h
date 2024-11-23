@@ -461,38 +461,46 @@ typedef enum {
 
 typedef struct interp_ops {
    InterpreterOpsType type;
-   int (*ccflib_new)(Interpreter* restrict interp, unsigned ccf_idx, MathPrgm **mp);
-   int (*ccflib_finalize)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*ctr_markequasflipped)(Interpreter* restrict interp);
-   int (*identaslabels)(Interpreter * interp, unsigned * p, LinkType edge_type);
-   int (*gms_add_uel)(Interpreter* restrict interp, const Token *tok, unsigned i); 
-   int (*gms_get_uelidx)(Interpreter *interp, const char *uelstr, int *uelidx);
-   int (*gms_get_uelstr)(Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr);
-   int (*label_getidentstr)(Interpreter* restrict interp, const Token *tok, char **ident, unsigned *ident_len);
-   int (*mp_addcons)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*mp_addvars)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*mp_addvipairs)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*mp_addzerofunc)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*mp_finalize)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*mp_new)(Interpreter* restrict interp, RhpSense sense, MathPrgm **mp);
-   int (*mp_setaschild)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*mp_setobjvar)(Interpreter* restrict interp, MathPrgm *mp);
-   int (*mp_setprobtype)(Interpreter* restrict interp, MathPrgm *mp, unsigned type);
-   int (*nash_addmp)(Interpreter* restrict interp, nashid_t nashid, MathPrgm *mp);
-   int (*nash_finalize)(Interpreter* restrict interp, Nash *nash);
-   int (*nash_new)(Interpreter* restrict interp, Nash **nash);
-   int (*ovf_addbyname)(Interpreter* restrict interp, EmpInfo *empinfo, const char *name, void ** ovfdef_data);
+   int (*ccflib_new)           (Interpreter *restrict interp, unsigned ccf_idx, MathPrgm **mp);
+   int (*ccflib_finalize)      (Interpreter *restrict interp, MathPrgm *mp);
+   int (*ctr_markequasflipped) (Interpreter *restrict interp);
+   int (*identaslabels)        (Interpreter *interp, unsigned * p, LinkType edge_type);
+   int (*gms_add_uel)          (Interpreter *restrict interp, const Token *tok, unsigned i); 
+   int (*gms_get_uelidx)       (Interpreter *interp, const char *uelstr, int *uelidx);
+   int (*gms_get_uelstr)       (Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr);
+   int (*label_getidentstr)    (Interpreter *restrict interp, const Token *tok, char **ident, unsigned *ident_len);
+
+   /* MP functions */
+   int (*mp_addcons)           (Interpreter *restrict interp, MathPrgm *mp);
+   int (*mp_addvars)           (Interpreter *restrict interp, MathPrgm *mp);
+   int (*mp_addvipairs)        (Interpreter *restrict interp, MathPrgm *mp);
+   int (*mp_addzerofunc)       (Interpreter *restrict interp, MathPrgm *mp);
+   int (*mp_finalize)          (Interpreter *restrict interp, MathPrgm *mp);
+   int (*mp_new)               (Interpreter *restrict interp, RhpSense sense, MathPrgm **mp);
+   int (*mp_setaschild)        (Interpreter *restrict interp, MathPrgm *mp);
+   int (*mp_setobjvar)         (Interpreter *restrict interp, MathPrgm *mp);
+   int (*mp_setprobtype)       (Interpreter *restrict interp, MathPrgm *mp, unsigned type);
+
+   /* Nash functions */
+   int (*nash_addmp)           (Interpreter* restrict interp, nashid_t nashid, MathPrgm *mp);
+   int (*nash_finalize)        (Interpreter* restrict interp, Nash *nash);
+   int (*nash_new)             (Interpreter* restrict interp, Nash **nash);
+
+   /* OVF functions */
+   int (*ovf_addbyname)        (Interpreter* restrict interp, EmpInfo *empinfo, const char *name, void ** ovfdef_data);
 //   int (*ovf_args_init)(Parser* restrict parser, void *ovfdef_data);
-   int (*ovf_addarg)(Interpreter* restrict interp, void *ovfdef_data);
-   int (*ovf_check)(Interpreter* restrict interp, void *ovfdef_data);
-   int (*ovf_paramsdefstart)(Interpreter* restrict interp, void *ovfdef_data,
-                             const struct ovf_param_def_list **paramsdef);
-   int (*ovf_setparam)(Interpreter* restrict interp, void *ovfdef_data, unsigned i,
-                       OvfArgType type, OvfParamPayload payload);
-   int (*ovf_setrhovar)(Interpreter* restrict interp, void *ovfdef_data);
+   int (*ovf_addarg)           (Interpreter* restrict interp, void *ovfdef_data);
+   int (*ovf_check)            (Interpreter* restrict interp, void *ovfdef_data);
+   int (*ovf_paramsdefstart)   (Interpreter* restrict interp, void *ovfdef_data,
+                                const struct ovf_param_def_list **paramsdef);
+   int (*ovf_setparam)         (Interpreter* restrict interp, void *ovfdef_data, unsigned i,
+                                OvfArgType type, OvfParamPayload payload);
+   int (*ovf_setrhovar)        (Interpreter* restrict interp, void *ovfdef_data);
    unsigned (*ovf_param_getvecsize)(Interpreter* restrict interp, void *ovfdef_data,
                                     const struct ovf_param_def *pdef);
-   const char *(*ovf_getname)(Interpreter* restrict interp, void *ovfdef_data);
+   const char *(*ovf_getname)   (Interpreter* restrict interp, void *ovfdef_data);
+
+
    int (*read_elt_vector)(Interpreter *interp, const char *vectorname,
                           IdentData *ident, GmsIndicesData *gmsindices,
                           double *val);

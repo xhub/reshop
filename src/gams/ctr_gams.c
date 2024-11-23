@@ -202,7 +202,15 @@ int gcdat_loadmdl(GmsContainerData * restrict gms, GmsModelData * restrict gmdld
 {
    char buf[GMS_SSSIZE];
 
+   /* ---------------------------------------------------------------------
+    * Init GEV and GMO
+    * --------------------------------------------------------------------- */
+
    S_CHECK(gcdat_init(gms, gmdldat));
+
+  /* ----------------------------------------------------------------------
+   * Load GMO 
+   * ---------------------------------------------------------------------- */
 
    if (gmoLoadDataLegacy(gms->gmo, buf)) {
       error("[GAMS] ERROR: Loading model data failed with message '%s'\n", buf);

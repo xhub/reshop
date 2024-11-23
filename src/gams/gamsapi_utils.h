@@ -2,9 +2,11 @@
 #ifndef GAMSAPI_UTILS_H
 #define GAMSAPI_UTILS_H
 
+#include "printout.h"
+
 #include "dctmcc.h"
 #include "gdxcc.h"
-#include "printout.h"
+#include "gmdcc.h"
 
 #define gdxerror(func, gdxh) { \
    char msg42[GMS_SSSIZE];\
@@ -75,5 +77,9 @@ static inline int chk_dbl2int(double val, const char *fn)
 
    return OK;
 }
+
+int gmderr(gmdHandle_t gmdh);
+
+#define  gmderror(gmdh, ...)  error(__VA_ARGS__), gmderr(gmdh);
 
 #endif
