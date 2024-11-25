@@ -9,6 +9,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
+#include <windows.h>
 #include <errhandlingapi.h>
 #include <memoryapi.h>
 
@@ -25,11 +26,11 @@
 #include "printout.h"
 
 void* OS_MemoryReserve(u64 size) {
-    void *memory;
+   void *memory;
 #ifdef _WIN32
-    memory = VirtualAlloc(0, size, MEM_RESERVE, PAGE_NOACCESS);
+   memory = VirtualAlloc(0, size, MEM_RESERVE, PAGE_NOACCESS);
    if (!memory) {
-      dw = GetLastError();
+      DWORD dw = GetLastError();
       error("FATAL ERROR: Could not reserve memory. Error code is %lu\n", dw);
    }
 
@@ -55,7 +56,7 @@ int OS_MemoryCommit(void* memory, u64 size) {
 #ifdef _WIN32
    void *ret = VirtualAlloc(memory, size, MEM_COMMIT, PAGE_READWRITE);
    if (!ret) {
-      dw = GetLastError();
+      DWORD dw = GetLastError();
       error("FATAL ERROR: Could not commit memory. Error code is %lu\n", dw);
       return Error_SystemError;
    }
@@ -71,7 +72,7 @@ int OS_MemoryDecommit(void* memory, u64 size)
 #ifdef _WIN32
    int ret = VirtualFree(memory, size, MEM_DECOMMIT);
    if (!ret) {
-      dw = GetLastError();
+      DWORD dw = GetLastError();
       error("FATAL ERROR: Could not decommit memory. Error code is %lu\n", dw);
       return Error_SystemError;
    }
@@ -87,16 +88,16 @@ int OS_MemoryRelease(void* memory, u64 size)
 #ifdef _WIN32
    int ret = VirtualFree(memory, size, MEM_RELEASE);
    if (!ret) {
-      dw = GetLastError();
+      DWORD dw = GetLastError();
       error("FATAL ERROR: Could not release memory. Error code is %lu\n", dw);
       return Error_SystemError;
    }
 #else
-    SYS_CALL_RET(munmap(memory, size));
+   SYS_CALL_RET(munmap(memory, size));
 
 #endif
 
-return OK;
+   return OK;
 }
 
 
