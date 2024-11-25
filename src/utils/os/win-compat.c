@@ -99,6 +99,8 @@ _err:
    return NULL;
 }
 
+
+
 #else
 
 /* because its' easier than trying to remove a source file in cmake */

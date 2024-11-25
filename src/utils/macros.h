@@ -200,7 +200,7 @@ void backtrace_(const char *expr, int status);
 #endif
 
 
-#define SYS_CALL(EXPR) { \
+#define SYS_CALL_(EXPR, ACTION) { \
    int status42 = EXPR; \
    if (RHP_UNLIKELY(status42)) { \
       int errsv42 = errno; \
@@ -209,7 +209,11 @@ void backtrace_(const char *expr, int status);
       STRERROR(errsv42, buf42, sizeof(buf42)-1, msg42); \
       error("Error msg is: %s\n", msg42); \
    } \
+   ACTION; \
 }
+
+#define SYS_CALL(EXPR) SYS_CALL_(EXPR, /* nop */)
+#define SYS_CALL_RET(EXPR) SYS_CALL_(EXPR, return Error_SystemError;)
 
 #define IO_CALL(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42 < 0)) { \
   error("%s :: write error %d\n", __func__, status42); \
