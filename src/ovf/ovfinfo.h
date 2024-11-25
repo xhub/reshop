@@ -89,13 +89,13 @@ typedef struct ovfinfo {
 } OvfInfo;
 
 typedef struct {
-   MathPrgm *mp;
+   MathPrgm *mp_primal;
    mpid_t mpid_dual;
-} CcflibData;
+} CcflibPrimalDualData;
 
 typedef union ovf_ops_data {
    OvfDef *ovf;
-   CcflibData *ccfdat;
+   CcflibPrimalDualData *ccfdat;
 } OvfOpsData;
 
 void ovfdef_free(OvfDef* def);

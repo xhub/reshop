@@ -11,16 +11,16 @@
 
 static rhp_idx ccflib_varidx(OvfOpsData ovfd)
 {
-   assert(ovfd.ccfdat->mp->type == MpTypeCcflib);
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   assert(ovfd.ccfdat->mp_primal->type == MpTypeCcflib);
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovf->vi_ovf;
 }
 
 static int ccflib_getnargs(OvfOpsData ovfd, unsigned *nargs)
 {
-   assert(ovfd.ccfdat->mp->type == MpTypeCcflib);
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   assert(ovfd.ccfdat->mp_primal->type == MpTypeCcflib);
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    *nargs = ovf_argsize(ovf);
 
@@ -29,8 +29,8 @@ static int ccflib_getnargs(OvfOpsData ovfd, unsigned *nargs)
 
 static int ccflib_getargs(OvfOpsData ovfd, Avar **v)
 {
-   assert(ovfd.ccfdat->mp->type == MpTypeCcflib);
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   assert(ovfd.ccfdat->mp_primal->type == MpTypeCcflib);
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    *v = ovf->args;
 
@@ -39,8 +39,8 @@ static int ccflib_getargs(OvfOpsData ovfd, Avar **v)
 
 static int ccflib_getmappings(OvfOpsData ovfd, rhp_idx **eis)
 {
-   assert(ovfd.ccfdat->mp->type == MpTypeCcflib);
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   assert(ovfd.ccfdat->mp_primal->type == MpTypeCcflib);
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    *eis = ovf->eis;
 
@@ -49,8 +49,8 @@ static int ccflib_getmappings(OvfOpsData ovfd, rhp_idx **eis)
 
 static int ccflib_getcoeffs(OvfOpsData ovfd, double **coeffs)
 {
-   assert(ovfd.ccfdat->mp->type == MpTypeCcflib);
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   assert(ovfd.ccfdat->mp_primal->type == MpTypeCcflib);
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    *coeffs = ovf->coeffs;
 
@@ -59,7 +59,7 @@ static int ccflib_getcoeffs(OvfOpsData ovfd, double **coeffs)
 
 static int ccflib_add_k(OvfOpsData ovfd, Model *mdl, Equ *e, Avar *y)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_add_k(ovf, mdl, e, y);
 }
@@ -67,28 +67,28 @@ static int ccflib_add_k(OvfOpsData ovfd, Model *mdl, Equ *e, Avar *y)
 static int ccflib_create_uvar(OvfOpsData ovfd, Container *ctr,
                               char* name, Avar *uvar)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_create_uvar(ovf, ctr, name, uvar);
 }
 
 static int ccflib_get_D(OvfOpsData ovfd, SpMat *D, SpMat *J)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_D(ovf, D, J);
 }
 
 static int ccflib_get_lin_transformation(OvfOpsData ovfd, SpMat *B, double** b)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_lin_transformation(ovf, B, b);
 }
 
 static int ccflib_get_M(OvfOpsData ovfd, SpMat *M)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_M(ovf, M);
 }
@@ -105,7 +105,7 @@ static int ccflib_get_mp_and_sense(UNUSED OvfOpsData dat, Model *mdl,
 
    /* HACK sense is set to just pass a later check */
    if (mpid_dual == MpId_NA) {
-      MathPrgm *mp_primal = dat.ccfdat->mp;
+      MathPrgm *mp_primal = dat.ccfdat->mp_primal;
 
       if (!mp_primal) {
          errormsg("[ccflib] ERROR: primal MP is NULL!\n");
@@ -150,77 +150,77 @@ _exit:
 
 static int ccflib_get_set(OvfOpsData ovfd, SpMat *A, double** b, bool trans)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_set(ovf, A, b, trans);
 }
 
 static int ccflib_get_set_nonbox(OvfOpsData ovfd, SpMat *A, double** b, bool trans)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_set_nonbox(ovf, A, b, trans);
 }
 
 static int ccflib_get_set_0(OvfOpsData ovfd, SpMat *A_0, double **b_0, double **shift_u)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_set_0(ovf, A_0, b_0, shift_u);
 }
 
 static void ccflib_get_ppty(OvfOpsData ovfd, struct ovf_ppty *ovf_ppty)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    ovfgen_get_ppty(ovf, ovf_ppty);
 }
 
 static int ccflib_get_cone(OvfOpsData ovfd, unsigned idx, enum cone *cone, void **cone_data)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_cone(ovf, idx, cone, cone_data);
 }
 
 static int ccflib_get_cone_nonbox(OvfOpsData ovfd, unsigned idx, enum cone *cone, void **cone_data)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_cone_nonbox(ovf, idx, cone, cone_data);
 }
 
 static size_t ccflib_size_y(OvfOpsData ovfd, size_t n_args)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_size_u(ovf, n_args);
 }
 
 static double ccflib_get_var_lb(OvfOpsData ovfd, size_t vidx)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_var_lb(ovf, vidx);
 }
 
 static double ccflib_get_var_ub(OvfOpsData ovfd, size_t vidx)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovfgen_get_var_ub(ovf, vidx);
 }
 
 static const char* ccflib_get_name(OvfOpsData ovfd)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    return ovf_getname(ovf);
 }
 
 static void ccflib_trimmem(OvfOpsData ovfd)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp->ccflib.ccf;
+   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    FREE(ovf->eis);
    FREE(ovf->coeffs);

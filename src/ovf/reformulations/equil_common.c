@@ -53,7 +53,7 @@ int ovf_add_polycons(Model *mdl, union ovf_ops_data ovfd, Avar *y,
       unsigned *row_idx, single_row_idx, row_len;
       double *vals = NULL, single_val;
 
-      S_CHECK(rhpmat_row(A, i, &single_row_idx, &single_val, &row_len,
+      S_CHECK(rhpmat_row_needs_update(A, i, &single_row_idx, &single_val, &row_len,
                          &row_idx, &vals));
 
       if (row_len == 0) {

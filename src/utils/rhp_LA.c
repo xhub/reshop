@@ -226,9 +226,42 @@ int rhpmat_get_size(const SpMat* mat, unsigned *n, unsigned *m)
  *
  * @return                  the error code
  */
-int rhpmat_row(const SpMat* m, unsigned i, unsigned* restrict single_idx,
+int rhpmat_row_needs_update(const SpMat* m, unsigned i, unsigned* restrict single_idx,
                double* restrict single_val, unsigned* restrict col_idx_len,
                unsigned** restrict col_idx, double** restrict vals)
+{
+   SpMatRowWorkingMem wrkmem;
+   S_CHECK(rhpmat_row(m, i, &wrkmem, col_idx_len, col_idx, vals));
+   if (*col_idx == &wrkmem.single_idx) {
+      *single_idx = **col_idx;
+      *single_val = **vals;
+
+      *col_idx = single_idx;
+      *vals = single_val;
+   }
+
+   return OK;
+}
+
+/**
+ * @brief General interface to get the row of a matrix 
+ *
+ * This function fill in the a vector corresponding to a row in a matrix
+ * The signature is quite long, and some arguments are just input in case the
+ * matrix is empty or has no data associated with it
+ *
+ * @param m                 the matrix
+ * @param i                 the index of the row to get
+ * @param[in]  wrk_mem      working memory space when the matrix contains no data
+ * @param[out] row_idx_len  the length of the row vector
+ * @param[out] row_idx      the indices for the row vector
+ * @param[out] row_vals     the entries for the row vector
+ *
+ * @return                  the error code
+ */
+int rhpmat_row(const SpMat* m, unsigned i, SpMatRowWorkingMem *wrkmem,
+               unsigned* restrict row_len, unsigned** restrict row_idxs,
+               double** restrict row_vals)
 {
    if (m->ppty) {
       if (!(m->ppty & EMPMAT_CSR) || m->ppty & EMPMAT_BLOCK) {
@@ -238,27 +271,29 @@ int rhpmat_row(const SpMat* m, unsigned i, unsigned* restrict single_idx,
 
       if (m->ppty & EMPMAT_EYE) {
          assert(m->csr);
-         *col_idx = single_idx;
-         *single_idx = i;
-         *col_idx_len = 1;
+         *row_idxs = &wrkmem->single_idx;
+         wrkmem->single_idx = i;
+         *row_len = 1;
          if (m->csr->nnzmax == 1) {
-            *vals = m->csr->x;
+            *row_vals = m->csr->x;
          } else {
-            *vals = single_val;
-            *single_val = 1.;
+            *row_vals = &wrkmem->single_val;
+            wrkmem->single_val = 1.;
          }
 
       } else {
          RHP_INT row_idx = m->csr->p[i];
-         *col_idx_len = m->csr->p[i+1] - row_idx;
-         *col_idx = &m->csr->i[row_idx];
-         *vals = &m->csr->x[row_idx];
+         *row_len = m->csr->p[i+1] - row_idx;
+         *row_idxs = &m->csr->i[row_idx];
+         *row_vals = &m->csr->x[row_idx];
       }
    } else { /* No m->given -> this is taken as the identity */
       /*  TODO(xhub) this is a bit specific, see if we can move this out */
-      *col_idx = single_idx;
-      *single_idx = i;
-      *col_idx_len = 1;
+      *row_idxs = &wrkmem->single_idx;
+      *row_vals = &wrkmem->single_val;
+      wrkmem->single_idx = i;
+      wrkmem->single_val = 1.;
+      *row_len = 1;
    }
 
    return OK;
@@ -316,7 +351,7 @@ int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
          return OK;
       }
 
-      return error_runtime();         
+      return error_runtime();
 
    }
 

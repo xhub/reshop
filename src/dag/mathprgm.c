@@ -1071,6 +1071,13 @@ int mp_rm_cons(MathPrgm *mp, rhp_idx ei)
    return OK;
 }
 
+/**
+ * @brief Instantiate the Fenchel dual of an MP
+ *
+ * @param mp  the MP to instanciate
+ *
+ * @return    the error code
+ */
 int mp_instantiate_fenchel_dual(MathPrgm *mp)
 {
    Model *mdl = mp->mdl;
@@ -1095,7 +1102,7 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    trace_process("[MP] Dualizing MP(%s) into MP(%s) using the Fenchel scheme\n",
                  mp_getname(mp_primal), mp_getname(mp));
 
-   CcflibData ccfdat = {.mp = mp_primal, .mpid_dual = mp->id };
+   CcflibPrimalDualData ccfdat = {.mp_primal = mp_primal, .mpid_dual = mp->id };
    OvfOpsData ovfd = { .ccfdat = &ccfdat };
 
    mp->type = MpTypeOpt;
@@ -1103,9 +1110,10 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    mp->sense = mp_primal->sense == RhpMin ? RhpMax : RhpMin;
 
    mpopt_init(&mp->opt);
-   mp->status = 0;
+   mp->status = MpStatusUnset;
 
-   if (mp_primal->ccflib.ccf->args->size == 0 && mp_primal->ccflib.ccf->num_empdag_children > 0) {
+   OvfDef *ccf = mp_primal->ccflib.ccf;
+   if (ccf->args->size == 0 && ccf->num_empdag_children > 0) {
       TO_IMPLEMENT("Dualization of MP node with only EMPDAG children");
    }
 
@@ -1210,7 +1218,7 @@ int mp_instantiate(MathPrgm *mp)
 
    mp_instance->status |= MpIsHidableAsInstance;
 
-   CcflibData  ccfdat = {.mp = mp, .mpid_dual = MpId_NA};
+   CcflibPrimalDualData  ccfdat = {.mp_primal = mp, .mpid_dual = MpId_NA};
    OvfOpsData ovfd = {.ccfdat = &ccfdat};
 
    CcflibInstanceData instancedat = {.ops = &ccflib_ops, .ovfd = ovfd};

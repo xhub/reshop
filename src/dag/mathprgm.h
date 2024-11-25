@@ -68,6 +68,7 @@ struct mp_dual {
 };
 
 typedef enum {
+   MpStatusUnset                  = 0x0,  /**< No status set                    */
    MpFinalized                    = 0x1,  /**< MP has been finalized            */
    MpIsHidden                     = 0x2,  /**< Hidden MP                        */
    MpIsHidableAsDual              = 0x4,  /**< Hiddable MP: is used as dual     */

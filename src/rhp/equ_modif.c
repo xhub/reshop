@@ -349,7 +349,7 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
       /* Number of component of B_i  */
       unsigned *row_idx, row_len, row_single_idx;
       double *row_vals = NULL, single_val;
-      S_CHECK(rhpmat_row(B, i, &row_single_idx, &single_val, &row_len,
+      S_CHECK(rhpmat_row_needs_update(B, i, &row_single_idx, &single_val, &row_len,
                &row_idx, &row_vals));
 
       if (row_len == 0) {
@@ -544,7 +544,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
       unsigned single_idx;
       double *lcoeffs = NULL;
       double single_val;
-      S_CHECK(rhpmat_row(B, i, &single_idx, &single_val, &args_idx_len,
+      S_CHECK(rhpmat_row_needs_update(B, i, &single_idx, &single_val, &args_idx_len,
                &args_idx, &lcoeffs));
 
       if (args_idx_len == 0) {
@@ -761,7 +761,7 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
       unsigned single_idx;
       double *lcoeffs = NULL;
       double single_val;
-      S_CHECK(rhpmat_row(B, i, &single_idx, &single_val, &args_idx_len,
+      S_CHECK(rhpmat_row_needs_update(B, i, &single_idx, &single_val, &args_idx_len,
                &args_idx, &lcoeffs));
 
       if (args_idx_len == 0) {

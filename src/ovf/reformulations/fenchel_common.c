@@ -619,7 +619,7 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
       unsigned single_idx;
       double single_val;
       double *lcoeffs = NULL;
-      S_CHECK(rhpmat_row(B_lin, i, &single_idx, &single_val, &args_idx_len,
+      S_CHECK(rhpmat_row_needs_update(B_lin, i, &single_idx, &single_val, &args_idx_len,
                          &arg_idx, &lcoeffs));
 
       if (args_idx_len == 0) {

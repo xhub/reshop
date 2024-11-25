@@ -495,7 +495,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       unsigned single_idx;
       double single_val;
       double *Brow = NULL;
-      S_CHECK_EXIT(rhpmat_row(&B, i, &single_idx, &single_val, &args_indx_len,
+      S_CHECK_EXIT(rhpmat_row_needs_update(&B, i, &single_idx, &single_val, &args_indx_len,
                          &arg_indx, &Brow));
 
       if (args_indx_len == 0) {

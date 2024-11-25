@@ -68,7 +68,7 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    S_CHECK_EXIT(ops->get_affine_transformation(ovfd, &instancedat->B, &instancedat->b));
 
    if (nargs_maps > 0) {
-      CcflibData ccfdat = {.mp = mp_ccflib, .mpid_dual = MpId_NA};
+      CcflibPrimalDualData ccfdat = {.mp_primal = mp_ccflib, .mpid_dual = MpId_NA};
       OvfOpsData ovfd_mp = {.ccfdat = &ccfdat};
       S_CHECK_EXIT(reformulation_equil_compute_inner_product(OvfType_Ccflib, ovfd_mp, mdl,
                                                         &instancedat->B, instancedat->b,

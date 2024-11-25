@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <float.h>
-#include <math.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -244,7 +243,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
       unsigned single_idx;
       double single_val;
       double *lcoeffs = NULL;
-      S_CHECK_EXIT(rhpmat_row(&fdat.B_lin, i, &single_idx, &single_val, &args_idx_len,
+      S_CHECK_EXIT(rhpmat_row_needs_update(&fdat.B_lin, i, &single_idx, &single_val, &args_idx_len,
                          &arg_idx, &lcoeffs));
 
       if (args_idx_len == 0) {

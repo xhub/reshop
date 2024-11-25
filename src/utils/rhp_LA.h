@@ -45,6 +45,13 @@ typedef struct rhp_spmat {
    uintptr_t ppty;
 } SpMat;
 
+/** Working memory for a sparse matrix with no data, like EMPMAT_EYE */
+typedef struct {
+   double single_val;
+   unsigned single_idx;
+} SpMatRowWorkingMem;
+
+
 enum EMPMAT_PPTY {
    EMPMAT_NUL = 0,
    EMPMAT_CSR = 1,
@@ -138,7 +145,10 @@ bool rhpmat_is_square(SpMat* m) NONNULL;
 int rhpmat_get_size(const SpMat* mat, unsigned *n, unsigned *m)
    ACCESS_ATTR(write_only, 2) ACCESS_ATTR(write_only, 3) NONNULL;
 
-int rhpmat_row(const SpMat* m, unsigned i, unsigned *single_idx, double *single_val,
+int rhpmat_row(const SpMat* m, unsigned i, SpMatRowWorkingMem *wrkmem,
+               unsigned* restrict row_len, unsigned** restrict row_idxs,
+               double** restrict row_vals) NONNULL;
+int rhpmat_row_needs_update(const SpMat* m, unsigned i, unsigned *single_idx, double *single_val,
                unsigned *col_idx_len, unsigned **col_idx, double **vals) NONNULL;
 
 int rhpmat_col(SpMat* m, unsigned i, unsigned* single_idx,
