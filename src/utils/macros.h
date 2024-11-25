@@ -192,7 +192,7 @@ void backtrace_(const char *expr, int status);
 
 
 /* Glibc provides a handy strerror_r */
-#if !defined(__clang_analyzer__) && defined(__GLIBC__) && (!(defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) ||  (defined(_GNU_SOURCE)))
+#if !defined(__clang_analyzer__) && defined(__GLIBC__) && (!(defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) || (defined(_GNU_SOURCE)))
 #define STRERROR(errcode, buf, size, msg) msg = strerror_r(errcode, buf, size)
 #else
 #define STRERROR(errcode, buf, size, msg) const char* tmp =  strerror(errcode); \
@@ -208,8 +208,8 @@ void backtrace_(const char *expr, int status);
       char *msg42, buf42[256]; \
       STRERROR(errsv42, buf42, sizeof(buf42)-1, msg42); \
       error("Error msg is: %s\n", msg42); \
+      ACTION; \
    } \
-   ACTION; \
 }
 
 #define SYS_CALL(EXPR) SYS_CALL_(EXPR, /* nop */)
@@ -251,13 +251,13 @@ extern int getpid(void);
 
 #define GDB_STOP() \
 fprintf(stderr, "PID: %d in %s", getpid(), __func__); /*NOLINT(bugprone-unused-return-value,cert-err33-c)*/ \
-RHP_TRACE_ME(); __maybe_unused int c42 = getchar(); //NOLINT(bugprone-unused-return-value,cert-err33-c)
+RHP_TRACE_ME(); UNUSED int c42 = getchar(); //NOLINT(bugprone-unused-return-value,cert-err33-c)
 
 #else //_UNISTD_H
 
 #define GDB_STOP() \
   fprintf(stderr, "PID: %d in %s", getpid(), __func__); /*NOLINT(bugprone-unused-return-value,cert-err33-c)*/ \
-  RHP_TRACE_ME(); __maybe_unused int c42 = getchar(); //NOLINT(bugprone-unused-return-value,cert-err33-c)
+  RHP_TRACE_ME(); UNUSED int c42 = getchar(); //NOLINT(bugprone-unused-return-value,cert-err33-c)
 
 #endif
 

@@ -148,7 +148,7 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
       if (mat->ppty & EMPMAT_BLOCK) {
          assert(mat->block);
          nb_blocks = mat->block->number;
-         A_CHECK(working_mem.ptr, ctr_getmem(ctr, sizeof(double) * nb_blocks));
+         A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, sizeof(double) * nb_blocks));
          vals = (double*)working_mem.ptr;
 
          for (unsigned i = 0; i < nb_blocks; ++i) {

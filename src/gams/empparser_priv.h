@@ -17,7 +17,7 @@
   struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = &_mdl->ctr}; \
   const char *_ident42 = emptok_getstrstart(_tok); \
   unsigned _ident_len42 = emptok_getstrlen(_tok); \
-  A_CHECK(working_mem.ptr, ctr_getmem(&_mdl->ctr, sizeof(char) * (_ident_len42+1))); \
+  A_CHECK(working_mem.ptr, ctr_getmem_old(&_mdl->ctr, sizeof(char) * (_ident_len42+1))); \
   _tmpstr = (char*)working_mem.ptr; \
   STRNCPY(_tmpstr, _ident42, _ident_len42); \
   _tmpstr[_ident_len42] = '\0';

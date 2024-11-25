@@ -152,7 +152,7 @@ static int gams_diff_alloc(struct sd_tool *sd_tool, Container *ctr, rhp_idx ei)
    }
 
    // HACK ARENA
-   ctr_relmem(ctr);
+   ctr_relmem_old(ctr);
 
    /* ----------------------------------------------------------------------
     * Ensure that the external library is loaded

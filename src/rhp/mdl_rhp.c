@@ -173,7 +173,7 @@ int rmdl_initctrfromfull(Model *mdl, Model *mdl_up)
 
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
    size_t mem_size = nvars_up * (sizeof(bool) + sizeof(int) + sizeof(double));
-   A_CHECK(working_mem.ptr, ctr_getmem(ctr, mem_size));
+   A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, mem_size));
 
    double* values = (double*)working_mem.ptr;
    int *var_in_equ = (int*)&values[nvars_up];

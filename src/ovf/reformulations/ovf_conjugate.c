@@ -275,7 +275,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       has_set = true;
       S_CHECK_EXIT(rhpmat_get_size(&A, &n_u, &n_constr));
       struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-      A_CHECK(working_mem.ptr, ctr_getmem(ctr, n_constr * sizeof(enum cone)));
+      A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, n_constr * sizeof(enum cone)));
       enum cone *c = (enum cone *)working_mem.ptr;
       void *cone_data;
       /*  TODO(xhub) specialized call? */

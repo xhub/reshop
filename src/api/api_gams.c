@@ -74,7 +74,7 @@ _err1:
 
 
    if (ctr) {
-      A_CHECK(working_mem.ptr, ctr_getmem(ctr, new_pathsize*sizeof(char)));
+      A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, new_pathsize*sizeof(char)));
       new_path = (char*)working_mem.ptr;
    } else {
       MALLOC_(new_path, char, new_pathsize);

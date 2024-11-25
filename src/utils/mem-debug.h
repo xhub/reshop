@@ -1,7 +1,10 @@
-#ifndef MEM_DEBUG_H
-#define MEM_DEBUG_H
+#ifndef RESHOP_MEM_DEBUG_H
+#define RESHOP_MEM_DEBUG_H
 
-
+/** @file mem-debug.h 
+*
+*   @brief memory debug defines
+*/
 
 #ifdef WITH_VALGRIND
 

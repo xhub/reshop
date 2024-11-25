@@ -148,10 +148,10 @@ static int cdat_sort_eval_equvar_(Container *ctr)
          len_v = len;
 
          if (working_mem.ptr) {
-            ctr_relmem(ctr);
+            ctr_relmem_old(ctr);
          }
 
-         A_CHECK(working_mem.ptr, ctr_getmem(ctr, sizeof(unsigned) * (len_v + len_v + total_n)));
+         A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, sizeof(unsigned) * (len_v + len_v + total_n)));
          toeval = (unsigned*)working_mem.ptr;
          eis = (rhp_idx*)&toeval[total_n];
          vis = &eis[len_v];

@@ -366,7 +366,7 @@ int gctr_getopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
       assert(max_codelen > 0);
 
       struct ctrmem working_mem = {.ptr = NULL, .ctr = ctr};
-      A_CHECK(working_mem.ptr, ctr_getmem(ctr, max_codelen*2*sizeof(int)));
+      A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, max_codelen*2*sizeof(int)));
       *instrs = (int *)working_mem.ptr;
       *args = &(*instrs)[max_codelen];
 

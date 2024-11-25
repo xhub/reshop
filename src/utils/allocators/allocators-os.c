@@ -21,9 +21,26 @@
 
 #endif
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#endif
+
 #include "allocators-os.h"
 #include "macros.h"
 #include "printout.h"
+
+/* References
+*
+* For windows:
+* - VirtualAlloc: https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc?redirectedfrom=MSDN
+*
+* For Linux:
+* - https://docs.kernel.org/arch/x86/x86_64/mm.html explains the virtual memory map, 
+*   with all the ranges
+* */
+
+
+
 
 void* OS_MemoryReserve(u64 size) {
    void *memory;
@@ -100,4 +117,62 @@ int OS_MemoryRelease(void* memory, u64 size)
    return OK;
 }
 
+void *OS_CheapRealloc(void* memory, u64 oldsz, u64 newsz)
+{
+   void *new_memory;
+#if defined(__APPLE__) /* We use mach_vm_remap */
 
+   /* WARNING: we might have to use mach_vm_allocate
+    *
+    * kern_return_t kr = mach_vm_allocate(task, &addr, size, VM_FLAGS_ANYWHERE);
+    *
+    * See <mach/vm_statistics.h> for a partial documentation of the VM_FLAG_*
+    *
+    * https://github.com/joncampbell123/dosbox-x/blob/master/src/cpu/dynamic_alloc_common.h
+    * https://github.com/apple-oss-distributions/dyld/blob/main/libdyld/dyld_process_info_notify.cpp
+    *
+    * TODO: unclear what the "don't copy" boolean means. Looking at darling, it
+    * seems to copy the page content, and triggers MAP_PRIVATE. Otherwise,
+    * MAP_SHARED is enabled, see
+    * https://github.com/CuriousTommy/darling-newlkm/blob/master/osfmk/duct/duct_vm_user.c#L478
+    *
+    * If needed, we can use vm_prot_t cur_prot, max_prot; rather than NULL
+    */
+
+   mach_vm_address_t new_addr, old_addr = memory;
+
+   mach_task_t self = mach_task_self();
+   kern_return_t kr = mach_vm_remap(self,
+                                    &new_addr, oldsz,
+                                    0,                         //alignment mask
+                                    VM_FLAGS_OVERWRITE,
+                                    self, old_addr,
+                                    false,                     // Don't copy
+                                    NULL, NULL,          // min/max protection
+                                    VM_INHERIT_DEFAULT);
+
+   if (kr != KERN_SUCCESS) {
+      Error("%s returned %d: %s", "mach_vm_remap", kr, mach_error_string(kr));
+      mach_vm_deallocate(self, old_addr, oldsz);
+      return NULL;
+	}
+
+   mach_vm_deallocate(self, old_addr, oldsz);
+
+   new_memory = new_addr;
+
+#elif defined (__linux__) /* we assume we have remap */
+
+   /* mremap unmaps the old memory mapping, unless MREMAP_DONTUNMAP is passed */
+   new_memory = mremap(memory, oldsz, newsz, MREMAP_MAYMOVE);
+
+#else
+   /* Windows may not have an equivalent. Look at there chromium code where
+    *  MapViewOfFile / UnmapViewOfFile is used  */
+
+   new_memory = realloc(memory, newsz);
+
+#endif
+
+   return new_memory;
+}

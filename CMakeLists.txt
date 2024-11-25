@@ -192,6 +192,10 @@ endif()
 # Platform-specific part
 #################################################
 
+# Test for unistd.h
+include(CheckIncludeFile)
+CHECK_INCLUDE_FILE(unistd.h HAS_UNISTD)
+
 if (LINUX) # GLIBC-specific for now
    SET(_GNU_SOURCE 1)
    if (DISTRIB)

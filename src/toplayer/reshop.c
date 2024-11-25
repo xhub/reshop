@@ -211,5 +211,8 @@ _exit:
       ctr_unsetneednames(&mdl->ctr);
    }
 
+   int rc = mdl_trimmem(mdl);
+   if (status == OK) { status = rc; }
+
    return status;
 }

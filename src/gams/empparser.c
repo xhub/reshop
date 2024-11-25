@@ -1979,7 +1979,7 @@ UNUSED static int _chk_labelbasename(Token *tok, Model *mdl)
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = &mdl->ctr};
    const char *ident = emptok_getstrstart(tok);
    unsigned ident_len = emptok_getstrlen(tok);
-   A_CHECK(working_mem.ptr, ctr_getmem(&mdl->ctr, sizeof(char) * (ident_len+1)));
+   A_CHECK(working_mem.ptr, ctr_getmem_old(&mdl->ctr, sizeof(char) * (ident_len+1)));
    char *equvarname = (char*)working_mem.ptr;
    STRNCPY(equvarname, ident, ident_len);
    equvarname[ident_len] = '\0';
@@ -4082,7 +4082,7 @@ int parse_label(Interpreter *interp, unsigned *p)
    S_CHECK(peek(interp, p, &toktype));
 
    if (toktype == TOK_LPAREN) {
-      tmpname = ctr_ensuremem(&mdl->ctr, label_len, 1);
+      tmpname = ctr_ensuremem_old(&mdl->ctr, label_len, 1);
       strcat(tmpname, "(");
       label_len++;
 
@@ -4108,7 +4108,7 @@ _loop:
 
       }
 
-      tmpname = ctr_ensuremem(&mdl->ctr, label_len, ident_len);
+      tmpname = ctr_ensuremem_old(&mdl->ctr, label_len, ident_len);
       strncat(tmpname, emptok_getstrstart(&interp->peek), ident_len);
       label_len += ident_len;
 
@@ -4120,7 +4120,7 @@ _loop:
       PARSER_EXPECTS(interp, "',' or ')' are expected", TOK_COMMA, TOK_RPAREN);
 
       if (toktype == TOK_COMMA) {
-         tmpname = ctr_ensuremem(&mdl->ctr, label_len, 2);
+         tmpname = ctr_ensuremem_old(&mdl->ctr, label_len, 2);
          strcat(tmpname, ", ");
          label_len += 2;
          goto _loop;
@@ -4129,7 +4129,7 @@ _loop:
       /* we have a ')' and can therefore exit */
    }
 
-   tmpname = ctr_ensuremem(&mdl->ctr, label_len, 1);
+   tmpname = ctr_ensuremem_old(&mdl->ctr, label_len, 1);
    label_len++;
    strcat(tmpname, ")");
 

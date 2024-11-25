@@ -34,6 +34,14 @@ static void dealloc_(Container *ctr)
    }
    FREE(ctr->workspace.mem);
 
+   if (arenalink_empty(&ctr->arenaL_temp) != OK) {
+      errormsg("[container] ERROR: could not free temporary memory arena\n");
+   }
+
+   if (arenalink_empty(&ctr->arenaL_perm) != OK) {
+      errormsg("[container] ERROR: could not free permanent memory arena\n");
+   }
+
    FREE(ctr->rosetta_vars);
    FREE(ctr->rosetta_equs);
    FREE(ctr->varmeta);
@@ -74,7 +82,7 @@ static void dealloc_(Container *ctr)
  *
  * @param  ctr  the container
  */
-void ctr_dealloc(Container *ctr)
+void ctr_fini(Container *ctr)
 {
    dealloc_(ctr);
 }
@@ -88,7 +96,7 @@ void ctr_dealloc(Container *ctr)
  *
  * @return       the model structure, or NULL if the allocation failed
  */
-int ctr_alloc(Container *ctr, BackendType backend)
+int ctr_init(Container *ctr, BackendType backend)
 {
    int status = OK;
    /* ------------------------------------------------------------------------
@@ -133,6 +141,9 @@ int ctr_alloc(Container *ctr, BackendType backend)
    ctr->fixed_vars = avar_newcompact(0, IdxNA);
    ctr->fops = NULL;
 
+   S_CHECK_EXIT(arenalink_init_sized(&ctr->arenaL_temp, Gigabytes(1)));
+   S_CHECK_EXIT(arenalink_init_sized(&ctr->arenaL_perm, Gigabytes(1)));
+
    return OK;
 
 _exit:
@@ -147,7 +158,7 @@ int ctr_equ_findvar(const Container *ctr, rhp_idx ei, rhp_idx vi,
    void *jac;
 
    jac = NULL;
-   do {
+do {
       if (ctr_equ_itervars(ctr, ei, &jac, jacval, &vi_, nlflag) != OK) {
          goto _exit;
       }
@@ -306,6 +317,49 @@ int ctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
    return ctr->ops->setequvarperp(ctr, ei, vi);
 }
 
+int ctr_trimmem(Container *ctr)
+{
+   return arenalink_empty(&ctr->arenaL_temp);
+}
+
+M_ArenaTempStamp ctr_memtemp_begin(Container *ctr)
+{
+   M_ArenaLink *arena = &ctr->arenaL_temp;
+
+   while (arena->next) { arena = arena->next; }
+
+   return arenalink_begin(arena);
+}
+
+int ctr_memtemp_end(M_ArenaTempStamp stamp)
+{
+   arenalink_end(stamp);
+
+   return OK;
+}
+
+void *ctr_getmemtemp(Container *ctr, size_t size)
+{
+   M_ArenaLink *arenatemp = &ctr->arenaL_temp;
+   M_Arena *arena = &ctr->arenaL_temp.arena;
+
+   void *mem = arena_alloc(arena, size);
+
+   while (!mem && arenatemp->next) {
+      arenatemp = arenatemp->next;
+      arena = &arenatemp->arena;
+
+      mem = arena_alloc(arena, size);
+   }
+
+   if (!mem) {
+      arenatemp->next = arenalink_create(Gigabytes(1));
+      mem = arena_alloc(&arenatemp->next->arena, size);
+   }
+
+   return mem;
+}
+
 /**
  * @brief Get some working memory
  *
@@ -317,9 +371,10 @@ int ctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
  *
  * @return      a pointer on the memory
  */
-void *ctr_getmem(Container *ctr, size_t size)
+void *ctr_getmem_old(Container *ctr, size_t size)
 {
-   assert(size>0);
+   assert(size > 0);
+
 #ifdef RHP_HAS_CLEANUP
    if (ctr->workspace.inuse) {
       error("%s :: workspace memory already in use\n", __func__);
@@ -356,7 +411,7 @@ void *ctr_getmem(Container *ctr, size_t size)
  *
  * @return      a pointer on the memory
  */
-void *ctr_ensuremem(Container *ctr, size_t cur_size, size_t extra_size)
+void *ctr_ensuremem_old(Container *ctr, size_t cur_size, size_t extra_size)
 {
 
    /* the "+1" is there to put a safeguard with valgrind */
@@ -378,7 +433,7 @@ void *ctr_ensuremem(Container *ctr, size_t cur_size, size_t extra_size)
  *
  * @param ctr  the container object
  */
-void ctr_relmem(Container *ctr)
+void ctr_relmem_old(Container *ctr)
 {
 #ifdef RHP_HAS_CLEANUP
    ctr->workspace.inuse = false;
@@ -392,12 +447,12 @@ void ctr_relmem(Container *ctr)
  *
  * @param ctr  the container object
  */
-void ctr_relmem_recursive(Container *ctr)
+void ctr_relmem_recursive_old(Container *ctr)
 {
 #ifdef RHP_HAS_CLEANUP
-   if (ctr->workspace.inuse) { ctr_relmem(ctr); return; }
+   if (ctr->workspace.inuse) { ctr_relmem_old(ctr); return; }
 
-   if (ctr->ctr_up) { ctr_relmem_recursive(ctr->ctr_up); return; }
+   if (ctr->ctr_up) { ctr_relmem_recursive_old(ctr->ctr_up); return; }
 #endif
 }
 
@@ -566,7 +621,7 @@ int ctr_setequrhs(Container *ctr, rhp_idx ei, double val)
 void ctr_memclean(struct ctrmem *ctrmem)
 {
    if (ctrmem && ctrmem->ctr) {
-      ctr_relmem(ctrmem->ctr);
+      ctr_relmem_old(ctrmem->ctr);
    }
 }
 

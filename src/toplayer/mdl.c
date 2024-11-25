@@ -149,7 +149,7 @@ static void mdl_free(Model *mdl)
    mdl_timings_rel(mdl->timings);
 
    mdl->ops->deallocdata(mdl);
-   ctr_dealloc(&mdl->ctr);
+   ctr_fini(&mdl->ctr);
 
    if (mdl->mdl_up) {
       mdl_release(mdl->mdl_up);
@@ -157,6 +157,11 @@ static void mdl_free(Model *mdl)
    }
 
    free(mdl);
+}
+
+int mdl_trimmem(Model *mdl)
+{
+   return ctr_trimmem(&mdl->ctr);
 }
 
 static void mdl_commondata_init(Model *mdl)
@@ -197,7 +202,7 @@ Model* mdl_new(BackendType backend)
 
    SN_CHECK_EXIT(mdl->ops->allocdata(mdl));
 
-   SN_CHECK_EXIT(ctr_alloc(&mdl->ctr, backend));
+   SN_CHECK_EXIT(ctr_init(&mdl->ctr, backend));
 
    SN_CHECK_EXIT(empinfo_alloc(&mdl->empinfo, mdl));
 

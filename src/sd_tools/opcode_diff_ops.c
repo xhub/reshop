@@ -665,7 +665,7 @@ static int opcode_diff_alloc_fromequ(struct sd_tool *sd_tool, Container *ctr, co
    }
 
    // HACK ARENA
-   ctr_relmem(ctr);
+   ctr_relmem_old(ctr);
 
    return OK;
 }
@@ -711,7 +711,7 @@ static int opcode_diff_alloc(struct sd_tool *sd_tool, Container *ctr, rhp_idx ei
    }
 
    // HACK ARENA
-   ctr_relmem(ctr);
+   ctr_relmem_old(ctr);
 
    return OK;
 }

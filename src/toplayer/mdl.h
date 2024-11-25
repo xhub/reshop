@@ -76,6 +76,9 @@ void mdl_release(Model *mdl);
 MALLOC_ATTR(mdl_release, 1)
 Model *mdl_new(BackendType backend);
 Model *mdl_borrow(Model *mdl);
+int mdl_trimmem(Model *mdl) NONNULL;
+
+void *mdl_getmem(Model *mdl) NONNULL;
 
 int mdl_solve(Model *mdl) NONNULL;
 int mdl_postprocess(Model *mdl) NONNULL;
@@ -95,42 +98,45 @@ int mdl_export(Model *mdl, Model *mdl_dst) NONNULL;
 int mdl_copyassolvable(Model *mdl, Model *mdl_src) NONNULL;
 int mdl_reportvalues(Model *mdl, Model *mdl_src) NONNULL;
 
-int mdl_gettype(const Model *mdl, ModelType *probtype);
-int mdl_getobjjacval(const Model *mdl, double *objjacval);
-int mdl_getoption(const Model *mdl, const char *option, void *val);
+int mdl_gettype(const Model *mdl, ModelType *probtype) NONNULL;
+int mdl_getobjjacval(const Model *mdl, double *objjacval) NONNULL;
+int mdl_getoption(const Model *mdl, const char *option, void *val) NONNULL;
 const char *mdl_getprobtypetxt(ModelType probtype);
 
 int mdl_analyze_modeltype(Model *mdl) NONNULL;
 int mdl_recompute_modeltype(Model *mdl) NONNULL;
 
-int mdl_getmodelstat(const Model *mdl, int *modelstat);
+int mdl_getmodelstat(const Model *mdl, int *modelstat) NONNULL;
 const char *mdl_getmodelstatastxt(const Model *mdl) NONNULL;
-const char *mdl_modelstattxt(const Model *mdl, int modelstat);
-int mdl_getobjequ(const Model *mdl, rhp_idx *objequ);
-int mdl_getobjequs(const Model *mdl, Aequ *objs);
-int mdl_getsense(const Model *mdl, RhpSense *objsense);
-int mdl_getobjvar(const Model *mdl, rhp_idx *objvar);
+const char *mdl_modelstattxt(const Model *mdl, int modelstat) NONNULL;
+int mdl_getobjequ(const Model *mdl, rhp_idx *objequ) NONNULL;
+int mdl_getobjequs(const Model *mdl, Aequ *objs) NONNULL;
+int mdl_getsense(const Model *mdl, RhpSense *objsense) NONNULL;
+int mdl_getobjvar(const Model *mdl, rhp_idx *objvar) NONNULL;
 int mdl_getsolvername(const Model *mdl, char const ** solvername) NONNULL;
 int mdl_getsolvestat(const Model *mdl, int *solvestat) NONNULL;
 const char *mdl_getsolvestatastxt(const Model *mdl) NONNULL;
-const char *mdl_solvestattxt(const Model *mdl, int solvestat);
+const char *mdl_solvestattxt(const Model *mdl, int solvestat) NONNULL;
 
-int mdl_setmodelstat(Model *mdl, int modelstat);
-int mdl_setsolvestat(Model *mdl, int solvestat);
+int mdl_setmodelstat(Model *mdl, int modelstat) NONNULL;
+int mdl_setsolvestat(Model *mdl, int solvestat) NONNULL;
 int mdl_setname(Model *mdl, const char *name) NONNULL;
 int mdl_setsense(Model *mdl, unsigned objsense) NONNULL;
-int mdl_setsolvername(Model *mdl, const char *solvername);
+int mdl_setsolvername(Model *mdl, const char *solvername) NONNULL;
 
+/* the following group can accomodate a null mdl pointer */
 unsigned mdl_getid(const Model *mdl);
 const char* mdl_getname(const Model *mdl);
 int mdl_getnamelen(const Model *mdl);
 const char* mdl_getname2(const Model *mdl);
 int mdl_getnamelen2(const Model *mdl);
+
+
 rhp_idx mdl_getcurrentei(const Model *mdl, rhp_idx ei) NONNULL;
 rhp_idx mdl_getcurrentvi(const Model *mdl, rhp_idx vi) NONNULL;
 
-int mdl_settype(Model *mdl, ModelType probtype);
-int mdl_setobjvar(Model *mdl, rhp_idx vi);
+int mdl_settype(Model *mdl, ModelType probtype) NONNULL;
+int mdl_setobjvar(Model *mdl, rhp_idx vi) NONNULL;
 
 int mdl_ensure_exportdir(Model *mdl) NONNULL;
 int mdl_export_gms(Model *mdl, const char *phase_name) NONNULL;

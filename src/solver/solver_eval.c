@@ -144,7 +144,7 @@ int ge_prep_jacdata(Container * restrict ctr, struct jacdata * restrict jacdata)
     * ------------------------------------------------------------------ */
 
    size_t mem_size = total_n * (sizeof(struct equ) + sizeof(struct sort_idx));
-   A_CHECK_EXIT(working_mem.ptr, ctr_getmem(ctr, mem_size));
+   A_CHECK_EXIT(working_mem.ptr, ctr_getmem_old(ctr, mem_size));
    struct sort_idx * restrict sort_arr = (struct sort_idx * restrict)working_mem.ptr;
    Equ * restrict ebck = (Equ * restrict)&sort_arr[total_n];
 

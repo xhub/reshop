@@ -9,6 +9,7 @@
 
 #include "compat.h"
 #include "macros.h"
+#include "rhp_fwd.h"
 
 #define RHP_INT unsigned
 #define RHP_INTMAX UINT_MAX
@@ -134,6 +135,7 @@ static inline RHP_INT rhpmat_nnz(const SpMat* m) {
 
 void rhp_spfree(struct sp_matrix *m);
 struct sp_matrix* rhp_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type) MALLOC_ATTR(rhp_spfree,1) CHECK_RESULT;
+SparseMatrix* spmat_allocA(M_ArenaLink *arena, RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type);
 
 int rhpmat_axpy(const SpMat *A, const double *x, double *y) NONNULL;
 int rhpmat_atxpy(const SpMat *A, const double *x, double *y) NONNULL;

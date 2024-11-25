@@ -30,8 +30,8 @@ typedef double f64;
 typedef u8  b8;
 typedef u32 b32;
 
-#define Gigabytes(count) (u64) (count * 1024 * 1024 * 1024)
-#define Megabytes(count) (u64) (count * 1024 * 1024)
-#define Kilobytes(count) (u64) (count * 1024)
+#define Gigabytes(count) (u64) (((u64)(count)) * 1024 * 1024 * 1024)
+#define Megabytes(count) (u64) (((u64)(count)) * 1024 * 1024)
+#define Kilobytes(count) (u64) (((u64)(count)) * 1024)
 
 #endif //DEFINES_H

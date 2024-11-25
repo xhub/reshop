@@ -1071,7 +1071,7 @@ int nltree_buildopcode(Container *ctr, const Equ *e, int **instrs, int **args,
    }
 
    struct ctrmem working_mem = {.ptr = NULL, .ctr = ctr};
-   A_CHECK(working_mem.ptr, (int*)ctr_getmem(ctr, (2*sizeof(int)*nlcode_size_ub)));
+   A_CHECK(working_mem.ptr, (int*)ctr_getmem_old(ctr, (2*sizeof(int)*nlcode_size_ub)));
    *instrs = (int*)working_mem.ptr;
    *args = &(*instrs)[nlcode_size_ub];
 

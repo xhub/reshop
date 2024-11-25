@@ -1297,7 +1297,7 @@ int cmat_chk_expensive(Container *ctr)
    rhp_idx total_n = cdat->total_n, total_m = cdat->total_m;
 
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-   A_CHECK(working_mem.ptr, ctr_getmem(ctr, total_n * sizeof(enum vtag)));
+   A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, total_n * sizeof(enum vtag)));
    enum vtag *vtags = working_mem.ptr;
 
    struct equ_meta * restrict emd = ctr->equmeta;

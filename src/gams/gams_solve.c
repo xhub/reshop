@@ -83,7 +83,7 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
    size_t memsize = memsize_int + sizeof(double) * nvars;
 
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = &mdl->ctr};
-   A_CHECK(working_mem.ptr, ctr_getmem(&mdl->ctr, memsize));
+   A_CHECK(working_mem.ptr, ctr_getmem_old(&mdl->ctr, memsize));
    double *jacvals = (double*) working_mem.ptr;
    colidxs = (int*)&jacvals[nvars];
    nlflags = &colidxs[nvars];

@@ -97,7 +97,7 @@ static int kludge_jams_equilibrium(Container *ctr, GmsModelData * restrict mdlda
        * the GMO API doesn't have the gmoGetEquMOne or gmoGetEquStatOne
        * ---------------------------------------------------------------------- */
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-   A_CHECK(working_mem.ptr, ctr_getmem(ctr, (MAX(ctr->m, 1))*(sizeof(double)+sizeof(int))));
+   A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, (MAX(ctr->m, 1))*(sizeof(double)+sizeof(int))));
    double *marginals = (double*)working_mem.ptr;
    int *bstats = (int*)&marginals[ctr->m];
 
@@ -294,7 +294,7 @@ static int gams_solve(Model *mdl)
       assert(mdlname_len > 0);
 
       struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-      A_CHECK(working_mem.ptr, ctr_getmem(ctr, (1+mdlname_len) * sizeof(char)));
+      A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, (1+mdlname_len) * sizeof(char)));
       char *mdlname = working_mem.ptr;
       memcpy(mdlname, mdl_getname(mdl), mdlname_len);
       mdlname[mdlname_len] = '\0';
@@ -981,7 +981,7 @@ static int gams_reportvalues_from_gams(Container *ctr, const Container *ctr_src)
 
    size_t max = MAX(m, n);
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-   A_CHECK(working_mem.ptr, ctr_getmem(ctr, max*sizeof(double)));
+   A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, max*sizeof(double)));
    void *pointer = working_mem.ptr;
 
    gmoGetVarL(gms_src->gmo, (double*)pointer);

@@ -219,7 +219,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
 
    double *val_ptr, *marginals;
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-   A_CHECK(working_mem.ptr, ctr_getmem(ctr, 3*n*sizeof(double)));
+   A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, 3*n*sizeof(double)));
    val_ptr = (double*)working_mem.ptr;
    marginals = &val_ptr[n];
    int *b_pointer = (int*)&marginals[n];
@@ -900,7 +900,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
                                         nlpool, nlpool_len));
 
       // HACK ARENA: we need to release memory here, just in case if was used
-      ctr_relmem_recursive(ctr_src);
+      ctr_relmem_recursive_old(ctr_src);
 
    }
 

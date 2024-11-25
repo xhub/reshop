@@ -2,13 +2,43 @@
 #include <float.h>
 #include <math.h>
 
+#include "allocators.h"
 #include "macros.h"
 #include "printout.h"
 #include "reshop.h"
 #include "rhp_LA.h"
 #include "rhp_LA_sparsetools.h"
+#include "rhp_defines.h"
 #include "status.h"
 #include "lequ.h" /* for some debug info  */
+
+SparseMatrix* spmat_allocA(M_ArenaLink *arena, RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
+{
+   SparseMatrix *mat = NULL;
+   u64 lenp = type == RHP_TRIPLET ? 1+nnzmax : 1+n;
+   u64 sizes[] = {sizeof(SparseMatrix), sizeof(RHP_INT)*nnzmax, sizeof(RHP_INT)*lenp, sizeof(double)*nnzmax};
+   RHP_INT *i = NULL, *p = NULL;
+   double *x = NULL;
+   void *mems[] = {mat, i, p, x};
+   RESHOP_STATIC_ASSERT(ARRAY_SIZE(mems) == ARRAY_SIZE(sizes), "");
+
+   SN_CHECK_EXIT(arenalink_alloc_blocks(arena, ARRAY_SIZE(sizes), mems, sizes));
+
+   assert(mat && i && p && x);
+
+   mat->m = m;
+   mat->n = n;
+   mat->nnz = 0;
+   mat->nnzmax = nnzmax;
+   mat->i = i;
+   mat->p = p;
+   mat->x = x;
+
+   return mat;
+
+_exit:
+   return NULL;
+}
 
 SparseMatrix* rhp_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
 {

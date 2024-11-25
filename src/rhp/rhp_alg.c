@@ -531,7 +531,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 
          struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
          size_t arrsize = MAX(ctr_solver->n, ctr_solver->m);
-         A_CHECK(working_mem.ptr, ctr_getmem(ctr, 2*arrsize*sizeof(double)));
+         A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, 2*arrsize*sizeof(double)));
 
          double * restrict vals = (double*)working_mem.ptr;
          double * restrict mults = &vals[arrsize];

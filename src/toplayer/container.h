@@ -7,6 +7,7 @@
  */
 
 
+#include "allocators.h"
 #include "compat.h"
 #include "equ.h"
 #include "equvar_metadata.h"
@@ -67,6 +68,8 @@ typedef struct container {
       bool inuse;               /**< true if the memory is inuse (for debugging) */
    } workspace;                 /**< workspace memory area                   */
 
+   M_ArenaLink arenaL_temp;      /**< Arena temporary memory area             */
+   M_ArenaLink arenaL_perm;      /**< Arena permament memory                  */
    NlPool *pool;                /**< pool of numerical values */
 
    Equ *equs;                   /**< an array of equations */
@@ -87,9 +90,10 @@ typedef struct container {
    Container *ctr_up;           /**< Source container                      */
 } Container;
 
-int ctr_alloc(Container *ctr, BackendType backend) NONNULL;
-void ctr_dealloc(Container *ctr) NONNULL;
-int ctr_resize(Container *ctr, unsigned n, unsigned m);
+int  ctr_init(Container *ctr, BackendType backend) NONNULL;
+void ctr_fini(Container *ctr) NONNULL;
+int  ctr_resize(Container *ctr, unsigned n, unsigned m) NONNULL;
+int  ctr_trimmem(Container *ctr) NONNULL;
 
 int ctr_equ_findvar(const Container *ctr, rhp_idx ei, rhp_idx vi, double *jacval,
                     int *nlflag);
@@ -199,10 +203,14 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
  * Container memory management
  * ---------------------------------------------------------------------- */
 
-void *ctr_getmem(Container *ctr, size_t size) ALLOC_SIZE(2);
-void *ctr_ensuremem(Container *ctr, size_t cur_size, size_t extra_size);
-void ctr_relmem(Container *ctr) NONNULL;
-void ctr_relmem_recursive(Container *ctr) NONNULL;
+void *ctr_getmemtemp(Container *ctr, size_t size) ALLOC_SIZE(2);
+M_ArenaTempStamp ctr_memtemp_begin(Container *ctr) NONNULL;
+int ctr_memtemp_end(M_ArenaTempStamp stamp);
+
+void *ctr_getmem_old(Container *ctr, size_t size) ALLOC_SIZE(2);
+void *ctr_ensuremem_old(Container *ctr, size_t cur_size, size_t extra_size);
+void ctr_relmem_old(Container *ctr) NONNULL;
+void ctr_relmem_recursive_old(Container *ctr) NONNULL;
 void ctr_memclean(struct ctrmem *ctrmem);
 
 /* ----------------------------------------------------------------------
