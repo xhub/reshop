@@ -410,7 +410,7 @@ typedef struct rhp_mdl {
         RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");   
         RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");   
         RHP_FAIL(rhp_gms_writesol2gdx($self, gdxname), "Couldn't write the solution as gdx");
-      fail:
+      fail: ;
      }
 
      void solve() {
@@ -418,7 +418,7 @@ typedef struct rhp_mdl {
         RHP_FAIL(rhp_process($self, solver), "Couldn't process the model");   
         RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");   
         RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");   
-      fail:
+      fail: ;
      }
 
   }
