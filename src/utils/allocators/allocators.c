@@ -13,7 +13,7 @@
 
 #define DEFAULT_ALIGNMENT MAX(sizeof(void*), 16)
 
-static bool is_power_of_two(uintptr_t x) {
+DBGUSED static bool is_power_of_two(uintptr_t x) {
    return (x & (x-1)) == 0;
 }
 
@@ -162,11 +162,12 @@ void pool_init(M_Pool* pool, u64 element_size) {
    pool->head = NULL;
 }
 
-void pool_clear(M_Pool* pool) {
-   for (u8* it = (u8*)pool + sizeof(M_Pool), *preit = it;
-   it <= pool->memory + pool->commit_position;
+void pool_clear(M_Pool* pool)
+{
+   for (M_PoolFreeNode* it = (M_PoolFreeNode*)(u8*)pool + sizeof(M_Pool), *preit = it;
+   it <= (M_PoolFreeNode*)pool->memory + pool->commit_position;
    preit = it, it += pool->element_size) {
-      ((M_PoolFreeNode*)preit)->next = (M_PoolFreeNode*)it;
+      preit->next = it;
    }
    pool->head = (M_PoolFreeNode*)pool->memory;
 }

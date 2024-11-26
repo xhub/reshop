@@ -5,7 +5,9 @@
 // IWYU pragma: always_keep
 
 /* we want this for SNAN */
-#define __STDC_WANT_IEC_60559_BFP_EXT__
+#ifndef __STDC_WANT_IEC_60559_BFP_EXT__
+   #define __STDC_WANT_IEC_60559_BFP_EXT__
+#endif
 
 
 #ifndef _GNU_SOURCE

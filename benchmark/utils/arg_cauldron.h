@@ -6,6 +6,13 @@
 
 #ifndef ARG_H_INCLUDED
 
+#if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_LLVM_COMPILER)
+#   define UNUSED __attribute__((unused))
+#else
+#   define UNUSED
+#endif
+
+
 static int
 ARG_LONG_func(char **argv0, char const *name)
 {
@@ -20,9 +27,9 @@ ARG_LONG_func(char **argv0, char const *name)
 }
 
 #define ARG_BEGIN do { \
-	for (argv[0] && (--argc, ++argv); \
+	for (bool UNUSED unused = argv[0] && (--argc, ++argv); \
 	     argv[0] && argv[0][0] == '-'; \
-	     argv[0] && (--argc, ++argv)) { \
+	     unused = argv[0] && (--argc, ++argv)) { \
 		int isFlag = 1; \
 		char *arg = argv[0]; \
 		if (arg[1] == '-' && arg[2] == 0 && (--argc, ++argv, 1)) \
