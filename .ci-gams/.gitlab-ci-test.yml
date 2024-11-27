@@ -8,11 +8,11 @@ test-leg:
   script:
     - !reference [ .get-gams ]
     - !reference [ .gams-folder-leg ]
-    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
-    - export PATH="$GAMSDIR:$PATH"
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
     - cp build/output/* "$GAMSDIR"/
 
+    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - export PATH="$GAMSDIR:$PATH"
     - EMPSLV=reshop bash test/gams/test.sh
 
     - mkdir emplib && cd emplib && emplib goempgo
@@ -39,6 +39,20 @@ test-debug-leg:
     - !reference [ .get-gams ]
     - !reference [ .gams-folder-leg ]
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
+    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - export PATH="$GAMSDIR:$PATH"
+    - cp build/output/* "$GAMSDIR"/
+
+    - EMPSLV=reshop bash test/gams/test.sh
+
+    - mkdir emplib && cd emplib && emplib goempgo
+    - gams goempgo lo=2 --solver=reshop
+    - tail -n 1 failures_emp.gms | grep -Eq "Failed tests. 0"; cd ..
+
+    - mkdir quality && cd quality && testlib quality
+    - gams quality lo=2 --solver=reshop
+    - tail -n 1 failures_qa.gms | grep -Eq "Failed tests. 0" ; cd ..
   artifacts:
     name: unittest-results-debug-linux
     paths: [build/test/doctest_results_linux.xml]
@@ -51,6 +65,20 @@ test-deg:
   needs: [fetch-ci-scripts,build-deg]
   script:
     - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
+    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_deg.txt)"
+    - export PATH="$GAMSDIR:$PATH"
+    - cp build/output/* "$GAMSDIR"/
+
+    - EMPSLV=reshop bash test/gams/test.sh
+
+    - mkdir emplib && cd emplib && emplib goempgo
+    - gams goempgo lo=2 --solver=reshop
+    - tail -n 1 failures_emp.gms | grep -Eq "Failed tests. 0"; cd ..
+
+    - mkdir quality && cd quality && testlib quality
+    - gams quality lo=2 --solver=reshop
+    - tail -n 1 failures_qa.gms | grep -Eq "Failed tests. 0" ; cd ..
   artifacts:
     name: unittest-results-deg
     paths: [build/test/doctest_results_deg.xml]
@@ -63,11 +91,53 @@ test-dac:
   needs: [fetch-ci-scripts,build-dac]
   script:
     - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
+    - cp build/output/* "$GAMSDIR"/
+
+    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_dac.txt)"
+    - export PATH="$GAMSDIR:$PATH"
+    - EMPSLV=reshop bash test/gams/test.sh
+
+    - mkdir emplib && cd emplib && emplib goempgo
+    - gams goempgo lo=2 --solver=reshop
+    - tail -n 1 failures_emp.gms | grep -Eq "Failed tests. 0"; cd ..
+
+    - mkdir quality && cd quality && testlib quality
+    - gams quality lo=2 --solver=reshop
+    - tail -n 1 failures_qa.gms | grep -Eq "Failed tests. 0" ; cd ..
   artifacts:
     name: unittest-results-dac
     paths: [build/test/doctest_results_dac.xml]
     reports:
       junit: build/test/doctest_results_dac.xml
+
+.pw-run-test: &pw-run-test |
+  function Run-Test {
+       param (
+           [string]$Command,
+           [string]$TestSuite,
+           [string]$FailureFile
+       )
+       # Create and switch to the test directory
+       New-Item -ItemType Directory -Path $TestSuite -Force | Out-Null
+       Set-Location $TestSuite
+ 
+       # Run the command
+       & $Command $TestSuite
+ 
+       # Run the GAMS job
+       gams $TestSuite lo=2 --solver=reshop
+  
+       # Check the last line of the failure file for "Failed tests. 0"
+       $LastLine = Get-Content -Path $FailureFile | Select-Object -Last 1
+       if ($LastLine -notmatch "Failed tests: 0") {
+           throw "Test failed in $Directory"
+       }
+ 
+       # Return to the original directory
+       Set-Location ..
+   }
+
 
 test-wei:
   stage: test
@@ -78,7 +148,23 @@ test-wei:
   script:
     - !reference [ .get-gams-wei ]
     - !reference [ .gams-folder-wei ]
+    - *pw-run-test
     - ctest --test-dir build/test --output-junit doctest_results_windows.xml -E tree
+
+    - $gmsdirname = Get-Content mygmsdir.tmp -Raw
+    - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
+    - $env:Path = "$GAMS_PATH" + $env:Path
+    - Copy-Item -Path "build/output/*" -Destination "$GAMS_PATH" -Recurse
+
+    - $env:EMPSLV = "reshop"
+    - bash test/gams/test.sh
+
+      # Run EMP library tests
+    - Run-Test -Command "emplib" -TestSuite "goempgo" -FailureFile "failures_emp.gms"
+
+      # Run quality tests
+    - Run-Test -Command "testlib" -TestSuite "quality" -FailureFile "failures_qa.gms"
+
   artifacts:
     name: unittest-results-windows
     paths: [build/test/doctest_results_windows.xml]
