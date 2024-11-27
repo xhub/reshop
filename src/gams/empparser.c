@@ -2062,7 +2062,7 @@ NONNULL static inline int assign_uels(int * restrict uels,
       }
    }
 
-   assert(gmsindices_deactivate(gmsindices));
+   gmsindices_deactivate(gmsindices);
 
    return OK;
 }
@@ -2249,7 +2249,7 @@ static int vm_set_dagroot(Interpreter * interp, unsigned * restrict p,
 
 static int fn_noop_noargs(Interpreter * interp, unsigned * restrict p)
 {
-   assert(!gmsindices_isset(&interp->gmsindices) || gmsindices_deactivate(&interp->gmsindices));
+   gmsindices_deactivate(&interp->gmsindices);
 
    return OK;
 }
@@ -3571,7 +3571,7 @@ static int parse_vi(MathPrgm * restrict mp, Interpreter * restrict interp,
             /* The next token is a label definition */
             return OK;
          } else {
-            assert(gmsindices_deactivate(&interp->gmsindices));
+            gmsindices_deactivate(&interp->gmsindices);
             TO_IMPLEMENT("VI with labels");
             
          }

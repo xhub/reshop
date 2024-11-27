@@ -169,6 +169,7 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
  *
  * @return             the error code
  */
+// HACK: this is unused
 int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
                           GmsIndicesData * restrict gmsindices)
 {

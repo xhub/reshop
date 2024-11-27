@@ -925,7 +925,7 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
 
    iterators->size = loopi;
 
-   assert(gmsindices_deactivate(indices));
+   gmsindices_deactivate(indices);
 
    return OK;
 }

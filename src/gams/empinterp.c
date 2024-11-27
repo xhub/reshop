@@ -117,7 +117,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    interp->gms_sym_iterator.loop_needed = false;
 
    gmsindices_init(&interp->gmsindices);
-   assert(gmsindices_deactivate(&interp->gmsindices));
+   gmsindices_deactivate(&interp->gmsindices);
 
    interp->daguid_parent = EMPDAG_UID_NONE;
    interp->daguid_grandparent = EMPDAG_UID_NONE;

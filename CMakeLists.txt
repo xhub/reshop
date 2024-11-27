@@ -156,6 +156,7 @@ set (pre_configure_dir "${CMAKE_SOURCE_DIR}/src/conf")
 include (CheckGit)
 CheckGitSetup()
 # If we are not in a git repo, use CMAKE_PROJECT_VERSION
+# With a shallow clone, the describe will also fail to get the tags ...
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/git-state.txt)
    if (DEFINED ENV{CI_COMMIT_SHORT_SHA})
       set(GIT_HASH $ENV{CI_COMMIT_SHORT_SHA})
