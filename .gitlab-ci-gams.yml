@@ -29,3 +29,5 @@ variables:
   MACHINES_CONTAINER_REG:
     value: registry.gams.com/devel/machines
     description: "URL to the container registry of the machines repository"
+  TERM: "xterm-256color"
+  COLORTERM: "truecolor"
