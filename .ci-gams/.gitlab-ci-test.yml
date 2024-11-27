@@ -69,7 +69,8 @@ test-deg:
     - !reference [.gams-folder-deg]
     - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
-    - export GAMSDIR="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)"
+    - cp -ra "$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)" gamsdir
+    - export GAMSDIR="$(pwd)/gamsdir"
     - export PATH="$GAMSDIR:$PATH"
     - cp build/output/* "$GAMSDIR"/
 
@@ -97,7 +98,8 @@ test-dac:
     - !reference [.gams-folder-dac]
     - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
-    - export GAMSDIR="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt)"
+    - cp -ra "$HOME/cache/gams-installs/$(cat gams_folder_dac.txt)" gamsdir
+    - export GAMSDIR="$(pwd)/gamsdir"
     - export PATH="$GAMSDIR:$PATH"
     - cp build/output/* "$GAMSDIR"/
 
@@ -158,7 +160,7 @@ test-wei:
 
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
-    - $env:Path = "$GAMS_PATH" + $env:Path
+    - $env:Path = "$GAMS_PATH;" + $env:Path
     - Copy-Item -Path "build/output/*" -Destination "$GAMS_PATH" -Recurse
 
     - $env:EMPSLV = "reshop"
