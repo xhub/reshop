@@ -23,6 +23,7 @@
 
 #ifdef __APPLE__
 #include <mach/mach.h>
+#include <mach/mach_vm.h>
 #endif
 
 #include "allocators-os.h"
@@ -139,9 +140,9 @@ void *OS_CheapRealloc(void* memory, u64 oldsz, u64 newsz)
     * If needed, we can use vm_prot_t cur_prot, max_prot; rather than NULL
     */
 
-   mach_vm_address_t new_addr, old_addr = memory;
+   mach_vm_address_t new_addr, old_addr = (mach_vm_address_t) memory;
 
-   mach_task_t self = mach_task_self();
+   mach_port_t self = mach_task_self();
    kern_return_t kr = mach_vm_remap(self,
                                     &new_addr, oldsz,
                                     0,                         //alignment mask
@@ -152,16 +153,16 @@ void *OS_CheapRealloc(void* memory, u64 oldsz, u64 newsz)
                                     VM_INHERIT_DEFAULT);
 
    if (kr != KERN_SUCCESS) {
-      Error("%s returned %d: %s", "mach_vm_remap", kr, mach_error_string(kr));
+      error("%s returned %d: %s", "mach_vm_remap", kr, mach_error_string(kr));
       mach_vm_deallocate(self, old_addr, oldsz);
       return NULL;
 	}
 
    mach_vm_deallocate(self, old_addr, oldsz);
 
-   new_memory = new_addr;
+   new_memory = (void*)new_addr;
 
-#elif defined (__linux__) /* we assume we have remap */
+#elif defined (__linux__) /* we assume remap is available */
 
    /* mremap unmaps the old memory mapping, unless MREMAP_DONTUNMAP is passed */
    new_memory = mremap(memory, oldsz, newsz, MREMAP_MAYMOVE);

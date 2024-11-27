@@ -51,7 +51,7 @@ void arena_clear(M_Arena* arena);
  * allocate a new arena if we run out of space.
  */
 typedef struct M_ArenaLink {
-   M_Arena arena;   /**< Main arena backing this object                     */
+   M_Arena arena;       /**< Main arena backing this object                     */
    M_ArenaLink *next;   /**< Next Arena, used in case we run out of memory here */
 } M_ArenaLink;
 
