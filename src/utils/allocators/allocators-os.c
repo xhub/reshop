@@ -103,8 +103,12 @@ int OS_MemoryDecommit(void* memory, u64 size)
 
 int OS_MemoryRelease(void* memory, u64 size)
 {
+   if (!memory) { return OK; }
+   assert(size > 0);
+
 #ifdef _WIN32
-   int ret = VirtualFree(memory, size, MEM_RELEASE);
+   // For MEM_RELEASE, size must be 0
+   int ret = VirtualFree(memory, 0, MEM_RELEASE);
    if (!ret) {
       DWORD dw = GetLastError();
       error("FATAL ERROR: Could not release memory. Error code is %lu\n", dw);

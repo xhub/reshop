@@ -194,8 +194,11 @@ M_Arena* arena_create(u64 max)
 
    M_Arena *arena = (M_Arena*)mem;
    memset(arena, 0, sizeof(M_Arena));
+
    arena->memory = ((u8*)mem) + offset;
+   arena->max = max;
    arena->reserved_size = reserved_size;
+   arena->alignement = DEFAULT_ALIGNMENT;
 
    return arena;
 }
@@ -208,6 +211,7 @@ void arena_clear(M_Arena* arena)
 int arena_free(M_Arena* arena)
 {
    if (!arena->memory) { return OK; }
+   assert(arena->reserved_size > 0);
 
    void *mem = arena->memory;
    u64 size = arena->reserved_size;
