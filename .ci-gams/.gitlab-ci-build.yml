@@ -10,6 +10,7 @@ build-leg:
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
+    - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
   needs: [fetch-ci-scripts]
   artifacts:

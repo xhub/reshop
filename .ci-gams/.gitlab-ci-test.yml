@@ -11,7 +11,7 @@ test-leg:
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
     - export PATH="$GAMSDIR:$PATH"
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
-    - cp build/* "$GAMSDIR"/
+    - cp build/output/* "$GAMSDIR"/
 
     - bash test/gams/test.sh
 
