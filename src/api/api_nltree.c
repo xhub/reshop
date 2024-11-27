@@ -235,7 +235,7 @@ int rhp_nltree_arithm(NlTree *tree, NlNode ***node,
  *
  *  @ingroup publicAPI
  *
- *  @param ctr     the container
+ *  @param mdl     the container
  *  @param tree    the expression tree
  *  @param node    the current node
  *  @param opcode  the opcode corresponding to the function
@@ -294,7 +294,7 @@ int rhp_nltree_call(Model *mdl, NlTree *tree,
  *
  *  @ingroup publicAPI
  *
- *  @param          ctr   the container
+ *  @param          mdl   the container
  *  @param          tree  the expression tree
  *  @param[in,out]  node  the current node
  *  @param          cst   the constant

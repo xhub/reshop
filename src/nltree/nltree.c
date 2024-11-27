@@ -771,7 +771,7 @@ int nltree_reset_var_list(NlTree* tree)
  *   This is a wrapper around nltree_mul_cst_x, which can be use is it is 
  *   important to know whether a node has been added.
  *
- *  @param ctr            the container
+ *  @param pool            the container
  *  @param tree           the equation tree
  *  @param[in,out] node   the current node
  *  @param[in,out] coeff  the coefficient to use in the multiplication
@@ -789,7 +789,7 @@ int nltree_mul_cst(NlTree* tree, NlNode ***node, NlPool *pool, double coeff)
  *
  *  Node must point to an empty object
  *
- *  @param         ctr       the container
+ *  @param         pool       the container
  *  @param         tree      the equation tree
  *  @param[in,out] node      the current node
  *  @param[in,out] coeff     the coefficient to use in the multiplication
@@ -924,7 +924,7 @@ int nltree_scal_umin(Container *ctr, NlTree *tree)
  *  @brief Add a multiplicative constant to a sum inside a sum, without
  *         introducing unnecessary ADD node.
  *
- *  @param         ctr    the container
+ *  @param         pool    the container
  *  @param         tree   the equation tree
  *  @param[in,out] node   the current ADD node
  *  @param[in,out] coeff  the coefficient to use in the multiplication
@@ -1596,7 +1596,7 @@ static int nltree_add_expr_common(NlTree *tree, const NlNode *node,
 /**
  *  @brief Add a nonlinear expression to a tree
  *
- *  @param ctr   the container
+ *  @param pool   the container
  *  @param tree  the expression to modify
  *  @param node  the root node of the expression
  *  @param cst   a multiplicative coefficient for the nonlinear expression
@@ -1634,7 +1634,7 @@ int nltree_add_nlexpr(NlTree *tree, NlNode *node, NlPool *pool, double cst)
  *  This function updates the container matrix
  *
  *  @param ctr   the container
- *  @param tree  the expression to modify
+ *  @param ei  the expression to modify
  *  @param node  the root node of the expression
  *  @param cst   a multiplicative coefficient for the nonlinear expression
  *
@@ -1698,9 +1698,10 @@ static inline int nlnode_reserve_and_getoffset(NlTree *tree,
  *
  * @ingroup EquSafeEditing
  *
- *  @param ctr   the container
- *  @param tree  the expression to modify
- *  @param node  the root node of the expression
+ *  @param ctr      the container
+ *  @param tree     the expression to modify
+ *  @param dstnode  the destination node
+ *  @param srcnode  the source node (root of the expression)
  *  @param cst   if finite, coefficient of the variable that defines the equation:
  *               \f$ cst v + F(x) =R= rhs \f$; otherwise assume that node points
  *               to the root node of the expression tree for F.
@@ -2039,7 +2040,7 @@ static int _nltree_put_add_node(NlTree *tree, NlNode **addr)
  * It creates an ADD node if there is none
  *
  *
- * @param         ctr    the container
+ * @param         pool    the container
  * @param         tree   the expression tree
  * @param[out]    raddr  the ADD node
  * @param[in,out] coeff  the coefficient of an expression

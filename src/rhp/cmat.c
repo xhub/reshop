@@ -275,8 +275,8 @@ struct ctr_mat_elt* cmat_objvar(rhp_idx objvar)
  *
  *  @param ctr   the container
  *  @param ei    the equation index
- *  @param v     list of variables appearing in the equation
- *  @param vals  the values of the variable coefficients
+ *  @param vi     list of variables appearing in the equation
+ *  @param val  the values of the variable coefficients
  *
  *  @return      the error code
  */
@@ -1128,11 +1128,12 @@ int cmat_copy_equ_except(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst, rhp_idx
 /**
  * @brief Append equations from a container matrix to another container one
  *
- * @param ctr_dst 
- * @param ctr_src 
- * @param e 
- * @param ei_dst_start 
- * @return 
+ * @param ctr_dst        the destination container
+ * @param ctr_src        the source container
+ * @param e              the equation indices to add
+ * @param ei_dst_start   the offset at which to add the equation indices
+ *
+ * @return                the error code
  */
 int cmat_append_equs(Container * restrict ctr_dst,
                      const Container * restrict ctr_src,

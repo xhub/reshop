@@ -270,7 +270,7 @@ int lequ_copy_except(Lequ * restrict dest, const Lequ * restrict src, rhp_idx vi
  *  The destination lequ must have been allocated and needs to be of the right
  *  size
  *
- *  @param dest  the destination object
+ *  @param rosetta  the destination object
  *  @param src   the source object
  *
  */

@@ -19,7 +19,7 @@
  * Set the label name to basename(uel1_name, uel2_name, uel3_name)
  *
  * @param entry           the entry with basename and uels
- * @param dcth            the handle to the dictionary (dct)
+ * @param interp            the handle to the dictionary (dct)
  * @param[out] labelname  the generated labelname
  *
  * @return                the error code

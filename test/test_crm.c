@@ -213,22 +213,23 @@ _exit:
 /**
  * @brief Explore a tree in a DFS fashion
  *
- * @param mdl 
- * @param tree 
- * @param depth 
- * @param n 
- * @return 
+ * @param mdl     the model
+ * @param tree    the scenario tree
+ * @param depth   the depth of the scenario tree
+ * @param nodeid  the node ID 
+ *
+ * @return  the error code
  */
-static int _DFS_ovf(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsigned n)
+static int DFS_ovf(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsigned nodeid)
 {
    int status = 0;
    char *defargname = NULL, *argtheta_name = NULL;
    struct rhp_avar *argTheta = NULL;
    struct rhp_aequ *defArgTheta = NULL;
 
-   tree->visited[n] = true;
+   tree->visited[nodeid] = true;
 
-   const int *children = tree->arcs[n];
+   const int *children = tree->arcs[nodeid];
 
    unsigned n_children = 0;
    while (*children >= 0) {
@@ -242,7 +243,7 @@ static int _DFS_ovf(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
 
 
    rhp_idx theta_idx;
-   RESHOP_CHECK(rhp_avar_get(tree->theta, n, &theta_idx));
+   RESHOP_CHECK(rhp_avar_get(tree->theta, nodeid, &theta_idx));
 
    argTheta = rhp_avar_new();
    argtheta_name = strdup(rhp_mdl_printvarname(mdl, theta_idx));
@@ -256,7 +257,7 @@ static int _DFS_ovf(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
    defArgTheta = rhp_aequ_new();
    RESHOP_CHECK(rhp_add_consnamed(mdl, n_children, RHP_CON_EQ, defArgTheta, defargname));
 
-   children = tree->arcs[n];
+   children = tree->arcs[nodeid];
    int child = *children++;
    unsigned cidx = 0;
 
@@ -275,8 +276,8 @@ static int _DFS_ovf(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
          RESHOP_CHECK(rhp_equ_addnewlvar(mdl, defargtheta, theta_child, -1));
       }
 
-      RESHOP_CHECK(_add_cons(mdl, tree, child, n));
-      RESHOP_CHECK(_DFS_ovf(mdl, tree, depth+1, child));
+      RESHOP_CHECK(_add_cons(mdl, tree, child, nodeid));
+      RESHOP_CHECK(DFS_ovf(mdl, tree, depth+1, child));
 
       child = *children++;
       cidx++;
@@ -433,7 +434,7 @@ int test_ecvarup_msp_ovf(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
    RESHOP_CHECK(rhp_equ_addnewlvar(mdl, state_init, x0, 1))
    RESHOP_CHECK(rhp_mdl_setequrhs(mdl, state_init, hinit));
 
-   RESHOP_CHECK(_DFS_ovf(mdl, &tree, 0, 0));
+   RESHOP_CHECK(DFS_ovf(mdl, &tree, 0, 0));
 
    struct sol_vals solvals;
    sol_vals_init(&solvals);

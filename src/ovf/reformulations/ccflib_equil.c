@@ -163,10 +163,10 @@ int primal_arcVFb_add_by(Model *mdl, ArcVFBasicData *arcVFb_dat,  double *b, Ava
 }
 
 /**
- * @brief Add w * <b, y> to add the equations where the dual MP VF appears
+ * @brief Add w * \<b, y\> to add the equations where the dual MP VF appears
  *
  * @param mdl     the model
- * @param edgeVF  the edge VF
+ * @param arc  the edge VF
  * @param b       the b vector
  * @param y       the variables of the dual MP
  *
@@ -325,7 +325,7 @@ int primal_add_minus_ky(Model *mdl, ArcVFData *arcVFdat, rhp_idx ky_idx)
 }
 
 /**
- * @brief Add <b, y> to the objequ of a dual MP
+ * @brief Add \<b, y\> to the objequ of a dual MP
  *
  * @param mp   the dual MP
  * @param b    the b vector

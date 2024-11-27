@@ -206,7 +206,7 @@ int rctr_func2eval_add(Container *ctr, rhp_idx ei)
  * @ingroup publicAPI
  *
  * @param ctr   the container
- * @param vidx  the variable to remove
+ * @param vi  the variable to remove
  *
  * @return      the error code
  */
@@ -514,7 +514,7 @@ unsigned rctr_poolidx(Container *ctr, double val)
 /**
  * @brief Add and initialize equations
  *
- * @param mdl  the container
+ * @param ctr  the container
  * @param nb   the number of equation to add to the model
  *
  * @return     the error code
@@ -672,7 +672,7 @@ int rmdl_ctr_transform(Model *mdl)
  *
  *  @param  ctr        the container
  *  @param  ei         the index of the original equation
- *  @param  equinfo    relevant data of the new equation
+ *  @param  equ    relevant data of the new equation
  *
  *  @return the status of the operation
  */

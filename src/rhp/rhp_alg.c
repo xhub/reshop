@@ -179,7 +179,7 @@ int ctr_compress_vars_check(size_t ctr_n, size_t total_n, size_t skip_var)
 /**
  * @brief Compress (after optional filtering) the variables of a model into a new one
  *
- * @param ctr      the original model
+ * @param ctr_src      the original model
  * @param ctr_dst  the destination model
  * @return         the error code
  */

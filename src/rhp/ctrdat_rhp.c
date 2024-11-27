@@ -31,13 +31,12 @@
 //#define DEBUG_MR
 
 /**
- * @brief Add a variable to evaluate via a given equation
+ * Reserve space for the equation / variables pairs
  *
- * @param ctr   the container
- * @param ei    the equation to use
- * @param vi    the variable to evaluate
+ * @param ctr     the container
+ * @param size    the amount of pairs to reserve
  *
- * @return      the error code
+ * @return        the error code
  */
 int rctr_reserve_eval_equvar(Container *ctr, unsigned size)
 {
@@ -314,7 +313,7 @@ int rctr_init_equ_empty(Container *ctr, rhp_idx ei, EquObjectType type,
 /**
  * @brief Perform some internal equation initialization
  *
- * @param model  the model representation
+ * @param cdat  the model representation
  * @param ei     the equation index
  *
  * @return       the error code
@@ -711,7 +710,7 @@ int cdat_add_subctr(RhpContainerData* ctrdat, struct filter_subset* fs)
  *
  *  @param         ctr     the container
  *  @param         ei      index of the equation
- *  @param[in,out] ptr     a pointer to the next variable. Must be set to NULL
+ *  @param[in,out] iterator     a pointer to the next variable. Must be set to NULL
  *                         on the first call. On output, points to the next
  *                         variable (or NULL is there is none).
  *  @param[out]    val     the (linearized) value of the variable in the

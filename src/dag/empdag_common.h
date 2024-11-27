@@ -374,7 +374,7 @@ int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new);
 /**
  * @brief Subsitute ei in an arcVF
  *
- * @param  arc 
+ * @param  arc     the EMPDAG arc
  * @param  ei_old  the old equation index
  * @param  ei_new  the new equation index
  *

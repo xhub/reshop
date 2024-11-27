@@ -341,7 +341,7 @@ void gcdat_free_handles(GmsContainerData *gms)
  *          consume it or copy it to a long-term memory
  *
  * @param      ctr      the model
- * @param      eidx     the equation index
+ * @param      ei     the equation index
  * @param[out] codelen  the length of the opcode
  * @param[out] instrs   the instructions
  * @param[out] args     the arguments

@@ -37,14 +37,14 @@ static inline int symtype_dct2ident(enum dcttypes dcttype, IdentData *ident)
  *
  * @param gmd        the GMD handle
  * @param sym_name   the symbol name (as a nul-terminated string)
- * @param symdat     the symbol data
- * @param gmd_cpy    If non-null, the handle to a GMD where a set or parameter will be copied
+ * @param ident     the symbol data
+ * @param gmdcpy    If non-null, the handle to a GMD where a set or parameter will be copied
  *
  * @return        the error code
  */
 NONNULL_AT(1,3) static int
 gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ident,
-                gmdHandle_t gmdcpy, int *domindices)
+                gmdHandle_t gmdcpy)
 {
 
    void *symptr;
@@ -104,6 +104,8 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
       return gmderror(gmd, "[GMD] ERROR: could not query type of symbol '%s'\n", sym_name);
    }
 
+   // TODO: domindices are not lookup now.
+#ifdef DO_LOOKUP_DOMINDICES
    if (symdim > 0 && domindices) {
       char dom_names[GMS_MAX_INDEX_DIM][GMS_SSSIZE];
       char *dom_names_ptrs[GMS_MAX_INDEX_DIM];
@@ -131,6 +133,7 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
          domindices[i] = symnr >= 0 ? symnr : 0;
       }
    }
+#endif
 
    ident->dim = symdim;
    ident->origin = IdentOriginGmd;
@@ -181,7 +184,7 @@ int gmd_find_ident(Interpreter * restrict interp, IdentData * restrict ident)
 
    gmdHandle_t gmd = interp->gmd; assert(gmd);
 
-   S_CHECK(gmd_find_symbol(gmd, lexeme, ident, interp->gmdcpy, NULL));
+   S_CHECK(gmd_find_symbol(gmd, lexeme, ident, interp->gmdcpy));
 
    return OK;
 }
@@ -276,14 +279,14 @@ int resolve_lexeme_as_gms_symbol(Interpreter * restrict interp, Token * restrict
 
    gmdHandle_t gmddct = interp->gmddct;
    if (gmddct) {
-      S_CHECK(gmd_find_symbol(gmddct, sym_name, ident, NULL, NULL));
+      S_CHECK(gmd_find_symbol(gmddct, sym_name, ident, NULL));
    } else if (dct) {
       S_CHECK(dct_find_symbol(dct, sym_name, ident, NULL));
    }
 
    gmdHandle_t gmd = interp->gmd;
    if (symdat->ident.type == IdentNotFound && gmd) {
-      S_CHECK(gmd_find_symbol(gmd, sym_name, ident, interp->gmdcpy, NULL));
+      S_CHECK(gmd_find_symbol(gmd, sym_name, ident, interp->gmdcpy));
    }
 
    tok->type = ident2toktype(symdat->ident.type);

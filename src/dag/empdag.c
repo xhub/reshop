@@ -1104,7 +1104,7 @@ const ArcVFData* empdag_find_Varc(const EmpDag *empdag, unsigned mpid_parent,
  * This function copies the string in name
  *
  * @param empdag the EMPDAG 
- * @param mp_id  the MP ID
+ * @param mpid  the MP ID
  * @param name   the name
  *
  * @return      the error code

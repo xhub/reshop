@@ -669,7 +669,6 @@ int equ_copy_to(Container *ctr, rhp_idx ei_src, Equ *edst,
  *
  * @param ctr        the container
  * @param ei_src     the original equation index
- * @param edst       the new equation
  * @param ei_dst     the equation index for the destination
  *
  * @return           the error code

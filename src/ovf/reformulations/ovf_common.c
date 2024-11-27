@@ -265,7 +265,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
  * @param ovf_varname  name of the OVF variable
  * @param mp_sense     true if the objective function/variable is to be
  *                     minimized
- * @param ovf_sup      true if the OVF is of sup type
+ * @param ovf_sense      true if the OVF is of sup type
  *
  * @return             the error code
  */

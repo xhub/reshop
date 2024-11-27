@@ -311,17 +311,16 @@ int ovf_check(OvfDef *ovf_def)
 }
 
 
-/** @brief  find the equations where placeholder variables appear
+/** Preprocess the arguments of an OVF
  *
  *  If an argument appears only once, in a linear fashion, then we can use
  *  the expression in the reformulations.
  *
  *  Call ovf_remove_mappings() to remove the mappings from the model
  *
- *  @param       ctr      the container
- *  @param       args     the given variable arguments
- *  @param[out]  eidx     the given equation arguments
- *  @param[out]  coeffs   coefficients of each placeholder variables in indices
+ *  @param       mdl      the model
+ *  @param       ovf_def  the OVF definition
+ *  @param       mpid     If valid, the MP which owns the arguments
  *
  *  @return               the error code
  */

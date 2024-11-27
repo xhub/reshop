@@ -280,12 +280,12 @@ int rhpmat_row_needs_update(const SpMat* m, unsigned i, unsigned* restrict singl
  * The signature is quite long, and some arguments are just input in case the
  * matrix is empty or has no data associated with it
  *
- * @param m                 the matrix
- * @param i                 the index of the row to get
- * @param[in]  wrk_mem      working memory space when the matrix contains no data
- * @param[out] row_idx_len  the length of the row vector
- * @param[out] row_idx      the indices for the row vector
- * @param[out] row_vals     the entries for the row vector
+ * @param m                the matrix
+ * @param i                the index of the row to get
+ * @param[in]  wrkmem      working memory space when the matrix contains no data
+ * @param[out] row_len     the length of the row vector
+ * @param[out] row_idxs    the indices for the row vector
+ * @param[out] row_vals    the entries for the row vector
  *
  * @return                  the error code
  */

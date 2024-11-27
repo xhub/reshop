@@ -948,10 +948,10 @@ static int gmssymiter_chk_dim(GmsIndicesData *indices, IdentData *ident,
  *
  * @param       interp           the interpreter
  * @param       ident            the GAMS symbol ident
- * @param       indices 
- * @param       iterators 
- * @param       tape 
- * @param[out]  gmssymiter_gidx 
+ * @param       indices          the GAMS indices
+ * @param       iterators        the loop iterators
+ * @param       tape             the VM tape
+ * @param[out]  gmssymiter_gidx  the (global) index of the VM loop object
  *
  * @return      the error code
  */
@@ -1428,10 +1428,10 @@ void empvm_compiler_free(Compiler* c)
  *
  * @warning the loop must already have been initialized!
  *
- * @param interp   
- * @param p 
- * @param c 
- * @param tape 
+ * @param interp  the interpreter
+ * @param p       the position pointer
+ * @param c       the VM compiler
+ * @param tape    the VM tape
  *
  * @return         the error code
  */
@@ -1487,18 +1487,18 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
 }
 
 /**
- * @brief 
+ * @brief TODO
  *
 
  *
- * @param interp 
- * @param p 
- * @param labelname       the EMPDAG label name
- * @param labelname_len 
- * @param edge_type 
- * @param gmsindices 
+ * @param interp      the interpreter
+ * @param p           the position pointer
+ * @param label       the EMPDAG label name
+ * @param label_len   the label length
+ * @param link_type   the link type
+ * @param gmsindices  the indices
  *
- * @return                the error code
+ * @return            the error code
  */
 static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *label,
                                unsigned label_len, LinkType link_type,
@@ -1806,13 +1806,14 @@ int c_identaslabels(Interpreter * restrict interp, unsigned * restrict p,
  * It is similar as parse_gmsindices(), but only IdentSet and IdentLocalSet
  * are allowed
  *
- * @param interp 
- * @param p 
- * @param idxdata 
- * @return 
+ * @param interp   the interpreter
+ * @param p        the position pointer
+ * @param indices  the symbol indices
+ *
+ * @return         the error code
  */
 static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
-                   GmsIndicesData * restrict idxdata)
+                          GmsIndicesData * restrict indices)
 {
    assert(emptok_gettype(&interp->cur) == TOK_LPAREN);
 
@@ -1831,7 +1832,7 @@ static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
       PARSER_EXPECTS(interp, "Sets to loop over must are identifiers",
                             TOK_IDENT, TOK_GMS_SET);
 
-      IdentData *data = &idxdata->idents[nargs];
+      IdentData *data = &indices->idents[nargs];
 
       if (toktype == TOK_GMS_SET) {
          S_CHECK(tok2ident(&interp->cur, data));
@@ -1840,12 +1841,12 @@ static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
                       IdentLocalSet, IdentSet);
       }
 
-      switch (idxdata->idents[nargs].type) {
+      switch (indices->idents[nargs].type) {
       case IdentLocalSet:
-         idxdata->num_localsets++;
+         indices->num_localsets++;
          break;
       case IdentSet:
-         idxdata->num_sets++;
+         indices->num_sets++;
          break;
       default:
          return runtime_error(interp->linenr);
@@ -1857,7 +1858,7 @@ static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
 
    } while (toktype == TOK_COMMA);
 
-   idxdata->nargs = nargs;
+   indices->nargs = nargs;
 
    return parser_expect(interp, "Closing ')' expected for loop set(s).", TOK_RPAREN);
 }
@@ -2469,12 +2470,12 @@ int parse_defvar(Interpreter * restrict interp, unsigned * restrict p)
  *
  *
  *
- * @param interp 
- * @param p 
- * @param labelname 
- * @param labelname_len 
- * @param gmsindices 
- * @return 
+ * @param interp  the interpreter
+ * @param p       the position pointer
+ * @param labelname  the label
+ * @param labelname_len the label length
+ * @param gmsindices   the label indices
+ * @return  the error code
  */
 int vm_labeldef_condition(Interpreter * interp, unsigned * restrict p,
                           const char *labelname, unsigned labelname_len,
@@ -2563,12 +2564,12 @@ int vm_labeldef_condition(Interpreter * interp, unsigned * restrict p,
  * @brief Generate the bytecode for a label definition of the form
  *     nOpt(set): ...
  *
- * @param interp 
- * @param p 
- * @param labelname 
- * @param labelname_len 
- * @param gmsindices 
- * @return 
+ * @param interp  the interpreter
+ * @param p       the position pointer
+ * @param labelname      the label
+ * @param labelname_len  the label length
+ * @param gmsindices     the label indices
+ * @return  the error code
  */
 int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
                      const char *labelname, unsigned labelname_len,
@@ -2640,11 +2641,11 @@ int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
  *
  * @param interp       the interpreter
  * @param p            the indices
- * @param edgetype     the type for all edges
+ * @param arctype     the type for all edges
  * @param argname      the basename of the labels
  * @param argname_len  the length of the basename 
  * @param gmsindices   the indices for the basename
- * @return 
+ * @return  the error code
  */
 static int vm_add_arcs(Interpreter * interp, unsigned * restrict p, LinkType arctype,
                         const char* argname, unsigned argname_len, GmsIndicesData* gmsindices)
@@ -2926,10 +2927,11 @@ static int c_ovf_addarg(Interpreter* restrict interp, UNUSED void *ovfdef_data)
 /**
  * @brief Pushes the gidx of the OVF onto the stack
  *
- * @param interp 
- * @param void 
- * @param paramsdef 
- * @return 
+ * @param interp       the interpreter
+ * @param ovfdef_data  the OVF data
+ * @param paramsdef    the OVF parameter definitions
+ *
+ * @return             the error code
  */
 static int c_ovf_paramsdefstart(Interpreter* restrict interp, UNUSED void *ovfdef_data,
                                  const OvfParamDefList **paramsdef)

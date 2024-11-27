@@ -53,9 +53,6 @@ macro(SET_C_WARNINGS _TARGETS)
       target_compile_options(${_T} PRIVATE -Wall -Wuninitialized -Wextra)
     ENDFOREACH()
     set (_just_warnings  "no-cast-function-type;format-overflow=2;format=2")
-      if (NOT NO_WDOCUMENTATION) # MOVE this to errors ...
-      list(APPEND _just_warnings "documentation")
-    endif()
     list(APPEND _just_warnings "no-c11-extensions;pointer-to-int-cast;uninitialized-const-reference")
     list(APPEND _just_warnings "pragma-pack;pragma-pack-suspicious-include;tautological-compare;null-pointer-arithmetic")
     list(APPEND _just_warnings "maybe-uninitialized;stringop-truncation;stringop-overflow=4;unused-result")
@@ -89,6 +86,7 @@ macro(SET_C_WARNINGS _TARGETS)
     # format-truncation=2 does not work as we check whether truncation happens ...
     list(APPEND _error_warnings "implicit-fallthrough=5;attribute-alias=2;array-bounds=2;format-truncation=1")
     list(APPEND _error_warnings "shift-overflow=2;use-after-free=3;unused-const-variable=2;enum-compare")
+    list(APPEND _error_warnings "documentation")
 
     foreach (_ew ${_error_warnings})
       add_c_options("-Werror=${_ew}" ${_TARGETS})

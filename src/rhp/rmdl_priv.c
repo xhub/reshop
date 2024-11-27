@@ -16,7 +16,6 @@
  *
  * @param       mdl     the model
  * @param[out]  objequ  the objective equation 
- * @return 
  */
 void rmdl_getobjequ_nochk(const Model *mdl, rhp_idx *objequ)
 {

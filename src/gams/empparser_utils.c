@@ -109,10 +109,11 @@ _finalize:
  *
  * This takes care of parsing the indices of a GAMS symbol or label
  *
- * @param interp 
- * @param p 
- * @param idxdata 
- * @return 
+ * @param      interp      the interpreter
+ * @param      p           the position pointer
+ * @param[out] gmsindices  the GAMS indices
+ *
+ * @return                 the error code
  */
 int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
                      GmsIndicesData * restrict gmsindices)

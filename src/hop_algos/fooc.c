@@ -1001,13 +1001,13 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
  *
  * Add the equations \f$ ∇ₓf(x)  - (∇ₓg^NL)ᵀ μ  - (Aₓ)ᵀ λ \f$ into the MCP
  *
- * @param ctr_mcp      the destination container
+ * @param mdl_mcp      the destination container
  * @param mp           the mathematical programm (optional)
- * @param cequ_nl      the nonlinear constraints (only those belonging to the
+ * @param cons_nl      the nonlinear constraints (only those belonging to the
  * MP, if any)
- * @param cequ_lin     the linear constraints (only those belonging to the MP,
+ * @param cons_lin     the linear constraints (only those belonging to the MP,
  * if any)
- * @param ctr_src      the source container
+ * @param mdl_src      the source container
  * @param objequ       the objective equation, to be found in ctr_src
  *
  * @return         the error code
@@ -1939,7 +1939,6 @@ _exit:
  * @brief Compute the first order optimality conditions as an MCP
  *
  * @param mdl      the model to solve
- * @param mcpdata  the jacobian data
  *
  * @return         the error code
  */
@@ -1962,10 +1961,9 @@ int fooc_create_mcp(Model *mdl)
  * @brief Compute the first order optimality conditions as a VI
  *
  * @param mdl      the model
- * @param mcpdata  the jacobian data
  *
  * @return         the error code
  */
-int fooc_create_vi(Model *mdl) {
+int fooc_create_vi(UNUSED Model *mdl) {
   return Error_NotImplemented;
 }

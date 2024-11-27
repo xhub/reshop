@@ -738,7 +738,7 @@ int rctr_equ_add_equ_rosetta(Container *ctr, Equ * restrict dst, Equ * restrict 
  * @param ctr      the container
  * @param dst      the destination
  * @param src      the equation to copy info the destination
- * @param rosetta  an array to translate variable indices
+ * @param coeff  an array to translate variable indices
  *
  * @return         the error code
  */

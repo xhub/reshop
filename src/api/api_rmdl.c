@@ -166,7 +166,7 @@ int rhp_equ_addquadrelative(Model *mdl, rhp_idx ei, Avar *v_row,
  * @ingroup publicAPI
  *
  * @param mdl    the container
- * @param eidx   the equation index
+ * @param ei   the equation index
  * @param v1     the first variable
  * @param v2     the second variable
  * @param coeff  the general coefficient
@@ -1259,7 +1259,7 @@ int rhp_add_connamed(Model *mdl, unsigned cone, rhp_idx *ei, const char* name)
  * @param      mdl   the model
  * @param      size    the number of mapping to create
  * @param      type  the type of the inclusion
- * @param[out] e     the equation container
+ * @param[out] eout     the equation container
  *
  * @return           the error code
  */
@@ -1773,8 +1773,8 @@ int rhp_mdl_reserve_vars(struct rhp_mdl *mdl, unsigned size)
  *
  * @ingroup publicAPI
  *
- * @param  ctr   the container object
- * @param  eidx  the equation index
+ * @param  mdl   the model
+ * @param  ei    the equation index
  *
  * @return       If success, a pointer to the expression tree
  *               Otherwise, NULL
@@ -1803,8 +1803,8 @@ NlTree* rhp_mdl_getnltree(const Model *mdl, rhp_idx ei)
  * @warning this function should not be used when there also
  *          is an objective variable
  *
- * @param ctr     the container
- * @param objeqn  the objective equation index
+ * @param mdl     the model
+ * @param objequ  the objective equation index
  *
  * @return        the error code
  */

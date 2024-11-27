@@ -530,10 +530,10 @@ static int vm_ovf_finalize(VmData *data, unsigned argc, const VmValue *values)
  * at compile time, we instantiate a list of OVF parameters and set the 
  * constant values there.
  *
- * @param VmData 
- * @param argc 
- * @param values 
- * @return 
+ * @param data    the VM data
+ * @param argc    the number of arguments
+ * @param values  the argument array
+ * @return  the error code
  */
 static int vm_ovf_syncparams(UNUSED VmData *data, unsigned argc, const VmValue *values)
 {

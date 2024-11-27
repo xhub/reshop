@@ -91,7 +91,7 @@ static int add_multiplier_common_(Container *ctr, enum cone mcone,
  *
  * @ingroup publicAPI
  *
- * @param       mdl  the model
+ * @param       ctr  the model
  * @param       nb   the number of variables to add
  * @param[out]  v    the abstract variable
  *
@@ -131,7 +131,7 @@ int rctr_add_pos_vars(Container * restrict ctr, unsigned nb, Avar *v)
  *
  * @ingroup publicAPI
  *
- * @param       mdl  the model
+ * @param       ctr  the model
  * @param       nb   the number of variables to add
  * @param[out]  v    the abstract variable
  *
@@ -171,7 +171,7 @@ int rctr_add_neg_vars(Container *ctr, unsigned nb, Avar *v)
  *
  * @ingroup publicAPI
  *
- * @param       mdl  the model
+ * @param       ctr  the model
  * @param       nb   the number of variables to add
  * @param[out]  v    the abstract variable
  *
@@ -209,7 +209,7 @@ int rctr_add_free_vars(Container *ctr, unsigned nb, Avar *v)
 /**
  * @brief Add box constraint variable 
  *
- * @param       mdl  the model
+ * @param       ctr  the model
  * @param       nb   the number of constraints to add
  * @param[out]  v    the abstract variable
  * @param       lb   (optional) the lower bounds

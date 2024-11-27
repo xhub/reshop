@@ -504,13 +504,13 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
  *  @brief Add the inner product \f$ \langle c, B F(x) + b\rangle \f$
  *
  *  @param  ctr      the container
- *  @param  edst     the equation
+ *  @param  e        the destination equation
  *  @param  c        the vector of constants
  *  @param  n_c      the size of the inner product arguments
  *  @param  B        the B matrix in the affine transformation
  *  @param  b        the c constant part in the affine transformation
  *  @param  coeffs   ???
- *  @param  var_idx  ???
+ *  @param  v        ???
  *  @param  eis      ???
  *  @param  coeff    ???
  *
@@ -735,7 +735,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
  *  @param b        ???
  *  @param coeffs   ???
  *  @param var_idx  ???
- *  @param equ_idx  ???
+ *  @param eis  ???
  *
  *  @return               the error code
  */
@@ -924,10 +924,10 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
  * @param ctr            the container
  * @param edst           the equation to modify
  * @param coeffs         ???
- * @param args_indx_len  the number of arguments
- * @param arg_idx        ???
- * @param equ_idx        ???
- * @param indices        ???
+ * @param row_len        the number of arguments
+ * @param row_idx        ???
+ * @param ei_maps        ???
+ * @param v              ???
  * @param lcoeffs        ???
  * @param cst            ???
  *

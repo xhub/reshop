@@ -60,9 +60,9 @@ int rmdl_exportmodel(Model *mdl, Model *mdl_solver, Fops *fops)
 /**
  * @brief Get a modifiable version of an equation
  *
- * @param mdl     the model
- * @param ei      the equation index
- * @param e[out]  the pointer to the equation
+ * @param      mdl  the model
+ * @param      ei   the equation index
+ * @param[out] e    the pointer to the equation
  *
  * @return        the error code
  */

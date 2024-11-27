@@ -452,7 +452,7 @@ int rhp_gms_fillmdl(Model *mdl)
 /** @brief set the gams control file for a given model
  *
  *  @param mdl    the model
- *  @param fname  the gams control file
+ *  @param cntrfile  the gams control file
  *
  *  @return       the error code
  */
@@ -474,7 +474,7 @@ int rhp_gms_setgamscntr(Model *mdl, const char *cntrfile)
 /** @brief set the gams system directory for a given model
  *
  *  @param mdl     the model
- *  @param dirname the gams system directory
+ *  @param gamsdir the gams system directory
  *
  *  @return        the error code
  */
@@ -503,7 +503,7 @@ int rhp_gms_setgamsdir(Model *mdl, const char *gamsdir)
 
 /** @brief globally set the gams control file 
  *
- *  @param  fname  the gams control file
+ *  @param  cntrfile  the gams control file
  *
  *  @return        the error code
  */
@@ -518,7 +518,7 @@ int rhp_gams_setglobalgamscntr(const char *cntrfile)
 
 /** @brief globally set the gams system directory
  *
- *  @param dirname the gams system directory
+ *  @param gamsdir the gams system directory
  *
  *  @return        the error code
  */

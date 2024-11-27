@@ -1436,11 +1436,12 @@ static int chk_wildcard_equs_allowed(Interpreter *interp)
 
 /** @brief Parse an alphanumeric sequence
  *
- * @param tok 
- * @param buf 
- * @param pos 
- * @param interp 
- * @return 
+ * @param tok     the token
+ * @param buf     the buffer
+ * @param pos     the position pointer
+ * @param interp  the interpreter
+ *
+ * @return        the error code
  */
 static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
                         Interpreter *interp)
@@ -1889,8 +1890,8 @@ static inline bool toktype_dagnode_kw(TokenType toktype)
 /**
  * @brief Parse a GMS symbol
  *
- * @param interp 
- * @param p
+ * @param interp  the interpreter
+ * @param p       the position pointer
  *
  * @return          the error code
  */
@@ -2275,7 +2276,7 @@ typedef struct {
  * @param p       the position pointer
  * @param imm_fn  the function to call in immediate mode
  * @param vm_fn   the function to call in VM mode
- * @return 
+ * @return  the error code
  */
 static int add_edge4label(Interpreter *interp, unsigned *p,
                           imm_fn_label2resolve imm_fn, vm_fn_label2resolve vm_fn)
@@ -2885,9 +2886,9 @@ int parse_MPargs_gmsvars_list(Interpreter * restrict interp, unsigned * restrict
  * We are called in a MP statement, when one of the argument is supposed to be
  * a node label.
  *
- * @param interp 
- * @param p 
- * @return 
+ * @param interp  the interpreter
+ * @param p       the position pointer
+ * @return  the error code
  */
 NONNULL_AT(1,2) static
 int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p, 
