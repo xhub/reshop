@@ -4,6 +4,19 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/* -------------------------------------------------------------------------
+ * Macro definitions
+ * ------------------------------------------------------------------------- */
+
+#if !defined(__clang__) && (__GNUC__ >= 11)
+   #define RHP_MALLOC(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
+#elif defined (__GNUC__)
+   #define RHP_MALLOC(...) __attribute__ ((malloc))
+#else 
+   #define RHP_MALLOC(...) /* __VA_ARGS__ */
+#endif
+
+
 struct rhp_avar;
 struct rhp_aequ;
 struct rhp_mdl;
@@ -129,15 +142,16 @@ union rhp_optval {
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-struct rhp_avar* rhp_avar_new(void);
-RHP_PUBLIB
-struct rhp_avar* rhp_avar_newcompact(unsigned size, unsigned start);
-RHP_PUBLIB
-struct rhp_avar* rhp_avar_newlist(unsigned size, rhp_idx *vis);
-RHP_PUBLIB
-struct rhp_avar* rhp_avar_newlistcopy(unsigned size, rhp_idx *vis);
-RHP_PUBLIB
 void rhp_avar_free(struct rhp_avar* v);
+RHP_PUBLIB RHP_MALLOC(rhp_avar_free)
+struct rhp_avar* rhp_avar_new(void);
+RHP_PUBLIB RHP_MALLOC(rhp_avar_free)
+struct rhp_avar* rhp_avar_newcompact(unsigned size, unsigned start);
+RHP_PUBLIB RHP_MALLOC(rhp_avar_free)
+struct rhp_avar* rhp_avar_newlist(unsigned size, rhp_idx *vis);
+RHP_PUBLIB RHP_MALLOC(rhp_avar_free)
+struct rhp_avar* rhp_avar_newlistcopy(unsigned size, rhp_idx *vis);
+
 RHP_PUBLIB
 int rhp_avar_get(const struct rhp_avar *v, unsigned i, rhp_idx *vi);
 RHP_PUBLIB
@@ -152,17 +166,18 @@ const char* rhp_avar_gettypename(const struct rhp_avar *v);
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
+void rhp_aequ_free(struct rhp_aequ* e);
+RHP_PUBLIB RHP_MALLOC(rhp_aequ_free)
 struct rhp_aequ* rhp_aequ_new(void);
-RHP_PUBLIB
+RHP_PUBLIB RHP_MALLOC(rhp_aequ_free)
 struct rhp_aequ* rhp_aequ_newcompact(unsigned size, rhp_idx start);
-RHP_PUBLIB
+RHP_PUBLIB RHP_MALLOC(rhp_aequ_free)
 struct rhp_aequ* rhp_aequ_newlist(unsigned size, rhp_idx *eis);
-RHP_PUBLIB
+RHP_PUBLIB RHP_MALLOC(rhp_aequ_free)
 struct rhp_aequ* rhp_aequ_newlistcopy(unsigned size, rhp_idx *eis);
+
 RHP_PUBLIB
 int rhp_aequ_get(const struct rhp_aequ *e, unsigned i, rhp_idx *ei);
-RHP_PUBLIB
-void rhp_aequ_free(struct rhp_aequ* e);
 RHP_PUBLIB
 unsigned rhp_aequ_size(const struct rhp_aequ *e);
 RHP_PUBLIB
@@ -178,9 +193,9 @@ char rhp_aequ_contains(const struct rhp_aequ *e, rhp_idx ei);
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-struct rhp_mdl *rhp_mdl_new(unsigned backend);
-RHP_PUBLIB
 void rhp_mdl_free(struct rhp_mdl *mdl);
+RHP_PUBLIB RHP_MALLOC(rhp_mdl_free)
+struct rhp_mdl *rhp_mdl_new(unsigned backend);
 
 /* -------------------------------------------------------------------------
  * Model public API

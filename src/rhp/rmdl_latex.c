@@ -649,7 +649,7 @@ int mdl_export_gms(Model *mdl, const char *phase_name)
    myfreeenvval(do_export);
   
   Model *mdl_gams;
-  A_CHECK(mdl_gams, rhp_mdl_new(RHP_BACKEND_GAMS_GMO));
+  A_CHECK(mdl_gams, mdl_new(RHP_BACKEND_GAMS_GMO));
 
   S_CHECK_EXIT(gmdl_set_gamsdata_from_env(mdl_gams));
   S_CHECK_EXIT(mdl_setsolvername(mdl_gams, "CONVERT"));
