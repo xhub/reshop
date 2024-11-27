@@ -100,9 +100,9 @@
 #endif
 
 
-#else /* NOT __GNUC__ */
+#elif defined(_MSC_VER)
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#if (_MSC_VER >= 1700)
 #  define CHECK_RESULT _Must_inspect_result_
 #else
 #  define CHECK_RESULT
@@ -116,7 +116,30 @@
 #define NONNULL_AT(...)
 #define NONNULL
 #define UNUSED
-#define __maybe_unused
+#define FORMAT_CHK(S,A)
+
+#define MALLOC_ATTR(...)          __declspec(restrict)
+
+#define MALLOC_ATTR_SIMPLE
+#define ACCESS_ATTR(TYPE, ...)
+#define WRITE_ONLY(...)
+#define READ_ONLY(...) 
+#define FALLTHRU 
+
+#define __counted_by(member)
+
+#else /* no real support here */
+
+#define CHECK_RESULT
+
+#define RHP_LIKELY(x) (x)
+#define RHP_UNLIKELY(x) (x)
+
+#define ALLOC_SIZE(SIZE)
+#define CTRMEM
+#define NONNULL_AT(...)
+#define NONNULL
+#define UNUSED
 #define FORMAT_CHK(S,A)
 #define MALLOC_ATTR(...)
 #define MALLOC_ATTR_SIMPLE
