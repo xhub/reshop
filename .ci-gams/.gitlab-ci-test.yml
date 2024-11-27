@@ -15,10 +15,10 @@ test-leg:
     - bash test/gams/test.sh
     - mkdir emplib && cd emplib && emplib goempgo
     - gams goempgo lo=2 --solver=reshop
-    - tail -n 1 failures_emp.gms | grep -q "Failed tests: 0" && echo "emplib: SUCCESS"; cd ..
+    - tail -n 1 failures_emp.gms | grep -q 'Failed tests: 0'; cd ..
     - mkdir quality && cd quality && testlib quality
     - gams quality lo=2 --solver=reshop
-    - tail -n 1 failures_qa.gms | grep -q "Failed tests: 0" && echo "quality: SUCCESS"; cd ..
+    - tail -n 1 failures_qa.gms | grep -q 'Failed tests: 0' ; cd ..
   artifacts:
     name: unittest-results-linux
     paths: [build/test/doctest_results_linux.xml]
