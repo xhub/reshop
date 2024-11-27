@@ -616,6 +616,12 @@ if (BUILD_GAMS_DRIVER)
    if (INSTALL_COMMON_MAKESELF)
       INSTALL(TARGETS ${LIBNAMES} DESTINATION ${CMAKE_BINARY_DIR}/makeself)
    endif()
+
+else (BUILD_GAMS_DRIVER)
+
+   INSTALL(TARGETS ${LIBNAMES} DESTINATION ${CMAKE_BINARY_DIR}/output)
+   INSTALL(FILES ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/output)
+
 endif ()
 
 # This is a way to get the version in a file in order to use it while building
