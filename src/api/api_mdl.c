@@ -72,7 +72,7 @@ unsigned rhp_mdl_getid(const struct rhp_mdl *mdl)
  *
  * @return     the solver model
  */
-Model *rhp_getsolvermdl(Model *mdl)
+Model *rhp_newsolvermdl(Model *mdl)
 {
    BackendType mdl_type = mdl->backend;
 

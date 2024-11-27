@@ -454,19 +454,19 @@ RHP_PUBLIB
 int rhp_empdag_mpeaddmp(struct rhp_mdl *mdl, struct rhp_nash_equilibrium* mpe, struct rhp_mathprgm *mp);
 
 /* -------------------------------------------------------------------------
- * EMPDAG edgeVF (value function)
+ * EMPDAG arcVF (value function)
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-struct rhp_empdag_arcVF * rhp_edgeVF_new(void);
+int rhp_arcVF_free(struct rhp_empdag_arcVF *arcVF);
+RHP_PUBLIB RHP_MALLOC(rhp_arcVF_free)
+struct rhp_empdag_arcVF * rhp_arcVF_new(void);
 RHP_PUBLIB
-int rhp_edgeVF_init(struct rhp_empdag_arcVF *edgeVF, rhp_idx ei);
+int rhp_arcVF_init(struct rhp_empdag_arcVF *arcVF, rhp_idx ei);
 RHP_PUBLIB
-int rhp_edgeVF_free(struct rhp_empdag_arcVF *edgeVF);
+int rhp_arcVF_setvar(struct rhp_empdag_arcVF *arcVF, rhp_idx vi);
 RHP_PUBLIB
-int rhp_edgeVF_setvar(struct rhp_empdag_arcVF *edgeVF, rhp_idx vi);
-RHP_PUBLIB
-int rhp_edgeVF_setcst(struct rhp_empdag_arcVF *edgeVF, double cst);
+int rhp_arcVF_setcst(struct rhp_empdag_arcVF *arcVF, double cst);
 
 
 /* -------------------------------------------------------------------------
@@ -684,8 +684,8 @@ int rhp_ovf_setreformulation(struct rhp_ovfdef *ovf_def, const char *reformulati
 /* -------------------------------------------------------------------------
  * ReSHOP model management
  * ------------------------------------------------------------------------- */
-RHP_PUBLIB
-struct rhp_mdl *rhp_getsolvermdl(struct rhp_mdl *mdl);
+RHP_PUBLIB RHP_MALLOC(rhp_mdl_free)
+struct rhp_mdl *rhp_newsolvermdl(struct rhp_mdl *mdl);
 
 /* -------------------------------------------------------------------------
  * ReSHOP main API

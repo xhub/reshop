@@ -166,7 +166,7 @@ int main(int argc, char** argv)
 // TODO MACOS
 #endif
 
-   mdl_solver = rhp_getsolvermdl(mdl);
+   mdl_solver = rhp_newsolvermdl(mdl);
    if (!mdl_solver) {
       if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: couldn't create solver model object\n"); }
       gevLogStatPChar(gev, msg);

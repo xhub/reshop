@@ -331,7 +331,7 @@ DllExport int STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
       goto _exit;
    }
 
-   mdl_solver = rhp_getsolvermdl(jh->mdl);
+   mdl_solver = rhp_newsolvermdl(jh->mdl);
    if (!mdl_solver) {
       (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: couldn't create solver model object\n");
       gevLogStatPChar(jh->eh, msg);

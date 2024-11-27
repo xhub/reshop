@@ -185,53 +185,55 @@ int rhp_ensure_mp(Model *mdl, unsigned reserve)
    return OK;
 }
 
-ArcVFData * rhp_edgeVF_new(void)
+ArcVFData * rhp_arcVF_new(void)
 {
-   ArcVFData *edgeVF;
-   MALLOC_NULL(edgeVF, ArcVFData, 1);
-   return edgeVF;
+   ArcVFData *arcVF;
+   MALLOC_NULL(arcVF, ArcVFData, 1);
+   return arcVF;
 }
 
-int rhp_edgeVF_init(ArcVFData *edgeVF, rhp_idx ei)
+int rhp_arcVF_init(ArcVFData *arcVF, rhp_idx ei)
 {
-   S_CHECK(chk_arg_nonnull(edgeVF, 1, __func__));
-   arcVFb_init(edgeVF, ei);
+   S_CHECK(chk_arg_nonnull(arcVF, 1, __func__));
+   arcVFb_init(arcVF, ei);
+
    return OK;
 }
 
-int rhp_edgeVF_free(ArcVFData *edgeVF)
+int rhp_arcVF_free(ArcVFData *arcVF)
 {
-   FREE(edgeVF);
+   free(arcVF);
+
    return OK;
 }
 
-int rhp_edgeVF_setvar(ArcVFData *edgeVF, rhp_idx vi)
+int rhp_arcVF_setvar(ArcVFData *arcVF, rhp_idx vi)
 {
-   S_CHECK(chk_arg_nonnull(edgeVF, 1, __func__));
-   arcVFb_setvar(edgeVF, vi);
+   S_CHECK(chk_arg_nonnull(arcVF, 1, __func__));
+   arcVFb_setvar(arcVF, vi);
    return OK;
 }
 
-int rhp_edgeVF_setcst(ArcVFData *edgeVF, double cst)
+int rhp_arcVF_setcst(ArcVFData *arcVF, double cst)
 {
-   S_CHECK(chk_arg_nonnull(edgeVF, 1, __func__));
-   arcVFb_setcst(edgeVF, cst);
+   S_CHECK(chk_arg_nonnull(arcVF, 1, __func__));
+   arcVFb_setcst(arcVF, cst);
    return OK;
 }
 
 int rhp_empdag_mpaddmpVF(Model *mdl, MathPrgm *mp,
-                         MathPrgm *mp_child, ArcVFData *edgeVF)
+                         MathPrgm *mp_child, ArcVFData *arcVF)
 {
    S_CHECK(chk_rmdldag(mdl, __func__));
    S_CHECK(chk_arg_nonnull(mp, 2, __func__));
    S_CHECK(chk_arg_nonnull(mp_child, 3, __func__));
-   S_CHECK(chk_arg_nonnull(edgeVF, 4, __func__));
+   S_CHECK(chk_arg_nonnull(arcVF, 4, __func__));
 
    unsigned id_parent = mp->id;
    unsigned id_child = mp_child->id;
-   edgeVF->mpid_child = id_child;
+   arcVF->mpid_child = id_child;
 
-   return empdag_mpVFmpbyid(&mdl->empinfo.empdag, id_parent, edgeVF);
+   return empdag_mpVFmpbyid(&mdl->empinfo.empdag, id_parent, arcVF);
 }
 
 int rhp_empdag_mpaddmpCTRL(Model *mdl, MathPrgm *mp, MathPrgm *mp_child)

@@ -158,7 +158,7 @@ static void _tree_free(struct tree *tree)
    rhp_avar_free(tree->h);
    rhp_avar_free(tree->theta);
    rhp_aequ_free(tree->defState);
-   rhp_edgeVF_free(tree->edgeVF);
+   rhp_arcVF_free(tree->edgeVF);
 }
 
 static int _tree_init_ovf(struct rhp_mdl *mdl, struct tree *tree)
@@ -183,7 +183,7 @@ static int _tree_init_dag(struct rhp_mdl *mdl, struct tree *tree)
    tree->objequCRM = rhp_aequ_new();
    RESHOP_CHECK(rhp_add_consnamed(mdl, tree->n_nonleaf, RHP_CON_EQ, tree->objequCRM, "objequCRM"));
 
-   tree->edgeVF = rhp_edgeVF_new();
+   tree->edgeVF = rhp_arcVF_new();
 
 _exit:
    return status;
@@ -348,7 +348,7 @@ static int _DFS_dag(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
    RESHOP_CHECK(rhp_aequ_get(tree->objequCRM, n, &objequCRM_n));
    RESHOP_CHECK(rhp_mp_setobjequ(crm, objequCRM_n));
 
-   RESHOP_CHECK(rhp_edgeVF_init(tree->edgeVF, objequ_n));
+   RESHOP_CHECK(rhp_arcVF_init(tree->edgeVF, objequ_n));
    RESHOP_CHECK(rhp_empdag_mpaddmpVF(mdl, mp, crm, tree->edgeVF));
 
 
@@ -368,8 +368,8 @@ static int _DFS_dag(struct rhp_mdl *mdl, struct tree *tree, unsigned depth, unsi
       if (!mp_child) { status = 1; goto _exit; }
 
       /* Add y(child) * vf(mp(child)) in the objequ of CRM(n) */
-      RESHOP_CHECK(rhp_edgeVF_init(tree->edgeVF, objequCRM_n));
-      RESHOP_CHECK(rhp_edgeVF_setvar(tree->edgeVF, y_child));
+      RESHOP_CHECK(rhp_arcVF_init(tree->edgeVF, objequCRM_n));
+      RESHOP_CHECK(rhp_arcVF_setvar(tree->edgeVF, y_child));
       RESHOP_CHECK(rhp_empdag_mpaddmpVF(mdl, crm, mp_child, tree->edgeVF));
 
       /* Add y(child) to the CRM */
