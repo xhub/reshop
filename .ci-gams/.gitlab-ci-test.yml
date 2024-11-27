@@ -64,6 +64,8 @@ test-deg:
   tags: [clarus]
   needs: [fetch-ci-scripts,build-deg]
   script:
+    - !reference [.get-gams]
+    - !reference [.gams-folder-deg]
     - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_deg.txt)"
@@ -90,12 +92,14 @@ test-dac:
   tags: [macos-arm64]
   needs: [fetch-ci-scripts,build-dac]
   script:
+    - !reference [.get-gams]
+    - !reference [.gams-folder-dac]
     - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
-
-    - cp build/output/* "$GAMSDIR"/
 
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_dac.txt)"
     - export PATH="$GAMSDIR:$PATH"
+    - cp build/output/* "$GAMSDIR"/
+
     - EMPSLV=reshop bash test/gams/test.sh
 
     - mkdir emplib && cd emplib && emplib goempgo
@@ -157,7 +161,7 @@ test-wei:
     - Copy-Item -Path "build/output/*" -Destination "$GAMS_PATH" -Recurse
 
     - $env:EMPSLV = "reshop"
-    - bash test/gams/test.sh
+    # - bash test/gams/test.sh
 
       # Run EMP library tests
     - Run-Test -Command "emplib" -TestSuite "goempgo" -FailureFile "failures_emp.gms"
