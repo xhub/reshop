@@ -6,7 +6,7 @@
    #ifndef _GNU_SOURCE
       #define _GNU_SOURCE 1
    #endif
-#elif __apple__
+#elif __APPLE__
 
    #ifndef _DARWIN_C_SOURCE
       #define _DARWIN_C_SOURCE

@@ -207,10 +207,12 @@ int ovfgraph_dot(const struct ovfinfo *ovf_info, struct rhp_graph_gen **nodes,
    bool free_png_viewer = false;
 
   if (!png_viewer) {
-#ifdef __apple__
+#ifdef __APPLE__
       png_viewer = "open "
 #elif defined(__linux__)
       png_viewer = "xdg-open";
+#else
+      png_viewer = NULL;
 #endif
    } else {
       free_png_viewer = true;

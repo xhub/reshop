@@ -132,10 +132,12 @@ int view_png(const char *fname, Model *mdl)
 
   if (!png_viewer || png_viewer[0] == '\0') {
       free(png_viewer); // optvals requires the callee to free
-#ifdef __apple__
+#ifdef __APPLE__
       png_viewer = "open -f "
 #elif defined(__linux__)
       png_viewer = "feh - &";
+#else
+      png_viewer = NULL;
 #endif
    } else {
       free_png_viewer = true;
