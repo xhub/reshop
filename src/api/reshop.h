@@ -4,18 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-/* -------------------------------------------------------------------------
- * Macro definitions
- * ------------------------------------------------------------------------- */
-
-#if !defined(__clang__) && (__GNUC__ >= 11)
-   #define RHP_MALLOC(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
-#elif defined (__GNUC__)
-   #define RHP_MALLOC(...) __attribute__ ((malloc))
-#else 
-   #define RHP_MALLOC(...) /* __VA_ARGS__ */
-#endif
-
 
 struct rhp_avar;
 struct rhp_aequ;
@@ -100,6 +88,18 @@ union rhp_optval {
 #endif
 
 
+/* -------------------------------------------------------------------------
+ * Compiler macro definitions
+ * ------------------------------------------------------------------------- */
+
+#if !defined(__clang__) && (__GNUC__ >= 11)
+   #define RHP_MALLOC(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
+#elif defined (__GNUC__)
+   #define RHP_MALLOC(...) __attribute__ ((malloc))
+#else 
+   #define RHP_MALLOC(...) /* __VA_ARGS__ */
+#endif
+
 #ifndef RHP_PUBDLL_ATTR
 #if defined _WIN32 || defined __CYGWIN__
   #ifdef reshop_EXPORTS
@@ -136,6 +136,10 @@ union rhp_optval {
 #define RHP_PUBLIB RHP_PUBDLL_ATTR RHP_NODISCARD
 #endif
 
+
+/* -------------------------------------------------------------------------
+ * End of compiler macro definitions
+ * ------------------------------------------------------------------------- */
 
 /* -------------------------------------------------------------------------
  * Variable functions
