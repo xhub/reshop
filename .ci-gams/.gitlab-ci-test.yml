@@ -69,7 +69,8 @@ test-deg:
     - !reference [.gams-folder-deg]
     - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
-    - cp -ra "$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)" gamsdir
+    - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)" gamsdir
+    - chmod +w gamsdir/*reshop*
     - export GAMSDIR="$(pwd)/gamsdir"
     - export PATH="$GAMSDIR:$PATH"
     - cp build/output/* "$GAMSDIR"/
@@ -98,7 +99,9 @@ test-dac:
     - !reference [.gams-folder-dac]
     - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
-    - cp -ra "$HOME/cache/gams-installs/$(cat gams_folder_dac.txt)" gamsdir
+    - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_dac.txt)" gamsdir
+    - ls -le gamsdir/*reshop*
+    - chmod +w gamsdir/*reshop*
     - export GAMSDIR="$(pwd)/gamsdir"
     - export PATH="$GAMSDIR:$PATH"
     - cp build/output/* "$GAMSDIR"/
