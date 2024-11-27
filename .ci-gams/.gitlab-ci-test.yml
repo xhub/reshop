@@ -8,14 +8,17 @@ test-leg:
   script:
     - !reference [ .get-gams ]
     - !reference [ .gams-folder-leg ]
-    - EXPORT GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
     - export PATH="$GAMSDIR:$PATH"
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
     - cp build/* "$GAMSDIR"/
+
     - bash test/gams/test.sh
+
     - mkdir emplib && cd emplib && emplib goempgo
     - gams goempgo lo=2 --solver=reshop
     - tail -n 1 failures_emp.gms | grep -Eq "Failed tests. 0"; cd ..
+
     - mkdir quality && cd quality && testlib quality
     - gams quality lo=2 --solver=reshop
     - tail -n 1 failures_qa.gms | grep -Eq "Failed tests. 0" ; cd ..
