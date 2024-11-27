@@ -157,7 +157,11 @@ include (CheckGit)
 CheckGitSetup()
 # If we are not in a git repo, use CMAKE_PROJECT_VERSION
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/git-state.txt)
-   set(GIT_HASH ${CMAKE_PROJECT_VERSION})
+   if (DEFINED ENV{CI_COMMIT_SHORT_SHA})
+      set(GIT_HASH $ENV{CI_COMMIT_SHORT_SHA})
+   else()
+      set(GIT_HASH ${CMAKE_PROJECT_VERSION})
+   endif()
    configure_file(${pre_configure_dir}/git_version.c.in ${CMAKE_BINARY_DIR}/generated/git_version.c @ONLY)
 endif()
 
