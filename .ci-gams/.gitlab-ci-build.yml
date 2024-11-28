@@ -48,7 +48,7 @@ deg-cleanup:
   variables:
     GIT_STRATEGY: none
   before_script:
-    - chmod +Rw gamsdir
+    - chmod -R +w gamsdir
     - rm -rf gamsdir
   script:
     - echo "DONE"
@@ -59,7 +59,7 @@ dac-cleanup:
   variables:
     GIT_STRATEGY: none
   before_script:
-    - chmod +Rw gamsdir
+    - chmod -R +w gamsdir
     - rm -rf gamsdir
   script:
     - echo "DONE"
