@@ -63,7 +63,7 @@ static void* open_library_priv(const char* lib_name, int flags, bool doprint)
            | flags;
 
   /* disable RTLD_DEEPBIND on apple and with ASAN */
-#if defined(RTLD_DEEPBIND) || defined(__SANITIZE_ADDRESS__) || (defined(__clang__) && __has_feature(address_sanitizer))
+#if defined(RTLD_DEEPBIND) && (defined(__SANITIZE_ADDRESS__) || (defined(__clang__) && __has_feature(address_sanitizer)))
   mode &= ~RTLD_DEEPBIND;
 #endif
 
