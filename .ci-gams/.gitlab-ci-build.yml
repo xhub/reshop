@@ -42,6 +42,7 @@ build-debug-leg:
     reports:
       junit: warnings.xml
 
+# The next two jobs are just there to do some cleanup, if needed
 deg-cleanup:
   stage: build
   tags: [clarus]
@@ -95,7 +96,6 @@ build-dac:
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
   needs: [fetch-ci-scripts,dac-cleanup]
-  allow_failure: true
   artifacts:
     name: reshop-dac
     paths: [warnings.xml,build/*.dylib,build/test,build/gams,build/output]
@@ -118,8 +118,11 @@ build-wei:
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
+
+    - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx -DGAMSSYSDIR="$HOME/master/gms test" -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake --build build-asan 
+    - cmake --install build-asan
   needs: [fetch-ci-scripts]
-  allow_failure: true
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
