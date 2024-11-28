@@ -631,7 +631,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
     * - attach the node to the active dual node, with active dual weight
     * 
     * - Compute/make (B^T y) accessible.
-    * - Compute <b, y> and add the term to the objective function of the
+    * - Compute < b , y > and add the term to the objective function of the
     *   active primal node
     * - update the data structure to set the current node as the active dual
     *   node
@@ -662,18 +662,18 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
    NlNode ***child_nlnodes;
    MathPrgm *mp_ccflib =  mps_old->arr[mpid_dual];
    OvfDef *ovf_def = mp_ccflib->ccflib.ccf;
-   unsigned nargs_maps = ovf_def->args->size;
+   unsigned n_maps = ovf_def->args->size;
 
    /* For now, we have an exclusive treatment: either we have
     * VF arguments or variables */
-   if (n_arcs > 0 && nargs_maps > 0) {
+   if (n_arcs > 0 && n_maps > 0) {
       error("[ccflib/equil:dual] ERROR: Mixture of %u MP children and %u "
-            "variable arguments, this is not supported yet\n", n_arcs, nargs_maps);
+            "variable arguments, this is not supported yet\n", n_arcs, n_maps);
       return Error_NotImplemented;
    }
 
-   unsigned n_args = n_arcs + nargs_maps;
-   MALLOC_(child_nlnodes, NlNode**, n_args);
+   unsigned n_args = n_arcs + n_maps;
+   CALLOC_(child_nlnodes, NlNode**, n_args);
    S_CHECK_EXIT(ccflib_equil_setup_dual_objequ(dfsdat, mp_dual, &dualdat.B, mps_old, child_nlnodes));
    rhp_idx objei_dual = dfsdat->dual_objequ_dat.equ->idx;
    assert(valid_ei(objei_dual));
@@ -773,9 +773,9 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
       trace_process("[ccflib/equil:dual] MP(%s) has no child\n", mps->names[mpid_dual]);
    }
 
-   if (nargs_maps > 0) {
+   if (n_maps > 0) {
       trace_process("[ccflib/equil:dual] MP(%s) has %u mapping arguments\n", mps->names[mpid_dual],
-                    nargs_maps);
+                    n_maps);
 
 
      /* ----------------------------------------------------------------------

@@ -61,7 +61,6 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
          A_CHECK(mdl_reform, rhp_mdl_new(RHP_BACKEND_RHP));
          S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_orig));
 
-         empinfo = &mdl_reform->empinfo;
       }
 
       S_CHECK(ovf_transform(mdl_reform));
@@ -83,7 +82,6 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
          A_CHECK(mdl_reform, rhp_mdl_new(RHP_BACKEND_RHP));
          S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_orig));
 
-         empinfo = &mdl_reform->empinfo;
       }
 
       S_CHECK(rmdl_empdag_transform(mdl_reform));

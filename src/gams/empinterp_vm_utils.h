@@ -249,7 +249,7 @@ int vm_multiset_membership_test(void *ptr, VmGmsSymIterator *filter, bool *res)
 {
    switch (filter->ident.origin) {
    case IdentOriginGdx: return gdx_reader_boolean_test(ptr, filter, res);
-   case IdentOriginGmd: TO_IMPLEMENT("Multiset membership test with GMD");
+   case IdentOriginGmd: /* keep scan-build happy */ *res = false; TO_IMPLEMENT("Multiset membership test with GMD");
    case IdentOriginDct: return error_ident_origin_dct(&filter->ident, __func__);
    default:             return runtime_error(filter->ident.lexeme.linenr);
    }

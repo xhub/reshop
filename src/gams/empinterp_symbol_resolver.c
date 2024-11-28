@@ -228,8 +228,10 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
    case TOK_GMS_VAR:
    case TOK_GMS_EQU:
       equvar = true;
+      break;
    case TOK_GMS_SET:
    case TOK_GMS_PARAM:
+      equvar = false;
       break;
    default:
       error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
