@@ -69,8 +69,10 @@ test-deg:
     - !reference [.gams-folder-deg]
     - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
+    - chmod +Rw gamsdir
+    - rm -rf gamsdir
     - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)" gamsdir
-    - chmod +w gamsdir/*reshop*
+    - chmod +Rw gamsdir
     - export GAMSDIR="$(pwd)/gamsdir"
     - export PATH="$GAMSDIR:$PATH"
     - cp build/output/* "$GAMSDIR"/
@@ -84,6 +86,8 @@ test-deg:
     - mkdir quality && cd quality && testlib quality
     - gams quality lo=2 --solver=reshop
     - tail -n 1 failures_qa.gms | grep -Eq "Failed tests. 0" ; cd ..
+
+    - rm -rf gamsdir
   artifacts:
     name: unittest-results-deg
     paths: [build/test/doctest_results_deg.xml]
@@ -99,9 +103,10 @@ test-dac:
     - !reference [.gams-folder-dac]
     - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
+    - chmod +Rw gamsdir
+    - rm -rf gamsdir
     - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_dac.txt)" gamsdir
-    - ls -le gamsdir/*reshop*
-    - chmod +w gamsdir/*reshop*
+    - chmod +Rw gamsdir
     - export GAMSDIR="$(pwd)/gamsdir"
     - export PATH="$GAMSDIR:$PATH"
     - cp build/output/* "$GAMSDIR"/
@@ -115,6 +120,8 @@ test-dac:
     - mkdir quality && cd quality && testlib quality
     - gams quality lo=2 --solver=reshop
     - tail -n 1 failures_qa.gms | grep -Eq "Failed tests. 0" ; cd ..
+
+    - rm -rf gamsdir
   artifacts:
     name: unittest-results-dac
     paths: [build/test/doctest_results_dac.xml]

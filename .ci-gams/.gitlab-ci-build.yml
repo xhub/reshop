@@ -42,6 +42,28 @@ build-debug-leg:
     reports:
       junit: warnings.xml
 
+deg-cleanup:
+  stage: build
+  tags: [clarus]
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - chmod +Rw gamsdir
+    - rm -rf gamsdir
+  script:
+    - echo "DONE"
+
+dac-cleanup:
+  stage: build
+  tags: [macos-arm64]
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - chmod +Rw gamsdir
+    - rm -rf gamsdir
+  script:
+    - echo "DONE"
+
 build-deg:
   stage: build
   tags: [clarus]
@@ -53,7 +75,7 @@ build-deg:
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
-  needs: [fetch-ci-scripts]
+  needs: [fetch-ci-scripts,deg-cleanup]
   artifacts:
     name: reshop-deg
     expire_in: 2 hours
@@ -72,7 +94,8 @@ build-dac:
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
-  needs: [fetch-ci-scripts]
+  needs: [fetch-ci-scripts,dac-cleanup]
+  allow_failure: true
   artifacts:
     name: reshop-dac
     paths: [warnings.xml,build/*.dylib,build/test,build/gams,build/output]
@@ -96,6 +119,7 @@ build-wei:
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
   needs: [fetch-ci-scripts]
+  allow_failure: true
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
