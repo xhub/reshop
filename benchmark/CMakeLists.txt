@@ -22,6 +22,8 @@ function (add_benchmark c_file)
    SET_C_WARNINGS(${_benchmark_exe})
 
    target_link_libraries (${_benchmark_exe} ${RESHOP_LIBNAME} ${benchmark_EXTRA_LIBS})
+   target_link_options(${_benchmark_exe} PRIVATE ${LINKER_FLAGS})
+
    target_compile_definitions (${_benchmark_exe} PRIVATE GAMSDIR="${GAMSDIR_TARGET}")
    target_compile_definitions (${_benchmark_exe} PRIVATE GAMSCNTR_DAT_FILE="${GAMSCNTR_DAT_FILE}")
    target_include_directories (${_benchmark_exe} PRIVATE utils)

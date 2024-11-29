@@ -24,8 +24,13 @@ function (ADD_PUBLIC_TEST c_file)
    SET_C_WARNINGS(${_test_exe})
 
    target_link_libraries (${_test_exe} ${RESHOP_LIBNAME} ${TEST_EXTRA_LIBS})
+
+   target_link_options(${_test_exe} PRIVATE ${LINKER_FLAGS})
+
    target_compile_definitions (${_test_exe} PRIVATE GAMSDIR="${GAMSDIR_TARGET}")
    target_compile_definitions (${_test_exe} PRIVATE GAMSCNTR_DAT_FILE="${GAMSCNTR_DAT_FILE}")
+
+
    if (BUILD_VREPR) # Useful for conjugate reformulation
       target_compile_definitions (${_test_exe} PRIVATE HAS_VREPR)
    endif(BUILD_VREPR)
@@ -82,7 +87,6 @@ function (ADD_INTERNAL_TEST c_file)
       my_add_test (${_test_name} ${_test_exe})
    endif()
 endfunction ()
-
 
 
 

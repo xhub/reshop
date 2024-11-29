@@ -33,31 +33,35 @@ list(APPEND RESHOP_GAMSLINK_LIB_C_FILES ${GAMS_C_FILES})
 set_source_files_properties(${RESHOP_GAMSLINK_LIB_C_FILES} PROPERTIES INCLUDE_DIRECTORIES
                             "${CMAKE_SOURCE_DIR}/common")
 
-add_library(${RESHOP_GAMSLINK_LIB} SHARED ${RESHOP_GAMSLINK_LIB_C_FILES})
-
+# on Windows, can't link a shared library with sanitizer
+if (NOT (WINDOWS AND CMAKE_BUILD_TYPE MATCHES "san"))
+  add_library(${RESHOP_GAMSLINK_LIB} SHARED ${RESHOP_GAMSLINK_LIB_C_FILES})
+  set(RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_LIB})
+endif()
 
 # This adds gmsrhp_ux.out
 set(RESHOP_GAMSLINK_EXE "gmsrhp_ux.out")
 
-# For a sanitizer build, we put everything in gmsrhp_ux
-if (CMAKE_BUILD_TYPE MATCHES "san")
-   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;" ${RESHOP_C_FILES})
-   target_link_libraries(${RESHOP_GAMSLINK_EXE} PRIVATE ${EXTRA_LIBS})
+get_target_property(_LIBRESHOP_TYPE ${RESHOP_LIBNAME} TYPE)
+
+if (_LIBRESHOP_TYPE STREQUAL "STATIC_LIBRARY")
+   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c")
 else()
    add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;"
                                       "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgmomcc.c;"
                                       "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgevmcc.c")
 endif()
 
-list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE} ${RESHOP_GAMSLINK_LIB})
+list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE})
 
 foreach(_T ${RESHOP_GAMSLINK_TARGETS})
-  target_link_libraries (${_T} PRIVATE ${RESHOP_LIBNAME} ${CMAKE_DL_LIBS})
- 
+  SET_C_WARNINGS(${_T})
   target_include_directories (${_T} PRIVATE ".")
  
-  SET_C_WARNINGS(${_T})
+  target_link_libraries (${_T} PRIVATE ${RESHOP_LIBNAME} ${CMAKE_DL_LIBS})
  
+   target_link_options(${_T} PRIVATE ${LINKER_FLAGS})
+
   if(HAS_IPO)
     set_target_properties(${_T} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
   endif()
@@ -65,18 +69,20 @@ endforeach()
 
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-   target_link_options (${RESHOP_GAMSLINK_LIB} PRIVATE
-      LINKER:--warn-common LINKER:--allow-shlib-undefined -nostartfiles LINKER:-Bsymbolic
-      LINKER:--no-undefined LINKER:-z,defs LINKER:-z,now LINKER:-z,relro)
-   target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE
-   LINKER:--warn-common LINKER:--no-undefined LINKER:-z,defs LINKER:-z,now LINKER:-z,relro
-   LINKER:--disable-new-dtags)
-elseif(APPLE)
-   target_link_options (${RESHOP_GAMSLINK_LIB} PRIVATE "-Wl,-rpath,@loader_path/")
-   target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE "-Wl,-rpath,@loader_path/")
+   # There are differences in where linked library are search between the old and new dtags
+   # Right now, GAMS relies on the old dtags behavior
+   target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE LINKER:--disable-new-dtags)
+
+   # 2024.11.29: this is most likely not needed. TODO: delete it in 2025
+##elseif(APPLE)
+##   target_link_options (${RESHOP_GAMSLINK_LIB} PRIVATE "-Wl,-rpath,@loader_path/")
+##   target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE "-Wl,-rpath,@loader_path/")
 endif()
 
+SET(GAMSCONFIG_YAML_FILES )
+
 configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig.yaml.in @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig_valgrind.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig_valgrind.yaml @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig_valgrind.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig_valgrind.yaml @ONLY)
 
 if (BUILD_INSTALLER)
@@ -105,9 +111,9 @@ if (BUILD_INSTALLER)
       DEPENDS ${RESHOP_GAMSLINK_LIB} ${RESHOP_LIBNAME}
               ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml ${CMAKE_BINARY_DIR}/makeself/installer.sh)
 
-else (BUILD_INSTALLER)
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_LIB} DESTINATION ${GAMSDIR})
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${GAMSDIR})
+      #else (BUILD_INSTALLER)
+      #   INSTALL(TARGETS ${RESHOP_GAMSLINK_LIB} DESTINATION ${GAMSDIR})
+      #   INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${GAMSDIR})
 endif(BUILD_INSTALLER)
 
 if (INSTALL_COMMON_MAKESELF)

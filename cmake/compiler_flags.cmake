@@ -107,6 +107,15 @@ macro(SET_C_WARNINGS _TARGETS)
     # See https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html#-fstrict-flex-arrays
     add_c_options("-fstrict-flex-arrays=3" ${_TARGETS})
 
+      add_c_options("-fstack-clash-protection" ${_TARGETS})
+      add_c_options("-fstack-protector-strong" ${_TARGETS})
+
+      if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+         add_c_options("-fcf-protection=full" ${_TARGETS})
+      elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+         add_c_options("-mbranch-protection=standard" ${_TARGETS})
+      endif()
+
     # We want to keep fortify cost low, except when compiling for development 
     if (DISTRIB)
        set(FORTIFY_LEVEL 2)
@@ -115,7 +124,7 @@ macro(SET_C_WARNINGS _TARGETS)
     endif()
 
     # From https://github.com/nextcloud/desktop
-    if (CMAKE_BUILD_TYPE)
+      if (CMAKE_SYSTEM_NAME MATCHES "Linux")
        string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
        if (CMAKE_BUILD_TYPE_LOWER MATCHES "(release|relwithdebinfo|minsizerel)" AND (NOT "${CMAKE_C_FLAGS}" MATCHES "FORTIFY_SOURCE=[3-9]"))
           # add_c_options("-Wp,-U_FORTIFY_SOURCE,-D_FORTIFY_SOURCE=${FORTIFY_LEVEL}" ${_TARGETS})
@@ -136,6 +145,8 @@ if(CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
       add_compile_options(-fp-model=precise)
    endif()
 endif()
+
+
 #if (APPLE)
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 #  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
