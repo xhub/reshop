@@ -289,8 +289,10 @@ int gams_load_libs(const char *sysdir)
 
 #if defined(__has_feature)
 #   if __has_feature(address_sanitizer) // for clang
+#ifndef __SANITIZE_ADDRESS__
 #       define __SANITIZE_ADDRESS__ // GCC already sets this
 #   endif
+#endif
 #endif
 
 #if defined(__SANITIZE_ADDRESS__)
