@@ -25,7 +25,7 @@ file(GLOB SWIG_I_INCLUDES *.i)
 set_property(SOURCE reshop.i PROPERTY C ON)
 set_property(SOURCE reshop.i PROPERTY SWIG_MODULE_NAME reshop)
 set_property(SOURCE reshop.i PROPERTY OUTPUT_DIR ${CMAKE_BINARY_DIR}/swig)
- set_property(SOURCE reshop.i PROPERTY USE_SWIG_DEPENDENCIES ON)
+set_property(SOURCE reshop.i PROPERTY USE_SWIG_DEPENDENCIES ON)
 set(CMAKE_SWIG_FLAGS -O -Wall -Werror -doxygen -python -builtin)
 
 # Use internal macros, but that's how it is

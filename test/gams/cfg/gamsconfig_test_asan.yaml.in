@@ -3,8 +3,9 @@ solverConfig:
       minVersion: 33
       fileType: 102111
       dictType: 5
-      licCodes: 00010203040506070809
-      scriptName: @VALGRIND_SCRIPTNAME@
+      licCodes: 0010203040506070809
+      scriptName: @ASAN_SCRIPTNAME@
+      executableName: @GAMSLINK_EXE_FULLPATH@
       defName: @RESHOP_DEFNAME@
       modelTypes:
         - EMP

@@ -1,0 +1,4 @@
+#!/bin/sh
+"@GAMSLINK_EXE_FULLPATH@" "$4" "$6"
+[ $? = 0 ] || echo "ERROR: Solver $6 returned with nonzero exitcode $?" 1>&2;
+exit 11

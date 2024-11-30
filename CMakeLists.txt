@@ -35,9 +35,9 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
       add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
       add_compile_definitions(_CRT_NONSTDC_NO_WARNINGS)
    endif()
-else()
-   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
 if (CMAKE_VERSION VERSION_LESS 3.25)
@@ -46,6 +46,9 @@ if (CMAKE_VERSION VERSION_LESS 3.25)
    endif()
 endif()
 
+#Set output directory
+set (OUTPUT_DIR ${CMAKE_BINARY_DIR}/output)
+file(MAKE_DIRECTORY ${OUTPUT_DIR})
 
 # Use C++14 (for PPL and backward)
 set(CMAKE_CXX_STANDARD 14)
@@ -539,6 +542,8 @@ if (_LIBRESHOP_TYPE STREQUAL "STATIC_LIBRARY" AND CMAKE_AR MATCHES "llvm-ar")
    list(APPEND LINKER_FLAGS "-fuse-ld=lld")
 endif()
 
+
+
 set (LIBNAMES "${RESHOP_LIBNAME}")
 
 # Always copy reshop
@@ -612,7 +617,6 @@ add_subdirectory (test)
 
 add_subdirectory (benchmark)
 
-
 # Install part
 if (BUILD_GAMS_DRIVER)
    if (BUILD_INSTALLER)
@@ -627,8 +631,8 @@ if (BUILD_GAMS_DRIVER)
 
 else (BUILD_GAMS_DRIVER)
 
-   INSTALL(TARGETS ${LIBNAMES} DESTINATION ${CMAKE_BINARY_DIR}/output)
-   INSTALL(FILES ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/output)
+   INSTALL(TARGETS ${LIBNAMES} DESTINATION ${OUTPUT_DIR})
+   INSTALL(FILES ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${OUTPUT_DIR})
 
 endif ()
 

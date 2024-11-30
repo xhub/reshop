@@ -1,0 +1,22 @@
+#!/bin/sh
+
+: ${VALGRIND_DIR:=/tmp/valgrind}
+: ${RESHOP_DRIVER:=@GAMSLINK_EXE_FULLPATH@}
+
+mkdir -p "$VALGRIND_DIR"
+
+GMSNAME=$(basename $(cat "$4" | tail -n -2 | head -n 1))
+
+valgrind --track-origins=yes \
+         --show-leak-kinds=definite,indirect \
+         --leak-check=full \
+         --error-exitcode=1 \
+         --malloc-fill=0xAA \
+         --free-fill=0xFF \
+         --undef-value-errors=yes \
+         --errors-for-leak-kinds=definite \
+         --log-file="$VALGRIND_DIR/${GMSNAME}".%n.log \
+         -q "$RESHOP_DRIVER" "$4"
+
+[ $? = 0 ] || echo "ERROR: Solver $6 exitcode nonzero: $?" 1>&2
+exit 11

@@ -42,8 +42,6 @@ endif()
 # This adds gmsrhp_ux.out
 set(RESHOP_GAMSLINK_EXE "gmsrhp_ux.out")
 
-get_target_property(_LIBRESHOP_TYPE ${RESHOP_LIBNAME} TYPE)
-
 if (_LIBRESHOP_TYPE STREQUAL "STATIC_LIBRARY")
    add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c")
 else()
@@ -79,17 +77,24 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ##   target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE "-Wl,-rpath,@loader_path/")
 endif()
 
-SET(GAMSCONFIG_YAML_FILES )
 
-configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig.yaml.in @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig_valgrind.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig_valgrind.yaml @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/gams_link/cfg/gamsconfig_valgrind.yaml.in ${CMAKE_BINARY_DIR}/gamsconfig_valgrind.yaml @ONLY)
+# GAMS config
 
-if (BUILD_INSTALLER)
+if (WINDOWS)
+   set(GAMS_SCRIPTNAME "gmsgennt.cmd")
+   SET(GAMS_EXENAME "gmsgennx.exe")
+   set(ASAN_SCRIPTNAME ${OUTPUT_DIR}/script.cmd)
+else (WINDOWS)
    SET(GAMS_SCRIPTNAME "gmsgenus.run")
    SET(GAMS_EXENAME "gmsgenux.out")
+   set(ASAN_SCRIPTNAME ${OUTPUT_DIR}/script.sh)
+endif(WINDOWS)
 
-   if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+
+if (BUILD_INSTALLER)
+
+   if (LINUX)
       SET(IS_LINUX 1)
    elseif (APPLE)
       SET(IS_LINUX 0)
@@ -111,9 +116,9 @@ if (BUILD_INSTALLER)
       DEPENDS ${RESHOP_GAMSLINK_LIB} ${RESHOP_LIBNAME}
               ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml ${CMAKE_BINARY_DIR}/makeself/installer.sh)
 
-      #else (BUILD_INSTALLER)
-      #   INSTALL(TARGETS ${RESHOP_GAMSLINK_LIB} DESTINATION ${GAMSDIR})
-      #   INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${GAMSDIR})
+else (BUILD_INSTALLER)
+   INSTALL(TARGETS ${RESHOP_GAMSLINK_LIB} DESTINATION ${OUTPUT_DIR})
+   INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${OUTPUT_DIR})
 endif(BUILD_INSTALLER)
 
 if (INSTALL_COMMON_MAKESELF)
@@ -121,3 +126,24 @@ if (INSTALL_COMMON_MAKESELF)
    INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${CMAKE_BINARY_DIR}/makeself)
    file(COPY ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/makeself)
 endif()
+
+
+
+
+set(GAMSLINK_EXE_FULLPATH $<TARGET_FILE:${RESHOP_GAMSLINK_EXE}>)
+set(VALGRIND_SCRIPTNAME ${OUTPUT_DIR}/valgrind.run)
+set(RESHOP_DEFNAME ${CMAKE_CURRENT_SOURCE_DIR}/optreshop.def)
+
+
+set(GAMSCONFIG_YAML_FILES_DIR ${CMAKE_SOURCE_DIR}/gams_link/cfg/)
+file (GLOB GAMSCONFIG_YAML_FILES LIST_DIRECTORIES false ${CMAKE_CURRENT_SOURCE_DIR}/cfg/gamsconfig*.yaml.in)
+file (GLOB GAMSCONFIG_TEST_YAML_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/test/gams/cfg/*.in)
+
+foreach(_f ${GAMSCONFIG_YAML_FILES} ${GAMSCONFIG_TEST_YAML_FILES})
+   cmake_path(GET _f FILENAME _outfile)
+   configure_file(${_f} ${CMAKE_BINARY_DIR}/generated/${_outfile} @ONLY)
+   set(_infile ${_outfile})
+   cmake_path(REMOVE_EXTENSION _outfile LAST_ONLY)
+   file(GENERATE OUTPUT ${OUTPUT_DIR}/${_outfile} INPUT ${CMAKE_BINARY_DIR}/generated/${_infile})
+endforeach()
+
