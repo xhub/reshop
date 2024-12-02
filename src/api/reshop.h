@@ -108,6 +108,8 @@ union rhp_optval {
     #else
       #define RHP_PUBDLL_ATTR __declspec(dllexport) // Note: actually gcc seems to also supports this syntax.
     #endif
+  #elif defined(reshop_static_build)  /* static build: no need for declspec */
+      #define RHP_PUBDLL_ATTR 
   #else
     #ifdef __GNUC__
       #define RHP_PUBDLL_ATTR __attribute__ ((dllimport))
