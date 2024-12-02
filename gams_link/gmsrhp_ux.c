@@ -21,7 +21,7 @@
 #include "macros.h"
 #include "printout.h"
 
-const char * mygetenv(const char *envvar)
+static const char * mygetenv(const char *envvar)
 {
    DWORD bufsize = 4096;
    char *envval;
@@ -45,7 +45,7 @@ const char * mygetenv(const char *envvar)
    return envval;
 }
 
-void myfreeenvval(const char *envval)
+static void myfreeenvval(const char *envval)
 {
    if (envval) { free((char*)envval); }
 }
