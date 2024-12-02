@@ -14,7 +14,7 @@ build-leg:
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
 
     # Asan
-    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -S .
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan
     - cmake --install build-asan
 
@@ -84,7 +84,7 @@ build-deg:
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
 
     # Asan
-    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=gcc -S .
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=gcc -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
   needs: [fetch-ci-scripts,deg-cleanup]
@@ -108,7 +108,7 @@ build-dac:
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
 
     # Asan
-    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -S .
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
   needs: [fetch-ci-scripts,dac-cleanup]
@@ -127,6 +127,7 @@ build-wei:
   script:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
+    - /C/Program\ Files/Microsoft\ Visual\ Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat x86_amd64
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
@@ -135,9 +136,9 @@ build-wei:
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
 
-    - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
-    - cmake --install build-asan
+    - cmake --install build-asan -v
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-wei
