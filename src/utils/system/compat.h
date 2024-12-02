@@ -72,12 +72,16 @@ int rmfn(const char *pathname);
  * To get environment variables
  * ---------------------------------------------------------------------- */
 #ifdef _WIN32
+
 const char * mygetenv(const char *envvar);
 void myfreeenvval(const char *envval);
+
 #else
+
 #include <stdlib.h>
 #define mygetenv getenv
 #define myfreeenvval(X) 
+
 #endif
 
 
