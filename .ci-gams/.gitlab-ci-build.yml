@@ -135,7 +135,7 @@ build-wei:
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
 
-    - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx -DGAMSSYSDIR="$HOME/master/gms test" -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
   needs: [fetch-ci-scripts]
