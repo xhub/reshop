@@ -2,15 +2,13 @@
  * does some inspection on the model instance
  */
 
-#ifdef __linux__
-   #ifndef _GNU_SOURCE
-      #define _GNU_SOURCE 1
-   #endif
-#elif __APPLE__
+#if defined(__linux__) && !defined(_GNU_SOURCE)
 
-   #ifndef _DARWIN_C_SOURCE
-      #define _DARWIN_C_SOURCE
-   #endif
+#  define _GNU_SOURCE 1
+
+#elif defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+
+#  define _DARWIN_C_SOURCE
 
 #endif
 
@@ -78,6 +76,12 @@ int main(int argc, char** argv)
    int rc;
    char msg[GMS_SSSIZE];
    gmoHandle_t gmo = NULL;
+
+   const char *banner_env = mygetenv("RHP_DRIVER_BANNER");
+   if (banner_env) {
+      (void)fprintf(stdout, "\nReSHOP GAMS testing driver with version %s\n\n", rhp_version());
+   }
+   myfreeenvval(banner_env);
 
    if( argc < 2 ) {
       printf("usage: %s <cntrlfile>\n", argv[0]);

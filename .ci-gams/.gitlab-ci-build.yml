@@ -12,11 +12,17 @@ build-leg:
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
+
+    # Asan
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -S .
+    - cmake --build build-asan
+    - cmake --install build-asan
+
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-leg
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.so,build/test,build/gams,build/output]
+    paths: [warnings.xml,build/*.so,build/test,build/gams,build/output,build-asan/test,build-asan/gams,build-asan/output]
     reports:
       junit: warnings.xml
 
@@ -76,11 +82,16 @@ build-deg:
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
+
+    # Asan
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=gcc -S .
+    - cmake --build build-asan 
+    - cmake --install build-asan
   needs: [fetch-ci-scripts,deg-cleanup]
   artifacts:
     name: reshop-deg
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.dylib,build/test,build/gams,build/output]
+    paths: [warnings.xml,build/*.dylib,build/test,build/gams,build/output,build-asan/test,build-asan/gams,build-asan/output]
     reports:
       junit: warnings.xml
 
@@ -95,6 +106,11 @@ build-dac:
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
+
+    # Asan
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -S .
+    - cmake --build build-asan 
+    - cmake --install build-asan
   needs: [fetch-ci-scripts,dac-cleanup]
   artifacts:
     name: reshop-dac
