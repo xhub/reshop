@@ -368,6 +368,8 @@ find_program(GAMS_EXE_HOST gams)
 
 if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
 
+   message(STATUS "Found gams ${GAMS_EXE_HOST}")
+
    set (SCRDIR "${CMAKE_BINARY_DIR}/gams")
    file(REMOVE_RECURSE "${SCRDIR}")
    file(MAKE_DIRECTORY "${SCRDIR}")
