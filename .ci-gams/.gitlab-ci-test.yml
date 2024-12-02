@@ -55,6 +55,7 @@ test-leg:
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
 
     # Test that we indeed call the right executable
+    - export LD_LIBRARY_PATH="$GAMSDIR"
     - RHP_DRIVER_BANNER=1 gams emplib/emp01.gms emp=reshop | grep -q "ReSHOP GAMS testing driver"
 
     - EMPSLV=reshop bash test/gams/test.sh
@@ -124,6 +125,7 @@ test-deg:
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
 
     # Test that we indeed call the right executable
+    - export DYLD_LIBRARY_PATH="$GAMSDIR"
     - RHP_DRIVER_BANNER=1 gams emplib/emp01.gms emp=reshop | grep -q "ReSHOP GAMS testing driver"
 
     # Run tests with regular reshop
@@ -168,6 +170,7 @@ test-dac:
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
 
     # Test that we indeed call the right executable
+    - export DYLD_LIBRARY_PATH="$GAMSDIR"
     - RHP_DRIVER_BANNER=1 gams emplib/emp01.gms emp=reshop | grep -q "ReSHOP GAMS testing driver"
 
     # Run tests with regular reshop
