@@ -29,7 +29,7 @@
 
 set(LINUX_LINKER_COMMON_Z defs noexecstack now origin relro)
 # --error-execstack is not supported by lld
-set(LINUX_LINKER_COMMON       -Bsymbolic --build-id=uuid --gc-sections --warn-common --warn-execstack)
+set(LINUX_LINKER_COMMON       -Bsymbolic --build-id=uuid --gc-sections --warn-common)
 set(LINUX_LINKER_COMMON_BFD   --warn-execstack --error-execstack)
 set(LINUX_LINKER_COMMON_LLD   --gdb-index)
 set(LINUX_LINKER_COMMON_MOLD  --gdb-index)
