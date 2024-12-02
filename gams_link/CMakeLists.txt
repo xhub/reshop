@@ -52,6 +52,15 @@ endif()
 
 list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE})
 
+# The install dir depends on what we build
+# This way, we don't hardcode the targets
+if (BUILD_INSTALLER OR INSTALL_COMMON_MAKESELF)
+  set(GAMSLINK_INSTALL_DIR ${CMAKE_BINARY_DIR}/makeself)
+else()
+  set(GAMSLINK_INSTALL_DIR ${OUTPUT_DIR})
+endif()
+
+
 foreach(_T ${RESHOP_GAMSLINK_TARGETS})
   SET_C_WARNINGS(${_T})
   target_include_directories (${_T} PRIVATE ".")
@@ -63,6 +72,8 @@ foreach(_T ${RESHOP_GAMSLINK_TARGETS})
   if(HAS_IPO)
     set_target_properties(${_T} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
   endif()
+
+   install(TARGETS ${_T} DESTINATION ${GAMSLINK_INSTALL_DIR})
 endforeach()
 
 
@@ -102,8 +113,6 @@ if (BUILD_INSTALLER)
    configure_file(${CMAKE_SOURCE_DIR}/gams_link/makeself/installer.sh.in ${CMAKE_BINARY_DIR}/installer.sh.in @ONLY)
 
    file(COPY ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/makeself)
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_LIB} DESTINATION ${CMAKE_BINARY_DIR}/makeself)
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${CMAKE_BINARY_DIR}/makeself)
 
    file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml INPUT ${CMAKE_BINARY_DIR}/gamsconfig.yaml.in)
    file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/makeself/installer.sh INPUT ${CMAKE_BINARY_DIR}/installer.sh.in
@@ -115,15 +124,9 @@ if (BUILD_INSTALLER)
       ${CMAKE_BINARY_DIR}/ReSHOP-${CMAKE_PROJECT_VERSION}-GAMS-${GAMS_VERSION}.run "ReSHOP GAMS installer" ./installer.sh
       DEPENDS ${RESHOP_GAMSLINK_LIB} ${RESHOP_LIBNAME}
               ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml ${CMAKE_BINARY_DIR}/makeself/installer.sh)
-
-else (BUILD_INSTALLER)
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_LIB} DESTINATION ${OUTPUT_DIR})
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${OUTPUT_DIR})
-endif(BUILD_INSTALLER)
+endif (BUILD_INSTALLER)
 
 if (INSTALL_COMMON_MAKESELF)
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_LIB} DESTINATION ${CMAKE_BINARY_DIR}/makeself)
-   INSTALL(TARGETS ${RESHOP_GAMSLINK_EXE} DESTINATION ${CMAKE_BINARY_DIR}/makeself)
    file(COPY ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/makeself)
 endif()
 
