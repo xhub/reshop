@@ -114,7 +114,7 @@ build-dac:
   needs: [fetch-ci-scripts,dac-cleanup]
   artifacts:
     name: reshop-dac
-    paths: [warnings.xml,build/*.dylib,build/test,build/gams,build/output]
+    paths: [warnings.xml,build/*.dylib,build/test,build/gams,build/output,build-asan/test,build-asan/gams,build-asan/output]
     expire_in: 2 hours
     reports:
       junit: warnings.xml
@@ -142,6 +142,6 @@ build-wei:
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.dll,build/*.lib,build/test,build/gams,build/output]
+    paths: [warnings.xml,build/*.dll,build/*.lib,build/test,build/gams,build/output,build-asan/test,build-asan/gams,build-asan/output]
     reports:
       junit: warnings.xml

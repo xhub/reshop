@@ -90,7 +90,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
       add_compile_options(-ggnu-pubnames)
    endif()
 
-   if (NOT LINKER_FLAVOR STREQUAL "BFD" OR LINKER_VERSION VERSION_GREATER_EQUAL "2.39")
+   if ((NOT LINKER_FLAVOR STREQUAL "BFD") OR LINKER_VERSION VERSION_GREATER_EQUAL "2.39")
       foreach(_f ${LINUX_LINKER_COMMON_${LINKER_FLAVOR}})
          list(APPEND LINKER_FLAGS LINKER:${_f})
       endforeach()

@@ -37,6 +37,9 @@ set_source_files_properties(${RESHOP_GAMSLINK_LIB_C_FILES} PROPERTIES INCLUDE_DI
 if (NOT (WINDOWS AND CMAKE_BUILD_TYPE MATCHES "san"))
   add_library(${RESHOP_GAMSLINK_LIB} SHARED ${RESHOP_GAMSLINK_LIB_C_FILES})
   set(RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_LIB})
+
+else()
+   set(GAMSCONFIG_SKIP_GAMSLINK_LIB 1)
 endif()
 
 # This adds gmsrhp_ux.out
@@ -143,6 +146,11 @@ file (GLOB GAMSCONFIG_YAML_FILES LIST_DIRECTORIES false ${CMAKE_CURRENT_SOURCE_D
 file (GLOB GAMSCONFIG_TEST_YAML_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/test/gams/cfg/*.in)
 
 foreach(_f ${GAMSCONFIG_YAML_FILES} ${GAMSCONFIG_TEST_YAML_FILES})
+   # If we don't build rhpcclib64, the target doesn't exists and the file(GENERATE ...) fails
+   if (GAMSCONFIG_SKIP_GAMSLINK_LIB AND _f MATCHES "gamsconfig.yaml.in")
+      continue()
+   endif()
+
    cmake_path(GET _f FILENAME _outfile)
    configure_file(${_f} ${CMAKE_BINARY_DIR}/generated/${_outfile} @ONLY)
    set(_infile ${_outfile})
