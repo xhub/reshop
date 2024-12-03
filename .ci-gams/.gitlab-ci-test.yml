@@ -57,7 +57,7 @@ test-leg:
     - ctest --test-dir build-asan/test -E gams --output-junit doctest_results_linux.xml || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
 
     # Test that we indeed call the right executable
-    - RHP_DRIVER_BANNER=1 gams emplib/emp01.gms emp=reshop #| grep -q "ReSHOP GAMS testing driver"
+    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop #| grep -q "ReSHOP GAMS testing driver"
 
     - EMPSLV=reshop bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
@@ -128,7 +128,7 @@ test-deg:
     - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
 
     # Test that we indeed call the right executable
-    - RHP_DRIVER_BANNER=1 gams emplib/emp01.gms emp=reshop #| grep -q "ReSHOP GAMS testing driver"
+    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop #| grep -q "ReSHOP GAMS testing driver"
 
     # Run tests with regular reshop
     - EMPSLV=reshop bash test/gams/test.sh
@@ -174,7 +174,7 @@ test-dac:
     - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
 
     # Test that we indeed call the right executable
-    - RHP_DRIVER_BANNER=1 gams emplib/emp01.gms emp=reshop #| grep -q "ReSHOP GAMS testing driver"
+    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop #| grep -q "ReSHOP GAMS testing driver"
 
     # Run tests with regular reshop
     - EMPSLV=reshop bash test/gams/test.sh
