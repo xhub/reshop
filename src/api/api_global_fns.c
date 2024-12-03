@@ -7,9 +7,65 @@
 #include "rhp_options.h"
 #include "status.h"
 
+#ifdef __x86_64__
+#   define RHP_ARCH "amd64"
+#elif defined(__i386__)
+#   define RHP_ARCH "x86 (32-bit)"
+#elif defined(__arm__)
+#   define RHP_ARCH "arm (32-bit)"
+#elif defined(__aarch64__)
+#   define RHP_ARCH "arm64"
+#elif defined(__ppc__) || defined(__powerpc__)
+#   define RHP_ARCH "PowerPC"
+#elif defined(__mips__)
+#   define RHP_ARCH "MIPS"
+#elif defined(__riscv)
+#   define RHP_ARCH "RISC-V"
+#elif defined(__sparc__)
+#   define RHP_ARCH "SPARC"
+#elif defined(_M_X64)
+#   define RHP_ARCH "amd64 (MSVC)"
+#elif defined(_M_IX86)
+#   define RHP_ARCH "x86 (32-bit, MSVC)"
+#elif defined(_M_ARM)
+#   define RHP_ARCH "arm (MSVC)"
+#elif defined(_M_ARM64)
+#   define RHP_ARCH "arm64 (MSVC)"
+#else
+#   error "Unkonwn architecture, please modify the source code"
+#endif
+
+#if defined(_WIN32)
+    #if defined(_WIN64)
+#  define RHP_OS "Windows (64-bit)"
+    #else
+#  define RHP_OS "Windows (32-bit)"
+    #endif
+#elif defined(__APPLE__) && defined(__MACH__)
+#  define RHP_OS "macOS"
+#elif defined(__linux__)
+#  define RHP_OS "Linux"
+#elif defined(__FreeBSD__)
+#  define RHP_OS "FreeBSD"
+#elif defined(__NetBSD__)
+#  define RHP_OS "NetBSD"
+#elif defined(__OpenBSD__)
+#  define RHP_OS "OpenBSD"
+#elif defined(__sun) && defined(__SVR4)
+#  define RHP_OS "Solaris"
+#elif defined(__ANDROID__)
+#  define RHP_OS "Android"
+#elif defined(__CYGWIN__)
+#  define RHP_OS "Cygwin"
+#elif defined(__HAIKU__)
+#  define RHP_OS "Haiku"
+#else
+#  define RHP_OS "Unknown"
+#endif
+
 void rhp_print_banner(void)
 {
-  printout(PO_INFO, "\nReSHOP %s\t Author: Olivier Huber\n\n", rhp_git_hash);
+  printout(PO_INFO, "\nReSHOP %s on " RHP_OS " / " RHP_ARCH "\t Author: Olivier Huber\n\n", rhp_git_hash);
 }
 
 const char* rhp_version(void)
