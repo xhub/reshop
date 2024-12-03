@@ -255,7 +255,7 @@ test-wei:
     - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
 
     - Copy-Item -Path "build-asan/output/gmsrhp_ux.out.exe" -Destination "$GAMS_PATH"
-    - Copy-Item -Path "build-asan/output/gamsconfig_test_asan.yaml" -Destination "$GAMS_PATH"/gamsconfig.yaml
+    - Copy-Item -Path "build-asan/output/gamsconfig_test_asan.yaml" -Destination "$GAMS_PATH/gamsconfig.yaml"
     - Get-Content "build-asan/output/gamsconfig_test_asan.yaml"
     - Get-Content "$GAMS_PATH"/gamsconfig.yaml
     - Run-Test -Command "emplib.exe" -TestSuite "goempgo" -FailureFile "failures_emp.gms"
