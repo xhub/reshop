@@ -128,7 +128,9 @@ build-wei:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
-    - 'call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64'
+    - $vcvarsallPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
+    - '& $vcvarsallPath x86_amd64'
+    #    - 'call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64'
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -S .

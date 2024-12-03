@@ -55,6 +55,9 @@ test-leg:
     # Install GAMS driver with asan
     - cp build-asan/output/gmsrhp_ux.out "$GAMSDIR"/
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
+    - cat build-asan/output/gamsconfig_test_asan.yaml
+    - cat "$GAMSDIR"/gamsconfig.yaml
+
 
     - export LD_LIBRARY_PATH="$GAMSDIR"
     - ctest --test-dir build-asan/test -E gams --output-junit doctest_results_linux.xml || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
@@ -126,6 +129,8 @@ test-deg:
     # Install GAMS driver with asan
     - cp build-asan/output/gmsrhp_ux.out "$GAMSDIR"/
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
+    - cat build-asan/output/gamsconfig_test_asan.yaml
+    - cat "$GAMSDIR"/gamsconfig.yaml
 
     - export DYLD_LIBRARY_PATH="$GAMSDIR"
     - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
@@ -172,6 +177,9 @@ test-dac:
     # Install GAMS driver with asan
     - cp build-asan/output/gmsrhp_ux.out "$GAMSDIR"/
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
+    - cat build-asan/output/gamsconfig_test_asan.yaml
+    - cat "$GAMSDIR"/gamsconfig.yaml
+
 
     - export DYLD_LIBRARY_PATH="$GAMSDIR"
     - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
@@ -248,6 +256,8 @@ test-wei:
 
     - Copy-Item -Path "build-asan/output/gmsrhp_ux.out.exe" -Destination "$GAMS_PATH"
     - Copy-Item -Path "build-asan/output/gamsconfig_test_asan.yaml" -Destination "$GAMS_PATH"/gamsconfig.yaml
+    - Get-Content "build-asan/output/gamsconfig_test_asan.yaml"
+    - Get-Content "$GAMS_PATH"/gamsconfig.yaml
     - Run-Test -Command "emplib.exe" -TestSuite "goempgo" -FailureFile "failures_emp.gms"
     - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
 
