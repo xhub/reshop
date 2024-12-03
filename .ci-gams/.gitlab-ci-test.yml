@@ -149,7 +149,7 @@ test-deg:
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop | grep -q "ReSHOP GAMS testing driver"
 
     # Run tests with regular reshop
-    - EMPSLV=reshop RHP_SOLVERLINK=2 bash test/gams/test.sh
+    - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
@@ -181,7 +181,7 @@ test-dac:
 
     # Run tests with regular reshop
     - cp build/output/{*.dylib,optreshop.def} "$GAMSDIR"/
-    - EMPSLV=reshop RHP_SOLVERLINK=2 bash test/gams/test.sh
+    - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
