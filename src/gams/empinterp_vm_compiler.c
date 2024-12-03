@@ -362,7 +362,7 @@ static inline int end_scope(Interpreter *interp, UNUSED Tape* tape) {
 
       /* TODO: think whether we want to do a "symbolic" check in Emb mode? */
       if (!embmode(interp) && c->vm->code.len > 0) {
-         trace_empparsermsg("[empinterp] VM execution\n");
+         trace_empparsermsg("\n[empinterp] VM execution\n");
          S_CHECK(vmcode_add(&c->vm->code, OP_END, interp->linenr));
          S_CHECK(empvm_run(c->vm));
       }
@@ -697,10 +697,10 @@ int loop_initandstart(Interpreter * restrict interp, Tape * restrict tape,
       S_CHECK(EMIT_GIDX(tape, ident->idx));
 
       if (loopobj_gidx < UINT_MAX) {
-         assert(iterators->iteridx2dim[i] < GMS_MAX_INDEX_DIM);
+         assert(iterators->varidxs2pos[i] < GMS_MAX_INDEX_DIM);
          S_CHECK(emit_bytes(tape, opcode_loopobj_update));
          S_CHECK(EMIT_GIDX(tape, loopobj_gidx));
-         S_CHECK(emit_bytes(tape, iterators->iteridx2dim[i], iterator->iter_lidx));
+         S_CHECK(emit_bytes(tape, iterators->varidxs2pos[i], iterator->iter_lidx));
       }
 
    }
@@ -900,10 +900,11 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
             S_CHECK(EMIT_GIDX(tape, loopidx_gidx));
             S_CHECK(emit_bytes(tape, i, idxident->idx));
          } else {
-            iterators->iteridx2dim[loopi] = i;
             memcpy(&iterators->idents[loopi], idxident, sizeof(*idxident));
+            iterators->varidxs2pos[loopi] = i;
             loopi++;
          }
+
          break; 
 
       /* -------------------------------------------------------------------
@@ -911,7 +912,7 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
        * ------------------------------------------------------------------- */
       case IdentSet:
       case IdentLocalSet:
-         iterators->iteridx2dim[loopi] = i;
+         iterators->varidxs2pos[loopi] = i;
          memcpy(&iterators->idents[loopi], idxident, sizeof(*idxident));
          loopi++;
          break;
@@ -978,7 +979,7 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
   /* ----------------------------------------------------------------------
    * When reading a GAMS symbol, we want to make sure that when the user
    * specified a domain as one of the index, then we just subsitute it
-   * with the universal UEL, that is we take a slice
+   * with the "wildcard", that is we take a slice
    * ---------------------------------------------------------------------- */
    assert(interp->cur.symdat.ident.type == ident->type);
 
@@ -997,10 +998,10 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
 
    LinkLabels *linklabels;
    uint8_t dim = indices->nargs;
-   uint8_t num_vars = indices->num_sets + indices->num_localsets + indices->num_loopiterators;
+   uint8_t nvaridxs = gmsindices_nvaridxs(indices);
    unsigned gidx;
    S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label, label_len, dim,
-                              num_vars, 0, linktype, &gidx));
+                               nvaridxs, 0, linktype, &gidx));
    *linklabels_gidx = gidx;
 
    if (indices->nargs == 0) {
@@ -1015,8 +1016,11 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
    bool dummy;
    S_CHECK(ident_gmsindices_process(indices, loopiterators, tape, linklabels->data, &dummy));
 
-   // TODO: document why we need to duplicate this
-   memcpy(&linklabels->data[dim], loopiterators->iteridx2dim, loopiterators->size * sizeof(int));
+  /* ----------------------------------------------------------------------
+   * We need to copy the position (of the index) where the loop iterators belong
+   * ---------------------------------------------------------------------- */
+
+   memcpy(&linklabels->data[dim], loopiterators->varidxs2pos, loopiterators->size * sizeof(int));
 
    return OK;
 }
@@ -1478,7 +1482,7 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
    S_CHECK(advance(interp, p, &toktype));
 
    /* Note great to make this distinction here. Can't find something nicer */
-   if (toktype == TOK_LPAREN) {
+   if (tok_isopeningdelimiter(toktype)) {
       S_CHECK(parse_conditional(interp, p, c, tape, c->scope_depth+1));
    } else {
       PARSER_EXPECTS(interp, "a GAMS set or opening delimiter '(' or '{' or '['",
@@ -1517,8 +1521,8 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
  * @return            the error code
  */
 static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *label,
-                               unsigned label_len, LinkType link_type,
-                               GmsIndicesData *gmsindices)
+                              unsigned label_len, LinkType link_type,
+                              GmsIndicesData *gmsindices)
 {
    Compiler *c = interp->compiler;
    EmpVm *vm = c->vm;
@@ -1627,8 +1631,8 @@ int dualslabels_setupnew(Interpreter *interp, Tape *tape, const char *label,
 {
    DualsLabel *dualslabel;
    uint8_t dim = gmsindices->nargs;
-   uint8_t num_vars = gmsindices->num_sets + gmsindices->num_localsets + gmsindices->num_loopiterators;
-   A_CHECK(dualslabel, dualslabel_new(label, label_len, dim, num_vars, opdat));
+   uint8_t nvaridxs = gmsindices_nvaridxs(gmsindices);
+   A_CHECK(dualslabel, dualslabel_new(label, label_len, dim, nvaridxs, opdat));
 
    S_CHECK(dualslabel_arr_add(&interp->dualslabels, dualslabel));
 
@@ -1653,7 +1657,7 @@ int dualslabels_setupnew(Interpreter *interp, Tape *tape, const char *label,
    S_CHECK(ident_gmsindices_process(gmsindices, loopiterators, tape, dualslabel->data, &dummy));
 
    // TODO: document why we need to duplicate this
-   memcpy(&dualslabel->data[dim], loopiterators->iteridx2dim, loopiterators->size * sizeof(int));
+   memcpy(&dualslabel->data[dim], loopiterators->varidxs2pos, loopiterators->size * sizeof(int));
 
    return OK;
 
@@ -2252,10 +2256,10 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
                               label_valfn.len, linktype, &label_gmsindices,
                               &loopiters, &gidx));
 
-      uint8_t num_vars = label_gmsindices.num_sets + label_gmsindices.num_localsets + label_gmsindices.num_loopiterators;
-      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_vars));
+      uint8_t nvaridxs = gmsindices_nvaridxs(&label_gmsindices);
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, nvaridxs));
 
-      for (unsigned i = 0; i < num_vars; ++i) {
+      for (unsigned i = 0; i < nvaridxs; ++i) {
          S_CHECK(emit_byte(tape, iterators.iters[i].iter_lidx));
       }
 
@@ -2569,12 +2573,13 @@ int vm_labeldef_condition(Interpreter * interp, unsigned * restrict p,
  * @brief Generate the bytecode for a label definition of the form
  *     nOpt(set): ...
  *
- * @param interp  the interpreter
- * @param p       the position pointer
+ * @param interp         the interpreter
+ * @param p              the position pointer
  * @param labelname      the label
  * @param labelname_len  the label length
  * @param gmsindices     the label indices
- * @return  the error code
+ *
+ * @return               the error code
  */
 int vm_labeldef_loop(Interpreter * interp, unsigned * restrict p,
                      const char *labelname, unsigned labelname_len,
@@ -2819,7 +2824,11 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
 
    if (toktype == TOK_CONDITION) {
       *p = p2;
+      interp_save_tok(interp);
+      // HACK: this should not be necessary
+      interp->cur.type = toktype;
       S_CHECK(parse_condition(interp, p, c, tape));
+      interp_restore_savedtok(interp);
    }
 
    /* ---------------------------------------------------------------------
@@ -3468,8 +3477,6 @@ const struct interp_ops interp_ops_compiler = {
    .ccflib_new = c_ccflib_new,
    .ccflib_finalize = c_ccflib_finalize,
    .ctr_markequasflipped = c_ctr_markequasflipped,
-   .gms_get_uelidx        = get_uelidx_via_dct,
-   .gms_get_uelstr        = get_uelstr_via_dct,
    .read_gms_symbol = c_gms_resolve,
    .identaslabels = c_identaslabels,
    .mp_addcons = c_mp_addcons,
@@ -3513,7 +3520,7 @@ int empvm_finalize(Interpreter *interp)
 
    /* TODO: think whether we want to do a "symbolic" check in Emb mode? */
    if (!embmode(interp) && c->vm->code.len > 0) {
-      trace_empparsermsg("[empinterp] VM execution\n");
+      trace_empparsermsg("\n[empinterp] VM execution\n");
       S_CHECK(vmcode_add(&c->vm->code, OP_END, interp->linenr));
       S_CHECK(empvm_run(c->vm));
    }
@@ -3547,6 +3554,14 @@ int c_switch_to_compmode(Interpreter *interp, bool *switched)
          TO_IMPLEMENT("temporary switch to vmmode with existing bytecode");
       }
 
+      /* NOTE: this was added (2024.12.05) after noticing that when we switch
+       * while processing         root: Nash(ag(i),mkt(j))
+       * the vm execution fired up after ag(i)
+       *
+       * Observe is this creates any issue
+       */
+      begin_scope(interp->compiler, __func__);
+
       interp->ops = &interp_ops_compiler;
       vm->data.uid_parent = interp->daguid_parent;
       vm->data.uid_grandparent = interp->daguid_grandparent;
@@ -3561,13 +3576,22 @@ int c_switch_to_compmode(Interpreter *interp, bool *switched)
 
 int c_switch_to_immmode(Interpreter *interp)
 {
+
+   Compiler *c = interp->compiler; assert(c);
+
+   EmpVm *vm = c->vm; assert(vm);
+   Tape _tape = {.code = &vm->code, .linenr = interp->linenr};
+   Tape * const tape = &_tape;
+
+   /* NOTE: see comment in c_switch_to_compmode for why this is needed*/
+   end_scope(interp, tape);
+
    S_CHECK(empvm_finalize(interp));
 
    if (!embmode(interp)) {
       interp->ops = &interp_ops_imm;
    }
 
-   EmpVm *vm = interp->compiler->vm;
    vm->data.uid_parent = EMPDAG_UID_NONE;
    vm->data.uid_grandparent = EMPDAG_UID_NONE;
 

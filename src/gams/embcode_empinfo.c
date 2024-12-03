@@ -47,7 +47,7 @@ static int emb_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned * p
 
    if (toktype == TOK_CONDITION) {
       *p = p2;
-      // HACK: we shouldn't have to save the token here
+      // HACK: shound't save token
       interp_save_tok(interp);
       parser_cpypeek2cur(interp);
       S_CHECK(vm_parse_condition(interp, p));
@@ -300,41 +300,11 @@ static int emb_read_elt_vector(Interpreter *interp, const char *identstr,
    return OK;
 }
 
-static int get_uelidx_via_gmd(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE], int * restrict uelidx)
-{
-   gmdHandle_t gmd = interp->gmd;
-
-   if (!gmdFindUel(gmd, uelstr, uelidx)) {
-      error("[embcode] ERROR while calling 'gmsFindUEL' for lexeme '%s'", uelstr);
-      return Error_GamsCallFailed;
-   }
-
-   return OK;
-}
-
-static int get_uelstr_via_gmd(Interpreter *interp, int uelidx, unsigned uelstrlen, char uelstr[VMT(static uelstrlen)])
-{
-   gmdHandle_t gmd = interp->gmd;
-   assert(gmd);
-
-   if (uelstrlen < GMS_SSSIZE) {
-      error("[embcode] ERROR in %s: string argument is too short\n", __func__);
-      return Error_SizeTooSmall;
-   }
-
-   GMD_CHK(gmdGetUelByIndex, gmd, uelidx, uelstr);
-
-   return OK;
-}
-
-
 const InterpreterOps parser_ops_emb = {
    .type                  = InterpreterOpsEmb,
    .ccflib_new            = emb_mp_ccflib_new,
    .ccflib_finalize       = emb_mp_ccflib_finalize,
    .ctr_markequasflipped  = emb_ctr_markequasflipped,
-   .gms_get_uelidx        = get_uelidx_via_gmd,
-   .gms_get_uelstr        = get_uelstr_via_gmd,
    .identaslabels         = emb_identaslabels,
    .mp_addcons            = emb_mp_addcons,
    .mp_addvars            = emb_mp_addvars,
@@ -358,7 +328,7 @@ const InterpreterOps parser_ops_emb = {
    .ovf_getname           = emb_ovf_getname,
    .read_param            = emb_read_param,
    .read_elt_vector       = emb_read_elt_vector,
-   .resolve_tokasident    = gmd_find_ident,
+   .resolve_tokasident    = gmd_search_ident,
    .read_gms_symbol       = emb_read_gms_symbol,
 };
 

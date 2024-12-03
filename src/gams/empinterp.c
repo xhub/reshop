@@ -87,6 +87,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 
    parsedkwds_init(&interp->state);
    interp->last_kw_info.type = TOK_UNSET;
+   interp->last_symbol.type = IdentNotFound;
    finalization_init(&interp->finalize);
 
 
@@ -248,9 +249,7 @@ static int interp_loadgmdsets(Interpreter *interp)
    assert(interp->gmd); assert(interp->dct);
 
    gmdHandle_t gmd = interp->gmd;
-   dctHandle_t dct = interp->dct;
 
-   int dct_nuels = dctNUels(dct);
    int nsymbols;
    GMD_CHK(gmdInfo, gmd, GMD_NRSYMBOLS, &nsymbols, NULL, NULL);
 
@@ -282,29 +281,24 @@ static int interp_loadgmdsets(Interpreter *interp)
       void *symiterptr = NULL;
       GMD_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
 
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, setname);
+
       do {
+         // HACK: gmdCopySymbol on sets does not copy the level values
+//         double uelidxdbl;
+//         GMD_CHK(gmdGetLevel, gmd, symiterptr, &uelidxdbl)
+//         int uelidx = (int)uelidxdbl;
+
          char uelstr[GLOBAL_UEL_IDENT_SIZE];
          GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uelstr)
-         int uelidx = dctUelIndex(dct, uelstr);
-
-         if (uelidx < 0) {
-            error("[empinterp] ERROR: cound't find UEL '%s' in DCT\n", uelstr);
-            gmdFreeSymbolIterator(gmd, symiterptr);
-            return Error_GamsCallFailed;
-         }
-
-         if (uelidx > dct_nuels) {
-            error("[empinterp] ERROR: UEL '%s' has index %d in DCT, not in [1,%d]",
-                  uelstr, uelidx, dct_nuels);
-            return Error_RuntimeError;
-         }
+         int uelidx;
+         GMD_CHK_RET(gmdFindUel, gmd, uelstr, &uelidx);
 
          rhp_int_add(&set, uelidx);
       } while ( gmdRecordMoveNext(gmd, symiterptr) );
 
       assert(set.len == nrecs);
 
-      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, setname);
       S_CHECK(namedints_add(&interp->globals.sets, set, strdup(setname)));
 
       trace_empinterp("%s ", setname);
@@ -330,7 +324,6 @@ static int interp_loadgmdparams(Interpreter *interp)
    assert(interp->gmd); assert(interp->dct);
 
    gmdHandle_t gmd = interp->gmd;
-   dctHandle_t dct = interp->dct;
    int nsymbols;
    GMD_CHK(gmdInfo, gmd, GMD_NRSYMBOLS, &nsymbols, NULL, NULL);
 
@@ -373,19 +366,19 @@ static int interp_loadgmdparams(Interpreter *interp)
       S_CHECK(lequ_reserve(&v, nrecs))
 
       do {
-         char uel[GLOBAL_UEL_IDENT_SIZE];
-         GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uel)
-         int uelidx = dctUelIndex(dct, uel);
-         if (uelidx < 0) {
-            error("[empinterp] ERROR: cound't find UEL '%s' in DCT\n", uel);
+         char uelstr[GLOBAL_UEL_IDENT_SIZE];
+         GMD_CHK(gmdGetKey, gmd, symiterptr, 0, uelstr)
+         int uelidx;
+         if (!gmdFindUel(gmd, uelstr, &uelidx) || uelidx <= 0) {
+            error("[empinterp] ERROR: cound't find UEL '%s' in GMD\n", uelstr);
             return Error_GamsCallFailed;
          }
 
          double val;
-         GMD_CHK(gmdGetLevel,gmd, symiterptr, &val);
+         GMD_CHK(gmdGetLevel, gmd, symiterptr, &val);
          lequ_add(&v, uelidx, val);
 
-      } while ( gmdRecordMoveNext(gmd, symiterptr));
+      } while (gmdRecordMoveNext(gmd, symiterptr));
 
       assert(v.len == nrecs);
 

@@ -199,8 +199,7 @@ int vmval_is_gmssymiter(VmValueArray * vmvals, unsigned idx) NONNULL;
 
 static inline VmGmsSymIterator * getgmssymiter(VmValueArray * globals, unsigned gidx)
 {
-   assert(gidx < globals->len);
-   assert(IS_GMSSYMITER(globals->arr[gidx]));
+   assert(gidx < globals->len); assert(IS_GMSSYMITER(globals->arr[gidx]));
 
    return AS_GMSSYMITER(globals->arr[gidx]);
 }
@@ -241,17 +240,6 @@ int vm_store_set_nrecs(Interpreter * restrict interp, EmpVm * restrict vm,
    case IdentOriginGmd: return vm_store_set_nrecs_gmd(interp, vm, ident, gidx);
    case IdentOriginDct: return error_ident_origin_dct(ident, __func__);
    default:             return runtime_error(ident->lexeme.linenr);
-   }
-}
-
-static inline
-int vm_multiset_membership_test(void *ptr, VmGmsSymIterator *filter, bool *res)
-{
-   switch (filter->ident.origin) {
-   case IdentOriginGdx: return gdx_reader_boolean_test(ptr, filter, res);
-   case IdentOriginGmd: /* keep scan-build happy */ *res = false; TO_IMPLEMENT("Multiset membership test with GMD");
-   case IdentOriginDct: return error_ident_origin_dct(&filter->ident, __func__);
-   default:             return runtime_error(filter->ident.lexeme.linenr);
    }
 }
 

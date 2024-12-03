@@ -2,6 +2,8 @@
 #include "empinterp.h"
 #include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
+#include "empinterp_vm_utils.h"
+#include "empparser_priv.h"
 #include "gamsapi_utils.h"
 
 #include "dctmcc.h"
@@ -43,7 +45,7 @@ static inline int symtype_dct2ident(enum dcttypes dcttype, IdentData *ident)
  * @return        the error code
  */
 NONNULL_AT(1,3) static int
-gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ident,
+gmd_search_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ident,
                 gmdHandle_t gmdcpy)
 {
 
@@ -170,7 +172,7 @@ gmd_find_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ide
  *
  * @return        the error code
  */
-int gmd_find_ident(Interpreter * restrict interp, IdentData * restrict ident)
+int gmd_search_ident(Interpreter * restrict interp, IdentData * restrict ident)
 {
    struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
    ident_init(ident, tok);
@@ -184,7 +186,41 @@ int gmd_find_ident(Interpreter * restrict interp, IdentData * restrict ident)
 
    gmdHandle_t gmd = interp->gmd; assert(gmd);
 
-   S_CHECK(gmd_find_symbol(gmd, lexeme, ident, interp->gmdcpy));
+   S_CHECK(gmd_search_symbol(gmd, lexeme, ident, interp->gmdcpy));
+
+   return OK;
+}
+
+/**
+ * @brief Try to resolve an identifier using GMD
+ *
+ * @param      gmdh   the GMD symbol pointer
+ * @param      filter   the filter
+ * @param[out] res      true if symbol matches the filter
+ *
+ * @return        the error code
+ */
+int gmd_boolean_test(void *gmdh, VmGmsSymIterator *filter, bool *res)
+{
+   gmdHandle_t gmd = gmdh;
+
+   char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
+   const char *uels_strp[GLOBAL_MAX_INDEX_DIM];
+
+   const int *uels = filter->uels;
+   unsigned dim = filter->ident.dim;
+
+   for (unsigned i = 0; i < dim; ++i) {
+      uels_strp[i] = uels_str[i];
+      GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
+   }
+
+   void *symptr = filter->ident.ptr; assert(symptr);
+
+   void *symiterptr = NULL;
+   *res = gmdFindRecord(gmd, symptr, uels_strp, &symiterptr);
+
+   assert(*res == (symiterptr != NULL));
 
    return OK;
 }
@@ -279,17 +315,17 @@ int resolve_lexeme_as_gms_symbol(Interpreter * restrict interp, Token * restrict
 
    gmdHandle_t gmddct = interp->gmddct;
    if (gmddct) {
-      S_CHECK(gmd_find_symbol(gmddct, sym_name, ident, NULL));
+      S_CHECK(gmd_search_symbol(gmddct, sym_name, ident, NULL));
    } else if (dct) {
       S_CHECK(dct_find_symbol(dct, sym_name, ident, NULL));
    }
 
    gmdHandle_t gmd = interp->gmd;
-   if (symdat->ident.type == IdentNotFound && gmd) {
-      S_CHECK(gmd_find_symbol(gmd, sym_name, ident, interp->gmdcpy));
+   if (ident->type == IdentNotFound && gmd) {
+      S_CHECK(gmd_search_symbol(gmd, sym_name, ident, interp->gmdcpy));
    }
 
-   tok->type = ident2toktype(symdat->ident.type);
+   tok->type = ident2toktype(ident->type);
 
    // HACK: this is needed, especially in embmode
    // TODO: use a status flag in the Token to indicate of data has been read
@@ -299,11 +335,15 @@ int resolve_lexeme_as_gms_symbol(Interpreter * restrict interp, Token * restrict
       aequ_init(&tok->payload.e);
    }
 
+   if (ident->type != IdentNotFound && &interp->cur == tok) {
+      interp_set_last_gms_symbol(interp, ident);
+   }
+
    return OK;
 
 }
 
-int get_uelidx_via_dct(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE], int * restrict uelidx)
+static inline int get_uelidx_via_dct(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE], int * restrict uelidx)
 {
    assert(interp->dct);
    *uelidx = dctUelIndex(interp->dct, uelstr);
@@ -311,11 +351,219 @@ int get_uelidx_via_dct(Interpreter * restrict interp, const char uelstr[GMS_SSSI
    return OK;
 }
 
-int get_uelstr_via_dct(Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr)
+int get_uelstr_for_empdag_node(Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr)
 {
-   assert(interp->dct);
+   if (interp->gmd) {
+      GMD_CHK_RET(gmdGetUelByIndex, interp->gmd, uelidx, uelstr);
+      return OK;
+   }
+
    char dummyquote = ' ';
+   if (interp->gmddct) {
+      gmdHandle_t gmd = interp->gmddct;
+      GMD_CHK_RET(gmdGetUelByIndex, gmd, uelidx, uelstr);
+
+      return OK;
+   }
+   assert(interp->dct);
    dct_call_rc(dctUelLabel, interp->dct, uelidx, &dummyquote, uelstr, uelstrlen);
 
    return OK;
 }
+
+NONNULL static inline
+int find_uelidx_gmd(gmdHandle_t gmd, const char uelstr[GMS_SSSIZE],
+                    int * restrict uelidx)
+{
+   if (!gmdFindUel(gmd, uelstr, uelidx)) {
+      error("[embcode] ERROR while calling 'gmsFindUel' for lexeme '%s'", uelstr);
+      return gmderr(gmd);
+   }
+
+   return OK;
+}
+
+int find_uelidx(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE],
+                int * restrict uelidx)
+{
+   IdentData *symbol = &interp->last_symbol;
+   if (interp->last_symbol.type == IdentNotFound) {
+      error("[empinterp] ERROR: cannot process UEL '%s' outside of a symbol. "
+            "Please file a bug\n", uelstr);
+      return Error_EMPRuntimeError;
+   }
+
+   gmdHandle_t gmd;
+   int rc = Error_EMPRuntimeError;
+
+   if (embmode(interp)) {
+      gmd = interp->gmd;
+      return gmd ? find_uelidx_gmd(gmd, uelstr, uelidx) : Error_EMPRuntimeError;
+   }
+
+   switch (symbol->type) {
+      /* Look for UEL in DCT */
+   case IdentEqu: case IdentVar: 
+      gmd = interp->gmddct;
+      if (gmd) {
+         rc = find_uelidx_gmd(gmd, uelstr, uelidx);
+      } else if (interp->dct) {
+         rc = get_uelidx_via_dct(interp, uelstr, uelidx);
+      }
+
+      if (rc != OK || *uelidx > 0) { return rc; }
+      break;
+   case IdentEmpDagLabel:
+      if (!interp->gmd) {
+         gmd = interp->gmddct;
+         if (gmd) {
+            return find_uelidx_gmd(gmd, uelstr, uelidx);
+         }
+         if (interp->dct) {
+            return get_uelidx_via_dct(interp, uelstr, uelidx);
+         }
+
+         return runtime_error(interp->linenr);
+      }
+      FALLTHRU
+   case IdentSet: case IdentParam: case IdentVector:
+      gmd = interp->gmd;
+      return find_uelidx_gmd(interp->gmd, uelstr, uelidx);
+   default:
+      return runtime_error(interp->linenr);
+   }
+
+   gmd = interp->gmd;
+   if (gmd) {
+      return rc;
+   }
+
+   if (!gmdFindUel(gmd, uelstr, uelidx)) {
+      return gmderr(gmd);
+   }
+
+   if (*uelidx > 0) {
+      int offset;
+      error("[empinterp] %nERROR: UEL '%s' was found in the GAMS database, "
+            "but does not appear in any equation of variable.\n", &offset, uelstr);
+
+      if (symbol->type == IdentEqu) {
+         error("%*sHint: Check the equation '%.*s' appears in the MODEL statement\n",
+               offset, "", lexeme_fmtargs(symbol->lexeme));
+      } else if (symbol->type == IdentVar) {
+         error("%*sHint: Check that the variable '%.*s' appears at least in one "
+               "of the equation listed in the MODEL statement\n", offset, "",
+               lexeme_fmtargs(symbol->lexeme));
+      } 
+   }
+
+   return Error_EMPIncorrectInput;
+}
+
+#ifdef NO_DELETE_2024_12_18
+static inline int convert_uelidx(gmdHandle_t gmddst, gmdHandle_t gmdsrc, int uelidx)
+{
+   char uelstr[GMS_SSSIZE];
+
+   if (gmdGetUelByIndex(gmdsrc, uelidx, uelstr)) {
+      return -gmderr(gmdsrc);
+   }
+
+   if (gmdFindUel(gmddst, uelstr, &uelidx)) {
+      return -gmderr(gmddst);
+   }
+
+   return uelidx;
+}
+
+int uelidx_check_or_convert(gmdHandle_t gmd, gmdHandle_t gmddct, int uelidx, struct origins origins)
+{
+   if (origins.sym != IdentOriginDct && origins.sym != IdentOriginGmd) {
+      assert(0 && "symbol has unsupported origin");
+      return -1;
+   }
+
+   if (origins.uel != IdentOriginDct && origins.uel != IdentOriginGmd) {
+      assert(0 && "UEL has unsupported origin");
+      return -1;
+   }
+
+   if (origins.sym == origins.uel) {
+      return uelidx;
+   }
+
+   gmdHandle_t gmddst, gmdsrc;
+
+   switch (origins.uel) {
+   case IdentOriginDct:
+      gmddst = gmd;
+      gmdsrc = gmddct;
+      break;
+   case IdentOriginGmd:
+      gmddst = gmddct;
+      gmdsrc = gmd;
+      break;
+   default:
+      assert(0 && "UEL has unsupported origin");
+      return -Error_EMPRuntimeError;
+   }
+
+   return convert_uelidx(gmddst, gmdsrc, uelidx);
+}
+
+// TODO delete once newer GMD is in master
+int uelidx_check_or_convert_dct_vs_gmd(gmdHandle_t gmd, dctHandle_t dct,
+                                       int uelidx, struct origins origins)
+{
+  if (origins.sym != IdentOriginDct && origins.sym != IdentOriginGmd) {
+      assert(0 && "symbol has unsupported origin");
+      return -1;
+   }
+
+   if (origins.uel != IdentOriginDct && origins.uel != IdentOriginGmd) {
+      assert(0 && "UEL has unsupported origin");
+      return -1;
+   }
+
+   if (origins.sym == origins.uel) {
+      return uelidx;
+   }
+
+   char uelstr[GLOBAL_UEL_IDENT_SIZE];
+   int uelidx_dst;
+
+  switch (origins.uel) {
+   case IdentOriginDct: {
+      char quote_[] = " ";
+      if (dctUelLabel(dct, uelidx, quote_, uelstr, sizeof(uelstr))) {
+         error("[DCT] Could not find UEL #%d\n", uelidx);
+         return -Error_EMPRuntimeError;
+      } 
+
+      if (gmdFindUel(gmd, uelstr, &uelidx_dst)) {
+         return -gmderr(gmd);
+      }
+      break;
+   }
+
+   case IdentOriginGmd:
+      if (gmdGetUelByIndex(gmd, uelidx, uelstr)) {
+         return -gmderr(gmd);
+      }
+
+      uelidx_dst = dctUelIndex(dct, uelstr);
+      if (uelidx <= 0) {
+         error("[empinterp] ERROR: could not find uel '%s' in the DCT\n", uelstr);
+         return -Error_EMPRuntimeError;
+      } 
+
+      break;
+   default:
+      assert(0 && "UEL has unsupported origin");
+      return -Error_EMPRuntimeError;
+   }
+
+   return uelidx_dst;
+
+}
+#endif

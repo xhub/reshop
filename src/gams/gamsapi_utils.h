@@ -40,6 +40,27 @@
       error("%*s%s\n", offset42, "", msg42); \
    }
 
+#define GMD_CHK_RET(func, gmdh, ...) \
+  if (!func(gmdh, __VA_ARGS__)) { \
+      int offset42; \
+      error("[gmd] %nERROR: call to %s failed!\n", &offset42, #func); \
+      char msg42[GMS_SSSIZE]; \
+      gmdGetLastError(gmdh, msg42); \
+      error("%*s%s\n", offset42, "", msg42); \
+      return Error_GamsCallFailed; \
+   }
+
+#define GMD_CHK_EXIT(func, gmdh, ...) \
+  if (!func(gmdh, __VA_ARGS__)) { \
+      int offset42; \
+      error("[gmd] %nERROR: call to %s failed!\n", &offset42, #func); \
+      char msg42[GMS_SSSIZE]; \
+      gmdGetLastError(gmdh, msg42); \
+      error("%*s%s\n", offset42, "", msg42); \
+      status = Error_GamsCallFailed; \
+      goto _exit; \
+   }
+
 #define GMD_FIND_CHK(func, gmdh, symptr, ...) \
    if (!func(gmdh, symptr, __VA_ARGS__)) { \
       char buf42[GMS_SSSIZE]; \

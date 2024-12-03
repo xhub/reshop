@@ -21,6 +21,7 @@ typedef enum {
    IdentOriginDct,
    IdentOriginLocal,
    IdentOriginGlobal,
+   IdentOriginEmpDag,  /**< Ident is an EMPDAG label */
 } IdentOrigin;
 
 typedef enum IdentType {
@@ -44,6 +45,7 @@ typedef enum IdentType {
    IdentSymbolSlice,
    IdentVar,
    IdentEqu,
+   IdentEmpDagLabel,    /**< Ident is a EMPDAG label */
    IdentTypeMaxValue,
 } IdentType;
 

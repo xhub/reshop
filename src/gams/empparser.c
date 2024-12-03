@@ -37,6 +37,8 @@
 #include "toplayer_utils.h"
 #include "win-compat.h"
 
+
+
 /**
  * @file empparser.c
  *
@@ -1091,7 +1093,8 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
    uelstr[tok_len] = '\0';
 
    int uelidx;
-   S_CHECK(interp->ops->gms_get_uelidx(interp, uelstr, &uelidx));
+   IdentOrigin origin = IdentOriginUnknown;
+   S_CHECK(find_uelidx(interp, uelstr, &uelidx));
    if (uelidx <= 0) {
      /* ----------------------------------------------------------------------
       * TODO: this is a hack as we currently have a hard time with the put
@@ -1101,7 +1104,7 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
       if (uelstr[0] == ' ') {
          unsigned pos = 1;
          while (pos < tok_len && uelstr[pos] == ' ') { uelstr[pos] = '\0'; pos++; }
-         S_CHECK(interp->ops->gms_get_uelidx(interp, &uelstr[pos], &uelidx));
+         S_CHECK(find_uelidx(interp, &uelstr[pos], &uelidx));
          if (uelidx <= 0) { goto _not_found; }
       } else {
          goto _not_found;
@@ -1111,6 +1114,7 @@ NONNULL static int tok_asUEL(Token *tok, char quote, unsigned * restrict p,
    *toktype = TOK_GMS_UEL;
    ident->idx = tok->payload.idx = uelidx;
    ident->type = IdentUEL;
+   ident->origin = origin;
 
    return OK;
 
@@ -1933,6 +1937,8 @@ static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
    // See code for labeldef
    S_CHECK(interp->ops->read_gms_symbol(interp, p));
 
+   // Restore the current tokentype
+
    // read_gms_symbol already deactivates the gmsindices
    interp->gms_sym_iterator.active = false;
 
@@ -1967,7 +1973,7 @@ int advance(Interpreter * restrict interp, unsigned * restrict p,
    // HACK: GG #10
    case TOK_GMS_SET:
    case TOK_GMS_PARAM:
-      if (!embmode(interp)) {return runtime_error(interp->linenr);}
+      if (!embmode(interp)) { return runtime_error(interp->linenr); }
    FALLTHRU
    case TOK_GMS_EQU:
    case TOK_GMS_VAR:
@@ -2770,6 +2776,9 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
    assert(interp->cur.type == TOK_IDENT);
    interp_save_tok(interp);
 
+   interp_set_last_empdag_node_symbol(interp, emptok_getstrstart(&interp->cur),
+                                      emptok_getstrlen(&interp->cur));
+
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
    
@@ -2823,6 +2832,7 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
    }
 
    assert(!gmsindices_isactive(&interp->gmsindices));
+   interp_reset_last_symbol(interp);
 
    return OK;
 }
@@ -2926,7 +2936,7 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
          ovfdef->num_empdag_children++;
       }
       for (unsigned i = idx2, len = interp->linklabels2arcs.len; i < len; ++i) {
-         ovfdef->num_empdag_children += interp->linklabels2arcs.arr[i]->num_children;
+         ovfdef->num_empdag_children += interp->linklabels2arcs.arr[i]->nchildren;
       }
    }
 
@@ -3209,8 +3219,8 @@ int parse_Nash(Interpreter *interp, unsigned *p)
    S_CHECK(advance(interp, p, &toktype));
    S_CHECK(parser_expect(interp, "'(' after Nash keyword)", TOK_LPAREN));
 
-   Nash *mpe;
-   S_CHECK(interp->ops->nash_new(interp, &mpe));
+   Nash *nash;
+   S_CHECK(interp->ops->nash_new(interp, &nash));
 
    do {
       S_CHECK(advance(interp, p, &toktype));
@@ -3224,7 +3234,7 @@ int parse_Nash(Interpreter *interp, unsigned *p)
 
    S_CHECK(parser_expect(interp, "Closing ')' after Nash keyword", TOK_RPAREN));
 
-   S_CHECK(interp->ops->nash_finalize(interp, mpe));
+   S_CHECK(interp->ops->nash_finalize(interp, nash));
 
    return advance(interp, p, &toktype);
 }
@@ -4584,8 +4594,10 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
    /* TODO URG: should this be deleted? */
    parser_update_last_kw(interp);
 
-   const char *identname = emptok_getstrstart(&interp->cur);
-   unsigned identname_len = emptok_getstrlen(&interp->cur);
+   const char *label = emptok_getstrstart(&interp->cur);
+   unsigned label_len = emptok_getstrlen(&interp->cur);
+
+   interp_set_last_empdag_node_symbol(interp, label, label_len);
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
@@ -4601,11 +4613,11 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
    if (toktype == TOK_CONDITION) {
       S_CHECK(chk_compat_gmsindices_condition(&gmsindices, interp->linenr));
 
-      return vm_labeldef_condition(interp, p, identname, identname_len, &gmsindices);
+      return vm_labeldef_condition(interp, p, label, label_len, &gmsindices);
    }
 
-   if (gmsindices.num_sets > 0 || gmsindices.num_localsets > 0 || gmsindices.num_loopiterators > 0) {
-      return vm_labeldef_loop(interp, p, identname, identname_len, &gmsindices);
+   if (gmsindices_nvaridxs(&gmsindices)) {
+      return vm_labeldef_loop(interp, p, label, label_len, &gmsindices);
    }
 
    /* ---------------------------------------------------------------------
@@ -4625,11 +4637,11 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
             "Only valid token would ':' for completing the label named '%.*s'.\n",
             interp->linenr, emptok_getstrlen(&interp->cur),
             emptok_getstrstart(&interp->cur), toktype2str(emptok_gettype(&interp->cur)),
-            identname_len, identname);
+            label_len, label);
       return Error_EMPIncorrectSyntax;
    }
 
-   S_CHECK(imm_set_regentry(interp, identname, identname_len, &gmsindices));
+   S_CHECK(imm_set_regentry(interp, label, label_len, &gmsindices));
 
    S_CHECK(labdeldef_parse_statement(interp, p));
 

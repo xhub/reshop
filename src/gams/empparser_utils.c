@@ -1,4 +1,5 @@
 #include "empinterp.h"
+#include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_utils.h"
 #include "empinterp_vm_compiler.h"
@@ -123,6 +124,9 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
 
    assert(!gmsindices_isactive(gmsindices));
 
+   IdentType symbol_type = interp->last_symbol.type;
+   Lexeme symbol_lexeme = interp->last_symbol.lexeme;
+   IdentOrigin symbol_origin = interp->last_symbol.origin;
   /* ----------------------------------------------------------------------
    * We are expecting to be called at gmssymb('a', '1')
    *                                          ^
@@ -145,6 +149,11 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
       S_CHECK(peek(interp, &p2, &toktype));
 
       nargs++;
+
+      /* Reset last symbol */
+      interp->last_symbol.type = symbol_type;
+      interp->last_symbol.lexeme = symbol_lexeme;
+      interp->last_symbol.origin = symbol_origin;
 
    } while (toktype == TOK_COMMA);
 
@@ -225,10 +234,11 @@ int resolve_tokasident(Interpreter *interp, IdentData *ident)
     * 2. Look for a global variable (todo)
     * 3. Look for an alias
     * 4. Look for a GAMS set / multiset / scalar / vector / param
+    * 5. Look for a symbol in the GMD
     *
     * --------------------------------------------------------------------- */
 
-   const char *identstr = NULL;
+   char *identstr = NULL;
    struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
    ident_init(ident, tok);
 
@@ -300,11 +310,18 @@ int resolve_tokasident(Interpreter *interp, IdentData *ident)
       goto _exit;
    }
 
+   /* 5: GMD (for multiset) */
+   if (interp->gmd) {
+      S_CHECK(gmd_search_ident(interp, ident));
+
+      if (ident->type != IdentNotFound) { return OK; }
+   }
+
    /* TODO: Params */
    ident->origin = IdentOriginUnknown;
 
 _exit:
-   FREE(identstr);
+   free(identstr);
 
    return OK;
 }

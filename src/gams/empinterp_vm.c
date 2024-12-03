@@ -25,24 +25,27 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-#include "dctmcc.h"
 #include "empdag.h"
 #include "empinterp_linkbuilder.h"
+#include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_symbol_resolver.h"
 #include "empinterp_utils.h"
 #include "empinterp_vm.h"
 #include "empinterp_vm_utils.h"
 #include "empinfo.h"
+#include "gamsapi_utils.h"
 #include "lequ.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl.h"
 #include "ovf_parameter.h"
 #include "printout.h"
+#include "reshop_data.h"
 
 #include "gclgms.h"
-#include "reshop_data.h"
+#include "dctmcc.h"
+#include "gmdcc.h"
 
 
 #define READ_BYTE(vm) (*vm->code.ip++)
@@ -146,11 +149,10 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
    case SIGNATURE_LOOPVAR: {
       int uel = AS_LOOPVAR(val_);
       char uel_label[GMS_SSSIZE];
-      char quote[] = " ";
-      if (dctUelLabel(vm->data.dct, uel, quote, uel_label, sizeof(uel_label))) {
+      if (gmdGetUelByIndex(vm->data.gmd, uel, uel_label)) {
          strcpy(uel_label, "ERROR getting LOOPVAR");
       }
-      trace_empinterp("%*s: %5d %s%s%s\n", pad, "LOOPVAR", uel, quote, uel_label, quote);
+      trace_empinterp("%*s: %5d %s\n", pad, "LOOPVAR", uel, uel_label);
       break;
    }
    case SIGNATURE_STRING:
@@ -211,6 +213,17 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
    }
 
 }
+static void vm_printuel(VmData *vmdata, int uel, unsigned mode, int *offset)
+{
+   gmdHandle_t gmd = vmdata->gmd ? vmdata->gmd : (vmdata->gmddct ? vmdata->gmddct : NULL);
+   if (gmd) {
+      gmd_printuel(gmd, uel, mode, offset);
+   } else {
+      if (vmdata->dct) {
+         dct_printuel(vmdata->dct, uel, mode, offset);
+      }
+   }
+}
 
 void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
 {
@@ -241,11 +254,10 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
    case SIGNATURE_LOOPVAR: {
       int uel = AS_LOOPVAR(v);
       char uel_label[GMS_SSSIZE];
-      char quote[] = " ";
-      if (dctUelLabel(vm->data.dct, uel, quote, uel_label, sizeof(uel_label))) {
+      if (gmdGetUelByIndex(vm->data.gmd, uel, uel_label)) {
          strcpy(uel_label, "ERROR getting LOOPVAR");
       }
-      printout(mode, " %s%s%s ", quote, uel_label, quote);
+      printout(mode, " '%s' ", uel_label);
       break;
    }
    case SIGNATURE_STRING:
@@ -323,7 +335,7 @@ DBGUSED static void print_symiter(VmGmsSymIterator *symiter, EmpVm *vm)
       for (unsigned ii = 0; ii < dim; ++ii) {
          if (ii > 0) { DEBUGVMRUN(", "); }
          int dummyoffset;
-         dct_printuel(vm->data.dct, uels[ii], PO_TRACE_EMPINTERP,
+         vm_printuel(&vm->data, uels[ii], PO_TRACE_EMPINTERP,
                       &dummyoffset);
       }
       DEBUGVMRUN("%s", ")");
@@ -412,7 +424,7 @@ static void _print_uels(dctHandle_t dct, unsigned mode, int *uels, unsigned nuel
 }
 #endif
 
-static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
+static int vm_gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
 {
    IdentType type = symiter->ident.type;
    assert(identisequvar(type) || type == IdentVector);
@@ -459,7 +471,7 @@ static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
          char symname[GMS_SSSIZE];
          memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
          symname[symiter->ident.lexeme.len] = 0;
-         status = gmd_read(vmdata->gmddct, vmdata->dct, &data, symname);
+         status = gmd_read(vmdata->gmddct, &data, symname);
 
          if (status == OK) {
             if (data.nrecs == 1) {
@@ -490,7 +502,7 @@ static int gms_read_symbol(VmData *vmdata, VmGmsSymIterator *symiter)
       char symname[GMS_SSSIZE];
       memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
       symname[symiter->ident.lexeme.len] = 0;
-      status = gmd_read(vmdata->gmd, vmdata->dct, &data, symname);
+      status = gmd_read(vmdata->gmd, &data, symname);
       if (type == IdentSet) {
          vmdata->inrecs = data.nrecs;
          vmdata->ival = data.itmp;
@@ -526,7 +538,7 @@ static int gms_read_extend_symb(VmData *vmdata, VmGmsSymIterator *filter)
    IdentType type = filter->ident.type;
    assert(identisequvar(type));
 
-   S_CHECK(gms_read_symbol(vmdata, filter));
+   S_CHECK(vm_gms_read_symbol(vmdata, filter));
 
    switch (type) {
    case IdentVar:
@@ -579,15 +591,26 @@ static int gms_equvar_sync(VmData *vmdata, IdentType type)
    return OK;
 }
 
-static int vm_membership_test(UNUSED VmData *vmdata, VmGmsSymIterator *symiter,
-                               bool *res)
+static inline
+int vm_multiset_membership_test(VmData *vmdata, VmGmsSymIterator *filter, bool *res)
+{
+   switch (filter->ident.origin) {
+   // HACK: gdx_reader_boolean_test 
+   case IdentOriginGdx: return gdx_reader_boolean_test(filter->ident.ptr, filter, res);
+   case IdentOriginGmd: return gmd_boolean_test(vmdata->gmd, filter, res);
+   case IdentOriginDct: return error_ident_origin_dct(&filter->ident, __func__);
+   default:             return runtime_error(filter->ident.lexeme.linenr);
+   }
+}
+
+static int vm_membership_test(VmData *vmdata, VmGmsSymIterator *symiter, bool *res)
 {
    IdentType type = symiter->ident.type;
 
    switch (type) {
    case IdentMultiSet:
       assert(symiter->ident.ptr);
-      return vm_multiset_membership_test(symiter->ident.ptr, symiter, res);
+      return vm_multiset_membership_test(vmdata, symiter, res);
    case IdentLocalSet:
    case IdentSet: {
       IntArray *obj = symiter->ident.ptr;
@@ -826,7 +849,7 @@ int empvm_run(struct empvm *vm)
 
          assert(valid_set(set) && idx < set.len);
          vm->locals[lidx_loopvar] = LOOPVAR_VAL(set.arr[idx]);
-         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, (set.arr[idx]), PO_TRACE_EMPINTERP, &offset2);});
+         DEBUGVMRUN_EXEC({vm_printuel(&vm->data, (set.arr[idx]), PO_TRACE_EMPINTERP, &offset2);});
          DEBUGVMRUN("%*s%s#%u[lvar%u = %u]\n", getpadding(offset0 + offset1 + offset2), "",
                     type == IdentSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
          break;
@@ -881,16 +904,33 @@ int empvm_run(struct empvm *vm)
          assert(IS_LOOPVAR(vm->locals[lidx]));
 
          int uel = AS_LOOPVAR(vm->locals[lidx]);
-         symiter->uels[idx] = uel;
 
-         if (uel > 0) symiter->compact = false;
+         /* Print output before possible uel idx translation */
          DBGUSED int offset1, offset2;
          DBGUSED Lexeme *lexeme = &symiter->ident.lexeme;
          DEBUGVMRUN("%.*s[%u] <- %n", lexeme->len, lexeme->start, idx, &offset1);
-         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
+         DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN(" #%u%n", uel, &offset2);
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
+      /* -------------------------------------------------------------------
+       * If the GAMS symbol is an equation or variable, one needs to convert
+       * the GMD uel to a GMDDCT uel
+       * ------------------------------------------------------------------- */
+
+         IdentType gmssym_type = symiter->ident.type;
+         gmdHandle_t gmd = vm->data.gmd;
+         if ((gmssym_type == IdentEqu || gmssym_type == IdentVar) && gmd) {
+            char uelstr[GLOBAL_UEL_IDENT_SIZE];
+            GMD_CHK_EXIT(gmdGetUelByIndex, gmd, uel, uelstr);
+            GMD_CHK_EXIT(gmdFindUel, vm->data.gmddct, uelstr, &uel);
+            assert(uel > 0);
+         }
+
+
+         symiter->uels[idx] = uel;
+
+         if (uel > 0) symiter->compact = false;
 
          break;
       }
@@ -931,7 +971,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          DBGUSED int offset1, offset2;
          DEBUGVMRUN("%.*s[%u] <- %n", dualslabel->label_len, dualslabel->label, idx, &offset1);
-         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
+         DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
          break;
@@ -947,7 +987,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          uint8_t nargs = READ_BYTE(vm);
 
          // HACK: loopiterators are not given here, but count as num_var ...
-         assert(dualslabel->num_var == nargs);
+         assert(dualslabel->nvaridxs == nargs);
 
          int *uels = NULL;
          if (nargs > 0) {
@@ -970,10 +1010,10 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          S_CHECK_EXIT(dualslabel_add(dualslabel, uels, nargs, mpid_dual));
 
          DEBUGVMRUN("#%u: ", dualslabel->mpid_duals.len-1);
-         DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < dualslabel->num_var; ++i) {
+         DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < dualslabel->nvaridxs; ++i) {
             int dummy; if (i == 0) {DEBUGVMRUN("(");}
-            dct_printuel(vm->data.dct, uels[i], PO_TRACE_EMPINTERP, &dummy);
-            if (i == dualslabel->num_var-1) { DEBUGVMRUN(")");}}
+            vm_printuel(&vm->data, uels[i], PO_TRACE_EMPINTERP, &dummy);
+            if (i == dualslabel->nvaridxs-1) { DEBUGVMRUN(")");}}
             });
          DEBUGVMRUN("\n");
          
@@ -996,7 +1036,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          DBGUSED int offset1, offset2;
          DEBUGVMRUN("%.*s[%u] <- %n", linklabels->label_len, linklabels->label, idx, &offset1);
-         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
+         DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
          break;
@@ -1018,7 +1058,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          DBGUSED int offset1, offset2; 
          DEBUGVMRUN("%.*s[%u] <- %n", regentry->label_len,
                     regentry->label, idx, &offset1);
-         DEBUGVMRUN_EXEC({dct_printuel(vm->data.dct, uel, PO_TRACE_EMPINTERP, &offset2);})
+         DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
 
          break;
@@ -1121,12 +1161,11 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          if (pos == UINT_MAX || !isfinite(dscratch->data[len])) {
             char buf[GMS_SSSIZE] = " ";
-            char quote = ' ';
 
-            dctUelLabel(vm->data.dct, vecidx, &quote, buf, sizeof(buf));
-            error("[empvm_run] runtime error: in '%.*s', no UEL %c%s%c (#%u)\n",
-                  vmvec->lexeme.len, vmvec->lexeme.start, quote, buf, quote, vecidx);
-            print_vector(vmvec->data, PO_ERROR, vm->data.dct);
+            gmdGetUelByIndex(vm->data.gmd, vecidx, buf);
+            error("[empvm_run] runtime error: in '%.*s', no UEL '%s' (#%u)\n",
+                  vmvec->lexeme.len, vmvec->lexeme.start, buf, vecidx);
+            print_vector(vmvec->data, PO_ERROR, vm->data.gmd);
             status = Error_EMPIncorrectInput;
             goto _exit;
          }
@@ -1135,7 +1174,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
                     vmvec->lexeme.len, vmvec->lexeme.start);
          DEBUGVMRUN_EXEC({
                int dummyoffset;
-               dct_printuel(vm->data.dct, (vecidx), PO_TRACE_EMPINTERP, &dummyoffset);
+               vm_printuel(&vm->data, (vecidx), PO_TRACE_EMPINTERP, &dummyoffset);
                trace_empinterpmsg(")\n");});
 
          vmvec->len++;
@@ -1221,7 +1260,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          DEBUGVMRUN_EXEC({print_symiter(symiter, vm); DEBUGVMRUN("%s", "\n"); })
 
-         status = gms_read_symbol(&vm->data, symiter);
+         status = vm_gms_read_symbol(&vm->data, symiter);
          if (status != OK) { goto _exit; }
 
          break;
@@ -1333,9 +1372,9 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
 
          vm->data.linklabels = linklabels_cpy;
-         unsigned num_var = linklabels_cpy->num_var;
-         if (num_var > 0) {
-            REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->num_var);
+         unsigned nvaridxs = linklabels_cpy->nvaridxs;
+         if (nvaridxs > 0) {
+            REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->nvaridxs);
          }
 
          DEBUGVMRUN("\n");
@@ -1371,14 +1410,14 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          /* This is a dummy read. Otherwise the VM dissassembler is lost */
          uint8_t nargs = READ_BYTE(vm);
-         assert(linklabels->num_var == nargs);
+         assert(linklabels->nvaridxs == nargs);
 
          int *uels = NULL;
          if (nargs > 0) {
             S_CHECK_EXIT(scratchint_ensure(&vm->data.e_data, nargs));
             uels = vm->data.e_data.data;
 
-            for (unsigned i = 0; i < linklabels->num_var; ++i) {
+            for (unsigned i = 0; i < linklabels->nvaridxs; ++i) {
                uint8_t slot = READ_BYTE(vm);
                int uel_lidx = AS_INT(vm->locals[slot]);
                uels[i] = uel_lidx;
@@ -1393,11 +1432,12 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          S_CHECK_EXIT(linklabels_add(linklabels, uels, coeff, vi));
 
-         DEBUGVMRUN("#%u: ", linklabels->num_children-1);
-         DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < linklabels->num_var; ++i) {
+         DEBUGVMRUN("#%u: ", linklabels->nchildren-1);
+         DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < linklabels->nvaridxs; ++i) {
             int dummy; if (i == 0) {DEBUGVMRUN("(");}
-            dct_printuel(vm->data.dct, uels[i], PO_TRACE_EMPINTERP, &dummy);
-            if (i == linklabels->num_var-1) { DEBUGVMRUN(")");}}
+            if (i > 0 ) { DEBUGVMRUN(",");}
+            vm_printuel(&vm->data, uels[i], PO_TRACE_EMPINTERP, &dummy);
+            if (i == linklabels->nvaridxs-1) { DEBUGVMRUN(")");}}
             if (valid_vi(vi)) {DEBUGVMRUN(" vi = %s", mdl_printvarname(vm->data.mdl, vi));}
             if (isfinite(coeff) && coeff != 1.) {DEBUGVMRUN(" c = %e", coeff);}
             });
@@ -1413,7 +1453,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
           * If there are no child, then delete the label
           * --------------------------------------------------------------- */
 
-         if (linklabels->num_children == 0) {
+         if (linklabels->nchildren == 0) {
             // TODO: is there a memory leak here?
             // TEST stochastic program with leaf nodes 
             vm->data.linklabels2arcs->len--;
@@ -1425,9 +1465,9 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
       case OP_LINKLABELS_KEYWORDS_UPDATE: {
          assert(vm->data.linklabels);
          LinkLabels *linklabels = vm->data.linklabels;
-         unsigned num_children = linklabels->num_children;
+         unsigned num_children = linklabels->nchildren;
 
-         if (linklabels->num_children == 0) {
+         if (linklabels->nchildren == 0) {
             errormsg("[empvm] ERROR: empty linklabels!\n");
             status = Error_EMPRuntimeError;
             goto _exit;

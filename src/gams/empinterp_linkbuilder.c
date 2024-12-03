@@ -9,15 +9,15 @@
 #include "printout.h"
 
 LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len,
-                           uint8_t dim, uint8_t num_vars, unsigned max_children)
+                            uint8_t dim, uint8_t nvaridxs, unsigned max_children)
 {
    LinkLabels *link = NULL;
-   CALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+num_vars));
+   CALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+nvaridxs));
 
    // HACK: check that uels_var needs to be of size num_vars.
-   // That is not obvious as TOK_LINKLABELS_SETFROM_LOOPVAR touches .data ...
+   // That is not obvious as OP_LINKLABELS_SETFROM_LOOPVAR touches .data ...
    if (max_children > 0) {
-      MALLOC_EXIT_NULL(link->uels_var, int, (size_t)max_children*num_vars); 
+      MALLOC_EXIT_NULL(link->uels_var, int, (size_t)max_children*nvaridxs); 
       MALLOC_EXIT_NULL(link->vi, rhp_idx, (size_t)max_children); 
       MALLOC_EXIT_NULL(link->coeff, double, (size_t)max_children); 
    } else {
@@ -33,16 +33,16 @@ LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len
       // HACK: what was our thought process here?
 
    default: ;
-      
+
    }
    link->extras = NULL;
 
    link->dim = dim;
-   link->num_var = num_vars;
+   link->nvaridxs = nvaridxs;
    link->label_len = label_len;
 
-   link->num_children = 0;
-   link->max_children = max_children;
+   link->nchildren = 0;
+   link->maxchildren = max_children;
    link->daguid_parent = EMPDAG_UID_NONE;
    link->label = label;
 
@@ -59,16 +59,16 @@ LinkLabels * linklabels_dup(const LinkLabels * link_src)
 {
    LinkLabels *link_cpy = NULL;
    uint8_t dim = link_src->dim;
-   uint8_t num_var = link_src->num_var;
-   unsigned max_children = link_src->max_children;
+   uint8_t nvaridxs = link_src->nvaridxs;
+   unsigned max_children = link_src->maxchildren;
 
-   size_t data_size = sizeof(int) * (dim + num_var);
+   size_t data_size = sizeof(int) * (dim + nvaridxs);
    MALLOCBYTES_NULL(link_cpy, LinkLabels, sizeof(LinkLabels) + data_size);
 
    memcpy(link_cpy, link_src, sizeof(LinkLabels) + data_size);
 
    if (max_children > 0) {
-      MALLOC_EXIT_NULL(link_cpy->uels_var, int, (size_t)num_var*max_children);
+      MALLOC_EXIT_NULL(link_cpy->uels_var, int, (size_t)nvaridxs*max_children);
       MALLOC_EXIT_NULL(link_cpy->vi, rhp_idx, max_children);
       MALLOC_EXIT_NULL(link_cpy->coeff, double, max_children);
 
@@ -88,7 +88,7 @@ LinkLabel * linklabels_dupaslabel(const LinkLabels * link_src, double coeff, rhp
 {
    LinkLabel *link;
    uint8_t dim = link_src->dim;
-   assert(link_src->num_children <= 1);
+   assert(link_src->nchildren <= 1);
    MALLOCBYTES_NULL(link, LinkLabel, sizeof(LinkLabel) + sizeof(int) * dim);
 
    link->dim = dim;
@@ -106,11 +106,11 @@ LinkLabel * linklabels_dupaslabel(const LinkLabels * link_src, double coeff, rhp
 
 int linklabels_add(LinkLabels *link, int *uels, double coeff, rhp_idx vi)
 {
-   uint8_t num_var = link->num_var;
-   unsigned num_children = link->num_children, max_children = link->max_children;
+   uint8_t num_var = link->nvaridxs;
+   unsigned num_children = link->nchildren, max_children = link->maxchildren;
 
    if (num_children >= max_children) {
-      unsigned size = link->max_children = MAX(2*max_children, num_children + 10);
+      unsigned size = link->maxchildren = MAX(2*max_children, num_children + 10);
       if (num_var > 0) {
          size_t size_data = (num_var*size);
          REALLOC_(link->uels_var, int, size_data);
@@ -127,7 +127,7 @@ int linklabels_add(LinkLabels *link, int *uels, double coeff, rhp_idx vi)
    link->coeff[num_children] = coeff;
    link->vi[num_children] = vi;
 
-   link->num_children++;
+   link->nchildren++;
 
    return OK;
 }
@@ -170,7 +170,7 @@ DualsLabel* dualslabel_new(const char *label, unsigned label_len, uint8_t dim,
    CALLOCBYTES_EXIT_NULL(dualslabel, DualsLabel, sizeof(*dualslabel) + sizeof(int) * (dim+num_vars));
 
    dualslabel->dim = dim;
-   dualslabel->num_var = num_vars;
+   dualslabel->nvaridxs = num_vars;
    dualslabel->label = label;
    dualslabel->label_len = label_len;
 
@@ -193,7 +193,7 @@ _exit:
 
 int dualslabel_add(DualsLabel* dualslabel, int *uels, uint8_t nuels, mpid_t mpid_dual)
 {
-   uint8_t num_var = dualslabel->num_var;
+   uint8_t num_var = dualslabel->nvaridxs;
    /* The MpIdArray len and max is used to keep track of the other data arrays as well */
    unsigned num_children = dualslabel->mpid_duals.len, max_children = dualslabel->mpid_duals.max;
 

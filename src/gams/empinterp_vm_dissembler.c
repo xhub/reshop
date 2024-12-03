@@ -3,6 +3,8 @@
 #include "empinterp_vm_utils.h"
 #include "printout.h"
 
+#include "dctmcc.h"
+
 #define READ_BYTE(vm) (unsigned)(*vm->code.ip++)
 #define READ_SHORT(vm) \
    (vm->code.ip += 2, \
@@ -284,16 +286,15 @@ static inline int valid_vmidx(unsigned idx, unsigned len, const char* setname)
 
 #define VM_CHK(EXPR) { int status42 = (EXPR); if (status42) status = status42; }
 
-int empvm_dissassemble(EmpVm *vm, unsigned mode)
+static void print_globals(EmpVm *vm, unsigned mode)
 {
-   uint8_t *instr_start = vm->code.ip;
-   int status = OK;
-
    printstr(mode, "\nGlobal table\n");
 
    for (unsigned i = 0, len = vm->globals.len; i < len; ++i) {
+
       VmValue v = vm->globals.arr[i];
       printout(mode, "[%5d] %20s", i, vmval_typename(v));
+
       if (IS_STR(v)) { printout(mode, "%30s\n", AS_STR(v));
       } else if (IS_REGENTRY(v)) {
          DagRegisterEntry *regentry = AS_REGENTRY(v);
@@ -305,16 +306,25 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          VmGmsSymIterator *symiter = AS_GMSSYMITER(v);
          IdentData *sym = &symiter->ident;
          printout(mode, "%30.*s\n", sym->lexeme.len, sym->lexeme.start);
-      } else if (IS_INT(v)) {  printout(mode, "%30d\n", AS_INT(v));
+      } else if (IS_INT(v))  {  printout(mode, "%30d\n", AS_INT(v));
       } else if (IS_UINT(v)) {  printout(mode, "%30u\n", AS_UINT(v));
       } else {
          printstr(mode, "\n");
       }
 
    }
+}
+
+int empvm_dissassemble(EmpVm *vm, unsigned mode)
+{
+   uint8_t *instr_start = vm->code.ip;
+   int status = OK;
+
+   print_globals(vm, mode);
 
    printout(mode, "\n\n%7s  %7s  %28s %20s %20s %20s\n", "op cnt", "addr", "OPCODE NAME",
             "ARG1", "ARG2", "ARG3");
+
    for (unsigned i = 0, len = vm->code.len, cnt = 0; cnt < len; ++i, cnt = vm->code.ip-instr_start) {
       uint8_t opcode = READ_BYTE(vm);
       if (opcode >= OP_MAXCODE) {
@@ -528,7 +538,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
             VM_CHK(valid_vmidx(val, vm->globals.len, "vm->globals"));
             VmValue v = vm->globals.arr[val];
             if (!IS_ARCOBJ(v)) {
-               error("\n\nERROR: argument should be an edge object, it is rather a %s\n\n", vmval_typename(v));
+               error("\n\nERROR: argument should be an arc object, it is rather a %s\n\n", vmval_typename(v));
                status = Error_EMPRuntimeError;
             }
             print_vmval_short(mode, v, vm);

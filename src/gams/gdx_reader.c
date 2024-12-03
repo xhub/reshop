@@ -467,13 +467,12 @@ _exit:
    return status;
 }
 
-void print_vector(const Lequ * restrict vector, unsigned mode, void *dct)
+void print_vector(const Lequ * restrict vector, unsigned mode, void *gmd)
 {
-   char quote = ' ';
    char buf[GMS_SSSIZE];
    for (unsigned i = 0, len = vector->len; i < len; ++i) {
       int idx = vector->vis[i];
-      dctUelLabel(dct, idx, &quote, buf, sizeof(buf));
+      gmdGetUelByIndex(gmd, idx, buf);
       printout(mode, "[%5d] %e %s\n", idx, vector->coeffs[i], buf);
    }
 }

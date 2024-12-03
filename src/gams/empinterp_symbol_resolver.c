@@ -12,6 +12,103 @@
 #include "gmdcc.h"
 #include "var.h"
 
+static NONNULL
+void print_help_missing_record_in_equation(const char *symname)
+{
+   int offset;
+   error("[empinterp] %nIn the model instance, the equation '%s' is defined, "
+         "but not with the above tuple.\n", &offset, symname);
+   errormsg("\nThere can be numerous causes to this error, here is one:\n"
+            "This particular equation has not been defined due to a restriction "
+            "over the domain of definition via the dollar control '$(...)'.\n\n"
+            "Please check your model statement or implement a restriction with the "
+            "conditional '$(...)' after the symbol.\n");
+}
+
+static NONNULL
+void print_help_missing_equation(const char *symname)
+{
+   int offset;
+   error("[empinterp] %nIn the model instance, the variable '%s' is defined, "
+         "but not with the above tuple.\n", &offset, symname);
+   errormsg("\nThere can be numerous causes to this error, here is one:\n"
+            "The equation was not included in the GAMS 'model' definition\n");
+}
+
+static NONNULL
+void print_help_missing_record_in_parameter(const char *symname)
+{
+   int offset;
+   error("[empinterp] %nIn parameter '%s', no record found for the above tuple.\n",
+         &offset, symname);
+}
+
+static NONNULL
+void print_help_missing_record_in_variable(const char *symname)
+{
+   int offset;
+   error("[empinterp] %nIn the model instance, the variable '%s' is defined, "
+         "but not with the above tuple.\n", &offset, symname);
+   errormsg("\nThere can be numerous causes to this error, like:\n"
+            "- The equation where the variable appears is not included in the "
+            "GAMS 'model' statement\n"
+            "- The equation where this variable could appear has not been defined, "
+            "due to a restriction over the domain of definition via the dollar "
+            "control '$(...)'.\n\n"
+            "Please check your model statement or implement a restriction with the "
+            "conditional '$(...)' after the symbol.\n");
+}
+
+static NONNULL
+void print_help_missing_variable(const char *symname)
+{
+   int offset;
+   error("[empinterp] %nIn the model instance, the variable '%s' is absent.\n",
+         &offset, symname);
+   errormsg("\nThere can be numerous causes to this error, here is one:\n"
+            "The equation where the variable appears is not included in the "
+            "GAMS 'model' statement\n");
+}
+
+static NONNULL
+int print_help(TokenType toktype, uint8_t dim, const char *symname)
+{
+   switch (toktype) {
+   case TOK_GMS_VAR:
+      if (dim > 0) {
+         print_help_missing_record_in_variable(symname);
+      } else { /* This should not get executed ... */
+         assert(0 && "investigate");
+         print_help_missing_variable(symname);
+      }
+      break;
+   case TOK_GMS_EQU:
+      if (dim > 0) {
+         print_help_missing_record_in_equation(symname);
+      } else { /* This should not get executed ... */
+         assert(0 && "investigate");
+         print_help_missing_equation(symname);
+      }
+      break;
+   case TOK_GMS_PARAM:
+      if (dim > 0) {
+         print_help_missing_record_in_parameter(symname);
+      } else { /* Odd one: missing symbol should not happen here */
+         assert(0 && "investigate");
+         print_help_missing_equation(symname);
+      }
+      break;
+   case TOK_GMS_SET:
+      assert(0 && "investigate");
+      break;
+   default:
+      assert(0 && "investigate");
+      return error_runtime();
+   }
+
+   return OK;
+}
+
 int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
 {
    int symidx, *uels;
@@ -74,20 +171,26 @@ int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
       void *fh = dctFindFirstRowCol(dct, symidx, uels, &idx);
       if (idx < 0) {
          dctSymName(dct, symidx, buf, sizeof(buf));
-         error("[empinterp] ERROR: in the DCT, could not find record for symbol %s", buf);
+         error("[empinterp] DCT ERROR: could not find record for symbol %s", buf);
          if (dim > 1 || (dim == 1 && uels[0] > 0)) {
             errormsg("(");
+
             for (unsigned i = 0; i < dim; ++i) {
                char quote = '\'';
                int uel = uels[i];
-               if (uel > 0) { dctUelLabel(dct, uels[i], &quote, buf, sizeof(buf));
-               } else { strcpy(buf, "'*'"); }
                if (i > 0) { errormsg(","); }
-               error("%c%s%c", quote, buf, quote);
+               if (uel > 0) {
+                  dctUelLabel(dct, uels[i], &quote, buf, sizeof(buf));
+                  error("%c%s%c", quote, buf, quote);
+               } else { errormsg(":"); }
             }
+
             errormsg(")");
          }
-         errormsg("\n");
+         errormsg("\n\n");
+
+         dctSymName(dct, symidx, buf, sizeof(buf));
+         S_CHECK(print_help(toktype, dim, buf));
 
          return Error_SymbolNotInTheGamsRim;
       }
@@ -161,7 +264,7 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
    assert(uel <= dctNUels(dct));
 
    if (uel == 0) {
-      printout(mode, "'*'%n", offset);
+      printout(mode, ":%n", offset);
    } else if (dctUelLabel(dct, uel, quote, buf, sizeof(buf))) {
       printout(mode, "UEL#%d%n", uel, offset);
    } else if (quote[0] != ' ') {
@@ -171,8 +274,42 @@ void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset)
    }
 }
 
+void gmd_printuelwithidx(gmdHandle_t gmd, int uel, unsigned mode)
+{
+   char uelstr[GMS_SSSIZE] = " ";
+
+#ifndef NDEBUG
+   int nuels;
+   GMD_CHK(gmdInfo, gmd, GMD_NRUELS, &nuels, NULL, NULL);
+   assert(uel <= nuels);
+#endif
+
+   gmdGetUelByIndex(gmd, uel, uelstr);
+   printout(mode, "[%5d] '%s'", uel, uelstr);
+}
+
+void gmd_printuel(gmdHandle_t gmd, int uel, unsigned mode, int *offset)
+{
+   char uelstr[GMS_SSSIZE] = " ";
+
+#ifndef NDEBUG
+   int nuels;
+   GMD_CHK(gmdInfo, gmd, GMD_NRUELS, &nuels, NULL, NULL);
+   assert(uel <= nuels);
+#endif
+
+   if (uel == 0) {
+      printout(mode, ":%n", offset);
+   } else if (gmdGetUelByIndex(gmd, uel, uelstr)) {
+      printout(mode, "UEL#%d%n", uel, offset);
+   } else {
+      printout(mode, "'%s'%n", uelstr, offset);
+   }
+}
+
 // HACK
-int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, const char *symname)
+int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data,
+             const char *symname)
 {
    UNUSED int symnr, *uels;
    unsigned dim;
@@ -206,32 +343,22 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
       trace_empinterp("[GMD] resolving GAMS symbol '%s' of type %s and dim %u.\n",
                       buf, toktype2str(toktype), dim);
       if (dim > 1 || (dim == 1 && uels[0] > 0)) {
-         // HACK: this is wrong
          trace_empinterp("[GMD] UELs values are:\n");
          for (unsigned i = 0; i < dim; ++i) {
             int uel = uels[i];
-            if (uel > 0) { if (dct) {
-                  char quote_[] = " ";
-                  if (dctUelLabel(dct, uel, quote_, buf, sizeof(buf))) {
-                     const char err_uel[] = "invalid UEL";
-                     memcpy(buf, err_uel, sizeof(err_uel));
-                  }
-               } else { GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf); }
+            if (uel > 0) {
+               GMD_CHK(gmdGetUelByIndex, gmd, uels[i], buf);
             } else { strcpy(buf, "wildcard (:)"); }
             trace_empinterp("%*c [%5d] %c%s%c\n", 11, ' ', uel, quote, buf, quote);
          }
       }
    }
 
-   bool equvar;
    switch (toktype) {
    case TOK_GMS_VAR:
    case TOK_GMS_EQU:
-      equvar = true;
-      break;
    case TOK_GMS_SET:
    case TOK_GMS_PARAM:
-      equvar = false;
       break;
    default:
       error("[empinterp] Unexpected token type '%s'\n", toktype2str(toktype));
@@ -245,34 +372,34 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
    *   and be done. THIS IS NOT POSSIBLE RIGHT NOW IN GMD
    * ---------------------------------------------------------------------- */
 
-   if (full_records && equvar && dct && data->type == GmsSymIteratorTypeImm) {
-      int dctsymidx = dctSymIndex(dct, symname);
-      if (dctsymidx <= 0) {
-         error("[DCT] ERROR: could not find symbol '%s'\n", symname);
-         return Error_SymbolNotInTheGamsRim;
-      }
-
-      int idx;
-      void *fh = dctFindFirstRowCol(dct, dctsymidx, uels, &idx);
-
-      if (idx < 0) {
-         error("[DCT] ERROR: could not find any record for symbol %s", symname);
-         return Error_SymbolNotInTheGamsRim;
-      }
- 
-      int size = dctSymEntries(dct, dctsymidx);
-      assert(size >= 0);
-
-      dctFindClose(dct, fh);
-
-      if (toktype == TOK_GMS_VAR) {
-         avar_setcompact(data->payload.v, size, idx);
-      } else {
-         aequ_setcompact(data->payload.e, size, idx);
-      }
-
-      return OK;
-   }
+//   if (full_records && equvar && dct && data->type == GmsSymIteratorTypeImm) {
+//      int dctsymidx = dctSymIndex(dct, symname);
+//      if (dctsymidx <= 0) {
+//         error("[DCT] ERROR: could not find symbol '%s'\n", symname);
+//         return Error_SymbolNotInTheGamsRim;
+//      }
+//
+//      int idx;
+//      void *fh = dctFindFirstRowCol(dct, dctsymidx, uels, &idx);
+//
+//      if (idx < 0) {
+//         error("[DCT] ERROR: could not find any record for symbol %s", symname);
+//         return Error_SymbolNotInTheGamsRim;
+//      }
+// 
+//      int size = dctSymEntries(dct, dctsymidx);
+//      assert(size >= 0);
+//
+//      dctFindClose(dct, fh);
+//
+//      if (toktype == TOK_GMS_VAR) {
+//         avar_setcompact(data->payload.v, size, idx);
+//      } else {
+//         aequ_setcompact(data->payload.e, size, idx);
+//      }
+//
+//      return OK;
+//   }
 
   /* ----------------------------------------------------------------------
    * TODO: use symnr!
@@ -282,7 +409,7 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
    bool single_record = true;
    data->allrecs = true;
    char  uels_str[GLOBAL_MAX_INDEX_DIM][GLOBAL_UEL_IDENT_SIZE];
-   char *uels_strp[GLOBAL_MAX_INDEX_DIM];
+   const char *uels_strp[GLOBAL_MAX_INDEX_DIM];
 
    if (!full_records) {
       /* initialize UELs */
@@ -295,22 +422,7 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
             continue;
          }
 
-         /* ----------------------------------------------------------------
-          * The uels indices always come from the CMEX gmd. If we read the
-          * DCT gmd, we need to translate.
-          * ---------------------------------------------------------------- */
-
-         if (equvar) {
-            assert(dct);
-            char quote_[] = " ";
-            if (dctUelLabel(dct, uels[i], quote_, uels_strp[i], GLOBAL_UEL_IDENT_SIZE)) {
-               error("[DCT] Could not find UEL #%d\n", uels[i]);
-               return Error_EMPRuntimeError;
-            } 
-
-         } else {
             GMD_CHK(gmdGetUelByIndex, gmd, uels[i], uels_str[i]);
-         }
 
          if (uels[i] != 0) { data->allrecs = false; }
       }
@@ -319,7 +431,9 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
    }
 
    if (single_record) {
-      GMD_FIND_CHK(gmdFindRecord, gmd, symptr, (const char **)uels_strp, &symiterptr);
+      if(!gmdFindRecord(gmd, symptr, (const char **)uels_strp, &symiterptr)) {
+         goto missing_record_in_symbol;
+      }
 
       double vals[GMS_VAL_MAX];
       int dummyUelIdx[GLOBAL_MAX_INDEX_DIM];
@@ -348,9 +462,13 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
    } else { /* Not a single record */
 
       if (full_records) {
-         GMD_FIND_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
+         if (!gmdFindFirstRecord(gmd, symptr, &symiterptr)) {
+            goto missing_record_in_symbol;
+         }
       } else {
-         GMD_FIND_CHK(gmdFindFirstRecordSlice, gmd, symptr, (const char **)uels_strp, &symiterptr);
+         if (!gmdFindFirstRecordSlice(gmd, symptr, uels_strp, &symiterptr)) {
+            goto missing_record_in_symbol;
+         }
       }
 
       /* ------------------------------------------------------------------
@@ -429,7 +547,8 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
       }
    }
 
-   /* HACK: in Imm mode, we expect the content of a variable and equation to be in */
+   /* HACK: in Imm mode, we expect the content of a variable and equation to be in
+    * different data structure than in VM mode ... */
    if (data->type != GmsSymIteratorTypeImm) { return OK; }
 
    switch (toktype) {
@@ -450,6 +569,31 @@ int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, c
    }
 
    return OK;
+
+missing_record_in_symbol: ;
+   GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, buf);
+   error("[empinterp] ERROR: in the GMD, could not find record for symbol %s", buf);
+   if (dim > 1 || (dim == 1 && uels[0] > 0)) {
+      errormsg("(");
+      for (unsigned i = 0; i < dim; ++i) {
+         char quote = '\'';
+         int uel = uels[i];
+         if (uel > 0) { GMD_CHK(gmdGetUelByIndex, gmd, uel, buf);
+         } else { strcpy(buf, "*"); }
+         if (i > 0) { errormsg(","); }
+         error("%c%s%c", quote, buf, quote);
+      }
+      errormsg(")");
+   }
+   errormsg("\n");
+  
+   int offset;
+   error("[gmd] GMD errors: %n\n", &offset);
+   gmdGetLastError(gmd, buf);
+   error("%*s%s\n", offset, "", buf);
+
+   S_CHECK(print_help(toktype, dim, symname));
+
+   return Error_SymbolNotInTheGamsRim;
+
 }
-
-

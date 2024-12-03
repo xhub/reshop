@@ -6,6 +6,7 @@
 #include "empinterp_utils.h"
 #include "empparser_priv.h"
 #include "empparser_utils.h"
+#include "gamsapi_utils.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl.h"
@@ -15,6 +16,7 @@
 #include "toplayer_utils.h"
 
 #include "dctmcc.h"
+#include "gmdcc.h"
 
 //NOLINTBEGIN
 UNUSED static int imm_gms_resolve_param(Interpreter* restrict interp, unsigned * restrict p)
@@ -58,6 +60,8 @@ int parser_filter_set(Interpreter* restrict interp, unsigned i, int val)
    }
 
    assert(interp->gms_sym_iterator.active && i < GMS_MAX_INDEX_DIM);
+
+   // TODO IDX  revisit
    interp->gms_sym_iterator.uels[i] = val;
 
    if (val > 0) {
@@ -138,11 +142,15 @@ static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
       IdentData *ident = &idents[i];
       switch (ident->type) {
       case IdentUEL: {
-         int uelidx = (int)ident->idx;
-         uels[i] = uelidx;
+         int uelidx = ident->idx;
          if (uelidx > 0) {
             symiter->compact = false;
+         } else if (uelidx < 0) {
+            error("[empinterp] ERROR while getting UEL index for %s ident '%.*s'\n",
+                  ident_fmtargs(ident));
+            return -uelidx;
          }
+         uels[i] = uelidx;
          break;
       case IdentSymbolSlice:
          uels[i] = 0;
@@ -187,7 +195,7 @@ static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
       char symname[GMS_SSSIZE];
       memcpy(symname, symiter->ident.lexeme.start, symiter->ident.lexeme.len);
       symname[symiter->ident.lexeme.len] = 0;
-      return gmd_read(gmddct, dct, &data, symname);
+      return gmd_read(gmddct, &data, symname);
    }
 
    return dct_read_equvar(dct, &data);
@@ -628,8 +636,6 @@ const InterpreterOps interp_ops_imm = {
    .ccflib_new            = imm_mp_ccflib_new,
    .ccflib_finalize       = imm_mp_ccflib_finalize,
    .ctr_markequasflipped  = imm_ctr_markequasflipped,
-   .gms_get_uelidx        = get_uelidx_via_dct,
-   .gms_get_uelstr        = get_uelstr_via_dct,
    .identaslabels         = imm_identaslabels,
    .mp_addcons            = imm_mp_addcons,
    .mp_addvars            = imm_mp_addvars,

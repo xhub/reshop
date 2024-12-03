@@ -168,6 +168,11 @@ static inline uint8_t gmsindices_nargs(GmsIndicesData *indices)
    return indices->nargs != UINT8_MAX ? indices->nargs : 0;
 }
 
+static inline uint8_t gmsindices_nvaridxs(GmsIndicesData *indices)
+{
+   return indices->num_sets + indices->num_localsets + indices->num_loopiterators;
+}
+
 static inline void gmsindices_deactivate(GmsIndicesData *indices)
 {
    if (indices->nargs == UINT8_MAX) { assert(0 && "indices not active"); }
@@ -311,5 +316,22 @@ static inline int empinterp_ops_dispatch(Interpreter *interp, unsigned *p,
 #define ident_fmtargs(ident)   identtype2str((ident)->type), lexeme_fmtargs((ident)->lexeme)
 #define tok_fmtargs(tok)       (tok)->len, (tok)->start
 
+NONNULL static inline void interp_set_last_gms_symbol(Interpreter *interp, IdentData * restrict ident) {
+   interp->last_symbol.origin = ident->origin;
+   interp->last_symbol.lexeme = ident->lexeme;
+   interp->last_symbol.type = ident->type;
+}
+
+NONNULL static inline void interp_set_last_empdag_node_symbol(Interpreter *interp, const char *label, unsigned label_len) {
+   interp->last_symbol.lexeme.start = label;
+   interp->last_symbol.lexeme.len = label_len;
+   interp->last_symbol.origin = IdentOriginEmpDag;
+   interp->last_symbol.type = IdentEmpDagLabel;
+}
+
+NONNULL static inline void interp_reset_last_symbol(Interpreter *interp)
+{
+   interp->last_symbol.type = IdentNotFound;
+}
 #endif // !EMPINTERP_PRIV_H
 

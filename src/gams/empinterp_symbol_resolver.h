@@ -43,12 +43,17 @@ typedef struct {
    } payload;
 } GmsResolveData;
 
+typedef struct {
+   gmdHandle_t gmd;
+   gmdHandle_t gmddct;
+   dctHandle_t dct; // HACK delete DCT
+} GmsDataSources;
+
 int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data) NONNULL;
 void dct_printuel(dctHandle_t dct, int uel, unsigned mode, int *offset);
 void dct_printuelwithidx(dctHandle_t dct, int uel, unsigned mode) NONNULL;
 
-//HACK NONNULL_AT
-int gmd_read(gmdHandle_t gmd, dctHandle_t dct, GmsResolveData * restrict data, const char *symname) NONNULL_AT(1, 3, 4);
+int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data, const char *symname) NONNULL;
 void gmd_printuel(gmdHandle_t gmd, int uel, unsigned mode, int *offset);
 void gmd_printuelwithidx(gmdHandle_t gmd, int uel, unsigned mode) NONNULL;
 

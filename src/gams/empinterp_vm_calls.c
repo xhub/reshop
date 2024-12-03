@@ -215,9 +215,9 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
 
    if (len > 0) {
       LinkLabels *linklabels = data->linklabels2arcs->arr[len-1];
-      assert(linklabels->num_children > 0);
+      assert(linklabels->nchildren > 0);
       has_child = linklabels->daguid_parent == ccflib_uid;
-      if (has_child) { num_children = linklabels->num_children; }
+      if (has_child) { num_children = linklabels->nchildren; }
    }
 
    len = data->linklabel2arc->len;

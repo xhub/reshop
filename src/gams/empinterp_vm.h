@@ -225,7 +225,7 @@ typedef struct {
    ArcVFObjArray arcvfobjs;
    daguid_t uid_grandparent;    /**< uid of the grand parent node            */
    daguid_t uid_parent;         /**< uid of the parent node                  */
-   int *linklabel_ws;  /* why is this not iscratch ?*/
+   int *linklabel_ws;           /* why is this not iscratch ?*/
 
    /* Borrowed data follow */
    Model *mdl;

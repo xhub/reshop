@@ -46,6 +46,6 @@ int gdx_reader_getsubset(GdxReader * restrict reader, GdxMultiSet * restrict set
                          unsigned pos, IntArray * restrict res) NONNULL;
 int gdx_reader_boolean_test(GdxReader * restrict reader, struct vm_gms_sym_iterator *filter,
                             bool *res) NONNULL;
-void print_vector(const Lequ * restrict vector, unsigned mode, void *dct) NONNULL;
+void print_vector(const Lequ * restrict vector, unsigned mode, void *gmd) NONNULL;
 
 #endif // !RHP_GDX_READER_H

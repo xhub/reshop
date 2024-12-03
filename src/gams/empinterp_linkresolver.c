@@ -336,7 +336,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
       LinkLabels *link = labels2resolve->arr[i];
 
-      unsigned num_children = link->num_children;
+      unsigned num_children = link->nchildren;
 
       if (num_children == 0) {
          error("[empinterp] ERROR: empty daglabel for node '%s'.\n",
@@ -376,14 +376,14 @@ static int dag_resolve_arc_labels(Interpreter *interp)
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
       LinkLabels *link = labels2resolve->arr[i];
       int * restrict child = link->uels_var;
-      uint8_t num_vars = link->num_var;
+      uint8_t num_vars = link->nvaridxs;
       uint8_t dim = link->dim;
       daguid_t daguid_src = link->daguid_parent;
       assert(daguid_src != EMPDAG_UID_NONE);
 
       UIntArray *arcs = &empdag->mps.Carcs[i];
 
-      unsigned num_children = link->num_children;
+      unsigned num_children = link->nchildren;
 
       const double * restrict coeffs;
       const rhp_idx * restrict vis;
@@ -396,9 +396,9 @@ static int dag_resolve_arc_labels(Interpreter *interp)
          continue;
       }
 
-      ArcDat arcdat = {.type = link->linktype, 
-         .labeldat = {.dim = link->dim,
-         .label_len = link->label_len, .label = link->label}};
+      ArcDat arcdat = {
+         .type = link->linktype,
+         .labeldat = {.dim = link->dim, .label_len = link->label_len, .label = link->label}};
       memcpy(arcdat.labeldat.uels, link->data, sizeof(int)*dim);
 
       /* Reserve the space for the edges */
@@ -564,7 +564,7 @@ static int dag_resolve_duals_label(Interpreter *interp)
       DualsLabel * restrict dual = dualslabels->arr[i];
       uint8_t dim = dual->dim;
       int * restrict child_uels_var = dual->uels_var;
-      uint8_t num_vars = dual->num_var;
+      uint8_t num_vars = dual->nvaridxs;
       unsigned num_children = dual->mpid_duals.len;
 
       LabelDat labeldat = {.dim = dim, .label_len = dual->label_len, .label = dual->label};

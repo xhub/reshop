@@ -1,6 +1,7 @@
 
 #include "compat.h"
 #include "empinterp_utils.h"
+#include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
 #include "empinterp_vm_utils.h"
 #include "empparser.h"
@@ -19,7 +20,7 @@
  * Set the label name to basename(uel1_name, uel2_name, uel3_name)
  *
  * @param entry           the entry with basename and uels
- * @param interp            the handle to the dictionary (dct)
+ * @param interp          the handle to the dictionary (dct)
  * @param[out] labelname  the generated labelname
  *
  * @return                the error code
@@ -42,7 +43,7 @@ int genlabelname(DagRegisterEntry * restrict entry, Interpreter *interp,
    size_t size = strsize;
 
    for (unsigned i = 0, len = entry->dim; i < len; ++i) {
-      interp->ops->gms_get_uelstr(interp, entry->uels[i], sizeof(uels[i]), uels[i]);
+      S_CHECK(get_uelstr_for_empdag_node(interp, entry->uels[i], sizeof(uels[i]), uels[i]));
       uels_len[i] = strlen(uels[i]);
       strsize += uels_len[i];
    }

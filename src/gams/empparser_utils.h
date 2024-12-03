@@ -29,9 +29,9 @@ typedef struct {
 } OperatorKeyword;
 
 int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
-                     GmsIndicesData * restrict idxdata) NONNULL;
+                     GmsIndicesData * restrict gmsindices) NONNULL;
 int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
-                          GmsIndicesData * restrict idxdata);
+                          GmsIndicesData * restrict gmsindices);
 
 int resolve_tokasident(Interpreter *interp, IdentData *ident) NONNULL;
 

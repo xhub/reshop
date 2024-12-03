@@ -8,6 +8,7 @@ typedef struct gms_indices_data GmsIndicesData;
 typedef struct interpreter Interpreter;
 typedef struct linklabel DagRegisterEntry;
 typedef struct gms_sym_iterator GmsSymIterator;
+typedef struct vm_gms_sym_iterator VmGmsSymIterator;
 typedef struct emptok Token;
 
 typedef struct linklabels LinkLabels;
@@ -17,4 +18,10 @@ typedef struct dual_label DualLabel;
 
 typedef struct dual_operator_data DualOperatorData;
 typedef struct smoothing_operator_data SmoothingOperatorData;
+
+
+/* For convenience */
+typedef struct gmdRec * gmdHandle_t;
+typedef struct dctRec * dctHandle_t;
+
 #endif

@@ -17,10 +17,10 @@ typedef struct {
 } IteratorData;
 
 typedef struct {
-   unsigned size;          /**< Number of true iterators */
-   unsigned loopobj_gidx;  /**< global index for the object inducing the loop */
-   EmpVmOpCode loopobj_opcode; /**< Update opcode for the loop object         */
-   uint8_t iteridx2dim[GMS_MAX_INDEX_DIM]; /**< Iterators index to gams indices */
+   unsigned size;          /**< Number of true iterators  */
+   unsigned loopobj_gidx;  /**< global index for the object inducing the loop      */
+   EmpVmOpCode loopobj_opcode; /**< Update opcode for the loop object              */
+   uint8_t varidxs2pos[GMS_MAX_INDEX_DIM]; /**< Position of the variable iterators */
    IdentData idents[GMS_MAX_INDEX_DIM];
    IteratorData iters[GMS_MAX_INDEX_DIM];
 } LoopIterators;

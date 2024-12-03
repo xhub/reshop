@@ -245,20 +245,24 @@ typedef struct linklabels_list {
  * can't store all runtime allocated 
  * --------------------------------------------------------------------- */
 
+/** Link label structure
+ *
+ *
+ */
 typedef struct linklabels {
-   uint8_t dim;
-   uint8_t num_var;
-   LinkType linktype;
-   uint16_t label_len;     /**< label length */
-   unsigned num_children;
-   unsigned max_children;  /**< Max number of children  */
-   daguid_t daguid_parent; /**< daguid ot the parent */
-   const char *label;      /**< Label                 */
-   int *uels_var;          /**< uel_var[num_var] per child */
-   rhp_idx *vi;            /**< Optional variable index    */
-   double *coeff;          /**< Optional coefficient       */
-   void **extras;           /**< extra objects              */
-   int data[];              /**< Layout: uels[dim] + pos[num_vars]*/
+   uint8_t dim;            /**< Label dimension                     */
+   uint8_t nvaridxs;       /**< Number of variable indices          */
+   LinkType linktype;      /**< Linkage type                        */
+   uint16_t label_len;     /**< label length                        */
+   unsigned nchildren;     /**< Number of children                  */
+   unsigned maxchildren;   /**< Max number of children              */
+   daguid_t daguid_parent; /**< daguid ot the parent                */
+   const char *label;      /**< Label                               */
+   int *uels_var;          /**< uel_var[nvaridxs] per child         */
+   rhp_idx *vi;            /**< Optional variable index             */
+   double *coeff;          /**< Optional coefficient                */
+   void **extras;           /**< extra objects                      */
+   int data[];              /**< Layout: uels[dim] + pos[nvaridxs]  */
 } LinkLabels;
 
 typedef struct linklabel {
@@ -275,8 +279,8 @@ typedef struct linklabel {
 /** The DualLabels data structure links EmpDag record with mpids.
  * Given thelabel(...), we link it to already created mpids */
 typedef struct dual_labels {
-   uint8_t dim;
-   uint8_t num_var;
+   uint8_t dim;             /**< Dimension */
+   uint8_t nvaridxs;        /**< Number of variable indices               */
    uint16_t label_len;       /**< Label length */
    const char *label;        /**< Label of the primal MP */
    int *uels_var;            /**< uel_var[num_var] per child */
@@ -418,8 +422,9 @@ typedef struct interpreter {
    Token pre;
 
    /* Parser state info */
-   InterpParsedKwds state;
-   KeywordLexemeInfo last_kw_info;
+   InterpParsedKwds   state;
+   KeywordLexemeInfo  last_kw_info;
+   IdentData          last_symbol;   /**< Last seen symbol (used for UEL indices) */
    InterpFinalization finalize;
 
    /* Parser state info */
@@ -466,8 +471,6 @@ typedef struct interp_ops {
    int (*ctr_markequasflipped) (Interpreter *restrict interp);
    int (*identaslabels)        (Interpreter *interp, unsigned * p, LinkType edge_type);
    int (*gms_add_uel)          (Interpreter *restrict interp, const Token *tok, unsigned i); 
-   int (*gms_get_uelidx)       (Interpreter *interp, const char *uelstr, int *uelidx);
-   int (*gms_get_uelstr)       (Interpreter *interp, int uelidx, unsigned uelstrlen, char *uelstr);
    int (*label_getidentstr)    (Interpreter *restrict interp, const Token *tok, char **ident, unsigned *ident_len);
 
    /* MP functions */
@@ -567,6 +570,5 @@ rhp_idx parser_getequvaridx(const struct interpreter *interp) {
    assert(interp->cur.type == TOK_GMS_VAR || interp->cur.type == TOK_GMS_EQU);
    return interp->cur.payload.idx;
 }
-
 
 #endif /* EMPPARSER_H */
