@@ -40,10 +40,11 @@ test-leg:
 
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
-    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - cp -ra "/cache/gams-installs/$(cat gams_folder_leg.txt)" gamsdir
+    - export GAMSDIR="$(pwd)/gamsdir"
+    #    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
     - export PATH="$GAMSDIR:$PATH"
 
-    - ls -l "$GAMSDIR"/*yaml*
     - rm -f "$GAMSDIR"/gamsconfig.yaml
 
     # Run regular build test
@@ -69,6 +70,8 @@ test-leg:
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
+  after_script:
+    - rm -rf ./gamsdir
 
   artifacts:
     name: unittest-results-linux
@@ -90,13 +93,20 @@ test-debug-leg:
 
     - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
-    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
+    - cp -ra "/cache/gams-installs/$(cat gams_folder_leg.txt)" gamsdir
+    - export GAMSDIR="$(pwd)/gamsdir"
+    # - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
     - export PATH="$GAMSDIR:$PATH"
+
+    - rm -f "$GAMSDIR"/gamsconfig.yaml
 
     - cp build/output/{*.so,optreshop.def} "$GAMSDIR"/
     - EMPSLV=reshop bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
+
+  after_script:
+    - rm -rf ./gamsdir
 
   artifacts:
     name: unittest-results-debug-linux
@@ -136,13 +146,14 @@ test-deg:
     - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
 
     # Test that we indeed call the right executable
-    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop #| grep -q "ReSHOP GAMS testing driver"
+    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop | grep -q "ReSHOP GAMS testing driver"
 
     # Run tests with regular reshop
-    - EMPSLV=reshop bash test/gams/test.sh
+    - EMPSLV=reshop RHP_SOLVERLINK=2 bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
+  after_script:
     # We need to clean up after yourselves
     - rm -rf gamsdir
 
@@ -170,7 +181,7 @@ test-dac:
 
     # Run tests with regular reshop
     - cp build/output/{*.dylib,optreshop.def} "$GAMSDIR"/
-    - EMPSLV=reshop bash test/gams/test.sh
+    - EMPSLV=reshop RHP_SOLVERLINK=2 bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
@@ -192,6 +203,7 @@ test-dac:
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
+  after_script:
     # We need to clean up after yourselves
     - rm -rf gamsdir
 
