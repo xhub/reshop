@@ -63,7 +63,7 @@ void reshop_release_internal_jmp_buf(void);
  * longjmp if setjmp has been called previously and is still active. If not,
  * it calls abort().
  * \param code error code
- * \param msn error message
+ * \param msg error message
  */
 void reshop_fatal_error(int code, const char* msg);
 
