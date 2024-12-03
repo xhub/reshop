@@ -43,6 +43,9 @@ test-leg:
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
     - export PATH="$GAMSDIR:$PATH"
 
+    - ls -l "$GAMSDIR"/*yaml*
+    - rm -f "$GAMSDIR"/gamsconfig.yaml
+
     # Run regular build test
     - cp build/output/{*.so,optreshop.def} "$GAMSDIR"/
     - EMPSLV=reshop bash test/gams/test.sh
