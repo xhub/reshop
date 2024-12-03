@@ -20,7 +20,7 @@ int vasprintf(char **strp, const char *format, va_list ap)
 
     len++;
     char *str = (char*)malloc((size_t) len);
-    if (!str) { return -1 };
+    if (!str) { return -1; };
 
     int retval = vsnprintf(str, (size_t)len, format, ap);
 
