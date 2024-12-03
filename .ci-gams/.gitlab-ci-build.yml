@@ -127,7 +127,7 @@ build-wei:
   script:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
-    - /C/Program\ Files/Microsoft\ Visual\ Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat x86_amd64
+    - "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
