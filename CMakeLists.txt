@@ -178,8 +178,13 @@ if (NOT WINDOWS AND NOT APPLE)
 endif ()
 
 # Maybe disable that for CC (esp. windows)
-include(CheckIPOSupported)
-check_ipo_supported(RESULT HAS_IPO)
+# Disable ipo on windows + sanitizer build (intel openapi 2024 chokes on it)
+if (WINDOWS AND CMAKE_BUILD_TYPE MATCHES "san")
+  set(HAS_IPO 0)
+else ()
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT HAS_IPO)
+endif ()
 
 # In dev mode, we want to have more output
 if(DEV_MODE)
