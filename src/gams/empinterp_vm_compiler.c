@@ -1264,21 +1264,33 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
 {
 
    TokenType toktype = parser_getcurtoktype(interp);
-   bool need_rparent = false, emit_not = false;
+   TokenType closing_delimiter = tok_closingdelimiter(toktype); /* Cheap way to init */
+   bool emit_not = false;
    assert(depth > 0);
 
+  /* ----------------------------------------------------------------------
+   * We are at the position
+   *
+   *          v 
+   *    ident$(condition(set))
+   * or                     v
+   *    ident$(NOT condition(set))
+   * etc
+   *
+   * We disable reading GAMS symbols as we are constructing a condition expression
+   *
+   * ---------------------------------------------------------------------- */
    if (depth == UINT16_MAX) {
       error("[empfinfo] ERROR line %u: maximum depth of %u reached while parsing "
             "conditional expression", interp->linenr, UINT16_MAX);
       return Error_EMPIncorrectInput;
    }
 
-   if (toktype == TOK_LPAREN) { 
-      need_rparent = true;
+   if (tok_isopeningdelimiter(toktype)) { 
+      assert(closing_delimiter != TOK_UNSET);
       S_CHECK(advance(interp, p, &toktype));
       PARSER_EXPECTS(interp, "a GAMS set or NOT", TOK_IDENT, TOK_NOT, TOK_SAMEAS,
-                     TOK_GMS_SET, TOK_GMS_MULTISET);
-
+                          TOK_GMS_SET, TOK_GMS_MULTISET);
    }
 
    do {
@@ -1295,7 +1307,7 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
     *
     * --------------------------------------------------------------------- */
 
-      if (toktype == TOK_LPAREN) {
+      if (tok_isopeningdelimiter(toktype)) {
          S_CHECK(parse_conditional(interp, p, c, tape, depth+1));
          if (emit_not) {
             S_CHECK(emit_byte(tape, OP_NOT));
@@ -1364,10 +1376,14 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
 
    } while (true);
 
-   if (need_rparent && toktype != TOK_RPAREN) {
-      return parser_err(interp, "Expecting a closing parenthesis ')' to end conditional");
+   if (closing_delimiter != TOK_UNSET && toktype != closing_delimiter) {
+      char msg[] = "Expecting a XXX to end conditional";
+      const char *closing_delimiter_str = toktype2str(closing_delimiter);
+      assert(strlen(closing_delimiter_str) == 3);
+      memcpy(&msg[12], closing_delimiter_str, 3);
+      
+      return parser_err(interp, msg);
    }
-
 
    return OK;
 }
@@ -1446,7 +1462,7 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
    *
    *         v
    *    ident$(condition(set))
-   * or
+   * or      v
    *    ident$(NOT condition(set))
    * etc
    *
@@ -1461,12 +1477,12 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
 
-   PARSER_EXPECTS(interp, "a GAMS set or '('", TOK_IDENT, TOK_LPAREN, TOK_GMS_SET);
-
-      /* Note great to make this distinction here. Can't find something nicer */
+   /* Note great to make this distinction here. Can't find something nicer */
    if (toktype == TOK_LPAREN) {
       S_CHECK(parse_conditional(interp, p, c, tape, c->scope_depth+1));
    } else {
+      PARSER_EXPECTS(interp, "a GAMS set or opening delimiter '(' or '{' or '['",
+                     TOK_IDENT, TOK_GMS_SET);
       S_CHECK(membership_test(interp, p, c, tape, false));
    }
 
@@ -1985,15 +2001,9 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
 
-   PARSER_EXPECTS(interp, "A delimiter '(' or '[')", TOK_LPAREN, TOK_LBRACK);
+   PARSER_EXPECTS(interp, "A delimiter '(' or '{' or '[')", TOK_LPAREN, TOK_LBRACE, TOK_LBRACK);
 
-   TokenType delimiter_endloop = TOK_UNSET;
-   if (toktype == TOK_LPAREN) {
-      delimiter_endloop = TOK_RPAREN;
-   } else if (toktype == TOK_LBRACK) {
-      delimiter_endloop = TOK_RBRACK;
-   }
-
+   TokenType closing_delimiter = tok_closingdelimiter(toktype);
 
    /* ---------------------------------------------------------------------
     * Step 1: Parse loop iterators
@@ -2006,7 +2016,7 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
     * --------------------------------------------------------------------- */
    S_CHECK(advance(interp, p, &toktype))
 
-   while (toktype != TOK_EOF && toktype != delimiter_endloop) {
+   while (toktype != TOK_EOF && toktype != closing_delimiter) {
       S_CHECK(process_statement(interp, p, toktype));
       toktype = parser_getcurtoktype(interp);
    }
@@ -2040,7 +2050,7 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
 
    /* Consume the delimiter_endloop token */
 //   S_CHECK(_advance(interp, p, &toktype))
-   S_CHECK(parser_expect(interp, "end delimiter of loop", delimiter_endloop));
+   S_CHECK(parser_expect(interp, "end delimiter of loop", closing_delimiter));
 
    /* Parse the next token */
    S_CHECK(advance(interp, p, &toktype))
@@ -2072,14 +2082,9 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    /* Consume the opening delimiter (parent / bracket / ...) */
    S_CHECK(advance(interp, p, &toktype))
 
-   PARSER_EXPECTS(interp, "A delimiter '(' or '[')", TOK_LPAREN, TOK_LBRACK);
+   PARSER_EXPECTS(interp, "A delimiter '(' or '{' or [')", TOK_LPAREN, TOK_LBRACE, TOK_LBRACK);
 
-   TokenType delimiter_endloop = TOK_UNSET;
-   if (toktype == TOK_LPAREN) {
-      delimiter_endloop = TOK_RPAREN;
-   } else if (toktype == TOK_LBRACK) {
-      delimiter_endloop = TOK_RBRACK;
-   }
+   TokenType closing_delimiter = tok_closingdelimiter(toktype);
 
    /* ---------------------------------------------------------------------
     * Step 0: Define the VM objects
@@ -2228,7 +2233,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
  
    // HACK: move this around, toards the end of the function
    /* Consume the delimiter_endloop token */
-   S_CHECK(parser_expect(interp, "end delimiter of loop", delimiter_endloop));
+   S_CHECK(parser_expect(interp, "end delimiter of loop", closing_delimiter));
 
    unsigned gidx;
 

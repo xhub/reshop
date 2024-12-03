@@ -125,6 +125,8 @@ static const char * const tok_str[] = {
    "')'",
    "'{'",
    "'}'",
+   "'['",
+   "']'",
    "'='",
    "','",
    "'+'",
@@ -580,6 +582,8 @@ const struct parse_rules rules[] = {
    [TOK_RANGLE]        = {NULL,      NULL,     PREC_NONE},
    [TOK_LPAREN]        = {_grouping, NULL,     PREC_CALL},
    [TOK_RPAREN]        = {NULL,      NULL,     PREC_NONE},
+   [TOK_LBRACE]        = {NULL,      NULL,     PREC_NONE},
+   [TOK_RBRACE]        = {NULL,      NULL,     PREC_NONE},
    [TOK_LBRACK]        = {NULL,      NULL,     PREC_NONE},
    [TOK_RBRACK]        = {NULL,      NULL,     PREC_NONE},
    [TOK_EQUAL]         = {NULL,      NULL,     PREC_NONE},
@@ -627,6 +631,12 @@ static inline int _tok_one(Token *tok, const char *str)
       break;
    case ')':
       tok->type = TOK_RPAREN;
+      break;
+   case '{':
+      tok->type = TOK_LBRACE;
+      break;
+   case '}':
+      tok->type = TOK_RBRACE;
       break;
    case '[':
       tok->type = TOK_LBRACK;

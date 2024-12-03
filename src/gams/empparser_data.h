@@ -67,12 +67,14 @@ typedef enum emptok_type {
    TOK_NOT,
    TOK_OR,
    /* Single token */
-   TOK_LANGLE,
-   TOK_RANGLE,
-   TOK_LPAREN,
-   TOK_RPAREN,
-   TOK_LBRACK,
-   TOK_RBRACK,
+   TOK_LANGLE,          /**< < */
+   TOK_RANGLE,          /**< > */
+   TOK_LPAREN,          /**< ( */
+   TOK_RPAREN,          /**< ) */
+   TOK_LBRACE,          /**< { */
+   TOK_RBRACE,          /**< { */
+   TOK_LBRACK,          /**< [ */
+   TOK_RBRACK,          /**< ] */
    TOK_EQUAL,
    TOK_COMMA,
    TOK_PLUS,
@@ -80,10 +82,10 @@ typedef enum emptok_type {
    TOK_STAR,
    TOK_SLASH,
    TOK_COLON,
-   TOK_DOT,
-   TOK_CONDITION,
-   TOK_SINGLE_QUOTE,
-   TOK_DOUBLE_QUOTE,
+   TOK_DOT,             /**< . */
+   TOK_CONDITION,       /**< $ */
+   TOK_SINGLE_QUOTE,    /**< ' */
+   TOK_DOUBLE_QUOTE,    /**< " */
    TOK_PERCENT,
    TOK_ERROR,
    TOK_EOF,

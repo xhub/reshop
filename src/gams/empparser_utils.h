@@ -5,6 +5,7 @@
 
 #include "compat.h"
 #include "empinterp_fwd.h"
+#include "empparser_data.h"
 
 typedef enum { OperatorKeywordString, OperatorKeywordScalar } OperatorKeywordType;
 
@@ -36,4 +37,22 @@ int resolve_tokasident(Interpreter *interp, IdentData *ident) NONNULL;
 
 NONNULL int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
                            unsigned op_kws_size, const OperatorKeyword *op_kws, void *dat);
+
+
+static inline bool tok_isopeningdelimiter(TokenType toktype)
+{
+   return (toktype == TOK_LPAREN || toktype == TOK_LBRACK || toktype == TOK_LBRACE);
+}
+
+static inline TokenType tok_closingdelimiter(TokenType toktype)
+{
+   switch (toktype) {
+   case TOK_LPAREN: return TOK_RPAREN;
+   case TOK_LBRACE: return TOK_RBRACE;
+   case TOK_LBRACK: return TOK_RBRACK;
+
+   default:         return TOK_UNSET;
+   }
+}
+
 #endif
