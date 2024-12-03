@@ -84,7 +84,7 @@ build-deg:
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
 
     # Asan
-    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=gcc -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
   needs: [fetch-ci-scripts,deg-cleanup]
@@ -128,7 +128,7 @@ build-wei:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
-    - '"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64'
+    - 'call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64'
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -S .
