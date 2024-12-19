@@ -399,6 +399,8 @@ static int dag_resolve_arc_labels(Interpreter *interp)
       ArcDat arcdat = {
          .type = link->linktype,
          .labeldat = {.dim = link->dim, .label_len = link->label_len, .label = link->label}};
+
+      /* Copy the fixes UELs */
       memcpy(arcdat.labeldat.uels, link->data, sizeof(int)*dim);
 
       /* Reserve the space for the edges */

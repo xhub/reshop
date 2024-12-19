@@ -24,7 +24,7 @@
 
 NONNULL int parse_identasscalar(Interpreter * interp, unsigned * restrict p,
                         double *val);
-int find_uelidx(Interpreter * restrict interp, const char uelstr[GMS_SSSIZE],
+int find_uelidx(Interpreter * restrict interp, const char uelstr[static 1],
                 int * restrict uelidx) NONNULL;
 
 

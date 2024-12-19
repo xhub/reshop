@@ -1761,6 +1761,7 @@ static int lexer(Interpreter *interp, enum ParseMode mode, unsigned *p)
       goto _exit;
    }
 
+   /* TODO: replace this with range conditions? */
    switch (buf[p_]) {
    case ':':
       if (buf[p_+1] == '=') {
@@ -1773,6 +1774,8 @@ static int lexer(Interpreter *interp, enum ParseMode mode, unsigned *p)
    case '>':
    case '(':
    case ')':
+   case '{':
+   case '}':
    case '[':
    case ']':
    case '=':

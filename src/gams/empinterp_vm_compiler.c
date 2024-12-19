@@ -879,6 +879,7 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
    EmpVmOpCode upd_opcode = iterators->loopobj_opcode;
 
    assert(iterators->loopobj_gidx < UINT_MAX);
+   assert(gmsindices_nargs(indices) < GMS_MAX_INDEX_DIM);
 
    for (unsigned i = 0, len = gmsindices_nargs(indices); i < len; ++i) {
 
@@ -997,14 +998,14 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
    Compiler *c = interp->compiler;
 
    LinkLabels *linklabels;
-   uint8_t dim = indices->nargs;
+   uint8_t dim = gmsindices_nargs(indices);
    uint8_t nvaridxs = gmsindices_nvaridxs(indices);
    unsigned gidx;
    S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label, label_len, dim,
                                nvaridxs, 0, linktype, &gidx));
    *linklabels_gidx = gidx;
 
-   if (indices->nargs == 0) {
+   if (dim == 0) {
       loopiterators->size = 0;
       loopiterators->loopobj_gidx = UINT_MAX;
       return OK;
@@ -1014,13 +1015,19 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
    loopiterators->loopobj_opcode = OP_LINKLABELS_SETFROM_LOOPVAR;
 
    bool dummy;
+
    S_CHECK(ident_gmsindices_process(indices, loopiterators, tape, linklabels->data, &dummy));
 
   /* ----------------------------------------------------------------------
-   * We need to copy the position (of the index) where the loop iterators belong
+   * Copy the coordinate (of the index) where the loop iterators belong,
+   * but can't use memcpy as we don't have the same type. Example:
+   *
+   * n('1', i, '2', j) -> varidxs2pos = [1, 3]
    * ---------------------------------------------------------------------- */
 
-   memcpy(&linklabels->data[dim], loopiterators->varidxs2pos, loopiterators->size * sizeof(int));
+   for (unsigned i = 0, len = loopiterators->size, j = dim; i < len; ++i, ++j) {
+      linklabels->data[j] = loopiterators->varidxs2pos[i];
+   }
 
    return OK;
 }
@@ -1656,8 +1663,17 @@ int dualslabels_setupnew(Interpreter *interp, Tape *tape, const char *label,
    bool dummy;
    S_CHECK(ident_gmsindices_process(gmsindices, loopiterators, tape, dualslabel->data, &dummy));
 
-   // TODO: document why we need to duplicate this
-   memcpy(&dualslabel->data[dim], loopiterators->varidxs2pos, loopiterators->size * sizeof(int));
+  /* ----------------------------------------------------------------------
+   * Copy the coordinate (of the index) where the loop iterators belong,
+   * but can't use memcpy as we don't have the same type. Example:
+   *
+   * n('1', i, '2', j) -> varidxs2pos = [1, 3]
+   * ---------------------------------------------------------------------- */
+
+   for (unsigned i = 0, len = loopiterators->size, j = dim; i < len; ++i, ++j) {
+      dualslabel->data[j] = loopiterators->varidxs2pos[i];
+   }
+
 
    return OK;
 

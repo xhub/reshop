@@ -900,7 +900,7 @@ int empvm_run(struct empvm *vm)
          VmGmsSymIterator *symiter;
          N_CHECK_EXIT(symiter, getgmssymiter(&vm->globals, gidx));
 
-         assert(idx < symiter->ident.dim);
+         assert(idx < symiter->ident.dim && symiter->ident.dim <= GMS_MAX_INDEX_DIM);
          assert(IS_LOOPVAR(vm->locals[lidx]));
 
          int uel = AS_LOOPVAR(vm->locals[lidx]);
@@ -923,10 +923,13 @@ int empvm_run(struct empvm *vm)
          if ((gmssym_type == IdentEqu || gmssym_type == IdentVar) && gmd) {
             char uelstr[GLOBAL_UEL_IDENT_SIZE];
             GMD_CHK_EXIT(gmdGetUelByIndex, gmd, uel, uelstr);
+#ifdef RHP_EXPERIMENTAL
             GMD_CHK_EXIT(gmdFindUel, vm->data.gmddct, uelstr, &uel);
+#else
+            uel = dctUelIndex(vm->data.dct, uelstr);
+#endif
             assert(uel > 0);
          }
-
 
          symiter->uels[idx] = uel;
 
@@ -1404,6 +1407,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          DEBUGVMRUN("\n");
          break;
       }
+
       case OP_LINKLABELS_STORE: {
          assert(vm->data.linklabels);
          LinkLabels *linklabels = vm->data.linklabels;
@@ -1445,6 +1449,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          
          break;
       }
+
       case OP_LINKLABELS_FINI: {
          assert(vm->data.linklabels);
          LinkLabels *linklabels = vm->data.linklabels;
@@ -1462,6 +1467,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          DEBUGVMRUN("\n");
          break;
       }
+
       case OP_LINKLABELS_KEYWORDS_UPDATE: {
          assert(vm->data.linklabels);
          LinkLabels *linklabels = vm->data.linklabels;

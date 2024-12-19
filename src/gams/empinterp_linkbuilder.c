@@ -79,8 +79,9 @@ LinkLabels * linklabels_dup(const LinkLabels * link_src)
    }
 
    return link_cpy;
+
 _exit:
-   FREE(link_cpy);
+   free(link_cpy);
    return NULL;
 }
 
