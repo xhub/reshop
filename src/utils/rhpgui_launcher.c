@@ -39,6 +39,8 @@ int imgui_start(const char *hint)
    }
 
 #ifdef _WIN32
+   // silence warning
+   (void)arg0;
 
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
