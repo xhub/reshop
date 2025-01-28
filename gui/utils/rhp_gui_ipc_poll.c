@@ -1,12 +1,27 @@
-
+#include "reshop_config.h"
 
 #include <errno.h>
-#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#define poll WSAPoll
+#define close closesocket
+
+#pragma comment(lib, "ws2_32.lib")  // Link against Winsock library
+
+#else
 #include <sys/socket.h>
+#include <poll.h>
+#endif
+
+#ifdef HAS_UNISTD
 #include <unistd.h>
+#endif
 
 #define MAX_CLIENTS 10
 
@@ -44,7 +59,7 @@ int ipc_pool_process(GuiData *guidat)
    PollData *polldat = guidat->ipc.data;
    struct pollfd *client_fds = polldat->fds;
    int server_fd = guidat->ipc.server_fd;
-   nfds_t nclients = polldat->nclients;
+   u8 nclients = polldat->nclients;
 
 
    // NOTE change timeout
@@ -77,7 +92,7 @@ int ipc_pool_process(GuiData *guidat)
 
    // Handle client messages
    int nclients_end = 1;
-   for (nfds_t i = 1; i <= nclients; i++) {
+   for (u8 i = 1; i <= nclients; i++) {
       // TODO handle other cases
       if (client_fds[i].revents & POLLIN) {
          int client_fd = client_fds[i].fd;

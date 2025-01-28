@@ -1,6 +1,17 @@
+#include "reshop_config.h"
+
 #include <errno.h>
 #include <string.h>
+
+#ifdef HAS_UNISTD
 #include <unistd.h>
+#endif
+
+#ifdef _WIN32
+#include <io.h>
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 
 #define DEBUG_MSG(...) loggerfmt(0, __VA_ARGS__)
 

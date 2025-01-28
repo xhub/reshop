@@ -588,7 +588,7 @@ int main(int argc, char *argv[])
       error_init("ReSHOP_gui expects exactly one or two command line argument(s), got %d\n", argc > 0 ? argc-1 : 0);
    }
 
-   pid_t pid_parent = -1;
+   int pid_parent = -1;
    if (argc == 3) {
       char *endptr;
       pid_parent = strtol(argv[2], &endptr, 10);
