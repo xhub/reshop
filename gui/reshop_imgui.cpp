@@ -610,6 +610,7 @@ int main(int argc, char *argv[])
    if (guidat.ipc.server_fd >= 0) {
       logWin.info("ReSHOP GUI starts to listen on %s", argv[1]);
    }
+   guidat.models = NULL;
 
    ipc_poll_gui_init(&guidat);
 
