@@ -16,10 +16,13 @@
 #include <winsock2.h>
 #include <afunix.h>
 #include <io.h>
+
 #else
+
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+
 #endif
 
 #ifdef HAS_UNISTD
@@ -41,6 +44,7 @@ int fd_setup(int fd)
    u_long mode = 1;
    if (ioctlsocket (fd, FIONBIO, &mode) == SOCKET_ERROR) {
       loggerfmt(ErrorGui, "[IPC] ERROR while on setting flags on fd %d: '%s'", fd, strerror(errno));
+      return 1;
    }
 
 #else
@@ -63,10 +67,19 @@ int server_init_socket(const char *sockpath, int pid)
    int server_fd;
    struct sockaddr_un addr;
 
+#ifdef _WIN32
+       // Initialize Winsock
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        loggerfmt(ErrorGui, "[IPC] ERROR: WSAStartup failed\n");
+        return 1;
+    }
+#endif
+
    // Create the Unix domain socket
    if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-      perror("socket");
-      exit(EXIT_FAILURE);
+        loggerfmt(ErrorGui, "[IPC] ERROR: AF_UNIX socket creation failed: '%s'\n", strerror(errno));
+        return 1;
    }
 
    // Bind the socket to a path
@@ -82,8 +95,9 @@ int server_init_socket(const char *sockpath, int pid)
 #endif
 
    if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-      perror("bind");
-      exit(EXIT_FAILURE);
+      loggerfmt(ErrorGui, "[IPC] ERROR: could not bind AF_UNIX socket '%s': '%s'\n",
+                sockpath , strerror(errno));
+      return 1;
    }
 
    // Set server socket to non-blocking mode
@@ -104,16 +118,20 @@ int server_init_socket(const char *sockpath, int pid)
 void server_fini_socket(int socket_fd, UNUSED const char *socket_path)
 {
 
-   if (socket_fd < 0) {
-      return;
-   }
+   if (socket_fd >= 0) {
 
-   close(socket_fd);
+      close(socket_fd);
 
 #ifndef __linux__
-   if (socket_path && strlen(socket_path) > 0) {
-      unlink(socket_path);
+      if (socket_path && strlen(socket_path) > 0) {
+         unlink(socket_path);
+      }
+#endif
+
    }
+
+#ifdef _WIN32
+   WSACleanup();
 #endif
 }
 
