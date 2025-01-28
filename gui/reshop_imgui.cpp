@@ -507,6 +507,7 @@ int main(int argc, char *argv[])
    }
 #elif __APPLE__
    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
+   (void)highDPIscaleFactor;
 #else
    (void)highDPIscaleFactor;
 #endif
