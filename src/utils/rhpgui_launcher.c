@@ -50,7 +50,8 @@ int imgui_start(const char *hint)
     // Create a new process
     if (!CreateProcess(
             imgui_path,        // Path to executable
-            sockpath,        // Command line arguments
+      // FIXME: can this argument be modified?
+            (char*)sockpath,        // Command line arguments
             NULL,        // Process handle not inheritable
             NULL,        // Thread handle not inheritable
             FALSE,       // Do not inherit handles

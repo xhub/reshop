@@ -7,7 +7,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef HAS_UNISTD
 #include <unistd.h>
+#endif
 
 #include "printout.h"
 #include "rhp_ipc.h"
