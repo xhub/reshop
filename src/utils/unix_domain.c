@@ -2,10 +2,27 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <winsock2.h>
+#include <io.h>
+#include <afunix.h>
+
+// See https://learn.microsoft.com/en-us/windows/win32/winsock/error-codes-errno-h-errno-and-wsagetlasterror-2
+#undef errno
+#define errno WSAGetLastError()
+
+#pragma comment(lib, "Ws2_32.lib")
+#else
+
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+
+#endif
 
 #include "macros.h"
 #include "printout.h"
@@ -22,17 +39,28 @@ static void write_err(void)
 {
    error_errno("[IPC] ERROR while calling 'write': '%s'\n");
 }
+#define CHK_WRITE(EXPR) if ((EXPR) == -1) { write_err(); }
 
+// FIXME
+#if 0
 static void read_err(void)
 {
    error_errno("[IPC] ERROR while calling 'read': '%s'\n");
 }
 
-#define CHK_WRITE(EXPR) if ((EXPR) == -1) { write_err(); }
 #define CHK_READ(EXPR) if ((EXPR) == -1) { read_err(); }
+#endif
 
 int fd_setup(int fd)
 {
+#ifdef _WIN32
+
+   u_long mode = 1;
+   if (ioctlsocket (fd, FIONBIO, &mode) == SOCKET_ERROR) {
+      error_errno("[IPC] ERROR while on setting flags on fd %d: '%s'", fd);
+   }
+
+#else
    int flags = fcntl(fd, F_GETFL, 0);
    if (flags == -1) {
       error_errno("[IPC] ERROR while on getting flags (F_GETFL) via fnctl on fd %d: '%s'", fd);
@@ -53,6 +81,7 @@ int fd_setup(int fd)
       error_errno("[IPC] ERROR: call to 'setsockopt' failed with msg: '%s'\n");
       return -1;
    }
+#endif
 
    return OK;
 }
@@ -84,6 +113,7 @@ static int unix_domain_getfd(const char *sockpath)
       return -1;
    }
 
+#ifndef _WIN32
    int size = 2 * 1024 * 1024;
    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) == -1) {
       error_errno("[IPC] ERROR: call to 'setsockopt' failed with msg: '%s'\n");
@@ -94,6 +124,7 @@ static int unix_domain_getfd(const char *sockpath)
       error_errno("[IPC] ERROR: call to 'setsockopt' failed with msg: '%s'\n");
       return -1;
    }
+#endif
 
    return fd;
 }
@@ -138,6 +169,7 @@ void unix_domain_send_str(MessageType mtype, const char* message)
    CHK_WRITE(write(gui_fd, &header, sizeof(header)))
    CHK_WRITE(write(gui_fd, message, msglen))
 
+#if 0
    // Poll for response
    struct pollfd fds;
    fds.fd = gui_fd;
@@ -156,5 +188,5 @@ void unix_domain_send_str(MessageType mtype, const char* message)
          break;
       }
    }
-
+   #endif
 }

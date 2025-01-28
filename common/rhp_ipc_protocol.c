@@ -1,7 +1,10 @@
 
 #include <stddef.h>
 #include <string.h>
+
+#ifdef HAS_UNISTD
 #include <unistd.h>
+#endif
 
 #include "rhp_ipc_protocol.h"
 

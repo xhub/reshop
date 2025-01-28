@@ -197,10 +197,10 @@ void backtrace_(const char *expr, int status);
  */
 
 #ifdef _WIN32
-#define error_errno(fmt) { \
-   char *errno_msg42[256]; \
+#define error_errno(...) { \
+   char errno_msg42[256]; \
    strerror_s(errno_msg42, sizeof(errno_msg42), errno); \
-   error(fmt, buf42); \
+   error(__VA_ARGS__, errno_msg42); \
 }
 #elif defined(__linux__) || defined(__APPLE__)
 #define error_errno(...) error(__VA_ARGS__, strerror(errno))

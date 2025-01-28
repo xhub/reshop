@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,18 +30,23 @@ tlsvar char sockpath[108]; //socket path
 // For AF_UNIX
 #include <winsock2.h>
 #include <afunix.h>
+#include <io.h>
+
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 
 static int gen_uuid(void)
 {
     UUID uuid;
     if (CoCreateGuid(&uuid) == S_OK) {
-        snprintf(uuidstr, size, "%08lX-%04X-%04X-%04X-%012llX",
+        snprintf(uuidstr, sizeof(uuidstr), "%08lX-%04X-%04X-%04X-%012llX",
                  uuid.Data1, uuid.Data2, uuid.Data3,
                  (uuid.Data4[0] << 8) | uuid.Data4[1],
                  *((unsigned long long*)&uuid.Data4[2]));
-    } else {
-      return -1;
+      return 0;
     }
+
+   return -1;
 }
 
 #elif defined(__linux__) || defined(__APPLE__) // Linux and macOS
@@ -116,12 +122,12 @@ const char* ipc_unix_domain_init(void)
    memcpy(&sockpath[strlen(sockpath)], uuid, strlen(uuid)+1);
 
 #elif defined (_WIN32)
-   int method = 0, nmethods = 3;
+   int method = 0, nmethods = 2; //FIXME implement other fallbacks
    DWORD ret;
    do {
       switch(method) {
       case 0:
-         ret = GetTempPath2A(sizeof(sockpath), sockpath);
+         ret = GetTempPathA(sizeof(sockpath), sockpath);
          if (ret == 0) {
             continue;
          }
@@ -131,7 +137,7 @@ const char* ipc_unix_domain_init(void)
          ret = strlen("C:\\Temp\\");
          break;
       default:
-         a.unaddr.sun_path[0] = '\0';
+         ;
       }
 
       size_t expected_sz = sizeof(sockpath) - ret - 1;
