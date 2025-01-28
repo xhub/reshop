@@ -188,7 +188,7 @@ int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldua
     * --------------------------------------------------------------------- */
    S_CHECK(fenchel_gen_cons(&fdat, mdl));
 
-   bool *equ_gen = fdat.cons_gen; assert(equ_gen);
+   // FIXME: bool *equ_gen = fdat.cons_gen; assert(equ_gen);
    rhp_idx ei_cons_start = aequ_fget(&fdat.dual.cons, 0);
 
   /* ----------------------------------------------------------------------
@@ -213,7 +213,7 @@ int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldua
    mpid_t mpid_dual = ccfprimaldualdat->mpid_dual, mpid_primal = ccfprimaldualdat->mp_primal->id;
    EmpDag *empdag = &mdl->empinfo.empdag; assert(empdag->empdag_up);
    const ArcVFData *Varcs_primal = empdag->empdag_up->mps.Varcs[mpid_primal].arr;
-   VarcArray *Varcs = &empdag->mps.Varcs[mpid_dual]; assert(Varcs->len == 0);
+   // FIXME: VarcArray *Varcs = &empdag->mps.Varcs[mpid_dual]; assert(Varcs->len == 0);
    assert(nVF == empdag->empdag_up->mps.Varcs[mpid_primal].len);
    DagUidArray *rarcs = empdag->mps.rarcs;
    daguid_t rarc_primal = rarcVFuid(mpid2uid(mpid_primal));

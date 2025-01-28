@@ -303,7 +303,7 @@ static void ShowExampleAppCustomNodeGraph(bool* opened)
    if (ImGui::BeginPopup("context_menu"))
    {
       EmpDagNode* node = node_selected != -1 ? &nodes[node_selected] : NULL;
-      ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup() - offset;
+      // FIXME: ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup() - offset;
       if (node != nullptr)
       {
          ImGui::Text("Node '%s'", node->Name);
@@ -344,10 +344,10 @@ static char const* logger_actions[] = {
 #include "tlsdef.h"
 tlsvar static ImGuiAl::Log *logObj = nullptr;
 
-void loggermsg(u8 level, const char* msg)
-{
-   logObj->puts(level, msg);
-}
+//void loggermsg(u8 level, const char* msg)
+//{
+//   logObj->puts(level, msg);
+//}
 
 void loggerfmt(u8 level, const char* fmt, ...) {
    va_list args;
@@ -507,6 +507,8 @@ int main(int argc, char *argv[])
    }
 #elif __APPLE__
    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
+#else
+   (void)highDPIscaleFactor;
 #endif
 
    int xdummy, ydummy, mon_w, mon_h;
@@ -514,8 +516,8 @@ int main(int argc, char *argv[])
 
    // Create a window
    //int display_w0 = 1400, display_h0 = 900;
-   float coeff = .7F;
-   int display_w0 = (int)((float) mon_w*.7F), display_h0 = (int)((float)mon_h*.7F);
+   constexpr float coeff = .7F;
+   int display_w0 = (int)((float) mon_w*coeff), display_h0 = (int)((float)mon_h*coeff);
    GLFWwindow* window = glfwCreateWindow(display_w0, display_h0, "ReSHOP GUI", nullptr, nullptr);
    if (!window) {
       std::cerr << "Failed to create GLFW window" << std::endl;
@@ -626,6 +628,9 @@ int main(int argc, char *argv[])
       glfwPollEvents();
 
       int ipc_rc = ipc_pool_process(&guidat);
+      if (ipc_rc) {
+         loggerfmt(ErrorGui, "[IPC] ERRROR: polling failed with rc = %d\n", ipc_rc);
+      }
 
       if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) {
          ImGui_ImplGlfw_Sleep(10);

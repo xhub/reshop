@@ -132,8 +132,9 @@ int nltree_check_add(NlNode *node);
  * Conversion from nltree to other format (GAMS, AMPL)
  * ------------------------------------------------------------------------- */
 
-NlTree* nltree_buildfromgams(unsigned codelen, const int *instrs,
-                             const int *args) NONNULL;
+NlTree* nltree_buildfromgams(unsigned codelen,
+                             const int instrs[VMT(restrict codelen)],
+                             const int args[VMT(restrict codelen)]);
 int nltree_buildopcode(Container *mdl, const Equ * e, int **instrs,
                         int **args, int *codelen) NONNULL;
 

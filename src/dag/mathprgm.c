@@ -1316,7 +1316,7 @@ int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le)
 
 int mp_packing_display(const MathPrgm *mp, uint8_t buf[VMT(static 1024)])
 {
-   size_t len = 0;
+   //FIXME size_t len = 0;
    memcpy(buf, &mp->id, sizeof(mp->id));
    buf += sizeof(mp->id);
    *buf++ = (u8)mp->sense;

@@ -75,7 +75,7 @@ int rctr_walkequ(const Container *ctr, rhp_idx ei, void **iterator,
 int rctr_get_var_sos1(Container *ctr, rhp_idx vi, unsigned **grps);
 int rctr_get_var_sos2(Container *ctr, rhp_idx vi, unsigned **grps);
 
-NONNULL_AT(1, 2) ACCESS_ATTR(write_only, 2) ACCESS_ATTR(read_write, 3)
+NONNULL_AT(1, 2) ACCESS_ATTR(write_only, 2)
 int rctr_add_equ_empty(Container *ctr, rhp_idx *ei, Equ **e,
                        EquObjectType type, enum cone cone);
 

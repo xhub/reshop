@@ -13,7 +13,7 @@ static void nashgui_free(NashGui *nash)
    free(nash->name);
 }
 
-static void Varcs_mb_free(VarcBasicDatGuiDArray *arcdat)
+static void Varcs_mb_free(VarcBasicDatGui *arcdat)
 {
 }
 
@@ -27,7 +27,7 @@ static void Varcs_free(VarcGui *arc)
    case ArcVFBasic:
       return;
    case ArcVFMultipleBasic:
-      darr_free(&arc->basicdat_arr, noop);
+      darr_free(&arc->basicdat_arr, Varcs_mb_free);
       return;
    default:
       fprintf(stderr, "Fatal Error: unhandled Varc type %u", type);

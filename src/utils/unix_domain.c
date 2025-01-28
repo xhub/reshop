@@ -18,6 +18,19 @@ tlsvar int gui_fd = -1;
 tlsvar int data_fd = -1;
 tlsvar int ctrl_fd = -1;
 
+static void write_err(void)
+{
+   error_errno("[IPC] ERROR while calling 'write': '%s'\n");
+}
+
+static void read_err(void)
+{
+   error_errno("[IPC] ERROR while calling 'read': '%s'\n");
+}
+
+#define CHK_WRITE(EXPR) if ((EXPR) == -1) { write_err(); }
+#define CHK_READ(EXPR) if ((EXPR) == -1) { read_err(); }
+
 int fd_setup(int fd)
 {
    int flags = fcntl(fd, F_GETFL, 0);
@@ -113,7 +126,7 @@ void unix_domain_send1(MessageType mtype)
    assert(gui_fd >= 0);
 
    MessageHeader header = { 0, mtype, {0} };
-   write(gui_fd, &header, sizeof(header));
+   CHK_WRITE(write(gui_fd, &header, sizeof(header)))
 }
 
 void unix_domain_send_str(MessageType mtype, const char* message)
@@ -122,8 +135,8 @@ void unix_domain_send_str(MessageType mtype, const char* message)
    // Send request
    size_t msglen = strlen(message)+1;
    MessageHeader header = { msglen, mtype, {0} };
-   write(gui_fd, &header, sizeof(header));
-   write(gui_fd, message, msglen);
+   CHK_WRITE(write(gui_fd, &header, sizeof(header)))
+   CHK_WRITE(write(gui_fd, message, msglen))
 
    // Poll for response
    struct pollfd fds;
@@ -133,10 +146,10 @@ void unix_domain_send_str(MessageType mtype, const char* message)
    while (poll(&fds, 1, 5000) > 0) { // 5-second timeout
       if (fds.revents & POLLIN) {
          MessageHeader res_header;
-         read(gui_fd, &res_header, sizeof(res_header));
+         CHK_READ(read(gui_fd, &res_header, sizeof(res_header)))
 
          char* response = malloc(res_header.length);
-         read(gui_fd, response, res_header.length);
+         CHK_READ(read(gui_fd, response, res_header.length))
 
          printf("Response: %.*s\n", res_header.length, response);
          free(response);

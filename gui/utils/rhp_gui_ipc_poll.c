@@ -13,6 +13,7 @@
 #include "rhp_socket_server.h"
 #include "rhpgui_ipc.h"
 #include "rhp_gui_data.h"
+#include "rhpgui_ipc_poll.h"
 
 typedef struct {
    u8 max;
