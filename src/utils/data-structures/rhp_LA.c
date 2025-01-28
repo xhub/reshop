@@ -15,14 +15,17 @@
 SparseMatrix* spmat_allocA(M_ArenaLink *arena, RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
 {
    SparseMatrix *mat = NULL;
+
    u64 lenp = type == RHP_TRIPLET ? 1+nnzmax : 1+n;
-   u64 sizes[] = {sizeof(SparseMatrix), sizeof(RHP_INT)*nnzmax, sizeof(RHP_INT)*lenp, sizeof(double)*nnzmax};
    RHP_INT *i = NULL, *p = NULL;
    double *x = NULL;
+
    void *mems[] = {mat, i, p, x};
+   u64 sizes[] = {sizeof(SparseMatrix), sizeof(RHP_INT)*nnzmax, sizeof(RHP_INT)*lenp, sizeof(double)*nnzmax};
+
    RESHOP_STATIC_ASSERT(ARRAY_SIZE(mems) == ARRAY_SIZE(sizes), "");
 
-   SN_CHECK_EXIT(arenalink_alloc_blocks(arena, ARRAY_SIZE(sizes), mems, sizes));
+   SN_CHECK_EXIT(arenaL_alloc_blocks(arena, ARRAY_SIZE(sizes), mems, sizes));
 
    assert(mat && i && p && x);
 
@@ -260,7 +263,7 @@ int rhpmat_row_needs_update(const SpMat* m, unsigned i, unsigned* restrict singl
                double* restrict single_val, unsigned* restrict col_idx_len,
                unsigned** restrict col_idx, double** restrict vals)
 {
-   SpMatRowWorkingMem wrkmem;
+   SpMatColRowWorkingMem wrkmem;
    S_CHECK(rhpmat_row(m, i, &wrkmem, col_idx_len, col_idx, vals));
    if (*col_idx == &wrkmem.single_idx) {
       *single_idx = **col_idx;
@@ -289,7 +292,7 @@ int rhpmat_row_needs_update(const SpMat* m, unsigned i, unsigned* restrict singl
  *
  * @return                  the error code
  */
-int rhpmat_row(const SpMat* m, unsigned i, SpMatRowWorkingMem *wrkmem,
+int rhpmat_row(const SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
                unsigned* restrict row_len, unsigned** restrict row_idxs,
                double** restrict row_vals)
 {
@@ -329,6 +332,22 @@ int rhpmat_row(const SpMat* m, unsigned i, SpMatRowWorkingMem *wrkmem,
    return OK;
 }
 
+int rhpmat_ensure_cscA(M_ArenaLink *arena, SpMat *m)
+{
+   if (!m->ppty) { return OK; } // nothing to do for empty (Id) matrix
+
+   assert(m->csr && !m->csc);
+   SparseMatrix * restrict csr = m->csr, *csc;
+
+   RHP_INT mrow = csr->m, nrow = csr->n;
+   A_CHECK(m->csc, spmat_allocA(arena, mrow, nrow, csr->nnz, RHP_CS));
+   csc = m->csc;
+   csr_tocsc(csr->m, csr->n, csr->p, csr->i, csr->x, csc->p, csc->i, csc->x);
+
+   return OK;
+
+}
+
 /**
  * @brief General interface to get the col of a matrix 
  *
@@ -338,17 +357,16 @@ int rhpmat_row(const SpMat* m, unsigned i, SpMatRowWorkingMem *wrkmem,
  *
  * @param m                 the matrix
  * @param i                 the index of the row to get
- * @param[in]  single_idx   memory space for the index (no matrix data case)
- * @param[in]  single_val   memory space for the value (no matrix data case)
- * @param[out] len  the length of the row vector
- * @param[out] col_idx      the column indices for the row vector
- * @param[out] vals         the entries for the row vector
+ * @param[in]  wrkmem      working memory space when the matrix contains no data
+ * @param[out] col_len      the length of the row vector
+ * @param[out] col_idxs     the column indices for the row vector
+ * @param[out] col_vals     the entries for the row vector
  *
  * @return                  the error code
  */
-int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
-               double* restrict single_val, unsigned* restrict len,
-               unsigned**col_idx, double** restrict vals)
+int rhpmat_col(SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
+               unsigned* restrict col_len, unsigned** restrict col_idxs,
+               double** restrict col_vals)
 {
    if (m->ppty) {
       bool csc_or_csr = m->ppty & (EMPMAT_CSR | EMPMAT_CSC);
@@ -360,9 +378,9 @@ int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
       if (m->ppty & EMPMAT_EYE) { goto eye_mat; }
 
       if (csc_or_csr) {
-         if (m->ppty & EMPMAT_CSR) {
+         if (!(m->ppty & EMPMAT_CSC)) {
 
-            assert(m->csr);
+            assert(m->csr && !m->csc);
             SparseMatrix * restrict csr = m->csr, *csc;
 
             RHP_INT mrow = csr->m, nrow = csr->n;
@@ -374,9 +392,9 @@ int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
 
          SparseMatrix * restrict csc = m->csc;
          RHP_INT row_start = csc->p[i];
-         *len = csc->p[i+1] - row_start;
-         *col_idx = &csc->i[row_start];
-         *vals = &csc->x[row_start];
+         *col_len = csc->p[i+1] - row_start;
+         *col_idxs = &csc->i[row_start];
+         *col_vals = &csc->x[row_start];
 
          return OK;
       }
@@ -386,11 +404,11 @@ int rhpmat_col(SpMat* m, unsigned i, unsigned* restrict single_idx,
    }
 
 eye_mat:
-   *col_idx = single_idx;
-   *single_idx = i;
-   *len = 1;
-   *vals = single_val;
-   *single_val = 1.;
+   *col_idxs = &wrkmem->single_idx;
+   wrkmem->single_idx = i;
+   *col_len = 1;
+   *col_vals = &wrkmem->single_val;
+   wrkmem->single_val = 1.;
 
    return OK;
 }

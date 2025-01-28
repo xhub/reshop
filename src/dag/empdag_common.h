@@ -4,6 +4,8 @@
 #include <limits.h>
 #include <math.h>
 
+#include "allocators.h"
+#include "block_array.h"
 #include "checks.h"
 #include "compat.h"
 #include "empdag_data.h"
@@ -13,14 +15,6 @@
 #include "rhpidx.h"
 #include "status.h"
 
-
-/** Stage of the EMPDAG */
-typedef enum {
-   EmpDag_Model,
-   EmpDag_Transformed,
-   EmpDag_Collapsed,
-   EmpDag_Subset,
-} EmpDagStage;
 
 /** Link type */
 typedef enum {
@@ -33,18 +27,6 @@ typedef enum {
    LinkViKkt,
    LinkTypeLast = LinkViKkt,
 } LinkType;
-
-/** Type of VF arc  */
-typedef enum {
-   ArcVFUnset,          /**< Unset arc VF type  */
-   ArcVFBasic,          /**< child VF appears in one equation with basic weight */
-   ArcVFMultipleBasic,  /**< child VF appears in equations with basic weight */
-   ArcVFLequ,           /**< child VF appears in one equation with linear sum weight */
-   ArcVFMultipleLequ,   /**< child VF appears in equations with linear sum weight */
-   ArcVFEqu,            /**< child VF appears in one equation with general weight */
-   ArcVFMultipleEqu,    /**< child VF appears in equations with general weight */
-   ArcVFLast = ArcVFMultipleEqu,
-} ArcVFType;
 
 /** arc VF weight of the form:   b y  */
 typedef struct {
@@ -88,13 +70,13 @@ typedef struct rhp_empdag_arcVF {
    };
 } ArcVFData;
 
-/** Generic EMPDAG arc */
-typedef struct empdag_arc {
+/** Generic EMPDAG link */
+typedef struct empdag_link {
    LinkType type;
    union {
       ArcVFData Varc;
    };
-} EmpDagArc;
+} EmpDagLink;
 
 const char* arcVFType2str(ArcVFType type);
 
@@ -121,6 +103,8 @@ NONNULL static inline bool valid_Varc(const ArcVFData *arc)
    return arc->type != ArcVFUnset;
 }
 
+NONNULL bool chk_Varc(const ArcVFData *arc, const Model *mdl);
+
 /* ----------------------------------------------------------------------
  * Start of the functions for dealing with arc VFs. The general interface
  * arcVF_XXX then dispatches depending on the type of arcVF
@@ -146,7 +130,94 @@ static inline void arcVFb_init(ArcVFData *arcVF, rhp_idx ei)
    arcVF->basic_dat.cst = 1.;
    arcVF->basic_dat.vi = IdxNA;
    arcVF->basic_dat.ei = ei;
+}
 
+/**
+ * @brief Initialize a basic arcVF
+ *
+ * @param arcVF the arc
+ * @param ei     the equation where the arcVf appears
+ */
+static inline void arcVFb_init_cst(ArcVFData *arcVF, rhp_idx ei, double cst)
+{
+   arcVF->type = ArcVFBasic;
+   arcVF->mpid_child = UINT_MAX;
+   arcVF->basic_dat.cst = cst;
+   arcVF->basic_dat.vi = IdxNA;
+   arcVF->basic_dat.ei = ei;
+}
+
+static NONNULL int arcVFmb_alloc(M_ArenaLink *arena, ArcVFData *arcVF, unsigned nequs)
+{
+   arcVF->type = ArcVFMultipleBasic;
+   arcVF->mpid_child = UINT_MAX;
+   arcVF->basics_dat.len = nequs;
+   arcVF->basics_dat.max = nequs;
+
+   A_CHECK(arcVF->basics_dat.list, arenaL_alloc_array(arena, ArcVFBasicData, nequs));
+
+   u64 sizes[] = {sizeof(rhp_idx)*nequs, sizeof(double)*nequs};
+   void *mems[] = {arcVF->lequ_dat.vis, arcVF->lequ_dat.vals};
+
+   return arenaL_alloc_blocks(arena, 2, mems, sizes);
+}
+
+/**
+ * @brief Initialize a basic arcVF
+ *
+ * @param arena  the memory arena
+ * @param arcVF  the arc
+ * @param nequs  the number of equations on this arc
+ * @param eis    the equation where the arcVf appears
+ *
+ * @return       the error code
+ */
+static inline
+int arcVFmb_init(M_ArenaLink *arena, ArcVFData *arcVF, unsigned nequs,
+                 const rhp_idx eis[VMT(static restrict nequs)])
+{
+   S_CHECK(arcVFmb_alloc(arena, arcVF, nequs));
+
+   for (unsigned i = 0; i < nequs; ++i) {
+      ArcVFBasicData *bdat = &arcVF->basics_dat.list[i];
+      bdat->vi = IdxNA;
+      bdat->cst = 1.;
+      bdat->ei = eis[i];
+   }
+
+   return OK;
+}
+
+/**
+ * @brief Initialize a basic multiple arcVF
+ *
+ * @param arena  the memory arena
+ * @param arcVF  the arc
+ * @param eis    the equation where the arcVf appears
+ *
+ * @return       the error code
+ */
+static inline
+int arcVFmb_init_from_aequ(M_ArenaLink *arena, ArcVFData *arcVF, Aequ *eis, DblArrayBlock *csts)
+{
+   unsigned nequs = aequ_size(eis);
+
+   if (nequs != csts->size) { 
+      error("[arcVFmb] ERROR: number of equations and constants do not match: %u vs %u",
+            nequs, csts->size);
+      return Error_RuntimeError;
+   }
+
+   S_CHECK(arcVFmb_alloc(arena, arcVF, nequs));
+
+   for (unsigned i = 0; i < nequs; ++i) {
+      ArcVFBasicData *bdat = &arcVF->basics_dat.list[i];
+      bdat->vi = IdxNA;
+      bdat->cst = dblarrs_fget(csts, i);
+      bdat->ei = aequ_fget(eis, i);
+   }
+
+   return OK;
 }
 
 NONNULL static inline void arcVFb_setvar(ArcVFData *arcVF, rhp_idx vi)
@@ -209,37 +280,64 @@ int arcVF_copy(ArcVFData *dst, const ArcVFData *src)
 }
 
 NONNULL static inline
-int arcVFb_mul_arcVFb(ArcVFData *arcVF1, const ArcVFData *arcVF2)
+int arcVFbdat_mul_arcVFbdat(ArcVFBasicData *arcVF1, const ArcVFBasicData *arcVF2)
 {
-   if (valid_vi(arcVF1->basic_dat.vi) && valid_vi(arcVF2->basic_dat.vi)) {
+   if (valid_vi(arcVF1->vi) && valid_vi(arcVF2->vi)) {
       TO_IMPLEMENT("arcVFb_mul_arcVFb yielding polynomial");
    }
 
-   if (!valid_vi(arcVF1->basic_dat.vi)) {
-      arcVF1->basic_dat.vi = arcVF2->basic_dat.vi;
+   if (!valid_vi(arcVF1->vi)) {
+      arcVF1->vi = arcVF2->vi;
    }
 
-   arcVF1->basic_dat.cst *= arcVF2->basic_dat.cst;
+   arcVF1->cst *= arcVF2->cst;
 
    return OK;
 }
 
+NONNULL static inline
+int arcVFb_mul_arcVF(ArcVFBasicData *arcVFbdat, const ArcVFData *arcVF2)
+{
+   assert(valid_Varc(arcVF2));
+
+   switch (arcVF2->type) {
+   case ArcVFBasic:
+      return arcVFbdat_mul_arcVFbdat(arcVFbdat, &arcVF2->basic_dat);
+   default:
+      error("%s :: Unsupported arcVF type %u", __func__, arcVF2->type);
+      return Error_NotImplemented;
+   }
+}
 
 NONNULL static inline
-int arcVFb_mul_arcVF(ArcVFData *edgeVF1, const ArcVFData *edgeVF2)
+int arcVFmb_mul_arcVF(ArcVFMultipleBasicData *arcVF1dat, const ArcVFData *arcVF2)
 {
-   assert(valid_Varc(edgeVF1) && valid_Varc(edgeVF2));
+   assert(valid_Varc(arcVF2));
 
-   switch (edgeVF2->type) {
-   case ArcVFBasic:
-      return arcVFb_mul_arcVFb(edgeVF1, edgeVF2);
+   switch (arcVF2->type) {
+   case ArcVFBasic: {
+      ArcVFBasicData *arcs = arcVF1dat->list;
+      const ArcVFBasicData *arc2dat = &arcVF2->basic_dat;
+      for (unsigned i = 0, len = arcVF1dat->len; i < len; ++i) {
+         S_CHECK(arcVFbdat_mul_arcVFbdat(&arcs[i], arc2dat));
+      }
+      return OK;
+   }
    default:
-      error("%s :: Unsupported edgeVF type %u", __func__, edgeVF2->type);
+      error("%s :: Unsupported edgeVF type %u", __func__, arcVF2->type);
       return Error_NotImplemented;
    }
 }
 
 
+/**
+ * @brief Multiply the data of two arcVF together.
+ *
+ * @param[in,out] arcVF1 the first arcVF
+ * @param[in]     arcVF2 the second arcVF
+ *
+ * @return               the error code
+ */
 NONNULL static inline
 int arcVF_mul_arcVF(ArcVFData *arcVF1, const ArcVFData *arcVF2)
 {
@@ -247,7 +345,9 @@ int arcVF_mul_arcVF(ArcVFData *arcVF1, const ArcVFData *arcVF2)
 
    switch (arcVF1->type) {
    case ArcVFBasic:
-      return arcVFb_mul_arcVF(arcVF1, arcVF2);
+      return arcVFb_mul_arcVF(&arcVF1->basic_dat, arcVF2);
+   case ArcVFMultipleBasic:
+      return arcVFmb_mul_arcVF(&arcVF1->basics_dat, arcVF2);
    default:
       error("%s :: Unsupported arcVF type %u", __func__, arcVF1->type);
       return Error_NotImplemented;
@@ -328,21 +428,22 @@ int arcVF_mul_lequ(ArcVFData *arcVF, unsigned len, rhp_idx *idxs, double *vals)
 
 const char *linktype2str(LinkType type);
 
-unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl);
+unsigned arcVFb_getnumcons(const ArcVFBasicData *arc, const Model *mdl);
 
 NONNULL static inline
-unsigned arcVF_getnumcons(ArcVFData *arc, const Model *mdl)
+unsigned arcVF_getnumcons(const ArcVFData *arc, const Model *mdl)
 {
    assert(valid_Varc(arc));
 
    switch (arc->type) {
    case ArcVFBasic:
-      return arcVFb_getnumcons(arc, mdl);
+      return arcVFb_getnumcons(&arc->basic_dat, mdl);
    case ArcVFMultipleBasic: {
       unsigned res = 0;
+      const ArcVFMultipleBasicData *dat = &arc->basics_dat;
 
-      for (unsigned i = 0, len = arc->basics_dat.len; i < len; ++i) {
-         res += arcVFb_getnumcons(arc, mdl);
+      for (unsigned i = 0, len = dat->len; i < len; ++i) {
+         res += arcVFb_getnumcons(&dat->list[i], mdl);
       }
       return res;
    }
@@ -353,7 +454,7 @@ unsigned arcVF_getnumcons(ArcVFData *arc, const Model *mdl)
 
 }
 
-bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl);
+bool arcVFb_in_objfunc(const ArcVFBasicData *arc, const Model *mdl);
 
 NONNULL static inline
 bool arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
@@ -362,7 +463,14 @@ bool arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
 
    switch (arc->type) {
    case ArcVFBasic:
-      return arcVFb_in_objfunc(arc, mdl);
+      return arcVFb_in_objfunc(&arc->basic_dat, mdl);
+   case ArcVFMultipleBasic: {
+      const ArcVFMultipleBasicData *dat = &arc->basics_dat;
+      for (unsigned i = 0, len = dat->len; i < len; ++i) {
+         if (arcVFb_in_objfunc(&dat->list[i], mdl)) return true;
+      }
+      return false;
+   }
    default:
       error("%s :: Unsupported arcVF type %u", __func__, arc->type);
       return Error_NotImplemented;
@@ -409,4 +517,29 @@ bool arcVF_has_abstract_objfunc(const ArcVFData *arc)
       return Error_NotImplemented;
    }
 }
+
+NONNULL bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Container *ctr);
+
+NONNULL static inline
+bool arcVF_chk_equ(const ArcVFData *arc, mpid_t mpid, const Container *ctr)
+{
+   assert(valid_Varc(arc));
+
+   switch (arc->type) {
+   case ArcVFBasic:
+      return arcVFb_chk_equ(&arc->basic_dat, mpid, ctr);
+   case ArcVFMultipleBasic: {
+      const ArcVFMultipleBasicData *dat = &arc->basics_dat;
+      for (unsigned i = 0, len = dat->len; i < len; ++i) {
+         if (!arcVFb_chk_equ(&dat->list[i], mpid, ctr)) { return false; }
+      }
+      return true;
+      }
+   default:
+      error("%s :: Unsupported arcVF type %u", __func__, arc->type);
+      return false;
+   }
+}
+
+
 #endif /* EMPDAG_COMMON_H */

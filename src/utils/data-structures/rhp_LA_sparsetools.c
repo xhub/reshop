@@ -72,10 +72,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 void csr_tocsc(const RHP_INT n_row,
                const RHP_INT n_col,
-               const RHP_INT Ap[],
+               const RHP_INT Ap[VMT(static n_row+1)],
                const RHP_INT Aj[],
                const double Ax[],
-               RHP_INT Bp[],
+               RHP_INT Bp[VMT(static n_col+1)],
                RHP_INT Bi[],
                double Bx[])
 {

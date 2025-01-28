@@ -19,9 +19,12 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *node,
                                 Avar *uvar, const SpMat *B, const double *b, double *coeffs, Avar *v,
                                 Aequ* eqn);
 int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat *mat, Avar *v, double coeff);
-int rctr_equ_add_maps(Container *ctr, Equ *e, double *coeffs,
-                      unsigned args_indx_len, rhp_idx *arg_idx, rhp_idx *equ_idx,
-                      Avar *v, double *lcoeffs, double cst);
+int rctr_equ_add_maps(Container *ctr, Equ *edst, unsigned nargs,
+                      const double v_coeffs[VMT(restrict nargs)],
+                      const rhp_idx indices[VMT(restrict static nargs)],
+                      const rhp_idx idx2ei_map[VMT(restrict static nargs)],
+                      Avar * restrict v,
+                      const double lcoeffs[VMT(restrict nargs)], double cst);
 int add_dot_prod_term_cst(Container *ctr, Equ *e,
                           NlNode **node, double cst, unsigned args_idx_len,
                           int *args_idx, double *coeffs, double *lcoeffs, int *var_idx,

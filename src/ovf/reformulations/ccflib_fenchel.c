@@ -3,6 +3,7 @@
 #include "equ_modif.h"
 #include "fenchel_common.h"
 #include "macros.h"
+#include "mathprgm.h"
 #include "mdl.h"
 #include "ctrdat_rhp.h"
 #include "ovf_common.h"
@@ -105,12 +106,34 @@ int ccflib_primal_addmult_nonbox_cons(Model *mdl, CcfLibFenchelDat *dat)
 
 }
 
-//#endif
+#endif
+
+static inline unsigned filter_colrow(unsigned clen, unsigned cidxs[VMT(static restrict clen)],
+                                     double cvals[VMT(static restrict clen)],
+                                     const bool filter[VMT(static restrict clen)])
+{
+   /* Iterate over the row and see if a constraint was trivial and not generated */
+   unsigned skipped_cons = 0;
+   for (unsigned i = 0; i < clen; ++i) {
+      unsigned ridx = cidxs[i];
+      if (!filter[ridx]) { /* Skip */
+         skipped_cons++;
+         continue;
+      }
+
+      unsigned i_new = i-skipped_cons;
+      cvals[i_new] = cvals[i];
+      cidxs[i_new] = ridx;
+   }
+
+   return clen - skipped_cons;
+}
 
 int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldualdat)
 {
    int status = OK;
    double start = get_thrdtime();
+   M_ArenaTempStamp atmp = ctr_memtemp_begin(&mdl->ctr);
 
    /* ----------------------------------------------------------------------
     * Analyze the conic QP structure:
@@ -134,17 +157,25 @@ int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldua
 
    S_CHECK(fdat_init(&fdat, OvfType_Ccflib_Dual, ops, ovfd, mdl));
 
+   /* In this function, we finalize equations as they are generated as no mapping
+    * are added */
+   fdat.finalize_equ = true;
+
    S_CHECK(fenchel_gen_vars(&fdat, mdl));
 
    /* WARNING this must come after fenchel_gen_vars */
    S_CHECK(fenchel_apply_yshift(&fdat));
 
-   unsigned n_y = fdat.primal.ydat.n_y;
-
    Container *ctr = &mdl->ctr;
-   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
-   /* ---------------------------------------------------------------------
+  /* ----------------------------------------------------------------------
+   * Generate the objective function. If there is a y shift, we need to compute
+   * 
+   * ---------------------------------------------------------------------- */
+
+   S_CHECK(fenchel_gen_objfn(&fdat, mdl));
+
+    /* ---------------------------------------------------------------------
     * 3. Add constraints G( F(x) ) - A^T v - D s - M^T tilde_y  ∈ (K_y)°
     *
     * Right now, we expect K to be either R₊, R₋ or {0}.
@@ -153,98 +184,135 @@ int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldua
     * 3.1 Using common function, create - A^T v - D s - M^T tilde_y  ∈ (K_y)°
     * 3.2 Add G( F(x) ) via the weights on the empdag arcs. The weights
     *     and index are obtained from a CSC representation of B
+    *
     * --------------------------------------------------------------------- */
-   S_CHECK(fenchel_gen_equs(&fdat, mdl));
+   S_CHECK(fenchel_gen_cons(&fdat, mdl));
 
-   bool *equ_gen = fdat.equ_gen; assert(equ_gen);
-   rhp_idx ei = aequ_fget(&fdat.dual.cons, 0);
+   bool *equ_gen = fdat.cons_gen; assert(equ_gen);
+   rhp_idx ei_cons_start = aequ_fget(&fdat.dual.cons, 0);
 
-   unsigned ncols = fdat.B_lin
-   unsigned *csc_col_ptr = ctr_getmem(ctr, sizeof(unsigned)*ncols);
-//    def csr_to_csc(M, N, csr_row_ptr, csr_col_idx, csr_data):
-//    # Step 1: Initialize the output arrays
-//    NNZ = len(csr_data)
-//    csc_data = [0] * NNZ
-//    csc_row_idx = [0] * NNZ
-//    csc_col_ptr = [0] * (N + 1)
-//
-//    # Step 2: Count the number of entries per column
-//    for col in csr_col_idx:
-//        csc_col_ptr[col + 1] += 1
-//
-//    # Step 3: Compute the cumulative sum to get column pointers
-//    for i in range(1, N + 1):
-//        csc_col_ptr[i] += csc_col_ptr[i - 1]
-//
-//    # Step 4: Fill csc_data and csc_row_idx using the CSR data
-//    for row in range(M):
-//        row_start = csr_row_ptr[row]
-//        row_end = csr_row_ptr[row + 1]
-//        for idx in range(row_start, row_end):
-//            col = csr_col_idx[idx]
-//            dest = csc_col_ptr[col]
-//
-//            # Fill the CSC arrays
-//            csc_row_idx[dest] = row
-//            csc_data[dest] = csr_data[idx]
-//
-//            # Increment the csc_col_ptr to the next position for this column
-//            csc_col_ptr[col] += 1
-//
-//    # Step 5: Restore csc_col_ptr to original values (shift back by one position)
-//    for j in range(N, 0, -1):
-//        csc_col_ptr[j] = csc_col_ptr[j - 1]
-//    csc_col_ptr[0] = 0
-//
-//    return csc_data, csc_row_idx, csc_col_ptr
+  /* ----------------------------------------------------------------------
+   * We add the arcs per VF in F_i, as these are the children in the EMPDAG.
+   * It makes it easier to store them as 
+   * ---------------------------------------------------------------------- */
 
+   RHP_INT nVF;
 
-   for (unsigned i = 0; i < n_y; ++i) {
-      if (!equ_gen[i]) { continue; } /* No generated equation */
+   if (spmat_isset(&fdat.B_lin)) {
+      S_CHECK(rhpmat_ensure_cscA(&ctr->arenaL_temp, &fdat.B_lin));
+      nVF = spmat_ncols(&fdat.B_lin);
+   } else {
+      nVF = fdat.nargs;
+   }
+
+   /* ----------------------------------------------------------------------
+   * We go over each columns of B, and generate the empdag weight.
+   * Except, some equation might not have been generated, hence we need
+   * to take them out.
+   * ---------------------------------------------------------------------- */
+   mpid_t mpid_dual = ccfprimaldualdat->mpid_dual, mpid_primal = ccfprimaldualdat->mp_primal->id;
+   EmpDag *empdag = &mdl->empinfo.empdag; assert(empdag->empdag_up);
+   const ArcVFData *Varcs_primal = empdag->empdag_up->mps.Varcs[mpid_primal].arr;
+   VarcArray *Varcs = &empdag->mps.Varcs[mpid_dual]; assert(Varcs->len == 0);
+   assert(nVF == empdag->empdag_up->mps.Varcs[mpid_primal].len);
+   DagUidArray *rarcs = empdag->mps.rarcs;
+   daguid_t rarc_primal = rarcVFuid(mpid2uid(mpid_primal));
+   empdag->mps.Varcs[mpid_primal].len = 0;
+
+   for (unsigned j = 0; j < nVF; ++j, ++Varcs_primal) {
+
+      unsigned *cidxs;
+      unsigned clen;
+      double *cvals = NULL;
+      SpMatColRowWorkingMem wrkmem;
+      S_CHECK_EXIT(rhpmat_col(&fdat.B_lin, j, &wrkmem, &clen, &cidxs, &cvals));
+
+     /* ---------------------------------------------------------------------
+      * If we have a shift, we might have to add in the objective the value
+      * --------------------------------------------------------------------- */
+
+      double objCoeff = 0;
+
+      if (fdat.primal.ydat.has_shift) {
+         double * restrict y_shift = fdat.primal.ydat.tilde_y;
+
+         for (unsigned i = 0; i < clen; ++i) {
+            unsigned idx = cidxs[i];
+            assert(idx < fdat.primal.ydat.n_y);
+            objCoeff += y_shift[idx] * cvals[idx];
+         }
+
+      }
+
+      if (fdat.skipped_cons) {
+         clen = filter_colrow(clen, cidxs, cvals, fdat.cons_gen);
+      }
+
+      /* We need the indices to be in the equation index space */
+      for (unsigned i = 0; i < clen; ++i) {
+         cidxs[i] += ei_cons_start;
+      }
 
       /* --------------------------------------------------------------------
-       * Iterate over the row of B_lin to copy the elements B_i F_i(x)
+       * Add the EMPDAG arc between nodes
        * -------------------------------------------------------------------- */
-      assert(ei < mdl_nequs_total(mdl));
-      Equ *e = &ctr->equs[ei];
-      ei++;
 
-      unsigned *row_idxs;
-      unsigned row_len;
-      double *row_vals = NULL;
-      SpMatRowWorkingMem wrkmem;
-      S_CHECK_EXIT(rhpmat_row(&fdat.B_lin, i, &wrkmem, &row_len, &row_idxs, &row_vals));
+      bool inObjFn = fabs(objCoeff) > DBL_EPSILON;
 
-      if (row_len == 0) {
-         printout(PO_DEBUG, "[Warn] %s: row %d is empty\n", __func__, i);
+      unsigned narcVFequ = clen + (inObjFn ? 1 : 0);
+
+      if (narcVFequ == 0) {
+         printout(PO_DEBUG, "[Warn] %s: row %d is empty\n", __func__, j);
          continue;
       }
 
+      /* --------------------------------------------------------------------
+       * Add the EMPDAG arc between nodes
+       * -------------------------------------------------------------------- */
+      ArcVFData arcvf_ccf;
+      if (narcVFequ == 1) { /* Simple arc */
+         rhp_idx ei_arc;
+         double cst_arc;
+         if (clen == 1) {
+            ei_arc = cidxs[0];
+            cst_arc = cvals[0];
+         } else {
+            ei_arc = fdat.dual.ei_objfn;
+            cst_arc = objCoeff;
+         }
 
-      S_CHECK(rctr_equ_add_maps(ctr, e, coeffs, row_len, (rhp_idx*)row_idxs,
-                                equ_idx, ovf_args, row_vals, 1.));
+         arcVFb_init(&arcvf_ccf, ei_arc);
+         arcVFb_setcst(&arcvf_ccf, cst_arc);
 
-      /* -------------------------------------------------------------------
-       * Add the constant term if it exists
-       * Since we have B_lin*F(x) + b_lin on the LHS, the constant is on the LHS with a
-       * minus
-       * ------------------------------------------------------------------- */
+      } else {
 
-      if (fdat.b_lin) {
-         equ_add_cst(e, fdat.b_lin[i]);
+         DblArrayBlock* dblarrs;
+         Aequ *equs;
+         if (inObjFn) {
+            dblarrs = dblarrs_new(atmp.arena, clen, cvals, 1, &objCoeff);
+            A_CHECK_EXIT(equs, aequ_newblockA(atmp.arena, clen, cidxs, 1, &fdat.dual.ei_objfn));
+         } else {
+            dblarrs = dblarrs_new(atmp.arena, clen, cvals);
+            A_CHECK_EXIT(equs, aequ_newblockA(atmp.arena, clen, cidxs));
+         }
+
+         S_CHECK_EXIT(arcVFmb_init_from_aequ(&ctr->arenaL_perm, &arcvf_ccf, equs, dblarrs));
       }
 
-      /* -------------------------------------------------------------------
-       * We have now define the new constraint. We need to keep the model
-       * consistent. Only the linear part as to be taken care of, the nonlinear
-       * code has already done its part
-       *
-       * TODO: move this call
-       * ------------------------------------------------------------------- */
-      S_CHECK(cmat_sync_lequ(ctr, e));
+      S_CHECK_EXIT(arcVF_mul_arcVF(&arcvf_ccf, Varcs_primal));
 
+      mpid_t mpid_child = Varcs_primal->mpid_child;
+
+      /* Remove the primal MP from the parent list */
+      S_CHECK(mpidarray_rmsorted(&rarcs[mpid_child], rarc_primal));
+
+      arcvf_ccf.mpid_child = mpid_child;
+      S_CHECK(empdag_mpVFmpbyid(empdag, mpid_dual, &arcvf_ccf));
    }
  
+   MathPrgm *mp_dual;
+   S_CHECK_EXIT(empdag_getmpbyid(empdag, mpid_dual, &mp_dual));
+   S_CHECK_EXIT(mp_setobjequ(mp_dual, fdat.dual.ei_objfn));
 
 _exit:
    fdat_empty(&fdat);
@@ -253,6 +321,7 @@ _exit:
 
    simple_timing_add(&mdl->timings->reformulation.CCF.fenchel, get_thrdtime() - start);
 
+   ctr_memtemp_end(atmp);
+
    return status;
 }
-#endif

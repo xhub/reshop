@@ -39,6 +39,7 @@ void rhp_int_init(IntArray *dat) NONNULL;
 int rhp_int_add(IntArray *dat, int v) NONNULL;
 int rhp_int_addsorted(IntArray *dat, int v) NONNULL;
 int rhp_int_addseq(IntArray *dat, int start, unsigned len) NONNULL;
+bool rhp_int_chksorted(const IntArray *dat) NONNULL;
 int rhp_int_copy(IntArray * restrict dat,
                  const IntArray * restrict dat_src) NONNULL;
 void rhp_int_empty(IntArray *dat) NONNULL;
@@ -106,6 +107,7 @@ static inline unsigned rhp_uint_at(const UIntArray *dat, unsigned i)
 #define rhp_idx_addsorted rhp_int_addsorted
 #define rhp_idx_addseq rhp_int_addseq
 #define rhp_idx_at rhp_int_at
+#define rhp_idx_chksorted rhp_int_chksorted
 #define rhp_idx_copy rhp_int_copy
 #define rhp_idx_empty rhp_int_empty
 #define rhp_idx_extend_sorted rhp_int_extend

@@ -262,7 +262,7 @@ DEFINE_STR()
 };
 
 static_assert(sizeof(opnames_offsets)/sizeof(opnames_offsets[0]) == OP_MAXCODE,
-              "Check the sizze of rules and enum emptok_type");
+              "Check the sizes of rules and enum emptok_type");
 
 
 

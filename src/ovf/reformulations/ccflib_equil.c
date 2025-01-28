@@ -411,12 +411,11 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, SpMat *B,
       * Get i-th row of B^T, that is the i-th column of B
       * ---------------------------------------------------------------------- */
 
-      unsigned si, len;
-      double sv;
-      unsigned *idxs;
+      unsigned len, *idxs;
       double *vals;
 
-      S_CHECK(rhpmat_col(B, i, &si, &sv, &len, &idxs, &vals));
+      SpMatColRowWorkingMem wrkmem;
+      S_CHECK(rhpmat_col(B, i, &wrkmem, &len, &idxs, &vals));
 
       NlNode **addr = &add_node->children[j];
 
@@ -699,13 +698,13 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
 
       trace_process("[ccflib/equil:dual] tackling child MP(%s)\n", mps->names[mpid_child]);
 
-      /* TODO: add restrict keyword */
-      unsigned si, len, *idxs;
-      double sv, *vals;
+      unsigned len, *idxs;
+      double *vals;
 
 
       /* Get i-th row of B^T, that is the i-th column of B */
-      S_CHECK_EXIT(rhpmat_col(&dualdat.B, i, &si, &sv, &len, &idxs, &vals));
+      SpMatColRowWorkingMem wrkmem;
+      S_CHECK_EXIT(rhpmat_col(&dualdat.B, i, &wrkmem, &len, &idxs, &vals));
       assert(len < dualdat.y.size);
 
       /* Update idxs to the variable space */

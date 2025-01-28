@@ -88,9 +88,10 @@ typedef struct ovfinfo {
    unsigned refcnt;
 } OvfInfo;
 
+/** Primal-dual MPs related to a CCFLIB */
 typedef struct {
-   MathPrgm *mp_primal;
-   mpid_t mpid_dual;
+   MathPrgm *mp_primal;   /**< Primal MP */
+   mpid_t mpid_dual;      /**< Dual MP ID */
 } CcflibPrimalDualData;
 
 typedef union ovf_ops_data {

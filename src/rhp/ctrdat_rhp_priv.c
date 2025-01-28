@@ -24,14 +24,14 @@ const char * const rmdl_solvernames[] = {"unset",
 #include "list_generic.inc"
 
 
-int cdat_add2free(struct ctrdata_rhp *model, void *mem)
+int cdat_add2free(RhpContainerData *cdat, void *mem)
 {
-  if (!model->mem2free) {
-    MALLOC_(model->mem2free, struct tofree_list, 1);
-    _tofree_list_init(model->mem2free);
+  if (!cdat->mem2free) {
+    MALLOC_(cdat->mem2free, struct tofree_list, 1);
+    _tofree_list_init(cdat->mem2free);
   }
 
-  return _tofree_list_add(model->mem2free, mem);
+  return _tofree_list_add(cdat->mem2free, mem);
 }
 
 int chk_ctrdat_space(struct ctrdata_rhp *ctrdat, unsigned nb, const char *fn)
@@ -54,10 +54,10 @@ void rctrdat_mem2free(struct tofree_list *mem2free)
   _tofree_list_free(mem2free);
 }
 
-struct vnames_list* vnames_list_new(void)
+VnamesList* vnames_list_new(void)
 {
-  struct vnames_list *l;
-  MALLOC_NULL(l, struct vnames_list, 1);
+  VnamesList *l;
+  MALLOC_NULL(l, VnamesList, 1);
 
   l->active = false;
   l->len = l->max = 0;
@@ -67,7 +67,7 @@ struct vnames_list* vnames_list_new(void)
   return l;
 }
 
-void vnames_list_free(struct vnames_list *l)
+void vnames_list_free(VnamesList *l)
 {
   FREE(l->start);
   FREE(l->end);
@@ -81,25 +81,26 @@ void vnames_list_free(struct vnames_list *l)
   FREE(l);
 }
 
-int vnames_list_start(struct vnames_list *l, rhp_idx idx, char* name)
+int vnames_list_start(VnamesList *l, rhp_idx idx, char* name)
 {
-  assert(!l->active);
-  l->active = true;
+   assert(!l->active);
+   l->active = true;
 
-  if (l->max <= l->len) {
-    l->max = MAX(2*l->max, l->len + 10);
-    REALLOC_(l->names, const char *, l->max);
-    REALLOC_(l->start, rhp_idx, l->max);
-    REALLOC_(l->end, rhp_idx, l->max);
-  }
+   if (l->max <= l->len) {
+      l->max = MAX(2*l->max, l->len + 10);
+      REALLOC_(l->names, const char *, l->max);
+      REALLOC_(l->start, rhp_idx, l->max);
+      REALLOC_(l->end, rhp_idx, l->max);
+   }
 
-  l->names[l->len] = name;
-  l->start[l->len] = idx;
+   l->names[l->len] = name;
+   l->start[l->len] = idx;
+   l->end[l->len] = IdxMaxValid;
 
-  return OK;
+   return OK;
 }
 
-void vnames_list_stop(struct vnames_list *l, rhp_idx idx)
+void vnames_list_stop(VnamesList *l, rhp_idx idx)
 {
   l->active = false;
   l->end[l->len++] = idx;

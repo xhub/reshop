@@ -62,15 +62,22 @@ typedef struct M_ArenaTempStamp {
 } M_ArenaTempStamp;
 
 
-int              arenalink_free(M_ArenaLink *arena);
-int              arenalink_init_sized(M_ArenaLink *arena, u64 size);
-M_ArenaLink*     arenalink_create(u64 max) MALLOC_ATTR(arenalink_free, 1);
-int              arenalink_alloc_blocks(M_ArenaLink *arenaL, unsigned num_blocks,
-                                        void *blocks[VMT(static num_blocks)],
-                                        u64 sizes[VMT(static num_blocks)]) NONNULL;
-M_ArenaTempStamp arenalink_begin(M_ArenaLink* arena);
-void             arenalink_end(M_ArenaTempStamp stamp);
-int              arenalink_empty(M_ArenaLink *arena) NONNULL;
+int           arenaL_free(M_ArenaLink *arena);
+int           arenaL_init_sized(M_ArenaLink *arena, u64 size);
+M_ArenaLink*  arenaL_create(u64 max) MALLOC_ATTR(arenaL_free, 1);
+int           arenaL_empty(M_ArenaLink *arena) NONNULL;
+void*         arenaL_alloc(M_ArenaLink* arena, u64 size) NONNULL;
+int           arenaL_alloc_blocks(M_ArenaLink *arenaL, unsigned num_blocks,
+                                     void *blocks[VMT(static num_blocks)],
+                                     u64 sizes[VMT(static num_blocks)]) NONNULL;
+void*         arenaL_alloc_array_sized(M_ArenaLink* arena, u64 elem_size, u64 count);
+
+
+#define arenaL_alloc_array(arena, elem_type, count) \
+arenaL_alloc_array_sized(arena, sizeof(elem_type), count)
+
+M_ArenaTempStamp arenaTemp_begin(M_ArenaLink* arena) NONNULL;
+void             arenaTemp_end(M_ArenaTempStamp stamp);
 
 
 //~ Scratch Helpers

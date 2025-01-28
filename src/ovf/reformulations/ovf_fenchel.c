@@ -25,7 +25,7 @@
 
 //#define DEBUG_OVF_PRIMAL 
 
-int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
+int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
 {
    double start = get_thrdtime();
    int status = OK;
@@ -162,40 +162,25 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
     * If we want to initialize the values of the new variables, this is the
     * start for the new equations
     * --------------------------------------------------------------------- */
-   rhp_idx ei_rho = IdxNA;
+   rhp_idx ei_objfn = IdxNA;
 
    if (valid_vi(vi_ovf)) {
-      /* TODO(xhub) reuse the code before to also store that*/
-      Equ *e_rho;
-      S_CHECK_EXIT(rctr_add_equ_empty(ctr, &ei_rho, &e_rho, Mapping, CONE_NONE));
 
-      if (fdat.primal.has_set) {
+      S_CHECK(fenchel_gen_objfn(&fdat, mdl));
+      ei_objfn = fdat.dual.ei_objfn; assert(valid_ei(ei_objfn));
+      Equ *e_objfn = &ctr->equs[ei_objfn];
 
-         /* Add < a, v > + < ub, w> */
-         S_CHECK_EXIT(rctr_equ_addnewlvars(ctr, e_rho, &fdat.dual.vars.v, fdat.dual.a));
-         S_CHECK_EXIT(rctr_equ_addnewlvars(ctr, e_rho, &fdat.dual.vars.w, fdat.dual.ub));
+      if (fdat.primal.ydat.has_shift) {
 
-         if (fdat.primal.ydat.has_shift) {
-
-            /* ----------------------------------------------------------------
-          * Add <G(F(x)), tilde_y>
+         /* ----------------------------------------------------------------
+          * Add <B(F(x)), tilde_y>, < b, tilde_y> has already been added
           * ---------------------------------------------------------------- */
 
-            S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, e_rho, fdat.primal.ydat.tilde_y,
-                                                   n_y, &fdat.B_lin, fdat.b_lin, coeffs,
-                                                   ovf_args, equ_idx, 1.));
+         S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, e_objfn, fdat.primal.ydat.tilde_y,
+                                                n_y, &fdat.B_lin, NULL, coeffs,
+                                                ovf_args, equ_idx, 1.));
 
-         }
       }
-
-      if (fdat.primal.is_quad) {
-         S_CHECK_EXIT(rctr_equ_add_quadratic(ctr, e_rho, &fdat.J, &fdat.dual.vars.s, 1.));
-
-         if (fdat.primal.ydat.has_shift) {
-            equ_add_cst(e_rho, -fdat.primal.ydat.shift_quad_cst);
-         }
-      }
-
    /* ---------------------------------------------------------------------
     * 2.2 Add an equation to evaluate rho
     *
@@ -203,14 +188,14 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
     * start for the new equations
     * --------------------------------------------------------------------- */
 
-      S_CHECK_EXIT(rctr_equ_addnewvar(ctr, e_rho, vi_ovf, -1.));
+      S_CHECK_EXIT(rctr_equ_addnewvar(ctr, e_objfn, vi_ovf, -1.));
 
-      S_CHECK_EXIT(rctr_add_eval_equvar(ctr, ei_rho, vi_ovf));
+      S_CHECK_EXIT(rctr_add_eval_equvar(ctr, ei_objfn, vi_ovf));
 
       /* \TODO(xhub) this is a HACK to remove this equation from the main model.
     */
       S_CHECK_EXIT(rctr_deactivate_var(ctr, vi_ovf));
-      S_CHECK_EXIT(rctr_deactivate_equ(ctr, ei_rho));
+      S_CHECK_EXIT(rctr_deactivate_equ(ctr, ei_objfn));
    }
 
 
@@ -223,9 +208,9 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
     * 3.1 Using common function, create - A^T v - D s - M^T tilde_y  ∈ (K_y)°
     * 3.2 Add G( F(x) ) to them
     * --------------------------------------------------------------------- */
-   S_CHECK(fenchel_gen_equs(&fdat, mdl));
+   S_CHECK(fenchel_gen_cons(&fdat, mdl));
 
-   bool *equ_gen = fdat.equ_gen; assert(equ_gen);
+   bool *equ_gen = fdat.cons_gen; assert(equ_gen);
    rhp_idx ei = aequ_fget(&fdat.dual.cons, 0);
 
    for (unsigned i = 0; i < n_y; ++i) {
@@ -238,19 +223,18 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
       Equ *e = &ctr->equs[ei];
       ei++;
 
-      unsigned *arg_idx;
-      unsigned args_idx_len;
-      unsigned single_idx;
+      unsigned *arg_idx, nargs, single_idx;
       double single_val;
       double *lcoeffs = NULL;
-      S_CHECK_EXIT(rhpmat_row_needs_update(&fdat.B_lin, i, &single_idx, &single_val, &args_idx_len,
+      S_CHECK_EXIT(rhpmat_row_needs_update(&fdat.B_lin, i, &single_idx, &single_val, &nargs,
                          &arg_idx, &lcoeffs));
 
-      if (args_idx_len == 0) {
+      if (nargs == 0) {
          printout(PO_DEBUG, "[Warn] %s :: row %d is empty\n", __func__, i);
          continue;
       }
-      S_CHECK(rctr_equ_add_maps(ctr, e, coeffs, args_idx_len, (rhp_idx*)arg_idx,
+
+      S_CHECK(rctr_equ_add_maps(ctr, e, nargs, coeffs, (rhp_idx*)arg_idx,
                                 equ_idx, ovf_args, lcoeffs, 1.));
 
       /* -------------------------------------------------------------------
@@ -279,7 +263,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
       Avar ovfvar;
       avar_setcompact(&ovfvar, 1, vi_ovf);
       Aequ ovf_objequ;
-      aequ_setcompact(&ovf_objequ, 1, ei_rho);
+      aequ_setcompact(&ovf_objequ, 1, ei_objfn);
 
       for (unsigned i = 0; i < fdat.nargs; ++i) {
          if (!valid_ei(equ_idx[i])) {
@@ -298,7 +282,7 @@ int ovf_fenchel(Model *mdl, enum OVF_TYPE type, OvfOpsData ovfd)
 
       /* TODO: OVF_SUP check MpMin */
       struct mp_descr descr = { .mdltype = MdlType_qcp, .sense = RhpMin,
-                                .objvar = vi_ovf, .objequ = ei_rho };
+                                .objvar = vi_ovf, .objequ = ei_objfn };
 
       A_CHECK_EXIT(fs, filter_subset_new(vlen, var_c, elen, eqn_c, &descr));
 

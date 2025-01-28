@@ -92,11 +92,11 @@ option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation 
 option(BUILD_PYTHON
    "Build a python bindings (argument is a list of python interpreter)" "")
 
-option(DEV_MODE
-   "Developper mode (enables extras)" OFF)
+option(BUILD_IMGUI "Build the ReSHOP GUI (currently using Dear Imgui)")
 
-option(EXPERIMENTAL
-   "Enable experimental features" OFF)
+option(DEV_MODE "Developper mode (enables extras)" OFF)
+
+option(EXPERIMENTAL "Enable experimental features" OFF)
 
 CMAKE_DEPENDENT_OPTION (WITH_BACKTRACE 
   "Build with backtracing facilities" ON
@@ -676,3 +676,7 @@ endif()
 
 
 add_subdirectory (docs)
+
+if (BUILD_IMGUI)
+   add_subdirectory(gui)
+endif(BUILD_IMGUI)

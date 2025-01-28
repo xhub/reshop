@@ -9,6 +9,7 @@
 #include "rhp_alg.h"
 #include "printout.h"
 #include "reshop.h"
+#include "rhp_ipc.h"
 #include "rhp_process.h"
 #include "status.h"
 #include "timings.h"
@@ -162,7 +163,17 @@ int rhp_process(Model *mdl, Model *mdl_solver)
    const char *no_solve = mygetenv("RHP_TEST_PARSER");
    if (no_solve) {
       myfreeenvval(no_solve);
-      return OK;
+      goto _exit;
+   }
+
+   /* Push to GUI */
+   if (valid_fd(data_fd)) {
+      S_CHECK_EXIT(ipc_send_mdl(mdl, data_fd));
+   }
+
+   /* If we have an active control fd, wait until we have the command to continue */
+   if (valid_fd(ctrl_fd)) {
+      S_CHECK_EXIT(ipc_wait(ctrl_fd));
    }
  
 

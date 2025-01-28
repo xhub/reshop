@@ -5,6 +5,7 @@
 #include <string.h>
 
 /* TODO(xhub) this is just for printing, move elsewhere */
+#include "ccflib_reformulations.h"
 #include "ccflib_utils.h"
 #include "cmat.h"
 #include "container.h"
@@ -328,6 +329,7 @@ MathPrgm *mp_dup(const MathPrgm *mp_src, Model *mdl)
       memcpy(&mp->vi, &mp_src->vi, sizeof(mp->vi));
    }
 
+   assert(rhp_idx_chksorted(&mp_src->equs));
    SN_CHECK(rhp_idx_copy(&mp->equs, &mp_src->equs));
    SN_CHECK(rhp_idx_copy(&mp->vars, &mp_src->vars));
 
@@ -1114,10 +1116,10 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
 
    OvfDef *ccf = mp_primal->ccflib.ccf;
    if (ccf->args->size == 0 && ccf->num_empdag_children > 0) {
-      TO_IMPLEMENT("Dualization of MP node with only EMPDAG children");
+      S_CHECK(ccflib_dualize_fenchel_empdag(mdl, &ccfdat));
+   } else {
+      S_CHECK(ovf_fenchel(mdl, OvfType_Ccflib_Dual, ovfd));
    }
-
-   S_CHECK(ovf_fenchel(mdl, OvfType_Ccflib_Dual, ovfd));
 
    return mp_finalize(mp);
 }
@@ -1309,5 +1311,57 @@ int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le)
 
    mp_unfinalized(mp);
 
+   return OK;
+}
+
+int mp_packing_display(const MathPrgm *mp, uint8_t buf[VMT(static 1024)])
+{
+   size_t len = 0;
+   memcpy(buf, &mp->id, sizeof(mp->id));
+   buf += sizeof(mp->id);
+   *buf++ = (u8)mp->sense;
+   *buf++ = (u8)mp->type;
+   *buf++ = (u8)mp->status;
+
+   switch (mp->type) {
+   case MpTypeOpt:
+      memcpy(buf, &mp->opt.objvar, sizeof(rhp_idx)); buf += sizeof(rhp_idx);
+      memcpy(buf, &mp->opt.objequ, sizeof(rhp_idx)); buf += sizeof(rhp_idx);
+      memset(buf, 0, sizeof(u32));
+      break;
+
+   case MpTypeVi:
+      memcpy(buf, &mp->vi.num_cons, sizeof(u32)); buf += sizeof(u32);
+      memcpy(buf, &mp->vi.num_zeros, sizeof(u32)); buf += sizeof(u32);
+      memcpy(buf, &mp->vi.num_matches, sizeof(u32)); buf += sizeof(u32);
+      break;
+
+   case MpTypeDual:
+      memcpy(buf, &mp->dual.mpid_primal, sizeof(mpid_t)); buf += sizeof(mpid_t);
+      memset(buf, 0, 2*sizeof(u32));
+      break;
+
+   case MpTypeCcflib:
+      memset(buf, 0, 3*sizeof(u32));
+      break;
+
+    default:
+      error("[MP] ERROR: can't pack MP of type %s\n", mptype2str(mp->type));
+      return Error_RuntimeError;
+   }
+
+   /*
+   const char *name = mp_getname(mp);
+   size_t namelen = strlen(name);
+
+   if (namelen > UINT32_MAX) {
+      error("[MP] ERROR while packing: name exceeds max length (%u): '%s'\n",
+            UINT32_MAX, name);
+      return Error_RuntimeError;
+   }
+
+   uint32_t slen = (uint32_t)namelen;
+   memcpy(buf, &slen, sizeof(slen));
+*/
    return OK;
 }

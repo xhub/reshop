@@ -61,7 +61,8 @@ static u64 align_forward_u64(u64 ptr, u64 align)
 
 //~ Arena
 
-void* arena_alloc(M_Arena* arena, u64 size) {
+void* arena_alloc(M_Arena* arena, u64 size)
+{
    void* memory = 0;
 
    // align!
@@ -143,7 +144,7 @@ void arena_dealloc(M_Arena* arena, u64 size) {
 
 void arena_dealloc_to(M_Arena* arena, u64 pos)
 {
-   assert(pos > arena->allocated_size);
+   assert(pos <= arena->allocated_size);
    if (pos > arena->max) { assert(0 && "wrong position"); pos = arena->max; }
    MEMORY_POISON(arena->memory + pos, arena->allocated_size - pos);
    arena->allocated_size = pos;
@@ -226,13 +227,13 @@ int arena_free(M_Arena* arena)
 
 //~ Temp arena
 
-int arenalink_init_sized(M_ArenaLink *arena, u64 size)
+int arenaL_init_sized(M_ArenaLink *arena, u64 size)
 {
    arena->next = NULL;
    return arena_init_sized(&arena->arena, size);
 }
 
-M_ArenaLink* arenalink_create(u64 max)
+M_ArenaLink* arenaL_create(u64 max)
 {
    u16 offset = align_forward_u64(sizeof(M_ArenaLink), DEFAULT_ALIGNMENT);
    u64 reserved_size = max+offset;
@@ -249,44 +250,65 @@ M_ArenaLink* arenalink_create(u64 max)
    return arena;
 }
 
-int arenalink_alloc_blocks(M_ArenaLink *arenaL, unsigned num_blocks,
-                           void *blocks[VMT(static num_blocks)],
-                           u64 sizes[VMT(static num_blocks)])
+void* arenaL_alloc(M_ArenaLink* arenaL, u64 size)
+{
+   while (arenaL->next) { arenaL = arenaL->next; }
+
+   return arena_alloc(&arenaL->arena, size);
+}
+
+int arenaL_alloc_blocks(M_ArenaLink *arenaL, unsigned num_blocks,
+                        void *blocks[VMT(static num_blocks)],
+                        u64 sizes[VMT(static num_blocks)])
 {
    while (arenaL->next) { arenaL = arenaL->next; }
 
    return arena_alloc_blocks(&arenaL->arena, num_blocks, blocks, sizes);
 }
 
-int arenalink_free(M_ArenaLink *arenaL)
+void* arenaL_alloc_array_sized(M_ArenaLink* arenaL, u64 elem_size, u64 count)
+{
+   while (arenaL->next) { arenaL = arenaL->next; }
+
+   return arena_alloc(&arenaL->arena, elem_size * count);
+}
+
+int arenaL_free(M_ArenaLink *arenaL)
 {
    if (!arenaL) { return OK; }
 
    M_ArenaLink *next = arenaL->next;
    if (next) {
-      arenalink_free(next);
+      arenaL_free(next);
    }
 
    return arena_free(&arenaL->arena);
 }
 
-int  arenalink_empty(M_ArenaLink *arenaL)
+int  arenaL_empty(M_ArenaLink *arenaL)
 {
-   return arenalink_free(arenaL);
+   return arenaL_free(arenaL);
 }
 
-M_ArenaTempStamp arenalink_begin(M_ArenaLink* arenatemp)
+M_ArenaTempStamp arenaTemp_begin(M_ArenaLink* arenatemp)
 {
    return (M_ArenaTempStamp) { arenatemp, arenatemp->arena.allocated_size };
 }
 
-void arenalink_end(M_ArenaTempStamp stamp)
+/**
+ * @brief Cleanup temporary memory based on stamp
+ *
+ * Note that this cleans up all arenas that were created afterwards
+ *
+ * @param stamp the arena stamp
+ */
+void arenaTemp_end(M_ArenaTempStamp stamp)
 {
    arena_dealloc_to(&stamp.arena->arena, stamp.pos_rewind);
 
    M_ArenaLink *next = stamp.arena->next;
    if (stamp.arena->next) {
-      arenalink_free(next);
+      arenaL_free(next);
    }
 }
 

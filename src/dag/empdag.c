@@ -125,6 +125,7 @@ const char* arcVFType2str(ArcVFType type)
 void empdag_init(EmpDag *empdag, Model *mdl)
 {
    empdag->type = EmpDag_Unset;
+   empdag->stage = EmpDagStage_Unset;
    empdag->finalized = false;
    empdag->has_resolved_arcs = true;  /* Set by false at the start of the empinterp */
    empdag->features.istree = false;
@@ -791,8 +792,8 @@ int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t mpid_parent, const ArcVFData *arc)
    mpid_t mpid_child = arc->mpid_child;
    S_CHECK(chk_mpid_(empdag, mpid_parent));
    S_CHECK(chk_mpid_(empdag, mpid_child));
-   assert(mpid_parent != mpid_child);
-   assert(valid_Varc(arc));
+
+   assert(mpid_parent != mpid_child); assert(chk_Varc(arc, empdag->mdl));
 
    S_CHECK(rhp_uint_adduniqnofail(&empdag->mps.rarcs[mpid_child], rarcVFuid(mpid2uid(mpid_parent))));
 
@@ -809,18 +810,18 @@ int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t mpid_parent, const ArcVFData *arc)
    return OK;
 }
 
-int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t id_parent, mpid_t id_child)
+int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t mpid_parent, mpid_t mpid_child)
 {
-   S_CHECK(chk_mpid_(empdag, id_parent));
-   S_CHECK(chk_mpid_(empdag, id_child));
-   assert(id_parent != id_child);
+   S_CHECK(chk_mpid_(empdag, mpid_parent));
+   S_CHECK(chk_mpid_(empdag, mpid_child));
+   assert(mpid_parent != mpid_child);
 
-   S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.Carcs[id_parent], mpid2uid(id_child)));
-   S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.rarcs[id_child], rarcCTRLuid(mpid2uid(id_parent))));
+   S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.Carcs[mpid_parent], mpid2uid(mpid_child)));
+   S_CHECK(rhp_uint_adduniqsorted(&empdag->mps.rarcs[mpid_child], rarcCTRLuid(mpid2uid(mpid_parent))));
 
    trace_empdag("[empdag] adding an edge of type %s from MP(%s) to MP(%s)\n",
-                linktype2str(LinkArcCtrl), empdag_getmpname(empdag, id_parent),
-                empdag_getmpname(empdag, id_child));
+                linktype2str(LinkArcCtrl), empdag_getmpname(empdag, mpid_parent),
+                empdag_getmpname(empdag, mpid_child));
 
    empdag->finalized = false;
 
@@ -864,7 +865,7 @@ int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mp_id, nashid_t nashid)
 //}
 
 int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
-                  EmpDagArc *arc)
+                  EmpDagLink *arc)
 {
 
    unsigned id_parent = uid2id(uid_parent);
@@ -1416,11 +1417,49 @@ int empdag_infer_roots(EmpDag *empdag)
    return OK;
 }
 
-unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl)
+NONNULL static inline bool chk_Varc_basic(const ArcVFBasicData *arc, const Model *mdl)
 {
-   assert(valid_Varc(arc) && arc->type == ArcVFBasic);
+   rhp_idx ei = arc->ei;
 
-   rhp_idx ei = arc->basic_dat.ei;
+   /* check that the equation index is valid */
+   if (ei != IdxObjFunc && ei != IdxCcflib && !chk_ei_(ei, ctr_nequs_total(&mdl->ctr))) {
+      if (valid_ei(ei)) {
+         error("[empdag] ERROR: invalid arcVF equation index %u not in [0,%u)\n",
+               ei, ctr_nequs_total(&mdl->ctr));
+      } else {
+         error("[empdag] ERROR: invalid arcVF equation index '%s'\n",
+               badidx_str(ei));
+      }
+
+      return false;
+   }
+
+   return true;
+}
+
+bool chk_Varc(const ArcVFData *arc, const Model *mdl)
+{
+   if (!valid_Varc(arc)) { return false; }
+
+   switch (arc->type) {
+   case ArcVFBasic: return chk_Varc_basic(&arc->basic_dat, mdl);
+   case ArcVFMultipleBasic: {
+      const ArcVFMultipleBasicData *dat = &arc->basics_dat;
+      for (unsigned i = 0, len = dat->len; i < len; ++i) {
+         if (!chk_Varc_basic(&dat->list[i], mdl)) { return false; }
+      }
+      return true;
+   }
+
+   default:
+      error("%s: Unsupported arcVF type %u", __func__, arc->type);
+   }
+   return true;
+}
+
+unsigned arcVFb_getnumcons(const ArcVFBasicData *arc, const Model *mdl)
+{
+   rhp_idx ei = arc->ei;
 
    if (ei == IdxObjFunc) { return 0; }
 
@@ -1429,11 +1468,9 @@ unsigned arcVFb_getnumcons(ArcVFData *arc, const Model *mdl)
    return mdl->ctr.equmeta[ei].role == EquConstraint ? 1 : 0;
 }
 
-bool arcVFb_in_objfunc(const ArcVFData *arc, const Model *mdl)
+bool arcVFb_in_objfunc(const ArcVFBasicData *arc, const Model *mdl)
 {
-   assert(valid_Varc(arc) && arc->type == ArcVFBasic);
-
-   rhp_idx ei = arc->basic_dat.ei;
+   rhp_idx ei = arc->ei;
 
    if (ei == IdxObjFunc) { return true; }
 
@@ -1582,3 +1619,24 @@ int empdag_substitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
    return empdag_substitute_mp_child_arcs(empdag, mpid_old, mpid_new);
 }
 
+bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Container *ctr)
+{
+   rhp_idx ei = arc->ei;
+
+   if (!valid_ei(ei)) {
+      /* Only the magic value IdxObjFunc or IdxCcflib is valid */
+      if (ei == IdxObjFunc || ei == IdxCcflib ) { return true; }
+
+      error("[empdag] ERROR: magic value '%s' used in a VF arc\n", badidx_str(ei));
+      return false;
+   }
+
+   bool res = ctr_chk_equ_ownership(ctr, ei, mpid);
+
+   if (!res) {
+      error("[empdag] ERROR: Equation '%s' does not belong to parent MP\n",
+            ctr_printequname(ctr, ei));
+   }
+
+   return res;
+}

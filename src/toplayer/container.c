@@ -34,11 +34,11 @@ static void dealloc_(Container *ctr)
    }
    FREE(ctr->workspace.mem);
 
-   if (arenalink_empty(&ctr->arenaL_temp) != OK) {
+   if (arenaL_empty(&ctr->arenaL_temp) != OK) {
       errormsg("[container] ERROR: could not free temporary memory arena\n");
    }
 
-   if (arenalink_empty(&ctr->arenaL_perm) != OK) {
+   if (arenaL_empty(&ctr->arenaL_perm) != OK) {
       errormsg("[container] ERROR: could not free permanent memory arena\n");
    }
 
@@ -141,8 +141,8 @@ int ctr_init(Container *ctr, BackendType backend)
    ctr->fixed_vars = avar_newcompact(0, IdxNA);
    ctr->fops = NULL;
 
-   S_CHECK_EXIT(arenalink_init_sized(&ctr->arenaL_temp, Gigabytes(1)));
-   S_CHECK_EXIT(arenalink_init_sized(&ctr->arenaL_perm, Gigabytes(1)));
+   S_CHECK_EXIT(arenaL_init_sized(&ctr->arenaL_temp, Gigabytes(1)));
+   S_CHECK_EXIT(arenaL_init_sized(&ctr->arenaL_perm, Gigabytes(1)));
 
    return OK;
 
@@ -319,7 +319,7 @@ int ctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
 
 int ctr_trimmem(Container *ctr)
 {
-   return arenalink_empty(&ctr->arenaL_temp);
+   return arenaL_empty(&ctr->arenaL_temp);
 }
 
 M_ArenaTempStamp ctr_memtemp_begin(Container *ctr)
@@ -328,12 +328,12 @@ M_ArenaTempStamp ctr_memtemp_begin(Container *ctr)
 
    while (arena->next) { arena = arena->next; }
 
-   return arenalink_begin(arena);
+   return arenaTemp_begin(arena);
 }
 
 int ctr_memtemp_end(M_ArenaTempStamp stamp)
 {
-   arenalink_end(stamp);
+   arenaTemp_end(stamp);
 
    return OK;
 }
@@ -353,7 +353,7 @@ void *ctr_getmemtemp(Container *ctr, size_t size)
    }
 
    if (!mem) {
-      arenatemp->next = arenalink_create(Gigabytes(1));
+      arenatemp->next = arenaL_create(Gigabytes(1));
       mem = arena_alloc(&arenatemp->next->arena, size);
    }
 
@@ -896,4 +896,21 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
     }
 
    return valid_ei(ei_) ? OK : Error_EMPRuntimeError;
+}
+
+bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid)
+{
+   if (ei >= ctr_nequs_total(ctr)) {
+      error("FATAL ERROR: equation index %u not in [0,%u)]\n", ei,
+            ctr_nequs_total(ctr));
+      return false;
+   }
+
+   EquMeta *emeta = &ctr->equmeta[ei];
+
+   if (equmeta_is_shared(emeta)) {
+      TO_IMPLEMENT("SHAREDEQU");
+   }
+
+   return emeta->mp_id == mpid;
 }

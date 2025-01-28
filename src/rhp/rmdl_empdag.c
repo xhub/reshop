@@ -517,6 +517,8 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       IdxArray * restrict equs_bigmp = &mp_big->equs;
       S_CHECK(rhp_idx_copy(vars_bigmp, &mp_root_src->vars));
       S_CHECK(rhp_idx_copy(equs_bigmp, &mp_root_src->equs));
+      assert(rhp_idx_chksorted(vars_bigmp));
+      assert(rhp_idx_chksorted(equs_bigmp));
 
       /* Most of the opt data is the same, minus the objequ */
       memcpy(&mp_big->opt, &mp_root_src->opt, sizeof(struct mp_opt));

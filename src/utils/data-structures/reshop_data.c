@@ -21,6 +21,7 @@ DBGUSED static bool chk_sorted_uintarray(const unsigned * restrict arr, unsigned
    return true;
 }
 
+
 void rhp_int_init(IntArray *dat)
 {
    dat->len = 0;
@@ -97,6 +98,11 @@ int rhp_int_addseq(IntArray *dat, int start, unsigned len)
 
    dat->len += len;
    return OK;
+}
+
+bool rhp_int_chksorted(const IntArray *dat)
+{
+   return chk_sorted_intarray(dat->arr, dat->len);
 }
 
 int rhp_int_copy(IntArray * restrict dat,
@@ -673,6 +679,10 @@ int rhp_uint_rmsorted(UIntArray *dat, unsigned v)
 
 error:
    error("Could not find value %u in the dataset\n", v);
+   for (unsigned i = 0, len = dat->len; i < len; ++i) {
+      error("\t[%5u] %u\n", i, dat->arr[i]);
+   }
+
    return Error_NotFound;
 }
 

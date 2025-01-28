@@ -10,6 +10,7 @@
 #include "printout.h"
 #include "reshop.h"
 #include "reshop_data.h"
+#include "rhp_defines.h"
 #include "rhp_fwd.h"
 
 /** @file mathprgm.h
@@ -38,7 +39,6 @@ struct mpes {
  *  Description of a optimization problem
  */
 struct mp_opt {
-  //   MpSense sense;     /**< sense of this problem */
   rhp_idx objvar; /**< index of the objective variable             */
   rhp_idx objequ; /**< index of the objective equation             */
   double objcoef; /**< coefficient of the objective variable       */
@@ -51,9 +51,9 @@ struct mp_opt {
  *  Description of a variational inequality \f$0 \in F(x) + N_X(x) \f$
  */
 struct mp_vi {
-   unsigned num_cons;    /**< number of constraints in the VI             */
-   unsigned num_zeros;   /**< number of VI zero func (\f$ F_i(x) \equiv 0 \f$) */
-   unsigned num_matches; /**< number of matches*/
+   u32 num_cons;    /**< number of constraints in the VI             */
+   u32 num_zeros;   /**< number of VI zero func (\f$ F_i(x) \equiv 0 \f$) */
+   u32 num_matches; /**< number of matches*/
    bool has_kkt;         /**< True of the MP contains the KKT of another MP    */
 };
 
@@ -67,43 +67,28 @@ struct mp_dual {
    DualOperatorData dualdat;
 };
 
-typedef enum {
-   MpStatusUnset                  = 0x0,  /**< No status set                    */
-   MpFinalized                    = 0x1,  /**< MP has been finalized            */
-   MpIsHidden                     = 0x2,  /**< Hidden MP                        */
-   MpIsHidableAsDual              = 0x4,  /**< Hiddable MP: is used as dual     */
-   MpIsHidableAsKkt               = 0x8,  /**< Hiddable MP: is used as kkt      */
-   MpIsHidableAsInstance          = 0x10,  /**< Hiddable MP: is used as kkt     */
-   MpIsHidableAsSmooth            = 0x20,  /**< Hiddable MP: smoothing operator */
-   MpCcflibNeedsFullInstantiation = 0x40,
-   MpDelayedFinalization          = 0x80,  /**< MP could not be finalized yet   */
-} MpStatus;
-
-#define MpIsHidable  (MpIsHidableAsDual | MpIsHidableAsKkt | MpIsHidableAsInstance)
-
 /** @struct mathprgm
  *
  *  Mathematical Programm definition
  */
 typedef struct rhp_mathprgm {
-  mpid_t id;                 /**< mathprgm ID                          */
-  RhpSense sense;              /**< mathprgm sense                       */
-  MpType type;                 /**< mathprgm type                        */
-//  enum EmpDAGType type_subdag; /**< type of the subdag of this node      */
+   mpid_t id;                    /**< mathprgm ID                          */
+   RhpSense sense;               /**< mathprgm sense                       */
+   MpType type;                  /**< mathprgm type                        */
    ModelType probtype;           /**< problem type                         */
    MpStatus status;
 
-  Model *mdl;                  /**< model for this MP                    */
+   Model *mdl;                   /**< model for this MP                    */
 
-  union {
-    struct mp_opt opt;
-    struct mp_vi vi;
-    struct mp_ccflib ccflib;
-    struct mp_dual dual;
-  };
+   union {
+      struct mp_opt opt;
+      struct mp_vi vi;
+      struct mp_ccflib ccflib;
+      struct mp_dual dual;
+   };
 
-  IdxArray equs;               /**< equations owned by the programm      */
-  IdxArray vars;               /**< variables owned by the programm      */
+   IdxArray equs;               /**< equations owned by the programm      */
+   IdxArray vars;               /**< variables owned by the programm      */
 } MathPrgm;
 
 /* -------------------------------------------------------------------------
@@ -164,6 +149,8 @@ int mp_instantiate(MathPrgm *mp) NONNULL;
 int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src) NONNULL;
 int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le) NONNULL;
 int mp_operator_kkt(MathPrgm *mp) NONNULL;
+
+int mp_packing_display(const MathPrgm *mp, uint8_t buf[VMT(static 1024)]);
 
 void mp_err_noobjdata(const MathPrgm *mp) NONNULL;
 

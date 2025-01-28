@@ -4,13 +4,13 @@
 #include <stdbool.h>
 
 #include "compat.h"
-#include "ctrdat_rhp_data.h"
+#include "cdat_rhp_data.h"
 #include "rhp_fwd.h"
 
 extern const char * const rmdl_solvernames[];
 
 struct tofree_list;
-struct ctrdata_rhp;
+typedef struct ctrdata_rhp RhpContainerData;
 
 typedef enum {
    VNL_Lagrangian = 0,
@@ -20,14 +20,14 @@ typedef enum {
 } VecNamesLookupTypes;
 
 /* @brief names for vector-type variables */
-struct vnames_list {
+typedef struct vnames_list {
   bool active;
   unsigned len;
   unsigned max;
   rhp_idx *start;
   rhp_idx *end;
   const char **names;  /**< names */
-};
+} VnamesList;
 
 struct vnames;
 typedef struct vnames_fooclookup VecNamesFoocLookup;
@@ -49,9 +49,9 @@ VecNamesFoocLookup* vnames_lookup_new(unsigned len, const Model *mdl_fooc,
 VecNamesLookupTypes *vnames_lookup_gettypes(VecNamesFoocLookup *dat) NONNULL;
 int vnames_lookup_copyname(VecNamesFoocLookup *dat, unsigned idx, char *name, unsigned len);
 
-int chk_ctrdat_space(struct ctrdata_rhp *ctrdat, unsigned nb, const char *fn) NONNULL;
+int chk_ctrdat_space(RhpContainerData *cdat, unsigned nb, const char *fn) NONNULL;
 void rctrdat_mem2free(struct tofree_list *mem2free) NONNULL;
 
-bool rctr_eq_not_deleted(struct ctrdata_rhp *cdat, rhp_idx ei) NONNULL;
+bool rctr_eq_not_deleted(RhpContainerData *cdat, rhp_idx ei) NONNULL;
 
 #endif /*RHP_MODEL_REPR_PRIV_H*/

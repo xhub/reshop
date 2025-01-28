@@ -15,7 +15,7 @@
  *
  */
 
-struct empdag_arc;
+struct empdag_link;
 
 /** Edges for value function */
 typedef struct VFedges {
@@ -110,21 +110,6 @@ typedef struct {
 } EmpDagFeatures;
 
 typedef struct {
-   unsigned num_min;
-   unsigned num_max;
-   unsigned num_feas;
-   unsigned num_vi;
-   unsigned num_nash;
-   unsigned num_active;
-} EmpDagNodeStats;
-
-typedef struct {
-   unsigned num_ctrl;
-   unsigned num_equil;
-   unsigned num_vf;
-} EmpDagEdgeStats;
-
-typedef struct {
    MpIdArray primal;
    MpIdArray dual;
 } DualMpInfo;
@@ -147,6 +132,7 @@ typedef struct {
 /** @brief Main EMP DAG structure */
 typedef struct empdag {
    EmpDagType type;
+   EmpDagStage stage;
    EmpDagFeatures features;
    EmpDagNodeStats node_stats;
    EmpDagEdgeStats arc_stats;
@@ -263,16 +249,11 @@ int empdag_getnashidbyname(const EmpDag *empdag, const char *name,
  * Arcs related functions
  * -------------------------------------------------------------------------- */
 
-int empdag_mpVFmpbyid(EmpDag *empdag, unsigned id_parent,
-                      const struct rhp_empdag_arcVF *edgeVF) NONNULL;
-int empdag_mpCTRLmpbyid(EmpDag *empdag, unsigned id_parent, unsigned id_child)
-                        NONNULL;
-int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mpid, nashid_t nashid)
-                        NONNULL;
-int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid)
-                        NONNULL;
-int empdag_nashaddmpsbyid(EmpDag *empdag, nashid_t nashid,
-                         const UIntArray *mps) NONNULL;
+int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t mpid_parent, const ArcVFData *arcVF) NONNULL;
+int empdag_mpCTRLmpbyid(EmpDag *empdag, mpid_t mpid_parent, mpid_t mpid_child) NONNULL;
+int empdag_mpCTRLnashbyid(EmpDag *empdag, mpid_t mpid, nashid_t nashid) NONNULL;
+int empdag_nashaddmpbyid(EmpDag *empdag, nashid_t nashid, mpid_t mpid) NONNULL;
+int empdag_nashaddmpsbyid(EmpDag *empdag, nashid_t nashid, const UIntArray *mps) NONNULL;
 
 int empdag_mpVFmpbyname(EmpDag *empdag, const char *mp1_name,
                         const struct rhp_empdag_arcVF *vf_info) NONNULL;
@@ -286,7 +267,7 @@ int empdag_nashaddmpsbyname(EmpDag *empdag, const char *nash_name,
                            const char *mp_names, unsigned mps_len) NONNULL;
 
 int empdag_addarc(EmpDag *empdag, daguid_t uid_parent, daguid_t uid_child,
-                          struct empdag_arc *edge) NONNULL;
+                          struct empdag_link *edge) NONNULL;
 /* --------------------------------------------------------------------------
  * Roots related functions
  * -------------------------------------------------------------------------- */

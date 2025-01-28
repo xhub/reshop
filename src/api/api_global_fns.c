@@ -5,6 +5,7 @@
 #include "printout.h"
 #include "reshop.h"
 #include "rhp_options.h"
+#include "rhpgui_launcher.h"
 #include "status.h"
 
 #ifdef __x86_64__
@@ -280,10 +281,18 @@ _exit:
    myfreeenvval(env_varval);
 
 
-   FREE(env_varname);
+   free(env_varname);
 
    if (status == OK) {
       status = ovf_syncenv();
+   }
+
+   if (status == OK) {
+      const char* imgui = mygetenv("RHP_IMGUI");
+      if (imgui) {
+         status = imgui_start(imgui);
+      }
+      myfreeenvval(imgui);
    }
 
    return status;

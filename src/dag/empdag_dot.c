@@ -44,17 +44,17 @@ typedef struct {
    const char *equname;
    char *weight;
    bool do_free_weight;
-} EdgeVFStrings;
+} ArcVFStrings;
 
-static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, const MathPrgm *mp,
-                               const Model *mdl, EdgeVFStrings *strs)
+static int arcVF_basic_arcdat(const ArcVFData *arcVF, const MathPrgm *mp,
+                              const Model *mdl, ArcVFStrings *strs)
 {
-   if (edgeVF->type != ArcVFBasic) {
-      strs->equname = arcVFType2str(edgeVF->type);
+   if (arcVF->type != ArcVFBasic) {
+      strs->equname = arcVFType2str(arcVF->type);
       return OK;
    }
 
-   const ArcVFBasicData *dat = &edgeVF->basic_dat;
+   const ArcVFBasicData *dat = &arcVF->basic_dat;
    rhp_idx ei = dat->ei;
    if (valid_ei(ei)) {
       rhp_idx objequ = mp_getobjequ(mp);
@@ -70,15 +70,16 @@ static int edgeVF_basic_arcdat(const ArcVFData *edgeVF, const MathPrgm *mp,
       const EmpDag *empdag = &mdl->empinfo.empdag;
       error("[empdag:dot] ERROR: invalid equation for VF arc between MP(%s) and "
             "MP(%s)\n", empdag_getmpname(empdag, mp->id),
-            empdag_getmpname(empdag, edgeVF->mpid_child));
+            empdag_getmpname(empdag, arcVF->mpid_child));
       strs->equname = "ERROR invalid equation index";
       strs->labelcolor = "red";
       strs->weight = NULL;
+
       return OK;
    }
 
-   double cst = edgeVF->basic_dat.cst;
-   rhp_idx vi = edgeVF->basic_dat.vi;
+   double cst = arcVF->basic_dat.cst;
+   rhp_idx vi = arcVF->basic_dat.vi;
    strs->weight = NULL;
    strs->do_free_weight = true;
    if (cst != 1.) {
@@ -108,6 +109,11 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
 
       if (!mp || (mps->Carcs[i].len == 0 && mps->Varcs[i].len == 0)) continue;
 
+      /* Poor man's detection of truly hidden MPs */
+      if (mp_ishidden(mp) && !mp_ishidable(mp)) {
+         continue;
+      }
+
       const UIntArray *Carcs = &mps->Carcs[i];
       unsigned mp_id = mp->id;
 
@@ -122,26 +128,26 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
                          isMP ? "MP" : "Nash", id, arcstyle_CTRL));
       }
 
-      const struct VFedges *Varcs = &mps->Varcs[i];
+      const VarcArray *Varcs = &mps->Varcs[i];
 
       for (unsigned j = 0, alen = Varcs->len; j < alen; ++j) {
 
-         const struct rhp_empdag_arcVF* edgeVF = &Varcs->arr[j];
-         unsigned mpchild_id = edgeVF->mpid_child;
+         const struct rhp_empdag_arcVF* arcVF = &Varcs->arr[j];
+         unsigned mpchild_id = arcVF->mpid_child;
 
-         EdgeVFStrings VFstrings = {.do_free_weight = false};
+         ArcVFStrings VFstrings = {.do_free_weight = false};
 
-         switch (edgeVF->type) {
+         switch (arcVF->type) {
          case ArcVFBasic:
-            edgeVF_basic_arcdat(edgeVF, mp, empdag->mdl, &VFstrings);
+            arcVF_basic_arcdat(arcVF, mp, empdag->mdl, &VFstrings);
             break;
          case ArcVFUnset:
             VFstrings.labelcolor = "red";
-            VFstrings.equname = "INVALID edgeVF";
+            VFstrings.equname = "INVALID arcVF";
             break;
          default:
             VFstrings.labelcolor = "red";
-            VFstrings.equname = "unsupported edgeVF type";
+            VFstrings.equname = "unsupported arcVF type";
          }
 
          IO_CALL(fprintf(f, " MP%u -> MP%u [label=<%s",
@@ -223,6 +229,10 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
          error("%s :: unsupported sense %s #%d", __func__, sense2str(sense), sense);
          return Error_InvalidValue;
       }
+
+      /* -------------------------------------------------------------------
+       * If there is no MP name available, make one up
+       * ------------------------------------------------------------------- */
 
       const char *name = mps->names[i];
       char *lname = NULL;

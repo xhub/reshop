@@ -1,4 +1,5 @@
 #include "reshop_config.h"
+#include "rhp_defines.h"
 
 #include <signal.h>
 #include <stdarg.h>
@@ -19,6 +20,7 @@
 #include "option_priv.h" /* Need when no constructor priority is available */
 #include "printout.h"
 #include "reshop.h"
+#include "rhp_ipc_protocol.h" // For sending log messages to GUI
 #include "tlsdef.h"
 
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -289,6 +291,58 @@ static tlsvar struct printout_ops print_ops = {
    .use_asciicolors = true
 };
 
+static tlsvar int log_fd = -1;
+
+static NONNULL void print_fd(int fd, unsigned mode, const char *buf)
+{
+   assert (fd >= 0);
+
+   u8 lvl;
+   unsigned mode_verbosity = (mode & 0xFc);
+   if (mode_verbosity == 0) {
+      lvl = 0;
+   } else if (mode_verbosity >= PO_LEVEL_INFO) {
+      lvl = 2;
+   } else {
+      lvl = 3;
+   }
+
+   // Send request
+   size_t buflen = strlen(buf)+1;
+   MessageHeader header = {buflen, LogMsgSolver, {lvl, 0, 0} };
+   if (write(fd, &header, sizeof(header)) == -1) { goto log_ipc_error; }
+   if (write(fd, buf, buflen) == -1) { goto log_ipc_error; }
+
+   return;
+
+log_ipc_error:
+   {
+   char *errnostr, errnomsg[256];
+   STRERROR(errno, errnomsg, sizeof(errnomsg), errnostr);
+   print_ops.print(print_ops.data, PO_ERROR, "[IPC] ERROR: could not send log message: ");
+   print_ops.print(print_ops.data, PO_ERROR, errnostr);
+   print_ops.print(print_ops.data, PO_ERROR, "\n");
+   }
+   // FIXME: 
+   /* Linux	212 KB	Buffer size (212 KB)	Configurable via SO_SNDBUF
+      macOS	64 KB	Buffer size (64 KB)	Configurable via SO_SNDBUF
+      Windows	8 KB to 64 KB	Buffer size (8-64 KB)	AF_UNIX supported on Win 10+
+
+
+      int bufsize;
+      socklen_t optlen = sizeof(bufsize);
+      getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize, &optlen);
+   */
+
+
+}
+
+void set_log_fd(int fd)
+{
+   log_fd = fd;
+}
+
+
 CONSTRUCTOR_ATTR_PRIO(1000) void logging_syncenv(void)
 {
 #ifdef NO_CONSTRUCTOR_PRIO
@@ -326,7 +380,8 @@ _exit:
    print_ops.use_asciicolors = false;
 
 #endif
-    }
+}
+
 static inline bool do_print(unsigned mode, bool *mode_has_color)
 {
    /* This is normal output */
@@ -382,8 +437,12 @@ void printout(unsigned mode, const char *format, ...)
       va_end(ap);
 
       if (rc <= 0) {
-         FREE(buf);
+         free(buf);
          return;
+      }
+
+      if (log_fd >= 0) {
+         print_fd(log_fd, mode, buf);
       }
 
       unsigned mode_ops = mode & PO_ALLDEST;
@@ -395,7 +454,7 @@ void printout(unsigned mode, const char *format, ...)
          print_ops.print(print_ops.data, mode_ops, buf);
       }
 
-      FREE(buf);
+      free(buf);
    }
 
 #ifdef WITH_BACKTRACE
@@ -412,6 +471,10 @@ void printstr(unsigned mode, const char *str)
 {
    bool mode_has_color = true;
    if (do_print(mode, &mode_has_color) && str) {
+
+      if (log_fd >= 0) {
+         print_fd(log_fd, mode, str);
+      }
 
       unsigned mode_ops = mode & PO_ALLDEST;
       if (print_ops.use_asciicolors && mode_has_color) {

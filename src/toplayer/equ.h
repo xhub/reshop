@@ -66,6 +66,10 @@ Aequ* aequ_newcompact(unsigned size, rhp_idx start) MALLOC_ATTR(aequ_free,1);
 Aequ* aequ_newlistborrow(unsigned size, rhp_idx *list) NONNULL MALLOC_ATTR(aequ_free,1);
 Aequ* aequ_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(aequ_free,1);
 Aequ* aequ_newblock(unsigned num_blocks) MALLOC_ATTR(aequ_free,1);
+
+Aequ* aequ_newblockA_(M_ArenaLink *arena, unsigned nblocks, ...);
+#define aequ_newblockA(arena, ...) aequ_newblockA_(arena, PP_NARG(__VA_ARGS__), __VA_ARGS__)
+
 int aequ_get(const Aequ *e, unsigned i, rhp_idx *ei) NONNULL;
 unsigned aequ_size(const Aequ *e) NONNULL;
 
@@ -89,7 +93,8 @@ int equ_copymetadata(Equ * restrict edst, const Equ * restrict esrc, rhp_idx ei)
 int equ_copy_to(Container *ctr, rhp_idx ei, Equ *edst, rhp_idx ei_dst,
                 unsigned lin_space, rhp_idx vi_no) NONNULL;
 int equ_dup(Container *ctr, rhp_idx ei, rhp_idx ei_dst) NONNULL;
-int equ_nltree_fromgams(Equ* e, unsigned codelen, const int *instrs, const int *args) NONNULL;
+int equ_nltree_fromgams(Equ* e, unsigned codelen, const int instrs[VMT(restrict codelen)],
+                        const int args[VMT(restrict codelen)]) NONNULL_AT(1);
 void equ_free(Equ *e) NONNULL;
 void equ_print(const Equ *equ);
 unsigned equ_get_nladd_estimate(Equ *e) NONNULL;

@@ -190,6 +190,21 @@ void backtrace_(const char *expr, int status);
 #define TO_IMPLEMENT(STR) { error("%s NOT IMPLEMENTED (yet): " STR "\n", __func__); return Error_NotImplemented; }
 #define TO_IMPLEMENT_EXIT(STR) { error("%s NOT IMPLEMENTED (yet): " STR "\n", __func__); status = Error_NotImplemented; goto _exit; }
 
+/* strerror is not required by POSIX to be thread-safe.
+ * However, it is on linux and macOs (since 10.6)
+ * This leaves us with windows, which provides strerror_s:
+ * errno_t strerror_s( char *buffer, size_t sizeInBytes, int errnum);
+ */
+
+#ifdef _WIN32
+#define error_errno(fmt) { \
+   char *errno_msg42[256]; \
+   strerror_s(errno_msg42, sizeof(errno_msg42), errno); \
+   error(fmt, buf42); \
+}
+#elif defined(__linux__) || defined(__APPLE__)
+#define error_errno(...) error(__VA_ARGS__, strerror(errno))
+#endif
 
 /* Glibc provides a handy strerror_r */
 #if !defined(__clang_analyzer__) && defined(__GLIBC__) && (!(defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) || (defined(_GNU_SOURCE)))

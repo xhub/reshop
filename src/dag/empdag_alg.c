@@ -551,18 +551,35 @@ NONNULL static int process_Carcs(EmpDagDfsData *dfsdata, UIntArray *Carcs,
    return runtime_error_rc(rc);
 }
 
-NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
+NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, VarcArray *Varcs,
                                  DfsPathDataFwd pathdata, mpid_t mpid_parent)
 {
    EmpDag *empdag = dfsdata->empdag;
    DagPathType cur_pathtype = pathdata.pathtype;
+   const Container *ctr = &dfsdata->mdl->ctr;
 
    dfsdata->hasVFPath = true;
 
    assert(Varcs->len > 0);
 
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
+
       const ArcVFData *arcVF = &Varcs->arr[i];
+      mpid_t mpid_child = arcVF->mpid_child;
+
+      /* -------------------------------------------------------------------
+       * First check: are the equations in the Varc assigned to the parent mp?
+       *
+       * ------------------------------------------------------------------- */
+      if (!arcVF_chk_equ(arcVF, mpid_parent, ctr)) {
+         error("[empdag] ERROR: The VF arc between MP(%s) and MP(%s) involves "
+               "at least one equation that does not belong to the parent MP(%s)\n",
+               empdag_getmpname(empdag, mpid_parent),
+               empdag_getmpname(empdag, mpid_child),
+               empdag_getmpname(empdag, mpid_parent));
+         return Error_EMPIncorrectInput;
+      }
+
 
       /* ------------------------------------------------------------------
        * If we have an adversarial MP, we add it to a list of MP to reformulate
@@ -570,7 +587,6 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, struct VFedges *Varcs,
        * path and the child MP are opposite.
        * ------------------------------------------------------------------ */
 
-      mpid_t mpid_child = arcVF->mpid_child;
       const MathPrgm *mp_child = empdag->mps.arr[mpid_child];
       RhpSense sense = mp_getsense(mp_child);
 
@@ -1536,6 +1552,13 @@ int analyze_nash(EmpDagDfsData *dfsdata, nashid_t nashid, AnalysisData *data)
    return OK;
 }
 
+/**
+ * @brief Analyze the EMPDAG and check for correctness
+ *
+ * @param empdag  the EMPDAG
+ *
+ * @return        the error code
+ */
 int empdag_analysis(EmpDag * restrict empdag)
 {
    int status = OK;

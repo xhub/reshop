@@ -1,11 +1,11 @@
-#ifndef CTRDAT_RHP_H
-#define CTRDAT_RHP_H
+#ifndef cdat_RHP_H
+#define cdat_RHP_H
 
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "ctrdat_rhp_data.h"
+#include "cdat_rhp_data.h"
 #include "compat.h"
 #include "equ.h"
 /*  TODO(Xhub) rework the solvestatus */
@@ -13,7 +13,7 @@
 #include "rhp_fwd.h"
 #include "var.h"
 
-/** @file ctrdat_rhp.h
+/** @file cdat_rhp.h
  *
  *  @brief Internal ReSHOP model structure
  */
@@ -100,7 +100,7 @@ struct postproc_data {
 };
 
 /**
- * @struct model_repr ctrdat_rhp.h
+ * @struct model_repr cdat_rhp.h
  *
  * In memory representation of a model
  */
@@ -162,17 +162,17 @@ typedef struct ctrdata_rhp {
 
 
 int cdat_alloc(Container *ctr, unsigned max_n, unsigned max_m) NONNULL;
-int cdat_dealloc(Container *ctr, RhpContainerData* ctrdat);
-int cdat_add_subctr(RhpContainerData* ctrdat, struct filter_subset* fs) NONNULL;
+int cdat_dealloc(Container *ctr, RhpContainerData* cdat);
+int cdat_add_subctr(RhpContainerData* cdat, struct filter_subset* fs) NONNULL;
 OWNERSHIP_TAKES(2)
-int cdat_equname_start(RhpContainerData* ctrdat, char *name) NONNULL;
-int cdat_equname_end(RhpContainerData* ctrdat) NONNULL;
-int cdat_equ_init(RhpContainerData *ctrdat, rhp_idx ei) NONNULL;
-int cdat_resize(RhpContainerData *ctrdat, unsigned max_n, unsigned max_m ) NONNULL;
+int cdat_equname_start(RhpContainerData* cdat, char *name) NONNULL;
+int cdat_equname_end(RhpContainerData* cdat) NONNULL;
+int cdat_equ_init(RhpContainerData *cdat, rhp_idx ei) NONNULL;
+int cdat_resize(RhpContainerData *cdat, unsigned max_n, unsigned max_m ) NONNULL;
 OWNERSHIP_TAKES(2)
-int cdat_varname_start(RhpContainerData* ctrdat, char *name) NONNULL;
-int cdat_varname_end(RhpContainerData* ctrdat ) NONNULL;
-int cdat_add2free(RhpContainerData *ctrdat, void *mem) NONNULL;
+int cdat_varname_start(RhpContainerData* cdat, char *name) NONNULL;
+int cdat_varname_end(RhpContainerData* cdat ) NONNULL;
+int cdat_add2free(RhpContainerData *cdat, void *mem) NONNULL;
 
 static NONNULL inline
 rhp_idx cdat_equ_inherited(const RhpContainerData *cdat, rhp_idx ei)

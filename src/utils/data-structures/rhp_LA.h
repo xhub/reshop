@@ -50,7 +50,7 @@ typedef struct rhp_spmat {
 typedef struct {
    double single_val;
    unsigned single_idx;
-} SpMatRowWorkingMem;
+} SpMatColRowWorkingMem;
 
 
 enum EMPMAT_PPTY {
@@ -84,7 +84,7 @@ static inline void rhpmat_null(SpMat* m)
    m->csr = NULL; m->csc = NULL; m->triplet = NULL; m->block = NULL; m->ppty = 0;
 }
 
-static inline bool rhpmat_nonnull(SpMat* m)
+static inline bool spmat_isset(SpMat* m)
 {
    return (m->csr || m->csc || m->triplet || m->block);
 }
@@ -137,25 +137,49 @@ void rhp_spfree(struct sp_matrix *m);
 struct sp_matrix* rhp_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type) MALLOC_ATTR(rhp_spfree,1) CHECK_RESULT;
 SparseMatrix* spmat_allocA(M_ArenaLink *arena, RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type);
 
+/* ----------------------------------------------------------------------
+ * Matrix computations
+ * ---------------------------------------------------------------------- */
 int rhpmat_axpy(const SpMat *A, const double *x, double *y) NONNULL;
 int rhpmat_atxpy(const SpMat *A, const double *x, double *y) NONNULL;
 void rhpmat_copy_row_neg(SpMat* M, unsigned i, double *vals,
                          int *indx, unsigned *offset, unsigned offset_var);
 double rhpmat_evalquad(const SpMat *m, const double *x) NONNULL;
 
+/* ----------------------------------------------------------------------
+ * Matrix transformations
+ * ---------------------------------------------------------------------- */
+int rhpmat_ensure_cscA(M_ArenaLink *arena, SpMat *m) NONNULL;
+
 bool rhpmat_is_square(SpMat* m) NONNULL;
 int rhpmat_get_size(const SpMat* mat, unsigned *n, unsigned *m)
    ACCESS_ATTR(write_only, 2) ACCESS_ATTR(write_only, 3) NONNULL;
 
-int rhpmat_row(const SpMat* m, unsigned i, SpMatRowWorkingMem *wrkmem,
+int rhpmat_row(const SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
                unsigned* restrict row_len, unsigned** restrict row_idxs,
                double** restrict row_vals) NONNULL;
 int rhpmat_row_needs_update(const SpMat* m, unsigned i, unsigned *single_idx, double *single_val,
                unsigned *col_idx_len, unsigned **col_idx, double **vals) NONNULL;
 
-int rhpmat_col(SpMat* m, unsigned i, unsigned* single_idx,
-               double* single_val, unsigned* col_idx_len,
-               unsigned** col_idx, double** vals);
+int rhpmat_col(SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
+               unsigned* restrict col_len, unsigned** restrict col_idxs,
+               double** restrict col_vals) NONNULL;
+
+static inline RHP_INT spmat_ncols(SpMat* m) {
+   assert(spmat_isset(m));
+
+   if (m->ppty & EMPMAT_CSC) {
+      return m->csc->n;
+   }
+   if (m->ppty & EMPMAT_CSR) {
+   
+   }
+
+   assert(0);
+
+   return 0;
+}
+
 #define rhpmat_free rhp_mat_free
 #define rhpmat_triplet rhp_mat_triplet
 

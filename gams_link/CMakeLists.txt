@@ -104,6 +104,22 @@ else (WINDOWS)
    set(ASAN_SCRIPTNAME ${OUTPUT_DIR}/script.sh)
 endif(WINDOWS)
 
+set(GAMSCONFIG_YAML_FILES_DIR ${CMAKE_SOURCE_DIR}/gams_link/cfg/)
+file (GLOB GAMSCONFIG_YAML_FILES LIST_DIRECTORIES false ${CMAKE_CURRENT_SOURCE_DIR}/cfg/gamsconfig*.yaml.in)
+file (GLOB GAMSCONFIG_TEST_YAML_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/test/gams/cfg/*.in)
+
+foreach(_f ${GAMSCONFIG_YAML_FILES} ${GAMSCONFIG_TEST_YAML_FILES})
+   # If we don't build rhpcclib64, the target doesn't exists and the file(GENERATE ...) fails
+   if (GAMSCONFIG_SKIP_GAMSLINK_LIB AND _f MATCHES "gamsconfig.yaml.in")
+      continue()
+   endif()
+
+   cmake_path(GET _f FILENAME _outfile)
+   configure_file(${_f} ${CMAKE_BINARY_DIR}/generated/${_outfile} @ONLY)
+   set(_infile ${_outfile})
+   cmake_path(REMOVE_EXTENSION _outfile LAST_ONLY)
+   file(GENERATE OUTPUT ${OUTPUT_DIR}/${_outfile} INPUT ${CMAKE_BINARY_DIR}/generated/${_infile})
+endforeach()
 
 
 if (BUILD_INSTALLER)
@@ -117,7 +133,7 @@ if (BUILD_INSTALLER)
 
    file(COPY ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/makeself)
 
-   file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml INPUT ${CMAKE_BINARY_DIR}/gamsconfig.yaml.in)
+   file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml INPUT ${CMAKE_BINARY_DIR}/generated/gamsconfig.yaml.in)
    file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/makeself/installer.sh INPUT ${CMAKE_BINARY_DIR}/installer.sh.in
           FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
@@ -141,20 +157,4 @@ set(VALGRIND_SCRIPTNAME ${OUTPUT_DIR}/valgrind.run)
 set(RESHOP_DEFNAME ${CMAKE_CURRENT_SOURCE_DIR}/optreshop.def)
 
 
-set(GAMSCONFIG_YAML_FILES_DIR ${CMAKE_SOURCE_DIR}/gams_link/cfg/)
-file (GLOB GAMSCONFIG_YAML_FILES LIST_DIRECTORIES false ${CMAKE_CURRENT_SOURCE_DIR}/cfg/gamsconfig*.yaml.in)
-file (GLOB GAMSCONFIG_TEST_YAML_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/test/gams/cfg/*.in)
-
-foreach(_f ${GAMSCONFIG_YAML_FILES} ${GAMSCONFIG_TEST_YAML_FILES})
-   # If we don't build rhpcclib64, the target doesn't exists and the file(GENERATE ...) fails
-   if (GAMSCONFIG_SKIP_GAMSLINK_LIB AND _f MATCHES "gamsconfig.yaml.in")
-      continue()
-   endif()
-
-   cmake_path(GET _f FILENAME _outfile)
-   configure_file(${_f} ${CMAKE_BINARY_DIR}/generated/${_outfile} @ONLY)
-   set(_infile ${_outfile})
-   cmake_path(REMOVE_EXTENSION _outfile LAST_ONLY)
-   file(GENERATE OUTPUT ${OUTPUT_DIR}/${_outfile} INPUT ${CMAKE_BINARY_DIR}/generated/${_infile})
-endforeach()
 

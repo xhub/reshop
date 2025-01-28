@@ -197,7 +197,7 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
                 empdag_getname(empdag, uid_child));
 
    LinkType linktype = arcdat->type;
-   EmpDagArc arc = { .type = linktype };
+   EmpDagLink link = { .type = linktype };
 
    switch (linktype) {
    case LinkArcVF: {
@@ -231,11 +231,11 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
       assert(valid_ei(objequ) || (objequ == IdxCcflib && mp_gettype(mp) == MpTypeCcflib)
                               || (objequ == IdxObjFunc));
 
-      arc.Varc.type = ArcVFBasic;
-      arc.Varc.mpid_child = mpid_child;
-      arc.Varc.basic_dat.ei = objequ;
-      arc.Varc.basic_dat.cst = arcdat->basic_dat.cst;
-      arc.Varc.basic_dat.vi = arcdat->basic_dat.vi;
+      link.Varc.type = ArcVFBasic;
+      link.Varc.mpid_child = mpid_child;
+      link.Varc.basic_dat.ei = objequ;
+      link.Varc.basic_dat.cst = arcdat->basic_dat.cst;
+      link.Varc.basic_dat.vi = arcdat->basic_dat.vi;
 
       break;
    }
@@ -313,7 +313,7 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
    }
 
 
-   return empdag_addarc(empdag, uid_parent, uid_child, &arc);
+   return empdag_addarc(empdag, uid_parent, uid_child, &link);
 }
 
 static int dag_resolve_arc_labels(Interpreter *interp)

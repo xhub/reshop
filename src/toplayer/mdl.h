@@ -49,11 +49,12 @@ typedef struct {
    char *exports_dir_parent;    /**< Parent of the exports dir               */
 } MdlCommonData;
 
+// FIXME Is this used? If yes, then document
 typedef union {
    McpInfo mcp;
 } MdlDetailedInfo;
 
-/** @brief ReSHOP Model structure */
+/** ReSHOP Model structure */
 typedef struct rhp_mdl {
    BackendType backend;         /**< model backend                           */
    MdlStatus status;            /**< various statuses of the model           */

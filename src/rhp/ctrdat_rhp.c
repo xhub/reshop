@@ -643,7 +643,7 @@ int cdat_varname_end(RhpContainerData* ctrdat)
    return OK;
 }
 
-int cdat_equname_start(RhpContainerData* ctrdat, char *name)
+int cdat_equname_start(RhpContainerData* cdat, char *name)
 {
   struct vnames *vnames;
   struct vnames_list *l;
@@ -652,7 +652,7 @@ int cdat_equname_start(RhpContainerData* ctrdat, char *name)
     * Get the last regular name (this creates one if needed)
     * --------------------------------------------------------------------- */
 
-   A_CHECK(vnames, vnames_getregular(&ctrdat->equ_names.v));
+   A_CHECK(vnames, vnames_getregular(&cdat->equ_names.v));
    A_CHECK(l, vnames->list);
 
    if (l->active) {
@@ -661,17 +661,20 @@ int cdat_equname_start(RhpContainerData* ctrdat, char *name)
       return Error_Inconsistency;
    }
 
+   /* Only Initialize if new sequence */
    if (!valid_ei(vnames->start)) {
-      vnames->start = ctrdat->total_m;
+      vnames->start = cdat->total_m;
    }
 
-  return vnames_list_start(l, ctrdat->total_m, name);
+   vnames->end = IdxMaxValid; /* This allows for useful debug messages */
+
+   return vnames_list_start(l, cdat->total_m, name);
 }
 
-int cdat_equname_end(RhpContainerData* ctrdat)
+int cdat_equname_end(RhpContainerData* cdat)
 {
    struct vnames *vnames;
-   A_CHECK(vnames, vnames_getregular(&ctrdat->equ_names.v))
+   A_CHECK(vnames, vnames_getregular(&cdat->equ_names.v))
    struct vnames_list *l;
    A_CHECK(l, vnames->list);
 
@@ -680,9 +683,9 @@ int cdat_equname_end(RhpContainerData* ctrdat)
       return Error_Inconsistency;
    }
 
-   rhp_idx end_idx = ctrdat->total_m-1;
-   vnames->end = end_idx;
-   vnames_list_stop(l, end_idx);
+   rhp_idx ei_end = cdat->total_m-1;
+   vnames->end = ei_end;
+   vnames_list_stop(l, ei_end);
 
    return OK;
 }

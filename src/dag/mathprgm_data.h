@@ -9,14 +9,7 @@
 
 #include <stdbool.h>
 
-struct emptree_node;
-
-struct mp_parents {
-   unsigned nb;
-   unsigned max;
-   struct emptree_node *list;
-};
-
+/** MathPrgm type */
 typedef enum {
    MpTypeUndef = 0,
    MpTypeOpt = 1,
@@ -31,6 +24,21 @@ typedef enum {
    MpTypeFooc = 5,
    MpTypeLast = MpTypeFooc,
 } MpType;
+
+/** MathPrgm status */
+typedef enum {
+   MpStatusUnset                  = 0x0,  /**< No status set                   */
+   MpFinalized                    = 0x1,  /**< MP has been finalized           */
+   MpIsHidden                     = 0x2,  /**< Hidden MP                       */
+   MpIsHidableAsDual              = 0x4,  /**< Hiddable MP: is used as dual    */
+   MpIsHidableAsKkt               = 0x8,  /**< Hiddable MP: is used as kkt     */
+   MpIsHidableAsInstance          = 0x10, /**< Hiddable MP: is used as kkt     */
+   MpIsHidableAsSmooth            = 0x20, /**< Hiddable MP: smoothing operator */
+   MpCcflibNeedsFullInstantiation = 0x40,
+   MpDelayedFinalization          = 0x80, /**< MP could not be finalized yet   */
+} MpStatus;
+
+#define MpIsHidable  (MpIsHidableAsDual | MpIsHidableAsKkt | MpIsHidableAsInstance)
 
 typedef enum {
    FenchelScheme = 0,

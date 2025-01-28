@@ -1,8 +1,10 @@
 #include <string.h>
 
 #include "fenchel_common.h"
+#include "cmat.h"
 #include "ctr_rhp.h"
 #include "ctr_rhp_add_vars.h"
+#include "equ_modif.h"
 #include "itostr.h"
 #include "lequ.h"
 #include "macros.h"
@@ -146,12 +148,14 @@ int fenchel_find_yshift(CcfFenchelData *fdat)
    return OK;
 }
 
-int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
-              const OvfOps *ops, OvfOpsData ovfd, Model *mdl)
+int fdat_init(CcfFenchelData * restrict fdat, OvfType type, const OvfOps *ops,
+              OvfOpsData ovfd, Model *mdl)
 {
    int status = OK;
 
    fdat->type = type;
+   fdat->skipped_cons = false;
+   fdat->finalize_equ = false;
    fdat->ops = ops;
    fdat->ovfd = ovfd;
    unsigned n_args;
@@ -163,9 +167,10 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
 
    rhp_idx vi_ovf = ops->get_ovf_vidx(ovfd);
    fdat->vi_ovf = vi_ovf;
+   fdat->dual.ei_objfn = IdxNA;
 
    RhpSense sense_parent;
-   S_CHECK(ops->get_mp_and_sense(ovfd, mdl, vi_ovf, &fdat->mp, &sense_parent));
+   S_CHECK(ops->get_mp_and_sense(ovfd, mdl, vi_ovf, &fdat->mp_dst, &sense_parent));
 
    if (fdat->primal.ydat.n_y == 0) {
       const char *ovf_name = ops->get_name(ovfd);
@@ -186,7 +191,7 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type,
    fdat->dual.ub = NULL;
    fdat->b_lin = NULL;
    fdat->tmpvec = NULL;
-   fdat->equ_gen = NULL;
+   fdat->cons_gen = NULL;
    fdat->equvar_basename = NULL;
 
    OvfPpty ovf_ppty;
@@ -380,7 +385,7 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    const OvfOps *ops = fdat->ops;
    OvfOpsData ovfd = fdat->ovfd;
-   MathPrgm *mp = fdat->mp;
+   MathPrgm *mp = fdat->mp_dst;
 
    /* NAMING: this should not exists */
    char *equvar_basename = NULL;
@@ -392,6 +397,7 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
    strcat(equvar_basename, "_");
    strcat(equvar_basename, fdat->type == OvfType_Ovf ? "ovf" : "ccf");
    strcat(equvar_basename, "_");
+   /* TODO URG: vi_ovf does not always make sense */
    unsignedtostr((unsigned)fdat->vi_ovf, sizeof(unsigned), &equvar_basename[strlen(equvar_basename)], 20, 10);
    unsigned ovf_name_idxlen = strlen(equvar_basename);
    fdat->equvar_basename = equvar_basename;
@@ -460,6 +466,7 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
       cdat_varname_start(cdat, v_name);
       w_start = cdat->total_n;
 
+ 
       double * restrict yvar_ub = fdat->primal.ydat.var_ub;
       double * restrict ub = fdat->dual.ub;
       unsigned n_y = fdat->primal.ydat.n_y;
@@ -514,11 +521,11 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
    return OK;
 }
 
-int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
+int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl)
 {
    Container *ctr = &mdl->ctr;
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
-   MathPrgm *mp = fdat->mp;
+   MathPrgm *mp_dst = fdat->mp_dst;
 
    /* ---------------------------------------------------------------------
     * Perform the computation of   M tilde_y
@@ -550,8 +557,8 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
 
    double * restrict var_ub = fdat->primal.ydat.var_ub;
 
-   MALLOC_(fdat->equ_gen, bool, n_y);
-   bool *equ_gen = fdat->equ_gen;
+   MALLOC_(fdat->cons_gen, bool, n_y);
+   bool *cons_gen = fdat->cons_gen;
 
    rhp_idx ei_cons_start = cdat->total_m;
 
@@ -566,15 +573,15 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
        * Get the polar (or dual for inf OVF) for the equation
        * ------------------------------------------------------------------- */
 
-      Cone equ_cone;
-      void* equ_cone_data;
+      Cone cons_cone;
+      void* cons_cone_data;
 
       switch (sense) {
       case RhpMax:
-         S_CHECK(cone_polar(cones_y[i], cones_y_data[i], &equ_cone, &equ_cone_data));
+         S_CHECK(cone_polar(cones_y[i], cones_y_data[i], &cons_cone, &cons_cone_data));
          break;
       case RhpMin:
-         S_CHECK(cone_dual(cones_y[i], cones_y_data[i], &equ_cone, &equ_cone_data));
+         S_CHECK(cone_dual(cones_y[i], cones_y_data[i], &cons_cone, &cons_cone_data));
          break;
       default: return error_runtime();
       }
@@ -586,16 +593,17 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
        * ------------------------------------------------------------------- */
 
        /* TODO(xhub) this should not be here. This has to be detected earlier*/
-      if (equ_cone == CONE_R) {
-         equ_gen[i] = false;
+      if (cons_cone == CONE_R) {
+         cons_gen[i] = false;
+         fdat->skipped_cons = true;
          continue;
       }
-      equ_gen[i] = true;
+      cons_gen[i] = true;
 
-      S_CHECK(rctr_add_equ_empty(ctr, &ei_new, &e, ConeInclusion, equ_cone));
+      S_CHECK(rctr_add_equ_empty(ctr, &ei_new, &e, ConeInclusion, cons_cone));
 
-      if (mp) {
-         S_CHECK(mp_addconstraint(mp, ei_new));
+      if (mp_dst) {
+         S_CHECK(mp_addconstraint(mp_dst, ei_new));
       }
 
       /* -------------------------------------------------------------------
@@ -620,7 +628,7 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
       double single_val;
       double *lcoeffs = NULL;
       S_CHECK(rhpmat_row_needs_update(B_lin, i, &single_idx, &single_val, &args_idx_len,
-                         &arg_idx, &lcoeffs));
+                                      &arg_idx, &lcoeffs));
 
       if (args_idx_len == 0) {
          printout(PO_DEBUG, "[Warn] %s :: row %d is empty\n", __func__, i);
@@ -682,11 +690,67 @@ int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl)
           w_curvi++;
       }
 
+      if (fdat->finalize_equ) {
+         S_CHECK(cmat_sync_lequ(ctr, e));
+      }
+
    }
 
    /* All the equations have been added  */
    cdat_equname_end(cdat);
    aequ_setcompact(&fdat->dual.cons, cdat->total_m - ei_cons_start, ei_cons_start);
+
+   return OK;
+}
+
+/**
+ * @brief Add objective function 
+ *
+ *   o   \f$ <c,v> + 0.5 <s, Js>\f$ in the simplest case
+ *   o   \f$ - 0.5 <tilde_y, M tilde_y> + <c - A tilde_y, v> + 0.5 <s, Js> \f$
+ *       if y has to be shifted by - tilde_y.
+ *
+ * @warning The term <G(F(x)), tilde_y> needs to be added by the callee
+ *
+ * @param  fdat  the fenchel data
+ * @param  mdl   the model
+ *
+ * @return       the error code
+ */
+int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl)
+{
+   Container *ctr = &mdl->ctr;
+   Equ *e_objfn;
+
+   S_CHECK(rctr_add_equ_empty(ctr, &fdat->dual.ei_objfn, &e_objfn, Mapping, CONE_NONE));
+
+   if (fdat->primal.has_set) {
+
+      /* Add < a, v > + < ub, w> */
+      S_CHECK(rctr_equ_addnewlvars(ctr, e_objfn, &fdat->dual.vars.v, fdat->dual.a));
+      S_CHECK(rctr_equ_addnewlvars(ctr, e_objfn, &fdat->dual.vars.w, fdat->dual.ub));
+
+   }
+
+   /* - 0.5 <tilde_y, M tilde_y> + < b, tilde_y> */
+   if (fdat->primal.ydat.has_shift) {
+
+      // cblas_ddot
+      double b_tilde_y = 0; double *y = fdat->primal.ydat.tilde_y, *b = fdat->b_lin;
+      if (b) {
+         for (unsigned i = 0, len = fdat->primal.ydat.n_y; i < len; ++i) {
+            b_tilde_y += y[i]*b[i];
+         }
+      }
+
+      equ_add_cst(e_objfn, b_tilde_y-fdat->primal.ydat.shift_quad_cst);
+   }
+
+   /* Add 0.5 <s, Js> */
+   if (fdat->primal.is_quad) {
+      S_CHECK(rctr_equ_add_quadratic(ctr, e_objfn, &fdat->J, &fdat->dual.vars.s, 1.));
+
+   }
 
    return OK;
 }
@@ -704,7 +768,7 @@ void fdat_empty(CcfFenchelData *fdat)
    FREE(fdat->b_lin);
    FREE(fdat->tmpvec);
 
-   FREE(fdat->equ_gen);
+   FREE(fdat->cons_gen);
    FREE(fdat->equvar_basename);
 
    ydat_empty(&fdat->primal.ydat);

@@ -244,8 +244,9 @@ bool chk_gms_opcode(int *instr, int *args, unsigned len, const char* equname)
  *
  *  @return          the error code
  */
-NlTree* nltree_buildfromgams(unsigned codelen, const int * restrict instrs,
-                          const int * restrict args)
+NlTree* nltree_buildfromgams(unsigned codelen,
+                             const int instrs[VMT(restrict codelen)],
+                             const int args[VMT(restrict codelen)])
 {
    int status = OK;
 

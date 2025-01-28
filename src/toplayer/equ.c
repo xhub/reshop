@@ -2,6 +2,7 @@
 
 #include <float.h>
 #include <math.h>
+#include <stdarg.h>
 
 #include "cmat.h"
 #include "ctr_rhp.h"
@@ -140,6 +141,36 @@ void aequ_init(Aequ *e)
    e->type = EquVar_Unset;
    e->size = 0;
    e->list = NULL;
+}
+
+Aequ* aequ_newblockA_(M_ArenaLink *arena, unsigned nblocks, ...)
+{
+   Aequ *e = arenaL_alloc(arena, sizeof(Equ));
+   e->blocks = arenaL_alloc(arena, sizeof(AequBlock) + nblocks*sizeof(Equ));
+
+   unsigned sz = 0;
+   e->type = EquVar_Block;
+   e->own = false;
+
+   e->blocks->len = nblocks;
+   e->blocks->max = nblocks;
+
+   va_list ap;
+   va_start(ap, nblocks);
+   Aequ *ee = e->blocks->e;
+   for (unsigned i = 0; i < nblocks; i+=2, ee++) {
+      unsigned size = (unsigned)va_arg(ap, unsigned);
+      sz += size;
+      ee->size = size;
+      ee->own = false;
+      ee->type = EquVar_List;
+      ee->list = (rhp_idx*)va_arg(ap, rhp_idx*);
+   }
+   va_end(ap);
+
+   e->size = sz;
+
+   return e;
 }
 
 /**
@@ -714,7 +745,9 @@ void equ_err_cone(const char *fn, const Equ * restrict e)
    assert(0);
 }
 
-int equ_nltree_fromgams(Equ* e, unsigned codelen, const int *instrs, const int *args)
+int equ_nltree_fromgams(Equ* e, unsigned codelen,
+                        const int instrs[VMT(restrict codelen)],
+                        const int args[VMT(restrict codelen)])
 {
    if (e->tree) {
       error("%s :: the tree for equation %d already exists\n",

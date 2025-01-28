@@ -2037,7 +2037,8 @@ static int _nltree_put_add_node(NlTree *tree, NlNode **addr)
 /**
  * @brief Find the top ADD node an expression tree.
  *
- * It creates an ADD node if there is none
+ * It creates an ADD node if there is none. If coeff is finite,
+ * on output it contains a scaled version of it
  *
  *
  * @param         pool    the container

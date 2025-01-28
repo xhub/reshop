@@ -103,7 +103,7 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
    double val;
    unsigned *sizes = NULL;
 
-   if (!rhpmat_nonnull(mat)) {
+   if (!spmat_isset(mat)) {
       error("%s :: the given matrix is empty!\n", __func__);
       return Error_UnExpectedData;
    }
@@ -501,14 +501,14 @@ int rctr_nltree_cpy_dot_prod_var_map(Container *ctr, NlTree *tree, NlNode *addno
 }
 
 /** 
- *  @brief Add the inner product \f$ \langle c, B F(x) + b\rangle \f$
+ *  @brief Add the inner product \f$ \langle c, B F(x) + b \rangle \f$
  *
  *  @param  ctr      the container
  *  @param  e        the destination equation
  *  @param  c        the vector of constants
  *  @param  n_c      the size of the inner product arguments
  *  @param  B        the B matrix in the affine transformation
- *  @param  b        the c constant part in the affine transformation
+ *  @param  b        the b constant part in the affine transformation
  *  @param  coeffs   ???
  *  @param  v        ???
  *  @param  eis      ???
@@ -521,7 +521,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
                          double coeff)
 {
    NlNode **addr = NULL, *add_node = NULL;
-   double dummyval = 1.;
+   double nlcoeff = 1.;
 
    NlTree *tree = NULL;
    unsigned offset = UINT_MAX;
@@ -545,7 +545,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
       double *lcoeffs = NULL;
       double single_val;
       S_CHECK(rhpmat_row_needs_update(B, i, &single_idx, &single_val, &args_idx_len,
-               &args_idx, &lcoeffs));
+                                      &args_idx, &lcoeffs));
 
       if (args_idx_len == 0) {
          error("[Warn] %s :: row %d is empty\n", __func__, i);
@@ -656,7 +656,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
                   /*  Needed because of nlnode_copy */
                   S_CHECK(nltree_reset_var_list(tree));
 
-                  S_CHECK(nltree_find_add_node(tree, &addr, ctr->pool, &dummyval));
+                  S_CHECK(nltree_find_add_node(tree, &addr, ctr->pool, &nlcoeff));
                   S_CHECK(nlnode_child_getoffset(tree, *addr, &offset));
 
                   S_CHECK(nlnode_reserve(tree, *addr, n_c));
@@ -681,7 +681,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
                /* Add B_i * ( ... )  */
                /* TODO(xhub) we may end up in a ADD->ADD situation, be careful
                 * here*/
-               S_CHECK(nltree_mul_cst(tree, &laddr, ctr->pool, mcoeff/dummyval));
+               S_CHECK(nltree_mul_cst(tree, &laddr, ctr->pool, mcoeff*nlcoeff));
 
                /* ----------------------------------------------------------
                 * Copy the expression tree
@@ -919,33 +919,37 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
 
 
 /**
- * @brief Copy  \f$ <Bi, F(x)> + b\f$ into an equation
+ * @brief Copy  \f$ cst < c, X>\f$ into an equation, where X is either a variable or mapping
+ *
+ * c is a sparse vector and X is either a variable value in a variable v or a mapping
+ * defined by v
  *
  * @param ctr            the container
  * @param edst           the equation to modify
- * @param coeffs         ???
- * @param row_len        the number of arguments
- * @param row_idx        ???
- * @param ei_maps        ???
- * @param v              ???
+ * @param v_coeffs       vector coeffs
+ * @param nargs          vector size
+ * @param indices        vector indices
+ * @param idx2ei_map     vector index to equation index mapping
+ * @param v              variable argument
  * @param lcoeffs        ???
- * @param cst            ???
+ * @param cst            The constant in front of the inner producr
  *
  * @return               the error code
  */
-int rctr_equ_add_maps(Container *ctr, Equ *edst, double *coeffs,
-                      unsigned row_len, rhp_idx *row_idx, rhp_idx *ei_maps,
-                      Avar * restrict v, double *lcoeffs, double cst)
+int rctr_equ_add_maps(Container *ctr, Equ *edst, unsigned nargs,
+                      const double v_coeffs[VMT(restrict nargs)],
+                      const rhp_idx indices[VMT(restrict static nargs)],
+                      const rhp_idx idx2ei_map[VMT(restrict static nargs)],
+                      Avar * restrict v,
+                      const double lcoeffs[VMT(restrict nargs)], double cst)
 {
    Lequ *le = edst->lequ;
 
-   for (unsigned j = 0; j < row_len; ++j) {
+   for (unsigned j = 0; j < nargs; ++j) {
 
+      unsigned ridx = indices[j]; assert(ridx < avar_size(v));
 
-      unsigned ridx = row_idx[j]; assert(ridx < avar_size(v));
-
-      rhp_idx ei = ei_maps[ridx];
-      rhp_idx vi;
+      rhp_idx vi, ei = idx2ei_map[ridx];
       S_CHECK(avar_get(v, ridx, &vi));
 
       /* -----------------------------------------------------------------
@@ -967,7 +971,7 @@ int rctr_equ_add_maps(Container *ctr, Equ *edst, double *coeffs,
        * Compute the coefficient that will multiply the function part
        * ----------------------------------------------------------------- */
 
-      double coeff = coeffs[ridx];
+      double coeff = v_coeffs[ridx];
       double coeffp;
       if (lcoeffs) { coeffp = cst*lcoeffs[j]/coeff; }
       else { coeffp = cst/coeff; }

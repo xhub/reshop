@@ -219,7 +219,7 @@ int Varc_dual(Model *mdl, unsigned linenr, daguid_t uid_parent, daguid_t uid_chi
 
    EmpDag *empdag = &mdl->empinfo.empdag;
 
-   EmpDagArc arc = { .type = LinkArcVF };
+   EmpDagLink arc = { .type = LinkArcVF };
 
    mpid_t mpid_child = uid2id(uid_child);
    mpid_t mpid_parent = uid2id(uid_parent);

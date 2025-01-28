@@ -70,7 +70,7 @@ typedef struct container {
 
    M_ArenaLink arenaL_temp;      /**< Arena temporary memory area             */
    M_ArenaLink arenaL_perm;      /**< Arena permament memory                  */
-   NlPool *pool;                /**< pool of numerical values */
+   NlPool *pool;                 /**< pool of numerical values */
 
    Equ *equs;                   /**< an array of equations */
    Var *vars;                   /**< an array of variables */
@@ -241,5 +241,7 @@ static inline bool ctr_is_rhp(const Container *ctr)
 }
 
 static inline NlPool *ctr_getpool(Container *ctr) { return ctr->pool; }
+
+bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid) NONNULL;
 
 #endif /* CONTAINER_H */

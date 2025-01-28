@@ -40,47 +40,47 @@ typedef enum {
 } EmpEdgeType;
 
 
-static inline bool valid_uid(unsigned uid) { return uid != EMPDAG_UID_NONE; }
+static inline bool valid_uid(daguid_t uid) { return uid != EMPDAG_UID_NONE; }
 
 const char *daguid_type2str(unsigned uid);
 
-static inline unsigned nashid2uid(unsigned id)
+static inline daguid_t nashid2uid(nashid_t id)
 {
   assert(id <= EMPDAG_IDMAX);
 
-  unsigned uid = id << 2 | EmpNodeNash;
+  daguid_t uid = id << 2 | EmpNodeNash;
   return uid;
 }
 
-static inline unsigned mpid2uid(unsigned id)
+static inline daguid_t mpid2uid(mpid_t id)
 {
   assert(id <= EMPDAG_IDMAX);
 
-  unsigned uid = id << 2 | EmpNodeMP;
+  daguid_t uid = id << 2 | EmpNodeMP;
   return uid;
 }
 
-static inline unsigned rarcVFuid(unsigned uid)
+static inline daguid_t rarcVFuid(daguid_t uid)
 {
    return uid | EmpEdgeVF;
 }
 
-static inline unsigned rarcCTRLuid(unsigned uid)
+static inline daguid_t rarcCTRLuid(daguid_t uid)
 {
    return uid | EmpEdgeCtrl;
 }
 
-static inline unsigned uid2id(unsigned uid)
+static inline unsigned uid2id(daguid_t uid)
 {
   return uid >> 2;
 }
 
-static inline bool uidisMP(unsigned uid)
+static inline bool uidisMP(daguid_t uid)
 {
   return (uid & EmpNodeMask) == EmpNodeMP;
 }
 
-static inline bool uidisNash(unsigned uid)
+static inline bool uidisNash(daguid_t uid)
 {
   return (uid & EmpNodeMask) == EmpNodeNash;
 }

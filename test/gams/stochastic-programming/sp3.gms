@@ -347,17 +347,21 @@ $exit
 * Has dual operator encoded in ReSHOP
 
 EmbeddedCode ReSHOP:
-n('1'): min cost('1') + cv('1').dual().valfn x('1') defcost('1')
+n('1'):  min cost('1') + cv('1').dual().valfn x('1') defcost('1')
+n(O_1):  min cost(O_1) + cv(O_1).dual().valfn x(O_1) defcost(O_1) e2(O_1)
+n(L):    min cost(L) x(L) e3(L) defcost(L)
+
 cv('1'): MP('ecvarup',n(O_1).valfn,tail=0.9,risk_wt=risk_wt,prob=pr(O_1))
-n(O_1): min cost(O_1) + cv(O_1).dual().valfn x(O_1) defcost(O_1) e2(O_1)
 cv('2'): MP('ecvarup',n(O_2).valfn,tail=0.75,risk_wt=risk_wt,prob=pr(O_2))
 cv('3'): MP('ecvarup',n(O_3).valfn,tail=0.8,risk_wt=risk_wt,prob=pr(O_3))
-n(L): min cost(L) x(L) e3(L) defcost(L)  
 endEmbeddedCode
+
+* option emp = reshopgdb;
+put_utility 'setEnv' / 'RHP_DISPLAY_EMPDAG' / '1';
 
 solve m using emp;
 
-abort$[m.modelStat <> %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', m.modelStat;
+abort$[m.modelStat <> %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m.modelStat;
 abort$[m.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m.solveStat;
 
 

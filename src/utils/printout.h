@@ -13,6 +13,7 @@
 void printout(unsigned mode, const char *format, ...) FORMAT_CHK(2,3);
 void printstr(unsigned mode, const char *str);
 void logging_syncenv(void);
+void set_log_fd(int fd);
 
 #define error(format, ...)   printout(PO_ERROR, format, __VA_ARGS__)
 #define errormsg(msg)        printstr(PO_ERROR, msg)
@@ -26,7 +27,7 @@ static inline int error_runtime(void)
 }
 
 #define logger(lvl, format, ...) printout(lvl, format, __VA_ARGS__)
-#define debug(...) printout(PO_DEBUG, __VA_ARGS__)
+#define debug(...)               printout(PO_DEBUG, __VA_ARGS__)
 
 #define chk_potrace(PO_VAL, ...) if (RHP_UNLIKELY(O_Output & (PO_VAL))) { printout(PO_VAL, __VA_ARGS__); }
 

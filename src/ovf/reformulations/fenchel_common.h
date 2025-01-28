@@ -33,6 +33,7 @@ typedef struct {
    double *ub;             /**< The cost vector for the dual (w variable)     */
    DualVars vars;
    Aequ cons;
+   rhp_idx ei_objfn;      /**< Objective function */
 } CcfFenchelDual;
 
 
@@ -55,11 +56,13 @@ typedef struct {
    CcfFenchelPrimal primal;
    CcfFenchelDual dual;
    OvfType type;
+   bool skipped_cons;     /**< True if some dual constraints were not created */
+   bool finalize_equ;     /**< If true, finalize equations as they are generated */
    unsigned nargs;
    rhp_idx vi_ovf;        /**< OVF variable index      */
-   bool *equ_gen;         /**< marker for generated equations                 */
+   bool *cons_gen;         /**< marker for generated equations                */
    const OvfOps *ops;
-   MathPrgm *mp;          /**< MathPrgm linked to the Ccf                     */
+   MathPrgm *mp_dst;      /**< MathPrgm that owns the new variables and equations */
    char *equvar_basename; /**< Basename for new equations and variables       */
    OvfOpsData ovfd;
 } CcfFenchelData;
@@ -72,6 +75,7 @@ NONNULL int fenchel_apply_yshift(CcfFenchelData *fdat);
 NONNULL int fenchel_find_yshift(CcfFenchelData *fdat);
 
 NONNULL int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl);
-NONNULL int fenchel_gen_equs(CcfFenchelData *fdat, Model *mdl);
+NONNULL int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl);
+NONNULL int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl);
 
 #endif

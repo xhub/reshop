@@ -321,7 +321,7 @@ static int add_v1(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
     rhp_idx ei;
     RESHOP_CHECK(rhp_avar_get(v_arg_ovf, i, &ui));
     RESHOP_CHECK(rhp_aequ_get(e_cons, i, &ei));
-    /*  (y(i) - sum(j, c1(j)*x(i, j)) - d1) */
+    /*  (y(i) - sum(j, c1(j)*x(i, j)) - d1) - u[i] = 0 */
     RESHOP_CHECK(rhp_equ_addnewlvar(mdl, ei, ui, -1.));
     RESHOP_CHECK(rhp_equ_addnewlvar(mdl, ei, cvar, -x[i]/sigma_y[i]));
     RESHOP_CHECK(rhp_equ_addnewlvar(mdl, ei, dvar, -1./sigma_y[i]));
