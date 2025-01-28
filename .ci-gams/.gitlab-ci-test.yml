@@ -234,7 +234,7 @@ test-dac:
        $LastLine = Get-Content -Path $FailureFile | Select-Object -Last 1
        if ($LastLine -notmatch "Failed tests: 0") {
          $Failures = Get-Content -Path $FailureFile
-         throw "Test failed in $TestSuite: $Failures"
+         throw "Test failed: ${Failures}"
        }
  
        # Return to the original directory
