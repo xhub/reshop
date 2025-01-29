@@ -14,6 +14,7 @@ enum rhp_options_enum {
    Options_Dump_Scalar_Models,
    Options_Expensive_Checks,
    Options_EMPInfoFile,
+   Options_GUI,
    Options_Output,
    Options_Output_Subsolver_Log,
    Options_Pathlib_Name,

@@ -2,6 +2,7 @@
 #include "macros.h"
 #include "printout.h"
 #include "reshop.h"
+#include "rhpgui_launcher.h"
 #include <ctype.h>
 
 static int chk_name(const char *optname, const char *fn)
@@ -40,6 +41,11 @@ int rhp_opt_setb(const char *name, int bval)
    if (opt_find(name, &optset, &index)) {
       S_CHECK(chk_opttype(&optset->opts[index], OptBoolean, __func__))
       optset->opts[index].value.b = bval;
+
+      if (!strcmp(name, "gui")) {
+         imgui_start(NULL);
+      }
+
       return OK;
    }
 

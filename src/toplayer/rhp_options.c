@@ -23,6 +23,7 @@ tlsvar struct option rhp_options[] = {
    [Options_Dump_Scalar_Models]    = { "dump_scalar_model",   "Dump every scalar model via convert",       OptBoolean, { .b = false } },
    [Options_Expensive_Checks]      = { "expensive_checks",    "Perform time consuming consistency checks", OptBoolean, { .b = false} },
    [Options_EMPInfoFile]           = { "EMPInfoFile",         "EMPinfo file to use",                       OptString,  { .s = "empinfo.dat" } },
+   [Options_GUI]                   = { "gui",                 "Start GUI",                                 OptBoolean, { .b = false } },
    [Options_Output]                = { "output",              "Output level",                              OptInteger, { .i = PO_INFO } },
    [Options_Output_Subsolver_Log]  = { "output_subsolver_log","whether to output subsolver logs",          OptBoolean, { .b = false } },
    [Options_Pathlib_Name]          = { "pathlib_name",        "path of the PATH library",                  OptString,  { .s = "" } },

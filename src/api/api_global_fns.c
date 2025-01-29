@@ -288,7 +288,7 @@ _exit:
    }
 
    if (status == OK) {
-      const char* imgui = mygetenv("RHP_IMGUI");
+      const char* imgui = mygetenv("RHP_GUI");
       if (imgui) {
          status = imgui_start(imgui);
       }

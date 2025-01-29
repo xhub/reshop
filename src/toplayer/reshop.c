@@ -166,10 +166,12 @@ int rhp_process(Model *mdl, Model *mdl_solver)
       goto _exit;
    }
 
+#ifdef RESUME_IPC
    /* Push to GUI */
    if (valid_fd(data_fd)) {
       S_CHECK_EXIT(ipc_send_mdl(mdl, data_fd));
    }
+#endif
 
    /* If we have an active control fd, wait until we have the command to continue */
    if (valid_fd(ctrl_fd)) {
