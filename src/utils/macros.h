@@ -210,8 +210,8 @@ void backtrace_(const char *expr, int status);
 #if !defined(__clang_analyzer__) && defined(__GLIBC__) && (!(defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) || (defined(_GNU_SOURCE)))
 #define STRERROR(errcode, buf, size, msg) msg = strerror_r(errcode, buf, size)
 #else
-#define STRERROR(errcode, buf, size, msg) const char* tmp =  strerror(errcode); \
-  strncpy(buf, tmp, size); msg = buf;
+#define STRERROR(errcode, buf, size, msg) const char* tmp = strerror(errcode); \
+  strncpy(buf, tmp, (size)-1); msg = buf;
 #endif
 
 
