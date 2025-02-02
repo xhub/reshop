@@ -9,7 +9,7 @@ include(UseSWIG)
 
 # linux target for python wheel
 if (LINUX AND DISTRIB)
-   set(PYTHON_WHEEL_PLAT "manylinux_2_17_x86_64")
+   set(PYTHON_WHEEL_PLAT "manylinux_2_28_x86_64")
 endif()
 
 

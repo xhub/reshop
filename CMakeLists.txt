@@ -44,7 +44,6 @@ endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-
 if (CMAKE_VERSION VERSION_LESS 3.25)
    if (CMAKE_SYSTEM_NAME MATCHES "Linux")
       set(LINUX 1)
@@ -86,16 +85,14 @@ include(sanitizers-profile)
 option(BUILD_GAMS_DRIVER 
   "Build the GAMS glue to use ReSHOP within the GAMS system" OFF)
 
-option(GAMSSYSDIR 
-   "GAMS system directory (as string)" "")
+option(GAMSSYSDIR "GAMS system directory (as string)" "")
 
 option(DISTRIB
-  "Build for the distribution of files: on Linux, disables recent glibc symbols" OFF)
+  "Build for the distribution of files: on Linux, ensure the use of glibc symbols compatible with 2.X, where X is the value of DISTRIB" OFF)
 
 option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" OFF)
 
-option(BUILD_PYTHON
-   "Build a python bindings (argument is a list of python interpreter)" "")
+option(BUILD_PYTHON "Build a python bindings (argument is a list of python interpreter)" "")
 
 option(BUILD_IMGUI "Build the ReSHOP GUI (currently using Dear Imgui)" ON)
 
@@ -218,7 +215,10 @@ CHECK_INCLUDE_FILE(unistd.h HAS_UNISTD)
 if (LINUX) # GLIBC-specific for now
    SET(_GNU_SOURCE 1)
    if (DISTRIB)
-      add_compile_definitions (COMPAT_GLIBC)
+      if(DISTRIB LESS 28)
+         message(FATAL_ERROR "DISTRIB=${DISTRIB} unsupported. The minimum value is 28. Open a bug report if support for GLIBC 2.17 is necessary")
+      endif()
+      add_compile_definitions (COMPAT_GLIBC=${DISTRIB})
    endif(DISTRIB)
 endif(LINUX)
 
@@ -684,6 +684,20 @@ if (WITH_CPPCHECK)
    endif()
 endif()
 
+if (LINUX AND DISTRIB)
+   add_custom_target(glibc_symbols
+             COMMAND sh -c "nm -D $<TARGET_FILE:${RESHOP_LIBNAME}> | grep '@GLIBC' | awk '{ split($2, a, \"@GLIBC_\"); split(a[2], v, \".\"); if (int(v[2]) > ${DISTRIB}) { print $2 }}' | tee glibc-non-conforming-symbols.txt | wc -l > glibc-num-non-conforming-symbols.txt"
+             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+             DEPENDS ${RESHOP_LIBNAME}
+             VERBATIM)
+
+   add_custom_target(glibc_restriction_check ALL
+        COMMAND ${CMAKE_COMMAND} -DGLIBC_MAX_VER=${DISTRIB} -P ${CMAKE_SOURCE_DIR}/cmake/glibc_restriction_check.cmake
+        COMMENT "Checking if GLIBC symbol are all <= 2.${DISTRIB}"
+        DEPENDS glibc_symbols
+    )
+
+endif()
 
 add_subdirectory (docs)
 

@@ -86,7 +86,7 @@ void myfreeenvval(const char *envval);
 
 
 
-#ifdef COMPAT_GLIBC
+#if defined(COMPAT_GLIBC) && (COMPAT_GLIBC < 14)
 /* Gen by objdump -T /lib/x86_64-linux-gnu/libm.so.6  |
  * awk '$6 ~ /\(GLIBC/ && $2 ~ /g/ && $4 ~ /text/ {
  *   sub(/)/, "\")", $6);
@@ -96,36 +96,46 @@ void myfreeenvval(const char *envval);
 /* libc 2.14 */
 __asm__(".symver memcpy,memcpy@GLIBC_2.2.5");
 
-/* libm 2.27 */
-__asm__(".symver exp2f,exp2f@GLIBC_2.2.5");
-__asm__(".symver pow10f,pow10f@GLIBC_2.2.5");
-__asm__(".symver pow10l,pow10l@GLIBC_2.2.5");
-__asm__(".symver pow10,pow10@GLIBC_2.2.5");
-__asm__(".symver pow,pow@GLIBC_2.2.5");
-__asm__(".symver log2f,log2f@GLIBC_2.2.5");
+#endif
+
+#if defined(COMPAT_GLIBC) && (COMPAT_GLIBC < 23)
 __asm__(".symver lgamma,lgamma@GLIBC_2.2.5");
-__asm__(".symver powf,powf@GLIBC_2.2.5");
-__asm__(".symver exp2,exp2@GLIBC_2.2.5");
 __asm__(".symver lgammaf,lgammaf@GLIBC_2.2.5");
 __asm__(".symver lgammal,lgammal@GLIBC_2.2.5");
-__asm__(".symver expf,expf@GLIBC_2.2.5");
-__asm__(".symver exp,exp@GLIBC_2.2.5");
-__asm__(".symver log2,log2@GLIBC_2.2.5");
-__asm__(".symver logf,logf@GLIBC_2.2.5");
-__asm__(".symver log,log@GLIBC_2.2.5");
+#endif
 
+#if defined(COMPAT_GLIBC) && (COMPAT_GLIBC < 27)
+/* libm 2.27 */
+__asm__(".symver exp2f,exp2f@GLIBC_2.2.5");
+__asm__(".symver log2f,log2f@GLIBC_2.2.5");
+__asm__(".symver powf,powf@GLIBC_2.2.5");
+__asm__(".symver expf,expf@GLIBC_2.2.5");
+__asm__(".symver logf,logf@GLIBC_2.2.5");
+#endif
+
+#if defined(COMPAT_GLIBC) && (COMPAT_GLIBC < 29)
+/* libm 2.29 */
+__asm__(".symver exp,exp@GLIBC_2.2.5");
+__asm__(".symver exp2,exp2@GLIBC_2.2.5");
+__asm__(".symver log,log@GLIBC_2.2.5");
+__asm__(".symver log2,log2@GLIBC_2.2.5");
+__asm__(".symver pow,pow@GLIBC_2.2.5");
+#endif
+
+#if defined(COMPAT_GLIBC) && (COMPAT_GLIBC < 34)
 /* libc 2.34 */
 __asm__(".symver dlopen,dlopen@GLIBC_2.2.5");
 __asm__(".symver dlsym,dlsym@GLIBC_2.2.5");
 __asm__(".symver dlerror,dlerror@GLIBC_2.2.5");
 __asm__(".symver dlclose,dlclose@GLIBC_2.2.5");
+#endif
 
+#if defined(COMPAT_GLIBC) && (COMPAT_GLIBC < 38)
 /* libm 2.38 */
 __asm__(".symver fmod,fmod@GLIBC_2.2.5");
 
 /* libc 2.38 */
 __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
-
 #endif
 
 
