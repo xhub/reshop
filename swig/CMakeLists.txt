@@ -3,7 +3,6 @@ if (NOT BUILD_PYTHON)
    return()
 endif()
 
-
 cmake_minimum_required(VERSION 3.22)
 find_package(SWIG REQUIRED)
 include(UseSWIG)
@@ -28,7 +27,7 @@ set_property(SOURCE reshop.i PROPERTY OUTPUT_DIR ${CMAKE_BINARY_DIR}/swig)
 set_property(SOURCE reshop.i PROPERTY USE_SWIG_DEPENDENCIES ON)
 set(CMAKE_SWIG_FLAGS -O -Wall -Werror -doxygen -python -builtin)
 
-# Use internal macros, but that's how it is
+# Use internal macros, but that's how it is ...
 swig_module_initialize(swig_py_reshop PYTHON)
 swig_add_source_to_module(swig_py_reshop reshop_py_wrap reshop.i)
 
@@ -60,23 +59,23 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       # Regular python discovery. We need to force the version to the one
       # specified as argument
       set(Python3_EXECUTABLE ${Py3_EXECUTABLE})
-   
+ 
       execute_process (COMMAND ${Python3_EXECUTABLE} "--version"
                        OUTPUT_VARIABLE PyCmd_VERSION
                        OUTPUT_STRIP_TRAILING_WHITESPACE)
       separate_arguments (outlist UNIX_COMMAND ${PyCmd_VERSION})
-   
+ 
       LIST(POP_BACK outlist Py3_VERSION)
-   
+ 
       # Unset a bunch of stuff to ensure find_package does something ...
       unset(Python3_Found)
       unset(Python3_Library)
       unset(Python3_NumPy_INCLUDE_DIRS)
-   
+ 
       find_package (Python3 REQUIRED
                     COMPONENTS Development.Module NumPy
                     EXACT ${Py3_VERSION})
-   
+ 
       # Use Python3_add_library()?
 
       execute_process (COMMAND ${Python3_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_platform())"
@@ -139,7 +138,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${pytarget}> reshop
      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${RESHOP_LIBNAME}> reshop
      # bdist_egg
-     COMMAND ${Python3_EXECUTABLE} setup.py egg_info  --tag-date --tag-build=dev bdist_wheel -p ${Python3_platform}
+     COMMAND ${Python3_EXECUTABLE} setup.py egg_info --tag-date --tag-build=dev bdist_wheel -p ${Python3_platform}
      COMMAND ${CMAKE_COMMAND} -E touch dist/timestamp
      MAIN_DEPENDENCY
        ${CMAKE_BINARY_DIR}/swig/setup.py.gen
