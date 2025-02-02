@@ -1,5 +1,7 @@
-
-
+# NOTE: This is not a standalone CMakeLists.txt
+if (NOT GAMS_C_FILES)
+  MESSAGE(FATAL_ERROR "GAMS_C_FILES must be defined before this project!")
+endif ()
 
 set (RESHOP_GAMSLINK_LIB rhpcclib)
 if ("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
@@ -10,11 +12,7 @@ set (RESHOP_GAMSLINK_LIB ${RESHOP_GAMSLINK_LIB} PARENT_SCOPE)
 
 list(APPEND RESHOP_GAMSLINK_LIB_C_FILES "reshop_main.c"
                                         "reshop_misc.c"
-                                         "${CMAKE_SOURCE_DIR}/common/reshop_gams_optfile.c")
-
-if (NOT GAMS_C_FILES)
-  MESSAGE(FATAL_ERROR "GAMS_C_FILES must be defined before this project!")
-endif ()
+                                        "${CMAKE_SOURCE_DIR}/common/reshop_gams_optfile.c")
 
 # Set GAMS_C_FILES properties
 if (C_COMPILER_GNU_LIKE)
@@ -26,7 +24,6 @@ set_source_files_properties(${GAMS_C_FILES} PROPERTIES COMPILE_DEFINITIONS GC_NO
 
 set_source_files_properties(${GAMS_C_FILES} PROPERTIES INCLUDE_DIRECTORIES
                                             "${GAMSDIR}/apifiles/C/api")
-
 
 list(APPEND RESHOP_GAMSLINK_LIB_C_FILES ${GAMS_C_FILES})
 
@@ -55,10 +52,13 @@ endif()
 
 list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE})
 
+# Setup few variables
+set(DESTDIR_MAKESELF ${CMAKE_BINARY_DIR}/makeself)
+
 # The install dir depends on what we build
 # This way, we don't hardcode the targets
 if (BUILD_INSTALLER OR INSTALL_COMMON_MAKESELF)
-  set(GAMSLINK_INSTALL_DIR ${CMAKE_BINARY_DIR}/makeself)
+  set(GAMSLINK_INSTALL_DIR ${DESTDIR_MAKESELF})
 else()
   set(GAMSLINK_INSTALL_DIR ${OUTPUT_DIR})
 endif()
@@ -70,17 +70,17 @@ foreach(_T ${RESHOP_GAMSLINK_TARGETS})
  
   target_link_libraries (${_T} PRIVATE ${RESHOP_LIBNAME} ${CMAKE_DL_LIBS})
  
-   target_link_options(${_T} PRIVATE ${LINKER_FLAGS})
+  target_link_options(${_T} PRIVATE ${LINKER_FLAGS})
 
   if(HAS_IPO)
     set_target_properties(${_T} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
   endif()
 
-   install(TARGETS ${_T} DESTINATION ${GAMSLINK_INSTALL_DIR})
+  install(TARGETS ${_T} DESTINATION ${GAMSLINK_INSTALL_DIR})
 endforeach()
 
 
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+if (LINUX)
    # There are differences in where linked library are search between the old and new dtags
    # Right now, GAMS relies on the old dtags behavior
    target_link_options (${RESHOP_GAMSLINK_EXE} PRIVATE LINKER:--disable-new-dtags)
@@ -104,11 +104,16 @@ else (WINDOWS)
    set(ASAN_SCRIPTNAME ${OUTPUT_DIR}/script.sh)
 endif(WINDOWS)
 
-set(GAMSCONFIG_YAML_FILES_DIR ${CMAKE_SOURCE_DIR}/gams_link/cfg/)
-file (GLOB GAMSCONFIG_YAML_FILES LIST_DIRECTORIES false ${CMAKE_CURRENT_SOURCE_DIR}/cfg/gamsconfig*.yaml.in)
-file (GLOB GAMSCONFIG_TEST_YAML_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/test/gams/cfg/*.in)
+set(GAMSLINK_EXE_FULLPATH ${GAMSLINK_INSTALL_DIR}/$<TARGET_FILE_NAME:${RESHOP_GAMSLINK_EXE}>)
+set(VALGRIND_SCRIPTNAME ${OUTPUT_DIR}/valgrind.run)
+set(RESHOP_DEFNAME ${CMAKE_CURRENT_SOURCE_DIR}/optreshop.def)
 
-foreach(_f ${GAMSCONFIG_YAML_FILES} ${GAMSCONFIG_TEST_YAML_FILES})
+set(GAMSCONFIG_YAML_FILES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cfg/)
+file (GLOB GAMSCONFIG_YAML_FILES LIST_DIRECTORIES false ${CMAKE_CURRENT_SOURCE_DIR}/cfg/gamsconfig*.yaml.in)
+file (GLOB TEST_CFG_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/test/gams/cfg/*.in)
+
+
+foreach(_f ${GAMSCONFIG_YAML_FILES} ${TEST_CFG_FILES})
    # If we don't build rhpcclib64, the target doesn't exists and the file(GENERATE ...) fails
    if (GAMSCONFIG_SKIP_GAMSLINK_LIB AND _f MATCHES "gamsconfig.yaml.in")
       continue()
@@ -121,7 +126,6 @@ foreach(_f ${GAMSCONFIG_YAML_FILES} ${GAMSCONFIG_TEST_YAML_FILES})
    file(GENERATE OUTPUT ${OUTPUT_DIR}/${_outfile} INPUT ${CMAKE_BINARY_DIR}/generated/${_infile})
 endforeach()
 
-
 if (BUILD_INSTALLER)
 
    if (LINUX)
@@ -129,32 +133,23 @@ if (BUILD_INSTALLER)
    elseif (APPLE)
       SET(IS_LINUX 0)
    endif ()
-   configure_file(${CMAKE_SOURCE_DIR}/gams_link/makeself/installer.sh.in ${CMAKE_BINARY_DIR}/installer.sh.in @ONLY)
 
-   file(COPY ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/makeself)
+   file(COPY ${RESHOP_DEFNAME} DESTINATION ${DESTDIR_MAKESELF})
 
-   file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml INPUT ${CMAKE_BINARY_DIR}/generated/gamsconfig.yaml.in)
-   file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/makeself/installer.sh INPUT ${CMAKE_BINARY_DIR}/installer.sh.in
+   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/makeself/installer.sh.in ${CMAKE_BINARY_DIR}/installer.sh.in @ONLY)
+
+   file(GENERATE OUTPUT ${DESTDIR_MAKESELF}/gamsconfig.yaml INPUT ${CMAKE_BINARY_DIR}/generated/gamsconfig.yaml.in)
+   file(GENERATE OUTPUT ${DESTDIR_MAKESELF}/installer.sh INPUT ${CMAKE_BINARY_DIR}/installer.sh.in
           FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
   # target to build the makeself
    add_custom_target(makeself
-      makeself --sha256 ${CMAKE_BINARY_DIR}/makeself/
+      makeself --sha256 ${DESTDIR_MAKESELF}/
       ${CMAKE_BINARY_DIR}/ReSHOP-${CMAKE_PROJECT_VERSION}-GAMS-${GAMS_VERSION}.run "ReSHOP GAMS installer" ./installer.sh
       DEPENDS ${RESHOP_GAMSLINK_LIB} ${RESHOP_LIBNAME}
-              ${CMAKE_BINARY_DIR}/makeself/gamsconfig.yaml ${CMAKE_BINARY_DIR}/makeself/installer.sh)
+              ${DESTDIR_MAKESELF}/gamsconfig.yaml ${DESTDIR_MAKESELF}/installer.sh)
 endif (BUILD_INSTALLER)
 
 if (INSTALL_COMMON_MAKESELF)
-   file(COPY ${CMAKE_SOURCE_DIR}/gams_link/optreshop.def DESTINATION ${CMAKE_BINARY_DIR}/makeself)
+   file(COPY ${RESHOP_DEFNAME} DESTINATION ${DESTDIR_MAKESELF})
 endif()
-
-
-
-
-set(GAMSLINK_EXE_FULLPATH ${GAMSLINK_INSTALL_DIR}/$<TARGET_FILE_NAME:${RESHOP_GAMSLINK_EXE}>)
-set(VALGRIND_SCRIPTNAME ${OUTPUT_DIR}/valgrind.run)
-set(RESHOP_DEFNAME ${CMAKE_CURRENT_SOURCE_DIR}/optreshop.def)
-
-
-
