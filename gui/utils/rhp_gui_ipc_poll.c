@@ -49,9 +49,15 @@ void ipc_poll_gui_init(GuiData *guidat)
    polldat->nclients = 0;
 
    // Listen for connections
+#ifdef _WIN32
+   if (listen(guidat->ipc.server_fd, MAX_CLIENTS) == SOCKET_ERROR) {
+      error_init("Call to 'listen' failed with error %d", WSAGetLastError());
+   }
+#else
    if (listen(guidat->ipc.server_fd, MAX_CLIENTS) == -1) {
       error_init("Call to 'listen' failed with errmsg '%s'", strerror(errno));
    }
+#endif
 }
 
 int ipc_pool_process(GuiData *guidat)

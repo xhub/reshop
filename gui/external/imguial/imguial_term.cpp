@@ -108,7 +108,7 @@ void ImGuiAl::Crt::vprintf(char const* const format, va_list args) {
 
     if (length >= sizeof(temp)) {
         line = new char[length + 1];
-        ::vsnprintf(line, length, format, args_copy);
+        ::vsnprintf(line, length+1, format, args_copy);
     }
 
     va_end(args_copy);
@@ -256,50 +256,50 @@ ImGuiAl::Log::Log(void* const buffer, size_t const buffer_size)
 void ImGuiAl::Log::debug(char const* const format, ...) {
     va_list args;
     va_start(args, format);
-    debug(format, args);
+    debugVA(format, args);
     va_end(args);
 }
 
 void ImGuiAl::Log::info(char const* const format, ...) {
     va_list args;
     va_start(args, format);
-    info(format, args);
+    infoVA(format, args);
     va_end(args);
 }
 
 void ImGuiAl::Log::warning(char const* const format, ...) {
     va_list args;
     va_start(args, format);
-    warning(format, args);
+    warningVA(format, args);
     va_end(args);
 }
 
 void ImGuiAl::Log::error(char const* const format, ...) {
     va_list args;
     va_start(args, format);
-    error(format, args);
+    errorVA(format, args);
     va_end(args);
 }
 
-void ImGuiAl::Log::debug(char const* const format, va_list args) {
+void ImGuiAl::Log::debugVA(char const* const format, va_list args) {
     setForegroundColor(_debugTextColor);
     setMetaData(static_cast<unsigned>(Level::Debug));
     vprintf(format, args);
 }
 
-void ImGuiAl::Log::info(char const* const format, va_list args) {
+void ImGuiAl::Log::infoVA(char const* const format, va_list args) {
     setForegroundColor(_infoTextColor);
     setMetaData(static_cast<unsigned>(Level::Info));
     vprintf(format, args);
 }
 
-void ImGuiAl::Log::warning(char const* const format, va_list args) {
+void ImGuiAl::Log::warningVA(char const* const format, va_list args) {
     setForegroundColor(_warningTextColor);
     setMetaData(static_cast<unsigned>(Level::Warning));
     vprintf(format, args);
 }
 
-void ImGuiAl::Log::error(char const* const format, va_list args) {
+void ImGuiAl::Log::errorVA(char const* const format, va_list args) {
     setForegroundColor(_errorTextColor);
     setMetaData(static_cast<unsigned>(Level::Error));
     vprintf(format, args);

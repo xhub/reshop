@@ -123,10 +123,12 @@ namespace ImGuiAl {
         void warning(char const* const format, ...);
         void error(char const* const format, ...);
 
-        void debug(char const* const format, va_list args);
-        void info(char const* const format, va_list args);
-        void warning(char const* const format, va_list args);
-        void error(char const* const format, va_list args);
+        // OH: on win, a call to `info(fmt, arg)` would be resolve to these.
+        // Rename them
+        void debugVA(char const* const format, va_list args);
+        void infoVA(char const* const format, va_list args);
+        void warningVA(char const* const format, va_list args);
+        void errorVA(char const* const format, va_list args);
 
          void puts(uint8_t level, char const * const msg);
 

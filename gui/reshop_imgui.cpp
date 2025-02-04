@@ -354,12 +354,12 @@ void loggerfmt(u8 level, const char* fmt, ...) {
    va_start(args, fmt);
 
    switch (static_cast<ImGuiAl::Log::Level>(level)) {
-   case ImGuiAl::Log::Level::Debug:   logObj->debug(fmt, args); break;
-   case ImGuiAl::Log::Level::Info:    logObj->info(fmt, args); break;
-   case ImGuiAl::Log::Level::Warning: logObj->warning(fmt, args); break;
-   case ImGuiAl::Log::Level::Error:   logObj->error(fmt, args); break;
+   case ImGuiAl::Log::Level::Debug:   logObj->debugVA(fmt, args); break;
+   case ImGuiAl::Log::Level::Info:    logObj->infoVA(fmt, args); break;
+   case ImGuiAl::Log::Level::Warning: logObj->warningVA(fmt, args); break;
+   case ImGuiAl::Log::Level::Error:   logObj->errorVA(fmt, args); break;
    default:
-      logObj->error(fmt, args);
+      logObj->errorVA(fmt, args);
    }
 
    va_end(args);
