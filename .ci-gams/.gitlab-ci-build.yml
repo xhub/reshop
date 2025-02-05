@@ -51,7 +51,7 @@ build-debug-leg:
 # The next two jobs are just there to do some cleanup, if needed
 deg-cleanup:
   stage: build
-  tags: [clarus]
+  tags: [carla]
   variables:
     GIT_STRATEGY: none
   before_script:
@@ -73,7 +73,7 @@ dac-cleanup:
 
 build-deg:
   stage: build
-  tags: [clarus]
+  tags: [carla]
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-deg]
