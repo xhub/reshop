@@ -3,6 +3,6 @@
 
 #include "rhp_gui_data.h"
 
-bool gui_ipc_handle_client(int client_fd, GuiData *guidat);
+bool gui_ipc_handle_client(rhpfd_t fd, GuiData *guidat);
 
 #endif

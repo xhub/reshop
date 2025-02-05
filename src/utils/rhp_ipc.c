@@ -144,7 +144,7 @@ const char* ipc_unix_domain_init(void)
       size_t n = snprintf(&sockpath[ret], expected_sz, "%s%s",
                           "reshop_ipc-", uuid);
       if (n >= expected_sz) {
-         error("[IPC] Truncation of socket path: '%s'\n", sockpath);
+         error("\n[IPC] Truncation of socket path: '%s'\n", sockpath);
          errormsg("[IPC] As a result, the communication with the GUI may not work\n");
       }
 
@@ -164,7 +164,7 @@ const char* ipc_unix_domain_init(void)
 
 }
 
-static inline bool guiack(int fd)
+static inline bool guiack(rhpfd_t fd)
 {
    MessageHeader header;
 
@@ -180,26 +180,26 @@ ipc_error_read:
    int errno_ = errno;
    char *errnostr, errnomsg[256];
    STRERROR(errno_, errnomsg, sizeof(errnomsg), errnostr);
-   error("[IPC] ERROR while sending model: 'read' failed with %s'\n", errnostr);
+   error("\n[IPC] ERROR while sending model: 'read' failed with %s'\n", errnostr);
 
    return false;
    }
 ipc_error_readheader: 
    {
-   error("[IPC] ERROR while sending model: expected header with size %zu; "
+   error("\n[IPC] ERROR while sending model: expected header with size %zu; "
          "read %zd\n", sizeof(header), bytes_read);
    return false;
    }
 ipc_error_noguiack: 
    {
-   error("[IPC] ERROR while sending model: expected %s header; got %s\n", 
+   error("\n[IPC] ERROR while sending model: expected %s header; got %s\n", 
          msgtype2str(GuiAck), msgtype2str(header.type));
    return false;
    }
 
 }
 
-int ipc_send_mdl(Model *mdl, int fd)
+int ipc_send_mdl(Model *mdl, rhpfd_t fd)
 {
    MessageHeader header;
    MessagePayload payload;
@@ -246,22 +246,20 @@ int ipc_send_mdl(Model *mdl, int fd)
 
 ipc_error_write: 
    {
-   int errno_ = errno;
-   char *errnostr, errnomsg[256];
-   STRERROR(errno_, errnomsg, sizeof(errnomsg), errnostr);
-   error("[IPC] ERROR while sending %s model '%.*s' #%u: 'write' failed with %s'\n",
-         mdl_fmtargs(mdl), errnostr);
+   sockerr_log2("\n[IPC] ERROR while sending %s model '%.*s' #%u: 'write' failed",
+         mdl_fmtargs(mdl));
 
    return Error_SystemError;
    }
 
 ipc_error_guiack:
-   error("[IPC] ERROR while sending %s model '%.*s' #%u: GUI didn't properly acknowledge\n",
+   error("\n[IPC] ERROR while sending %s model '%.*s' #%u: GUI didn't properly acknowledge\n",
          mdl_fmtargs(mdl));
-   return Error_SystemError;
+
+   return Error_RuntimeError;
 }
 
-int ipc_wait(int fd)
+int ipc_wait(rhpfd_t fd)
 {
    return OK;
 

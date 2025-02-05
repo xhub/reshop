@@ -26,6 +26,7 @@ typedef enum {
    EventReset,
    GuiIsReady,
    GuiAck,
+   GuiAckReq,
    GuiRaiseError,
    GuiIsClosing,
    LogMsgSolver,
@@ -35,16 +36,16 @@ typedef enum {
    NewModelStart,
    NewModelName,
    NewModelEnd,
+   RequestCoeffValue,
+   RequestEquById,
+   RequestEquName,
    RequestMpById,
    RequestMpName,
    RequestNashById,
    RequestNashName,
    RequestVarById,
    RequestVarName,
-   RequestEquById,
-   RequestEquName,
-   RequestCoeffValue,
-   MessageTypeMaxValue,
+   MessageTypeMaxValue
 } MessageType;
 
 typedef struct {
@@ -67,53 +68,6 @@ typedef struct { \
   obj arr[]; \
 } obj ## Array
 
-#define arr_nbytes(a, n) (sizeof(*(a)) + (sizeof(*((a)->arr))) * n)
-
-#define arr_add(a, elt) { \
-   if ((a)->len >= (a)->max) { \
-      (a)->max = MAX(2*(a)->max, (a)->len+10); \
-      (a) = myrealloc((a)->arr, arr_nbytes((a), (a)->max)); \
-      if (!(a)) { \
-         fprintf(stderr, "FATAL ERROR: allocation failure\n"); \
-         exit(EXIT_FAILURE); \
-      } \
-   } \
-   (a)->arr[(a)->len++] = elt; \
-}
-
-#define mymalloc malloc
-
-#define arr_init_size(a, n) { \
-   (a) = mymalloc(arr_nbytes(a, n))) ; \
-   if (!(a)) { \
-      fprintf(stderr, "FATAL ERROR: allocation failure\n"); \
-      exit(EXIT_FAILURE); \
-   } \
-   (a)->len = 0; (a)->max = n; \
-}
-
-#define arr_add_nochk(a, elt) { \
-   assert(a->len < a->max); \
-   a->arr[a->len++] = elt; \
-}
-
-#define arr_getnext(a) { \
-   a->arr[a->len++] = elt; \
-   assert(a->len <= a->max); \
-}
-
-#define arr_free(a, fn) if (a) { \
-   for (u32 i = 0, len = (a)->len; i < len; ++i) { \
-      fn(&(a)->arr[i]); \
-   } \
-}
-
-#define darr_free(da, fn) if (da) { \
-   for (u32 i = 0, len = (da)->len; i < len; ++i) { \
-      fn(&(da)->darr[i]); \
-   } \
-   free((da)->darr); \
-}
 typedef struct {
    u32 basename_idx;
 } EmpDagName;
@@ -218,7 +172,8 @@ typedef struct {
 DEF_ARRAY(ModelGui);
 
 #define MessagePayloadSize 4096
-#define SimpleLoadSize (MessagePayloadSize-sizeof(MessageHeader))
+#define DesiredAlignement 32
+#define SimpleLoadSize (MessagePayloadSize-DesiredAlignement)
 
 #define MathPrgmGuiMax (MessagePayloadSize/MpGuiBasicDataSize)
 #define NashGuiMax (MessagePayloadSize/NashGuiBasicDataSize)
@@ -226,12 +181,18 @@ DEF_ARRAY(ModelGui);
 #define CarcGuiMax (MessagePayloadSize/MpGuiBasicDataSize)
 #define NarcGuiMax (MessagePayloadSize/MpGuiBasicDataSize)
 
+/*
+ * For better performance, we want simple.load to be 32 or bits aligned.
+ */
+
 typedef union {
-   uint8_t buffer[MessagePayloadSize];
+   uint8_t buf[MessagePayloadSize];
    struct {
       MessageHeader header;
+      uint8_t pad[DesiredAlignement-sizeof(MessageHeader)]; /**< Padding to make simple.load aligned */
       union {
          uint8_t load[SimpleLoadSize];
+ 
          ModelGui mdl;
          EmpDagGui empdag;
       };
@@ -243,10 +204,11 @@ typedef union {
    NarcGui narcs[NarcGuiMax];
 } MessagePayload;
 
+RESHOP_STATIC_ASSERT(offsetof(MessagePayload, simple.load) % DesiredAlignement == 0, "Check padding for load field in MessagePayload")
+
+RESHOP_STATIC_ASSERT(CHAR_BIT == 8, "MessagePayload needs porting to an arch where CHAR_BIT != 8")
 
 #define MessageSimplePayloadSize (offsetof(MessagePayload, mps))
-
-RESHOP_STATIC_ASSERT(sizeof(MessageHeader) == offsetof(MessagePayload, simple.load), "review MessagePayload")
 
 #define NewModelStartPayload (offsetof(MessagePayload, simple.mdl) + ModelGuiBasicDataSize)
 #define NewEmpDagStartPayload (offsetof(MessagePayload, simple.empdag) + EmpDagGuiBasicDataSize)

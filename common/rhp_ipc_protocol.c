@@ -19,6 +19,7 @@ DEFSTR(EventFini,"EventFini") \
 DEFSTR(EventReset,"EventReset") \
 DEFSTR(GuiIsReady,"GuiIsReady") \
 DEFSTR(GuiAck,"GuiAck") \
+DEFSTR(GuiAckReq,"GuiAckReq") \
 DEFSTR(GuiRaiseError,"GuiRaiseError") \
 DEFSTR(GuiIsClosing,"GuiIsClosing") \
 DEFSTR(LogMsgSolver,"LogMsgSolver") \
@@ -28,15 +29,15 @@ DEFSTR(NewEmpDagEnd,"NewEmpDagEnd") \
 DEFSTR(NewModelStart,"NewModelStart") \
 DEFSTR(NewModelName,"NewModelName") \
 DEFSTR(NewModelEnd,"NewModelEnd") \
+DEFSTR(RequestCoeffValue,"RequestCoeffValue") \
+DEFSTR(RequestEquById,"RequestEquById") \
+DEFSTR(RequestEquName,"RequestEquName") \
 DEFSTR(RequestMpById,"RequestMpById") \
 DEFSTR(RequestMpName,"RequestMpName") \
 DEFSTR(RequestNashById,"RequestNashById") \
 DEFSTR(RequestNashName,"RequestNashName") \
 DEFSTR(RequestVarById,"RequestVarById") \
 DEFSTR(RequestVarName,"RequestVarName") \
-DEFSTR(RequestEquById,"RequestEquById") \
-DEFSTR(RequestEquName,"RequestEquName") \
-DEFSTR(RequestCoeffValue,"RequestCoeffValue")
 
 
 #define DEFSTR(id, str) char id[sizeof(str)];
@@ -84,6 +85,7 @@ const MessageInfo msgtype[] = {
    [EventReset]        = { .len = 0 },
    [GuiIsReady]        = { .len = 0 },
    [GuiAck]            = { .len = 0 },
+   [GuiAckReq]         = { .len = 0 },
    [GuiRaiseError]     = { .len = MessagePayloadArbitrary },
    [GuiIsClosing]      = { .len = 0 },
    [LogMsgSolver]      = { .len = MessagePayloadArbitrary },
@@ -93,15 +95,15 @@ const MessageInfo msgtype[] = {
    [NewModelStart]     = { .len = 0 },
    [NewModelName]      = { .len = 0 },
    [NewModelEnd]       = { .len = 0 },
+   [RequestCoeffValue] = { .len = sizeof(u32) },
+   [RequestEquById]    = { .len = sizeof(rhp_idx) },
+   [RequestEquName]    = { .len = sizeof(rhp_idx) },
    [RequestMpById]     = { .len = sizeof(mpid_t) },
    [RequestMpName]     = { .len = sizeof(mpid_t) },
    [RequestNashById]   = { .len = sizeof(nashid_t) },
    [RequestNashName]   = { .len = sizeof(nashid_t) },
    [RequestVarById]    = { .len = sizeof(rhp_idx) },
    [RequestVarName]    = { .len = sizeof(rhp_idx) },
-   [RequestEquById]    = { .len = sizeof(rhp_idx) },
-   [RequestEquName]    = { .len = sizeof(rhp_idx) },
-   [RequestCoeffValue] = { .len = sizeof(u32) },
 };
 
 /* Payloads

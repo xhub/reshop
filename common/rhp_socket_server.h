@@ -5,9 +5,11 @@
 extern "C" {
 #endif
 
-int server_init_socket(const char *socket_path, int pid);
-void server_fini_socket(int socket_fd, const char *socket_path);
-int fd_setup(int fd);
+#include "rhp_defines.h"
+
+rhpfd_t server_init_socket(const char *socket_path, int pid);
+void server_fini_socket(rhpfd_t socket_fd, const char *socket_path);
+int fd_setup(rhpfd_t fd);
 
 #ifdef __cplusplus
 }

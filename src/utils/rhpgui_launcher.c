@@ -100,7 +100,6 @@ int imgui_start(const char *hint)
 
       return OK;
     } else {
-
       sigwait(&set, &sig); // Wait for SIGUSR1
    }
 

@@ -7,10 +7,12 @@ extern "C" {
 
 #include "rhp_gui_data.h"
 
-int server_init_socket(const char *socket_path, int pid);
-void server_fini_socket(int socket_fd, const char *socket_path);
-bool gui_ipc_handle_client(int client_fd, GuiData *guidat);
-int fd_setup(int fd);
+rhpfd_t server_init_socket(const char *socket_path, int pid);
+void server_fini_socket(rhpfd_t socket_fd, const char *socket_path);
+bool gui_ipc_handle_client(rhpfd_t client_fd, GuiData *guidat);
+int fd_setup(rhpfd_t fd);
+int fd_set_blocking(rhpfd_t fd);
+int fd_set_nonblocking(rhpfd_t fd);
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,6 @@
 #include "reshop_config.h"
 
+#include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,8 @@
 #include <afunix.h>
 #include <io.h>
 
+#define close closesocket
+
 #else
 
 #include <fcntl.h>
@@ -32,18 +35,17 @@
 #include "rhp_ipc_protocol.h"
 #include "rhp_socket_server.h"
 #include "rhp_gui_data.h"
-
-#include <errno.h>
+#include "rhpgui_error.h"
 
 #define DEBUG_MSG(...) logfn(__VA_ARGS__)
 
 
-int fd_setup(int fd)
+int fd_set_blocking(rhpfd_t fd)
 {
 #ifdef _WIN32
-   u_long mode = 1;
+   u_long mode = 0;
    if (ioctlsocket (fd, FIONBIO, &mode) == SOCKET_ERROR) {
-      loggerfmt(ErrorGui, "[IPC] ERROR while on setting flags on fd %d: '%s'", fd, strerror(errno));
+      sockerr_log2("[IPC] ERROR while setting fd %d as blocking", fd);
       return 1;
    }
 
@@ -51,35 +53,69 @@ int fd_setup(int fd)
 
    int flags = fcntl(fd, F_GETFL, 0);
    if (flags == -1) {
-      loggerfmt(ErrorGui, "[IPC] ERROR while on getting flags (F_GETFL) via fnctl on fd %d: '%s'", fd, strerror(errno));
+      sockerr_log2("[IPC] ERROR while on getting flags (F_GETFL) via fnctl on fd %d", fd);
+      return -1;
+   }
+   if ((flags & O_NONBLOCK) && (fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) == -1)) {
+      sockerr_log2("[IPC] ERROR while on setting flags (F_GETFL) via fnctl on fd %d: '%s'", fd);
+      return -1;
+   }
+
+#endif
+
+   return 0;
+
+
+}
+
+int fd_set_nonblocking(rhpfd_t fd)
+{
+#ifdef _WIN32
+   u_long mode = 1;
+   if (ioctlsocket (fd, FIONBIO, &mode) == SOCKET_ERROR) {
+      sockerr_log2("[IPC] ERROR while setting fd %d as blocking: '%s'", fd);
+      return 1;
+   }
+
+#else
+
+   int flags = fcntl(fd, F_GETFL, 0);
+   if (flags == -1) {
+      sockerr_log2("[IPC] ERROR while on getting flags (F_GETFL) via fnctl on fd %d: '%s'", fd);
       return -1;
    }
    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-      loggerfmt(ErrorGui, "[IPC] ERROR while on setting flags (F_GETFL) via fnctl on fd %d: '%s'", fd, strerror(errno));
+      sockerr_log2("[IPC] ERROR while on setting flags (F_GETFL) via fnctl on fd %d: '%s'", fd);
       return -1;
    }
+
 #endif
+
    return 0;
+
 }
 
-int server_init_socket(const char *sockpath, int pid)
+int fd_setup(rhpfd_t fd)
 {
-   int server_fd;
+   return fd_set_nonblocking(fd);
+}
+
+rhpfd_t server_init_socket(const char *sockpath, int pid)
+{
+   rhpfd_t fd;
    struct sockaddr_un addr;
 
 #ifdef _WIN32
        // Initialize Winsock
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        loggerfmt(ErrorGui, "[IPC] ERROR: WSAStartup failed\n");
-        return 1;
+        sockerr_fatal("[IPC] ERROR: WSAStartup failed\n");
     }
 #endif
 
    // Create the Unix domain socket
-   if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        loggerfmt(ErrorGui, "[IPC] ERROR: AF_UNIX socket creation failed: '%s'\n", strerror(errno));
-        return 1;
+   if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        sockerr_fatal("[IPC] ERROR: AF_UNIX socket creation failed")
    }
 
    // Bind the socket to a path
@@ -94,15 +130,13 @@ int server_init_socket(const char *sockpath, int pid)
    unlink(sockpath); // Remove existing socket
 #endif
 
-   if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-      loggerfmt(ErrorGui, "[IPC] ERROR: could not bind AF_UNIX socket '%s': '%s'\n",
-                sockpath , strerror(errno));
-      return 1;
+   if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+      sockerr_fatal2("[IPC] ERROR: could not bind AF_UNIX socket '%s'", sockpath)
    }
 
    // Set server socket to non-blocking mode
-   int rc = fd_setup(server_fd);
-   if (rc) { return rc; }
+   int rc = fd_setup(fd);
+   if (rc) { return 0; }
 
    loggerfmt(InfoGui, "ReSHOP gui listening on %s\n", sockpath);
 
@@ -112,15 +146,15 @@ int server_init_socket(const char *sockpath, int pid)
    }
 #endif
 
-   return server_fd;
+   return fd;
 }
 
-void server_fini_socket(int socket_fd, UNUSED const char *socket_path)
+void server_fini_socket(rhpfd_t fd, UNUSED const char *socket_path)
 {
 
-   if (socket_fd >= 0) {
+   if (fd > 0) {
 
-      close(socket_fd);
+      close(fd);
 
 #ifndef __linux__
       if (socket_path && strlen(socket_path) > 0) {
@@ -134,4 +168,3 @@ void server_fini_socket(int socket_fd, UNUSED const char *socket_path)
    WSACleanup();
 #endif
 }
-

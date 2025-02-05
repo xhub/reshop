@@ -1,5 +1,3 @@
-/* date = September 27th 2021 11:48 am */
-
 #ifndef DEFINES_H
 #define DEFINES_H
 
@@ -33,5 +31,18 @@ typedef u32 b32;
 #define Gigabytes(count) (u64) (((u64)(count)) * 1024 * 1024 * 1024)
 #define Megabytes(count) (u64) (((u64)(count)) * 1024 * 1024)
 #define Kilobytes(count) (u64) (((u64)(count)) * 1024)
+
+#ifdef _WIN32
+#include <BaseTsd.h>
+
+typedef UINT_PTR  rhpfd_t;
+#define FDP       "%llu"
+
+#else
+
+typedef int rhpfd_t;
+#define FDP "%d"
+
+#endif
 
 #endif //DEFINES_H

@@ -1,6 +1,9 @@
 #include "rhp_gui_data.h"
 #include "rhp_socket_server.h"
 
+#include "rhpgui_array_utils.h"
+
+
 static void mpgui_free(MathPrgmGui *mp)
 {
    if (!mp) { return; }
@@ -56,6 +59,7 @@ void modelgui_free(ModelGui *mgui)
 void guidata_fini(GuiData* gdat)
 {
    server_fini_socket(gdat->ipc.server_fd, gdat->ipc.name);
+   free(gdat->ipc.name);
    free(gdat->ipc.data);
    arr_free(gdat->models, modelgui_free);
 }

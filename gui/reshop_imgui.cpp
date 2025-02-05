@@ -34,6 +34,7 @@
 #include "rhp_defines.h"
 #include "rhp_socket_server.h"
 #include "rhp_gui_data.h"
+#include "rhpgui_error.h"
 
 
 #include "JetBrainsMonoNL-Regular.h"
@@ -140,7 +141,7 @@ static void ShowExampleAppCustomNodeGraph(bool* opened)
 
    // State
    static ImVector<EmpDagNode> nodes;
-   static ImVector<EmpDagVArc> links;
+   //   static ImVector<EmpDagVArc> links;
    static ImVector<EmpDagSimpleArc> linksCtlr;
    static ImVector<EmpDagSimpleArc> linksNash;
    static ImVec2 scrolling = ImVec2(0.0F, 0.0F);
@@ -152,12 +153,15 @@ static void ShowExampleAppCustomNodeGraph(bool* opened)
    ImGuiIO& io = ImGui::GetIO();
    if (!inited)
    {
-      //      nodes.push_back(EmpDagNode(0, "MainTex", ImVec2(40, 50), 0.5f, 1, 1));
-      //      nodes.push_back(EmpDagNode(1, "BumpMap", ImVec2(40, 150), 0.42f, 1, 1));
-      //      nodes.push_back(EmpDagNode(2, "Combine", ImVec2(270, 80), 1.0f, 2, 2));
-      //      links.push_back(EmpDagSimpleArc(0, 0, 2, 0));
-      //      links.push_back(EmpDagSimpleArc(1, 0, 2, 1));
-      //      inited = true;
+      #define MY_DEMO
+#ifdef MY_DEMO
+            nodes.push_back(EmpDagNode(0, "Hydro", ImVec2(140, 50),  1, 0));
+            nodes.push_back(EmpDagNode(1, "Thermal", ImVec2(140, 150),  1, 0));
+            nodes.push_back(EmpDagNode(2, "Equilibrium", ImVec2(0, 100),  0, 2));
+            linksCtlr.push_back(EmpDagSimpleArc(2, 0, 0, 0));
+            linksCtlr.push_back(EmpDagSimpleArc(2, 1, 1, 0));
+            inited = true;
+#endif
    }
 
    // Draw a list of nodes on the left side
@@ -216,7 +220,7 @@ static void ShowExampleAppCustomNodeGraph(bool* opened)
    // Display links
    drawList->ChannelsSplit(2);
    drawList->ChannelsSetCurrent(0); // Background
-   for (int link_idx = 0; link_idx < links.Size; link_idx++)
+   for (int link_idx = 0; link_idx < linksCtlr.Size; link_idx++)
    {
       EmpDagSimpleArc* link = &linksCtlr[link_idx];
       EmpDagNode* parent = &nodes[link->parentIdx];
@@ -606,11 +610,9 @@ int main(int argc, char *argv[])
    }
 
    GuiData guidat;
-   guidat.ipc.name = argv[1];
+   guidat.connected = false;
+   guidat.ipc.name = strdup(argv[1]);
    guidat.ipc.server_fd = server_init_socket(guidat.ipc.name, pid_parent);
-   if (guidat.ipc.server_fd >= 0) {
-      logWin.info("ReSHOP GUI starts to listen on %s", argv[1]);
-   }
    guidat.models = NULL;
 
    ipc_poll_gui_init(&guidat);

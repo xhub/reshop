@@ -12,6 +12,7 @@
 
 #include "compat.h"
 #include "mem-debug.h"
+#include "rhp_basic_memory.h"
 #include "status.h"
 
 //#define ABS(a)          (((a) >= 0)  ? (a) : (-(a)))
@@ -97,21 +98,6 @@
 
 #define CALLOC_EXIT_NULL(ptr,type,n)  CALLOC(ptr,type,n); \
    if (RHP_UNLIKELY(!(ptr))) { goto _exit; };
-
-ALLOC_SIZE(2) MALLOC_ATTR_SIMPLE
-static inline void *myrealloc(void *ptr, size_t size)
-{
-#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ > 11)
-#pragma GCC diagnostic ignored "-Wuse-after-free"
-#endif
-   void* oldptr = ptr;
-   void *newptr  = realloc(ptr, size); /* NOLINT(bugprone-suspicious-realloc-usage) */
-   if (RHP_UNLIKELY(!newptr && errno == ENOMEM && oldptr)) { free(oldptr); }
-   return newptr;
-#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ > 11)
-#pragma GCC diagnostic pop
-#endif
-}
 
 #define REALLOC(ptr,type,n) { (ptr) = (type*)myrealloc((void*)(ptr), (n)*sizeof(type)); \
    assert(((ptr) || (n) == 0) && "Allocation error for object " #ptr); }

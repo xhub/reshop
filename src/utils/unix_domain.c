@@ -1,3 +1,4 @@
+#include "reshop_config.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -31,13 +32,24 @@
 #include "rhp_socket_server.h"
 #include "status.h"
 
-tlsvar int gui_fd = -1;
+
+#ifdef _WIN32
+
+tlsvar rhpfd_t gui_fd  = INVALID_SOCKET;
+tlsvar rhpfd_t data_fd = INVALID_SOCKET;
+tlsvar rhpfd_t ctrl_fd = INVALID_SOCKET;
+
+#else
+
+tlsvar int gui_fd  = -1;
 tlsvar int data_fd = -1;
 tlsvar int ctrl_fd = -1;
 
+#endif
+
 static void write_err(void)
 {
-   error_errno("[IPC] ERROR while calling 'write': '%s'\n");
+   sockerr_log("[IPC] ERROR while calling 'write'");
 }
 #define CHK_WRITE(EXPR) if ((EXPR) == -1) { write_err(); }
 
@@ -51,34 +63,34 @@ static void read_err(void)
 #define CHK_READ(EXPR) if ((EXPR) == -1) { read_err(); }
 #endif
 
-int fd_setup(int fd)
+int fd_setup(rhpfd_t fd)
 {
 #ifdef _WIN32
 
    u_long mode = 1;
    if (ioctlsocket (fd, FIONBIO, &mode) == SOCKET_ERROR) {
-      error_errno("[IPC] ERROR while on setting flags on fd %d: '%s'", fd);
+      sockerr_log2("[IPC] ERROR while on setting flags on fd %zu", fd);
    }
 
 #else
    int flags = fcntl(fd, F_GETFL, 0);
    if (flags == -1) {
-      error_errno("[IPC] ERROR while on getting flags (F_GETFL) via fnctl on fd %d: '%s'", fd);
+      sockerr_log2("[IPC] ERROR while on getting flags (F_GETFL) via fnctl on fd %d", fd);
       return Error_SystemError;
 }
    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-      error_errno("[IPC] ERROR while on setting flags (F_GETFL) via fnctl on fd %d: '%s'", fd);
+      sockerr_log2("[IPC] ERROR while on setting flags (F_GETFL) via fnctl on fd %d", fd);
       return Error_SystemError;
    }
 
    int size = 2 * 1024 * 1024;
    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) == -1) {
-      error_errno("[IPC] ERROR: call to 'setsockopt' failed with msg: '%s'\n");
+      sockerr_log("[IPC] ERROR: call to 'setsockopt' failed");
       return -1;
    }
 
    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) == -1) {
-      error_errno("[IPC] ERROR: call to 'setsockopt' failed with msg: '%s'\n");
+      sockerr_log("[IPC] ERROR: call to 'setsockopt' failed with msg");
       return -1;
    }
 #endif
@@ -93,7 +105,7 @@ static int unix_domain_getfd(const char *sockpath)
 
    // Create the Unix domain socket
    if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-      error_errno("[IPC] ERROR: call to 'socket' failed with msg: '%s'\n");
+      sockerr_log("[IPC] ERROR: call to 'socket' failed with msg");
       return -1;
    }
 
@@ -109,19 +121,19 @@ static int unix_domain_getfd(const char *sockpath)
 #endif
 
    if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-      error_errno("[IPC] ERROR: call to 'connect' failed with msg: '%s'\n");
+      sockerr_log("[IPC] ERROR: call to 'connect' failed with msg");
       return -1;
    }
 
 #ifndef _WIN32
    int size = 2 * 1024 * 1024;
    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) == -1) {
-      error_errno("[IPC] ERROR: call to 'setsockopt' failed with msg: '%s'\n");
+      sockerr_log("[IPC] ERROR: call to 'setsockopt' failed with msg");
       return -1;
    }
 
    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) == -1) {
-      error_errno("[IPC] ERROR: call to 'setsockopt' failed with msg: '%s'\n");
+      sockerr_log("[IPC] ERROR: call to 'setsockopt' failed with msg");
       return -1;
    }
 #endif
@@ -138,16 +150,17 @@ int unix_domain_client_init(const char *sockpath)
 
    // Set socket to non-blocking
    if (fd_setup(gui_fd)) {
-      error("[IPC] ERROR: could not set fd=%d as nonblocking\n", gui_fd);
+      error("[IPC] ERROR: could not set fd=" FDP " as nonblocking\n", gui_fd);
       return Error_SystemError;
    }
 
    data_fd = unix_domain_getfd(sockpath);
-   if (data_fd <= 0) { 
+   if (!valid_fd(data_fd)) { 
       return Error_SystemError;
    }
 
-   debug("[IPC] Succesfully connected to %s: gui_fd=%d; data_fd=%d\n", sockpath, gui_fd, data_fd);
+   debug("[IPC] Succesfully connected to %s: gui_fd=" FDP "; data_fd=" FDP "\n",
+         sockpath, gui_fd, data_fd);
 
    return OK;
 }

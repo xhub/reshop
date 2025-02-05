@@ -13,6 +13,8 @@ extern "C" {
 void loggerfmt(uint8_t level, const char *fmt, ...);
 void error_init(const char *fmt, ...);
 
+// FIXME: get proper support for custom allocator
+#define mymalloc malloc
 
 typedef enum {
    DebugGui,
@@ -25,9 +27,9 @@ typedef enum {
 typedef struct {
    bool connected;
    struct {
-      int server_fd;
+      rhpfd_t server_fd;
       void *data;
-      const char *name;
+      char *name;
    } ipc;
    ModelGuiArray *models;
 } GuiData;
@@ -37,7 +39,12 @@ void modelgui_free(ModelGui *mgui);
 static inline GuiData* guidata_new(void)
 {
    GuiData *gdat = (GuiData *)mymalloc(sizeof(GuiData));
+   gdat->connected = false;
+   gdat->ipc.server_fd = -1;
+   gdat->ipc.data = NULL;
+   gdat->ipc.name = NULL;
    gdat->models = NULL;
+
    return gdat;
 }
 
