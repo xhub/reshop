@@ -289,11 +289,11 @@ int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldua
          DblArrayBlock* dblarrs;
          Aequ *equs;
          if (inObjFn) {
-            dblarrs = dblarrs_new(atmp.arena, clen, cvals, 1, &objCoeff);
-            A_CHECK_EXIT(equs, aequ_newblockA(atmp.arena, clen, cidxs, 1, &fdat.dual.ei_objfn));
+            dblarrs = dblarrs_new_(atmp.arena, 2, clen, cvals, 1, &objCoeff);
+            A_CHECK_EXIT(equs, aequ_newblockA_(atmp.arena, 2, clen, cidxs, 1, &fdat.dual.ei_objfn));
          } else {
-            dblarrs = dblarrs_new(atmp.arena, clen, cvals);
-            A_CHECK_EXIT(equs, aequ_newblockA(atmp.arena, clen, cidxs));
+            dblarrs = dblarrs_new_(atmp.arena, 1, clen, cvals);
+            A_CHECK_EXIT(equs, aequ_newblockA_(atmp.arena, 1, clen, cidxs));
          }
 
          S_CHECK_EXIT(arcVFmb_init_from_aequ(&ctr->arenaL_perm, &arcvf_ccf, equs, dblarrs));

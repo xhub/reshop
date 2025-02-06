@@ -69,11 +69,13 @@ Aequ* aequ_newblock(unsigned num_blocks) MALLOC_ATTR(aequ_free,1);
 
 Aequ* aequ_newblockA_(M_ArenaLink *arena, unsigned nblocks, ...);
 
+#ifdef ONLY_C11_COMPLIANT_COMPILER
 /* FIXME: remove as soon as possible */
 #ifdef __INTEL_COMPILER
 #define aequ_newblockA(arena, ...) aequ_newblockA_(arena, VA_NARG_TYPED(uintptr_t, __VA_ARGS__), __VA_ARGS__)
 #else
 #define aequ_newblockA(arena, ...) aequ_newblockA_(arena, PP_NARG(__VA_ARGS__), __VA_ARGS__)
+#endif
 #endif
 
 
