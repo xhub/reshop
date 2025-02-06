@@ -101,7 +101,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
          case MpTypeOpt:
          case MpTypeVi:
             break;
-         case MpTypeCcflib:
+         case MpTypeCcflib: {
             if (!mp_->ccflib.mp_instance) {
                errbug("[FOOC] ERROR: %s MP(%s) is part of NASH(%s) but has not been instanciated!",
                       mptype2str(type), empdag_getmpname(empdag, mpid),
@@ -113,6 +113,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
             S_CHECK(empdag_substitute_mp_arcs(empdag, mpid, mpid_instance));
 
             break;
+         }
          default:
             errbug("[FOOC] ERROR: %s MP(%s) is part of NASH(%s). This is unsupported.",
                    mptype2str(type), empdag_getmpname(empdag, mpid),
@@ -447,8 +448,7 @@ int mdl_transform_emp_togamsmdltype(Model *mdl_src, Model **mdl_target)
             *mdl_target = mdl_borrow(mdl_src);
          }
 
-         Model *mdl_target_ = *mdl_target;
-         S_CHECK(mdl_recompute_modeltype(mdl_target_));
+         S_CHECK(mdl_recompute_modeltype(*mdl_target));
          return OK;
 
       case Opt_SolveSingleOptAsMcp:
