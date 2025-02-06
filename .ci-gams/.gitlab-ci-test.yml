@@ -254,8 +254,8 @@ test-wei:
     - !reference [ .get-gams-wei ]
     - !reference [ .gams-folder-wei ]
     - *pw-run-test
-    - ctest --test-dir build/test --output-junit doctest_results_windows.xml -E tree
-    - ctest --test-dir build-icl/test -E tree
+    - ctest --test-dir build/test --output-junit doctest_results_windows.xml; if (-not $?) { ctest --test-dir build/test --rerun-failed --output-on-failure }
+    - ctest --test-dir build-icl/test; if (-not $?) { ctest --test-dir build-icl/test --rerun-failed --output-on-failure }
 
     - Get-Content "$GAMS_PATH/gamsconfig.yaml"
     - if (Test-Path "$GAMS_PATH/gamsconfig.yaml") { Remove-Item "$GAMS_PATH/gamsconfig.yaml" -Force }

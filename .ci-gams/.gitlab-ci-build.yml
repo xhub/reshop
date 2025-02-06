@@ -149,6 +149,6 @@ build-wei:
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.dll,build/*.lib,build/test,build/gams,build/output,build-icl/test,build-icl/gams,build-icl/output]
+    paths: [warnings.xml,build/test,build/gams,build/output,build-icl/test,build-icl/gams,build-icl/output]
     reports:
       junit: warnings.xml
