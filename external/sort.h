@@ -62,7 +62,7 @@ static const uint64_t shell_gaps[48] = {1, 4, 10, 23, 57, 132, 301, 701, 1750, 4
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
-#if __has_builtin(__builtin_clzll) || (defined(__GNUC__) && ((__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ > 3)))
+#if (!defined(__ICL) && __has_builtin(__builtin_clzll)) || (defined(__GNUC__) && ((__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ > 3)))
 #define CLZ __builtin_clzll
 #else
 

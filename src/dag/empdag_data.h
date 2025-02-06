@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "rhp_defines.h"
 #include "rhp_fwd.h"

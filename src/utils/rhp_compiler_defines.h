@@ -100,9 +100,10 @@
 #endif
 
 
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) && !defined(__INTEL_COMPILER) /* intel classic compiler is quite broken */
 
-#if (_MSC_VER >= 1700)
+#if (_MSC_VER >= 1700) 
+
 #  define CHECK_RESULT _Must_inspect_result_
 #else
 #  define CHECK_RESULT
@@ -119,6 +120,7 @@
 #define FORMAT_CHK(S,A)
 
 #define MALLOC_ATTR(...)          __declspec(restrict)
+#define IGNORE_DEALLOC_MISMATCH(EXPR) 
 
 #define MALLOC_ATTR_SIMPLE
 #define ACCESS_ATTR(TYPE, ...)
@@ -142,6 +144,7 @@
 #define UNUSED
 #define FORMAT_CHK(S,A)
 #define MALLOC_ATTR(...)
+#define IGNORE_DEALLOC_MISMATCH(EXPR) 
 #define MALLOC_ATTR_SIMPLE
 #define ACCESS_ATTR(TYPE, ...)
 #define WRITE_ONLY(...)

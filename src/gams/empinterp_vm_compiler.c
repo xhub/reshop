@@ -212,7 +212,7 @@ NONNULL static Compiler* ensure_vm_mode(Interpreter *interp)
    return c;
 }
 
-#define emit_bytes(tape, ...) _emit_bytes(tape, PP_NARG(__VA_ARGS__), __VA_ARGS__); 
+#define emit_bytes(tape, ...) _emit_bytes(tape, VA_NARG_TYPED(u8, __VA_ARGS__), __VA_ARGS__); 
 
 static inline int emit_short(Tape *tape, uint16_t short_) {
    S_CHECK(emit_byte(tape, (short_ >> 8) & 0xff));

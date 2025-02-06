@@ -281,7 +281,14 @@ RHP_TRACE_ME(); UNUSED int c42 = getchar(); //NOLINT(bugprone-unused-return-valu
     "to be shorter than %d\n", __func__, SIZE); error(__VA_ARGS__); return Error_SystemError; } }
 
 
-/* From https://stackoverflow.com/questions/2124339/c-preprocessor-va-args-number-of-arguments/2124385#2124385 */
+
+/* FIXME: due to the external requirements of support the intel classic compiler wiht a documented broken preprocess,
+ * the following can't be used.
+ *
+ * We came up with VA_NARG_TYPES to circumvent this
+ */
+
+// From https://stackoverflow.com/questions/2124339/c-preprocessor-va-args-number-of-arguments/2124385#2124385
 #define PP_NARG(...) \
          PP_NARG_(__VA_ARGS__,PP_RSEQ_N())
 #define PP_NARG_(...) \
@@ -302,5 +309,9 @@ RHP_TRACE_ME(); UNUSED int c42 = getchar(); //NOLINT(bugprone-unused-return-valu
          29,28,27,26,25,24,23,22,21,20, \
          19,18,17,16,15,14,13,12,11,10, \
          9,8,7,6,5,4,3,2,1,0
+
+/* This was tested on godbolt with a few compiler, and even without optimization,
+ * only the constant apperas in the binary */
+#define VA_NARG_TYPED(type,...) (sizeof((type[]){__VA_ARGS__})/sizeof(type))
 
 #endif /* MACROS_H */

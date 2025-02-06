@@ -68,7 +68,14 @@ Aequ* aequ_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(aequ_fre
 Aequ* aequ_newblock(unsigned num_blocks) MALLOC_ATTR(aequ_free,1);
 
 Aequ* aequ_newblockA_(M_ArenaLink *arena, unsigned nblocks, ...);
+
+/* FIXME: remove as soon as possible */
+#ifdef __INTEL_COMPILER
+#define aequ_newblockA(arena, ...) aequ_newblockA_(arena, VA_NARG_TYPED(uintptr_t, __VA_ARGS__), __VA_ARGS__)
+#else
 #define aequ_newblockA(arena, ...) aequ_newblockA_(arena, PP_NARG(__VA_ARGS__), __VA_ARGS__)
+#endif
+
 
 int aequ_get(const Aequ *e, unsigned i, rhp_idx *ei) NONNULL;
 unsigned aequ_size(const Aequ *e) NONNULL;

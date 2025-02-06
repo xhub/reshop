@@ -173,16 +173,16 @@ WRAP_VAR_GETTER(getvarval,double*,value)
 WRAP_VAR_GETTER(getvartype,unsigned*,type)
 WRAP_VAR_GETTER(getvarub,double*,upper_bound)
 
-#define WRAP_GETTER2(argidx, name, argtype1, argname1, argtype2, argname2) \
-int rhp_mdl_ ## name (const Model *mdl, rhp_idx argidx, argtype1 argname1, argtype2 argname2) { \
+#define WRAP_GETTER2(argidx, name, arg1_t, arg1, arg2_t, arg2) \
+int rhp_mdl_ ## name (const Model *mdl, rhp_idx argidx, arg1_t arg1, arg2_t arg2) { \
    S_CHECK(chk_mdl(mdl, __func__)); \
-   S_CHECK(chk_arg_nonnull(argname1, 3, __func__)); \
-   S_CHECK(chk_arg_nonnull(argname2, 4, __func__)); \
+   S_CHECK(chk_arg_nonnull(arg1, 3, __func__)); \
+   S_CHECK(chk_arg_nonnull(arg2, 4, __func__)); \
    assert(mdl->ctr.ops->name); \
-   return mdl->ctr.ops->name (&mdl->ctr, argidx, argname1, argname2); \
+   return mdl->ctr.ops->name (&mdl->ctr, argidx, arg1, arg2); \
 }
 
-#define WRAP_VAR_GETTER2(...) WRAP_GETTER2(vi, __VA_ARGS__)
+#define WRAP_VAR_GETTER2(name, arg1_t, arg1, arg2_t, arg2)  WRAP_GETTER2(vi, name, arg1_t, arg1, arg2_t, arg2)
 
 WRAP_VAR_GETTER2(getvarbounds,double*,lb,double*,ub)
 
@@ -247,18 +247,19 @@ int rhp_mdl_ ## name (Model *mdl, rhp_idx argidx, argtype argname) { \
    return mdl->ctr.ops->name (&mdl->ctr, argidx, argname); \
 }
 
-#define WRAP_SETTER2(argidx, name, argtype1, argname1, argtype2, argname2) \
-int rhp_mdl_ ## name (Model *mdl, rhp_idx argidx, argtype1 argname1, argtype2 argname2) { \
+#define WRAP_SETTER2(argidx, name, arg1_t, arg1, arg2_t, arg2) \
+int rhp_mdl_ ## name (Model *mdl, rhp_idx argidx, arg1_t arg1, arg2_t arg2) { \
    S_CHECK(chk_mdl(mdl, __func__)); \
    S_CHECK(argidx ## _inbounds(argidx, argidx ## _maxval(&mdl->ctr), __func__)); \
    assert(mdl->ctr.ops->name); \
-   return mdl->ctr.ops->name (&mdl->ctr, argidx, argname1, argname2); \
+   return mdl->ctr.ops->name (&mdl->ctr, argidx, arg1, arg2); \
 }
 
-#define WRAP_VAR_SETTER(...) WRAP_SETTER(vi, __VA_ARGS__)
-#define WRAP_VAR_SETTER2(...) WRAP_SETTER2(vi, __VA_ARGS__)
-#define WRAP_EQU_SETTER(...) WRAP_SETTER(ei, __VA_ARGS__)
-#define WRAP_EQU_SETTER2(...) WRAP_SETTER2(ei, __VA_ARGS__)
+/* FIXME: Because of the broken preprocessor in intel classic compiler, we can't use __VA_ARGS__ */
+#define WRAP_VAR_SETTER(name, arg1_t, arg1)                 WRAP_SETTER (vi, name, arg1_t, arg1)
+#define WRAP_VAR_SETTER2(name, arg1_t, arg1, arg2_t, arg2)  WRAP_SETTER2(vi, name, arg1_t, arg1, arg2_t, arg2)
+#define WRAP_EQU_SETTER(name, arg1_t, arg1)                 WRAP_SETTER (ei, name, arg1_t, arg1)
+#define WRAP_EQU_SETTER2(name, arg1_t, arg1, arg2_t, arg2)  WRAP_SETTER2(ei, name, arg1_t, arg1, arg2_t, arg2)
 
 //WRAP_VAR_SETTER(setvarperp,rhp_idx*,match)
 //WRAP_VAR_SETTER(setvarstatone,unsigned,bstat)
@@ -280,34 +281,36 @@ WRAP_EQU_SETTER(setequvarperp,rhp_idx,vi)
 WRAP_EQU_SETTER2(setequtype,unsigned,type,unsigned,cone)
 
 
-#define WRAP_MDL_FN1(qualifier,name, argtype1, argname1) \
-int rhp_mdl_ ## name (qualifier Model *mdl, argtype1 argname1) { \
+#define WRAP_MDL_FN1(qualifier, name, arg1_t, arg1) \
+int rhp_mdl_ ## name (qualifier Model *mdl, arg1_t arg1) { \
    S_CHECK(chk_mdl(mdl, __func__)); \
-   return mdl_ ## name (mdl, argname1); \
+   return mdl_ ## name (mdl, arg1); \
 }
 
-#define WRAP_MDL_FN2(qualifier, name, argtype1, argname1, argtype2, argname2) \
-int rhp_mdl_ ## name (qualifier Model *mdl, argtype1 argname1, argtype2 argname2) { \
+#define WRAP_MDL_FN2(qualifier, name, arg1_t, arg1, arg2_t, arg2) \
+int rhp_mdl_ ## name (qualifier Model *mdl, arg1_t arg1, arg2_t arg2) { \
    S_CHECK(chk_mdl(mdl, __func__)); \
-   return mdl_ ## name (mdl, argname1, argname2); \
+   return mdl_ ## name (mdl, arg1, arg2); \
 }
 
-#define WRAP_CTR_FN1(qualifier,name, argtype1, argname1) \
-int rhp_mdl_ ## name (qualifier Model *mdl, argtype1 argname1) { \
+#define WRAP_CTR_FN1(qualifier, name, arg1_t, arg1) \
+int rhp_mdl_ ## name (qualifier Model *mdl, arg1_t arg1) { \
    S_CHECK(chk_mdl(mdl, __func__)); \
-   return ctr_ ## name (&mdl->ctr, argname1); \
+   return ctr_ ## name (&mdl->ctr, arg1); \
 }
 
-#define WRAP_CTR_FN2(qualifier, name, argtype1, argname1, argtype2, argname2) \
-int rhp_mdl_ ## name (qualifier Model *mdl, argtype1 argname1, argtype2 argname2) { \
+#define WRAP_CTR_FN2(qualifier, name, arg1_t, arg1, arg2_t, arg2) \
+int rhp_mdl_ ## name (qualifier Model *mdl, arg1_t arg1, arg2_t arg2) { \
    S_CHECK(chk_mdl(mdl, __func__)); \
-   return ctr_ ## name (&mdl->ctr, argname1, argname2); \
+   return ctr_ ## name (&mdl->ctr, arg1, arg2); \
 }
-#define WRAP_MDL_GETTER1(...)  WRAP_MDL_FN1(const, __VA_ARGS__)
-#define WRAP_MDL_SETTER1(...)  WRAP_MDL_FN1(/**/, __VA_ARGS__)
-#define WRAP_CTR_GETTER1(...)  WRAP_CTR_FN1(const, __VA_ARGS__)
-#define WRAP_CTR_GETTER2(...)  WRAP_CTR_FN2(const, __VA_ARGS__)
-#define WRAP_CTR_SETTER2(...)  WRAP_CTR_FN2(/**/, __VA_ARGS__)
+
+/* FIXME: Because of the broken preprocessor in intel classic compiler, we can't use __VA_ARGS__ */
+#define WRAP_MDL_GETTER1(name, arg1_t, arg1)                WRAP_MDL_FN1(const, name, arg1_t, arg1)
+#define WRAP_MDL_SETTER1(name, arg1_t, arg1)                WRAP_MDL_FN1(/**/,  name, arg1_t, arg1)
+#define WRAP_CTR_GETTER1(name, arg1_t, arg1)                WRAP_CTR_FN1(const, name, arg1_t, arg1)
+#define WRAP_CTR_GETTER2(name, arg1_t, arg1, arg2_t, arg2)  WRAP_CTR_FN2(const, name, arg1_t, arg1, arg2_t, arg2)
+#define WRAP_CTR_SETTER2(name, arg1_t, arg1, arg2_t, arg2)  WRAP_CTR_FN2(/**/,  name, arg1_t, arg1, arg2_t, arg2)
 
 
 WRAP_MDL_GETTER1(getobjequs,Aequ*,objs)

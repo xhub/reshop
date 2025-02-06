@@ -37,6 +37,12 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
    endif()
 endif()
 
+# FIXME: remove intel classical compiler asap
+if(CMAKE_C_COMPILER MATCHES "icl")
+   set (CMAKE_C_STANDARD 11)
+endif()
+
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
@@ -432,6 +438,7 @@ if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
                       "Stderr content is:\n${GAMS_STDERR}\n"
                       "Stdout content is:\n${GAMS_STDOUT}\n"
                       "Using the GAMS `API` files in external/gamsapi/")
+      unset(GAMSDIR CACHE)
    endif()
 
    file(READ ${SCRDIR}/gams_data GAMS_OUTPUT)
@@ -466,16 +473,19 @@ if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
                     ERROR_VARIABLE GAMS_STDERR)
 
    if (GAMS_RC GREATER 0)
-   message(FATAL_ERROR "Could not execute target GAMS executable ${GAMS_EXE_TARGET}."
+      message(WARNING "Could not execute target GAMS executable ${GAMS_EXE_TARGET}.\n"
                        "Stderr content is:\n${GAMS_STDERR}\n"
                        "Stdout content is:\n${GAMS_STDOUT}\n"
-                       "Use the GAMSSYSDIR to specify the GAMS system directory")
+                       "Using external/gamsapi for the GAMS 'API' files")
+      unset(GAMSDIR CACHE)
    endif()
    
-   SET(GAMSCNTR_DAT_FILE "${SCRDIR}/gamscntr.dat")
+   if (GAMSDIR)
+     SET(GAMSCNTR_DAT_FILE "${SCRDIR}/gamscntr.dat")
 
-   MESSAGE(STATUS "GAMS SYSDIR (target): ${GAMSDIR_TARGET}")
-   MESSAGE(STATUS "GAMS CNTR file (target): ${GAMSCNTR_DAT_FILE}")
+     MESSAGE(STATUS "GAMS SYSDIR (target): ${GAMSDIR_TARGET}")
+     MESSAGE(STATUS "GAMS CNTR file (target): ${GAMSCNTR_DAT_FILE}")
+   endif(GAMSDIR)
 endif()
 
 # TODO: document this overwrite?
@@ -484,7 +494,7 @@ if (GAMSSYSDIR)
 endif(GAMSSYSDIR)
 
 if(NOT GAMSDIR)
-   SET (GAMSDIR "${CMAKE_SOURCE_DIR}/external/gamsapi/")
+   SET (GAMSDIR "${CMAKE_SOURCE_DIR}/external/gamsapi/" CACHE PATH "GAMS system directory")
 endif (NOT GAMSDIR)
 
 MESSAGE(STATUS "GAMS SYSDIR (host): ${GAMSDIR}")
