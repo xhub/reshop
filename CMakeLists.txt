@@ -428,10 +428,10 @@ if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
                     ERROR_VARIABLE GAMS_STDERR)
 
    if (GAMS_RC GREATER 0)
-   message(FATAL_ERROR "Could not execute target GAMS executable ${GAMS_EXE_TARGET}."
-                       "Stderr content is:\n${GAMS_STDERR}\n"
-                       "Stdout content is:\n${GAMS_STDOUT}\n"
-                       "Use the GAMSSYSDIR to specify the GAMS system directory")
+      message(WARNING "Could not execute target GAMS executable ${GAMS_EXE_TARGET}.\n"
+                      "Stderr content is:\n${GAMS_STDERR}\n"
+                      "Stdout content is:\n${GAMS_STDOUT}\n"
+                      "Using the GAMS `API` files in external/gamsapi/")
    endif()
 
    file(READ ${SCRDIR}/gams_data GAMS_OUTPUT)
