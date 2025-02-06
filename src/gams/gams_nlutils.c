@@ -17,7 +17,7 @@
 #include "optcc.h"
 #include "cfgmcc.h"
 
-#define IO_READ(expr, filename) do { size_t info = expr; if (!info) { printf("IO error while reading %s\n", filename); goto _exit; } } while (0);
+#define IO_READ(expr, filename) do { size_t info = expr; if (!info) { printf("IO error while reading '%s'\n", filename); goto _exit; } } while (0);
 
 static uint32_t read_field(FILE* f)
 {
@@ -54,7 +54,7 @@ _exit:
 
 struct gams_opcodes_file* gams_read_opcode(const char* filename, double **pool)
 {
-   FILE* f = fopen(filename, "r");
+   FILE* f = fopen(filename, "rb");
    struct gams_opcodes_file* equs = NULL;
 
    if (!f) {
@@ -62,11 +62,13 @@ struct gams_opcodes_file* gams_read_opcode(const char* filename, double **pool)
       return NULL;
    }
 
+#ifndef _WIN32
    if (setvbuf(f, NULL, _IOFBF, 1024*4)) {
       perror("setvbuf");
       printf("Error in setting larger buffer for %s\n", filename);
       goto _exit;
     }
+#endif
 
    unsigned char opcode;
    uint32_t val, len;
