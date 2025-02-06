@@ -234,6 +234,8 @@ test-dac:
        $LastLine = Get-Content -Path $FailureFile | Select-Object -Last 1
        if ($LastLine -notmatch "Failed tests: 0") {
          $Failures = Get-Content -Path $FailureFile
+         Get-ChildItem -Path WEX*/*.log | ForEach-Object { Get-Content $_ }
+         Get-ChildItem -Path WEX*/*.lst | ForEach-Object { Get-Content $_ }
          throw "Test failed: ${Failures}"
        }
  
@@ -253,7 +255,10 @@ test-wei:
     - !reference [ .gams-folder-wei ]
     - *pw-run-test
     - ctest --test-dir build/test --output-junit doctest_results_windows.xml -E tree
+    - ctest --test-dir build-icl/test -E tree
 
+    - Get-Content "$GAMS_PATH/gamsconfig.yaml"
+    - if (Test-Path "$GAMS_PATH/gamsconfig.yaml") { Remove-Item "$GAMS_PATH/gamsconfig.yaml" -Force }
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;" + $env:Path
@@ -264,7 +269,7 @@ test-wei:
     # - bash test/gams/test.sh
 
       # Run tests with regular reshop
-    - Run-Test -Command "emplib.exe" -TestSuite "goempgo" -FailureFile "failures_emp.gms"
+    - Run-Test -Command "emplib.exe"  -TestSuite "goempgo" -FailureFile "failures_emp.gms"
     - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
 
     # If we can asan to work, then this can be enabled

@@ -130,7 +130,6 @@ build-wei:
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $vcvarsallPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
     - '& $vcvarsallPath x86_amd64'
-    #    - 'call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64'
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -S .
@@ -138,13 +137,18 @@ build-wei:
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
 
-    - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
-    - cmake --build build-asan 
-    - cmake --install build-asan -v
+    - cmake -B build-icl -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icl -S .
+    - cmake --build build-icl -v | Tee-Object -FilePath 'build_log-icl.txt'
+    - cmake --install build-icl -v
+
+    # TODO: asan support on windows
+    # - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
+    # - cmake --build build-asan 
+    # - cmake --install build-asan -v
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
-    paths: [warnings.xml,build/*.dll,build/*.lib,build/test,build/gams,build/output,build-asan/test,build-asan/gams,build-asan/output]
+    paths: [warnings.xml,build/*.dll,build/*.lib,build/test,build/gams,build/output,build-icl/test,build-icl/gams,build-icl/output]
     reports:
       junit: warnings.xml
