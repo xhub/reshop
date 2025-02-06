@@ -147,6 +147,15 @@ if(CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
    endif()
 endif()
 
+# FIXME: remove ASAP
+# This is needed as the classic intel compiler by default does not have proper a math/FP setting
+if(CMAKE_C_COMPILER_ID MATCHES "Intel")
+   if("x${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
+      add_compile_options(/fp:precise /Qrestrict /Qvla /wd:589 /wd:2415)
+   else()
+      add_compile_options(-fp-model=precise -Qrestrict -Qvla)
+   endif()
+endif()
 
 #if (APPLE)
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
