@@ -145,12 +145,10 @@ if(CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
    else()
       add_compile_options(-fp-model=precise)
    endif()
-endif()
-
 # FIXME: remove ASAP
 # This is needed as the classic intel compiler by default does not have proper a math/FP setting
-if(CMAKE_C_COMPILER_ID MATCHES "Intel")
-   if("x${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
+elseif(CMAKE_C_COMPILER_ID MATCHES "Intel")
+  if (CMAKE_SYSTEM_NAME MATCHES "Windows")
       add_compile_options(/fp:precise /Qrestrict /Qvla /wd:589 /wd:2415)
    else()
       add_compile_options(-fp-model=precise -Qrestrict -Qvla)
