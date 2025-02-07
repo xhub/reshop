@@ -78,7 +78,7 @@ build-deg:
     - !reference [.get-gams]
     - !reference [.gams-folder-deg]
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
@@ -207,6 +207,7 @@ build-wei:
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-wei
+    when: always
     expire_in: 2 hours
     paths: 
       - warnings.xml

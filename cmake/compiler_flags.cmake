@@ -149,7 +149,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
 # This is needed as the classic intel compiler by default does not have proper a math/FP setting
 elseif(CMAKE_C_COMPILER_ID MATCHES "Intel")
   if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-      add_compile_options(/fp:precise /Qrestrict /Qvla /wd:589 /wd:2415)
+      add_compile_options(/fp:precise /Qrestrict /Qvla /wd:589 /wd:2415 /Qstd:c17)
    else()
       add_compile_options(-fp-model=precise -Qrestrict -Qvla)
    endif()

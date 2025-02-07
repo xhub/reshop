@@ -42,11 +42,6 @@ if(CMAKE_C_COMPILER MATCHES "icl")
    set (CMAKE_C_STANDARD 11)
 endif()
 
-if (APPLE AND NOT CMAKE_C_COMPILER MATCHES "clang")
-   set (CMAKE_C_COMPILER clang)
-   set (CMAKE_CXX_COMPILER clang)
-endif()
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
