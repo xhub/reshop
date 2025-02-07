@@ -37,6 +37,11 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
    endif()
 endif()
 
+# FIXME: remove intel classical compiler asap
+if(CMAKE_C_COMPILER MATCHES "icl")
+   set (CMAKE_C_STANDARD 11)
+endif()
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (CMAKE_VERSION VERSION_LESS 3.25)
@@ -93,7 +98,64 @@ set(GUI_CPP_FILES "reshop_imgui.cpp"
 
 add_executable(reshop_imgui ${GUI_C_FILES} ${GUI_CPP_FILES} ${IMGUI_FILES})
 
-find_package(glfw3 REQUIRED)
+find_package(glfw3)
+
+if (glfw3_FOUND)
+
+   target_include_directories(reshop_imgui PRIVATE glfw)
+   target_link_libraries(reshop_imgui ${IMGUI_LIBRARIES} glfw)
+
+else (glfw3_FOUND)
+
+   include(ExternalProject)
+
+   set(glfw3_DESTDIR ${CMAKE_CURRENT_BINARY_DIR}/glfw)
+
+   if (LINUX)
+      set(GLFW_EXTRA_CMAKE_ARGS -DGLFW_BUILD_X11=1 -DGLFW_BUILD_WAYLAND=0
+            -DCMAKE_C_FLAGS=-I${CMAKE_CURRENT_SOURCE_DIR}/external)
+      target_compile_definitions(reshop_imgui PRIVATE GLFW_INCLUDE_NONE)
+      list(APPEND IMGUI_LIBRARIES rt m dl pthread)
+   endif()
+
+   ExternalProject_Add(glfw_external
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/glfw 
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${glfw3_DESTDIR}
+               -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+               -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+               -DCMAKE_GENERATOR=${CMAKE_GENERATOR}
+               -DGLFW_BUILD_EXAMPLES=0
+               -DGLFW_BUILD_TESTS=0
+               -DGLFW_BUILD_DOCS=0
+               -DGLFW_LIBRARY_TYPE=STATIC
+               -DCMAKE_INSTALL_LIBDIR=${glfw3_DESTDIR}
+					-DCMAKE_INSTALL_BINDIR=${glfw3_DESTDIR}
+					-DCMAKE_INSTALL_INCLUDEDIR=${glfw3_DESTDIR}
+					-DCMAKE_INSTALL_PREFIX=${glfw3_DESTDIR}
+               ${GLFW_EXTRA_CMAKE_ARGS}
+    BUILD_ALWAYS OFF  # Avoid rebuilding every time
+    INSTALL_DIR ${glfw3_DESTDIR}
+   )
+
+   set(glfw3_DIR ${glfw3_DESTDIR})
+
+      # Add include directory for the external project
+   target_include_directories(reshop_imgui PRIVATE "${glfw3_DESTDIR}")
+ 
+   if (APPLE)
+      list(APPEND IMGUI_LIBRARIES "-framework OpenGL" "-framework Cocoa"
+                                  "-framework IOKit" "-framework CoreVideo")
+   endif()
+   if (WINDOWS)
+      list(APPEND IMGUI_LIBRARIES gdi32.lib opengl32.lib)
+   endif()
+
+   target_link_libraries(reshop_imgui ${IMGUI_LIBRARIES} glfw3)
+   target_link_directories(reshop_imgui PRIVATE ${glfw3_DESTDIR})
+
+   add_dependencies(reshop_imgui glfw_external)
+
+endif(glfw3_FOUND)
 
 # find_package(PkgConfig REQUIRED)
 # pkg_check_modules(IMGUI REQUIRED imgui)
@@ -107,8 +169,6 @@ target_include_directories(reshop_imgui PRIVATE "${CMAKE_BINARY_DIR}/generated/"
                                                 "${CMAKE_CURRENT_SOURCE_DIR}/external/imguial"
                                                 "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
                                                 "${CMAKE_CURRENT_SOURCE_DIR}/utils"
-                                                glfw
                                                 "${IMGUI_INCLUDE_DIRS}"
 )
 
-target_link_libraries(reshop_imgui ${IMGUI_LIBRARIES} glfw)

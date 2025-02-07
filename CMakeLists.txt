@@ -42,6 +42,10 @@ if(CMAKE_C_COMPILER MATCHES "icl")
    set (CMAKE_C_STANDARD 11)
 endif()
 
+if (APPLE AND NOT CMAKE_C_COMPILER MATCHES "clang")
+   set (CMAKE_C_COMPILER clang)
+   set (CMAKE_CXX_COMPILER clang)
+endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -98,7 +102,7 @@ option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation 
 option(BUILD_PYTHON
    "Build a python bindings (argument is a list of python interpreter)" "")
 
-option(BUILD_IMGUI "Build the ReSHOP GUI (currently using Dear Imgui)")
+option(BUILD_IMGUI "Build the ReSHOP GUI (currently using Dear Imgui)" ON)
 
 option(DEV_MODE "Developper mode (enables extras)" OFF)
 
@@ -653,7 +657,8 @@ endif ()
 
 # This is a way to get the version in a file in order to use it while building
 # makeself and it is also useful in some Makefile target.
-configure_file(${CMAKE_SOURCE_DIR}/cmake/version.in ${CMAKE_BINARY_DIR}/version @ONLY)
+# FIXME: 2026.02.06: the file "version" make the compilation failed in C++ on MacOS. Remove in a little bit
+# configure_file(${CMAKE_SOURCE_DIR}/cmake/version.in ${CMAKE_BINARY_DIR}/version @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/cmake/reshop_config.h.in ${CMAKE_BINARY_DIR}/generated/reshop_config.h)
 
 # TODO? delete?
