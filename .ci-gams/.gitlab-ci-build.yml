@@ -119,6 +119,36 @@ build-dac:
     reports:
       junit: warnings.xml
 
+.pw-run-test: &pw-run-test |
+  function Run-Test {
+       param (
+           [string]$Command,
+           [string]$TestSuite,
+           [string]$FailureFile
+       )
+       # Create and switch to the test directory
+       New-Item -ItemType Directory -Path $TestSuite -Force | Out-Null
+       Set-Location $TestSuite
+ 
+       # Run the command
+       & $Command $TestSuite
+ 
+       # Run the GAMS job
+       gams.exe $TestSuite lo=2 --solver=reshop
+  
+       # Check the last line of the failure file for "Failed tests. 0"
+       $LastLine = Get-Content -Path $FailureFile | Select-Object -Last 1
+       if ($LastLine -notmatch "Failed tests: 0") {
+         $Failures = Get-Content -Path $FailureFile
+         Get-ChildItem -Path WEX*/*.log | ForEach-Object { Get-Content $_ }
+         Get-ChildItem -Path WEX*/*.lst | ForEach-Object { Get-Content $_ }
+         throw "Test failed: ${Failures}"
+       }
+ 
+       # Return to the original directory
+       Set-Location ..
+   }
+
 build-wei:
   stage: build
   tags: [pond]
@@ -127,6 +157,8 @@ build-wei:
   script:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
+    - *pw-run-test
+
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $vcvarsallPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
     - '& $vcvarsallPath x86_amd64'
@@ -141,6 +173,33 @@ build-wei:
     - cmake --build build-icl -v | Tee-Object -FilePath 'build_log-icl.txt'
     - cmake --install build-icl -v
 
+    - ctest --test-dir build/test --output-junit doctest_results_windows.xml; if (-not $?) { ctest --test-dir build/test --rerun-failed --output-on-failure }
+    - ctest --test-dir build-icl/test; if (-not $?) { ctest --test-dir build-icl/test --rerun-failed --output-on-failure }
+
+    - Get-Content "$GAMS_PATH/gamsconfig.yaml"
+    - if (Test-Path "$GAMS_PATH/gamsconfig.yaml") { Remove-Item "$GAMS_PATH/gamsconfig.yaml" -Force }
+
+    # - $gmsdirname = Get-Content mygmsdir.tmp -Raw
+    # - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
+    # - $env:Path = "$GAMS_PATH;" + $env:Path
+    - Copy-Item -Path "build/output/*.dll" -Destination "$GAMS_PATH"
+    - Copy-Item -Path "build/output/optreshop.def" -Destination "$GAMS_PATH"
+
+    - $env:EMPSLV = "reshop"
+    # - bash test/gams/test.sh
+
+      # Run tests with regular reshop
+    - Run-Test -Command "emplib.exe"  -TestSuite "goempgo" -FailureFile "failures_emp.gms"
+    - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
+
+    # If we can asan to work, then this can be enabled
+    #    - Copy-Item -Path "build-asan/output/gmsrhp_ux.out.exe" -Destination "$GAMS_PATH"
+    #    - Copy-Item -Path "build-asan/output/gamsconfig_test_asan.yaml" -Destination "$GAMS_PATH/gamsconfig.yaml"
+    #    - Get-Content "build-asan/output/gamsconfig_test_asan.yaml"
+    #    - Get-Content "$GAMS_PATH/gamsconfig.yaml"
+    #    - Run-Test -Command "emplib.exe" -TestSuite "goempgo" -FailureFile "failures_emp.gms"
+    #    - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
+
     # TODO: asan support on windows
     # - cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
     # - cmake --build build-asan 
@@ -149,6 +208,16 @@ build-wei:
   artifacts:
     name: reshop-wei
     expire_in: 2 hours
-    paths: [warnings.xml,build/test,build/gams,build/output,build-icl/test,build-icl/gams,build-icl/output]
+    paths: 
+      - warnings.xml
+      - build/test
+      - build/gams
+      - build/output
+      - build/test/doctest_results_windows.xml
+      - build-icl/test
+      - build-icl/gams
+      - build-icl/output
+      - goempgo/
+      - quality/
     reports:
       junit: warnings.xml
