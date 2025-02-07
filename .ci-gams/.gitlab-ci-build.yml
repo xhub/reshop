@@ -164,12 +164,12 @@ build-wei:
     - '& $vcvarsallPath x86_amd64'
     - $GAMS_PATH = "C:\Cache\gams-installs\$gmsdirname"
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -S .
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
 
-    - cmake -B build-icl -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icl -S .
+    - cmake -B build-icl -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icl -DCMAKE_CXX_COMPILER=icl -S .
     - cmake --build build-icl -v | Tee-Object -FilePath 'build_log-icl.txt'
     - cmake --install build-icl -v
 
