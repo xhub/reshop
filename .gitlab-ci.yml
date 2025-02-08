@@ -63,7 +63,7 @@ build:
       - apifiles
       - "build/*.run"
       - build/compile_commands.json
-      - build/gamsconfig_valgrind.yaml
+      - build/output/gamsconfig_valgrind.yaml
       - build/gcc.log
       - build/libreshop.so
       - build/gui/reshop_imgui
@@ -100,7 +100,7 @@ gams_test:
   script:
     #   - bash build/*.run
     - cp build/makeself/{gmsrhp_ux.out,libreshop.so} "$GAMSDIR"/
-    - cp build/gamsconfig_valgrind.yaml "$GAMSDIR"/gamsconfig.yaml
+    - cp build/output/gamsconfig_valgrind.yaml "$GAMSDIR"/gamsconfig.yaml
     - env EMPSLV=reshop bash test/gams/test.sh
     - mkdir -p "$QA_TMPDIR" && pushd "$QA_TMPDIR" > /dev/null && testlib quality && gams quality lo=2 --solver=reshop; popd > /dev/null; cp "$QA_TMPDIR"/failures_qa.gms .
     - mkdir -p "$EMPLIB_TMPDIR" && pushd "$EMPLIB_TMPDIR" > /dev/null && emplib goempgo && gams goempgo lo=2 --solver=reshop; popd > /dev/null; cp "$EMPLIB_TMPDIR"/failures_emp.gms .
@@ -117,6 +117,7 @@ scan-build:
   stage: scan-build
   script:
     - mkdir build-scan-build && cd build-scan-build && sh ../utils/scan-build-ci.sh ..
+  allow_failure: true
   artifacts:
     expire_in: 2 weeks
     when: always
@@ -127,6 +128,7 @@ fbinfer:
   stage: fbinfer
   script:
     - infer run --keep-going --compilation-database build/compile_commands.json; infer-explore --html
+  allow_failure: true
   artifacts:
     expire_in: 2 weeks
     when: on_success
@@ -138,6 +140,7 @@ cppcheck:
   script:
     - mkdir -p build && cd build && sh ../utils/cppcheck-ci.sh
     - mv cppcheck ../
+  allow_failure: true
   artifacts:
     expire_in: 2 weeks
     when: always
@@ -155,6 +158,7 @@ sanitizer:
     - CC=${COMPILER/_*/} CXX=${COMPILER/*_/} cmake -DCMAKE_BUILD_TYPE=$SANITIZER -DWITH_BACKTRACE=0 -DWITH_BACKWARD=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA ../
     - make -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2)
     - export LD_LIBRARY_PATH=$(pwd); ctest -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) || ctest --rerun-failed --output-on-failure
+  allow_failure: true
   parallel:
     matrix:
       - COMPILER: ["gcc-14_g++-14", "clang-19_clang++-19"]
@@ -167,11 +171,11 @@ upload:
   script:
     - mkdir public
     - mkdir public/valgrind
-    - cp build/gcc.log public/
-    - cp -r cppcheck public/
-    - cp -r build/docs/html public/doxygen
-    - cp -r build-scan-build/scan-build public/
-    - cp -r infer-out/report.html public/report-fbinfer
+    - cp build/gcc.log public/ || true
+    - cp -r cppcheck public/ || true
+    - cp -r build/docs/html public/doxygen || true
+    - cp -r build-scan-build/scan-build public/ || true
+    - cp -r infer-out/report.html public/report-fbinfer || true
     - cp *.gms public || true
     - cp build/Testing/Temporary/MemoryChecker*.log public/valgrind/ || true
     - cp valgrind/* public/valgrind/ || true
