@@ -9,7 +9,7 @@ default:
 
 stages:
    - build
-   - gams_test
+   - test
    - fbinfer
    - scan-build
    - cppcheck
@@ -56,26 +56,38 @@ build:
     - mv compile_commands2.json compile_commands.json
     - cp libpath50.so liblusol.so test
     - cp libpath50.so liblusol.so swig
-    - ctest -D ExperimentalMemCheck || ctest --rerun-failed --output-on-failure
   artifacts:
     expire_in: 2 weeks
-    when: on_success
+    when: always
     paths:
-      - build/libreshop.so
-      - build/compile_commands.json
-      - build/docs/html
-      - build/gcc.log
-      - build/Testing/Temporary
-      - build/generated
       - apifiles
+      - "build/*.run"
+      - build/compile_commands.json
+      - build/gamsconfig_valgrind.yaml
+      - build/gcc.log
+      - build/libreshop.so
+      - build/gui/reshop_imgui
+      - build/docs/html
+      - build/generated
+      - build/makeself
+      - build/swig
+      - build/test
       - libpath50.so
       - liblusol.so
-      - build/makeself
-      - build/gamsconfig_valgrind.yaml
-      - "build/*.run"
+
+ctest:
+  stage: test
+  script:
+    - cd build; ctest -D ExperimentalMemCheck || ctest --rerun-failed --output-on-failure
+  allow_failure: true
+  artifacts:
+    expire_in: 2 weeks
+    when: always
+    paths:
+      - build/Testing/Temporary
 
 gams_test:
-  stage: gams_test
+  stage: test
   image:
     name: gams/gams:latest
     pull_policy: [always, always, always, if-not-present]
@@ -163,6 +175,7 @@ upload:
     - cp *.gms public || true
     - cp build/Testing/Temporary/MemoryChecker*.log public/valgrind/ || true
     - cp valgrind/* public/valgrind/ || true
+    - find public/valgrind -type f -empty -delete || true  # delete empty files
     - chmod a+rx -R public
     - chmod 600 $SSH_KEY && sed -i 's/\r$//g' $SSH_KEY
     - scp -i $SSH_KEY -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r public huber@zamok.crans.org:www/reshop-ci
