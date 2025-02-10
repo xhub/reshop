@@ -2,7 +2,8 @@
 
 LLVM_MVER=19
 
-scan-build-$LLVM_MVER --use-cc=clang-$LLVM_MVER --use-c++=clang++-$LLVM_MVER -o scan-build cmake -DBUILD_GAMS_DRIVER=0 -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA $@
+scan-build-$LLVM_MVER --use-cc=clang-$LLVM_MVER --use-c++=clang++-$LLVM_MVER -o scan-build \
+   cmake -DBUILD_GAMS_DRIVER=0 -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA -DBUILD_IMGUI=1 "$@"
 
 # We used to be able to do 1300 ...
 scan-build-$LLVM_MVER --use-cc=clang-$LLVM_MVER --use-c++=clang++-$LLVM_MVER -maxloop 600 -o scan-build --exclude apifiles/C/api -enable-checker \
@@ -16,7 +17,7 @@ security.FloatLoopCounter,\
 valist.CopyToSelf,\
 valist.Uninitialized,\
 valist.Unterminated \
-make -j $(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2)
+make -j $(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) reshop_imgui
 
 # optin.core.EnumCastOutOfRange
 

@@ -11,7 +11,8 @@ stages:
    - build
    - test
    - fbinfer
-   - scan-build
+   - scan-build-reshop
+   - scan-build-imgui
    - cppcheck
    - sanitizers
    - upload
@@ -50,20 +51,29 @@ build:
         -DBUILD_INSTALLER=1 -DINSTALL_COMMON_MAKESELF=1 -DBUILD_PYTHON=python3 ..
     - make -j$N_PROCS 2>&1 install makeself | tee gcc.log
     - make doc -j$N_PROCS
-    - cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
-    - cat compile_commands.json | 
-        jq '[.[] | select(.file | contains("apifiles") or contains("PYTHON_wrap") | not )]' | sed -e 's:-fanalyzer::'  > compile_commands2.json
-    - mv compile_commands2.json compile_commands.json
     - cp libpath50.so liblusol.so test
     - cp libpath50.so liblusol.so swig
+    - mkdir ../build-reshop-only && cd ../build-reshop-only
+    - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DGAMS_VERSION=$GAMS_MAJVER -DDISTRIB=28 -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0
+        -DBUILD_GAMS_DRIVER=ON -DGIT_HASH=$CI_COMMIT_SHORT_SHA -DBUILD_IMGUI=0
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+    - cat compile_commands.json | 
+        jq '[.[] | select(.file | contains("apifiles") or contains("PYTHON_wrap") | not )]' | sed -e 's:-fanalyzer::' > compile_commands2.json
+    - mv compile_commands2.json compile_commands_reshop-only.json
+    - mkdir ../build-imgui-only && cd ../build-imgui-only
+    - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ../gui
+    - cp compile_commands.json ../build/compile_commands_imgui.json
   artifacts:
     expire_in: 2 weeks
     when: always
     paths:
       - apifiles
       - "build/*.run"
-      - build/compile_commands.json
-      - build/output/gamsconfig_valgrind.yaml
+      - build/compile_commands*.json
+      - build/DartConfiguration.tcl
+      - build/output
       - build/gcc.log
       - build/libreshop.so
       - build/gui/reshop_imgui
@@ -113,21 +123,32 @@ gams_test:
       - failures_emp.gms
       - valgrind
 
-scan-build:
-  stage: scan-build
+scan-build-reshop:
+  stage: scan-build-reshop
   script:
-    - mkdir build-scan-build && cd build-scan-build && sh ../utils/scan-build-ci.sh ..
+    - mkdir scan-build-reshop && cd scan-build-reshop && sh ../utils/scan-build-ci-reshop.sh ..
   allow_failure: true
   artifacts:
     expire_in: 2 weeks
     when: always
     paths:
-      - build-scan-build/scan-build
+      - scan-build-reshop/scan-build
+
+scan-build-imgui:
+  stage: scan-build-imgui
+  script:
+    - mkdir scan-build-imgui && cd scan-build-imgui && sh ../utils/scan-build-ci-gui.sh ..
+  allow_failure: true
+  artifacts:
+    expire_in: 2 weeks
+    when: always
+    paths:
+      - scan-build-imgui/scan-build
 
 fbinfer:
   stage: fbinfer
   script:
-    - infer run --keep-going --compilation-database build/compile_commands.json; infer-explore --html
+    - infer run --keep-going --compilation-database build/compile_commands_reshop-only.json; infer-explore --html
   allow_failure: true
   artifacts:
     expire_in: 2 weeks
@@ -174,7 +195,8 @@ upload:
     - cp build/gcc.log public/ || true
     - cp -r cppcheck public/ || true
     - cp -r build/docs/html public/doxygen || true
-    - cp -r build-scan-build/scan-build public/ || true
+    - cp -r scan-build-reshop/scan-build public/scan-buil-reshop || true
+    - cp -r scan-build-imgui/scan-build public/scan-buil-imgui || true
     - cp -r infer-out/report.html public/report-fbinfer || true
     - cp *.gms public || true
     - cp build/Testing/Temporary/MemoryChecker*.log public/valgrind/ || true

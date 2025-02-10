@@ -9,7 +9,7 @@ cppcheck \
 --xml \
 --inline-suppr \
 --output-file=report-cppcheck.xml \
---project=compile_commands.json \
+--project=compile_commands_reshop-only.json \
 -iapifiles \
 -iexternal/ppl_lcdd.cpp \
 --check-level=exhaustive \
