@@ -11,7 +11,7 @@ extern "C" {
 #include "rhp_ipc_protocol.h"
 
 void loggerfmt(uint8_t level, const char *fmt, ...);
-void error_init(const char *fmt, ...);
+NO_RETURN void error_init(const char *fmt, ...);
 
 // FIXME: get proper support for custom allocator
 #define mymalloc malloc

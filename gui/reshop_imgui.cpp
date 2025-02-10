@@ -387,7 +387,7 @@ static void logger_init(ImGuiAl::Log &logger)
 }
 
 
-void error_init(const char *fmt, ...)
+NO_RETURN void error_init(const char *fmt, ...)
 {
    bool stop_gui = false;
    va_list va;

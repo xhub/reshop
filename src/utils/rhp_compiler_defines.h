@@ -28,6 +28,21 @@
 #define RESHOP_STATIC_ASSERT(EXPR, STR) 
 #endif
 
+/* noreturn */
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202300L) || \
+    (defined(__cplusplus) && __cplusplus >= 201103L)
+
+#  define NO_RETURN [[noreturn]]
+
+#else
+
+#  define NO_RETURN
+
+#endif
+
+/* **************************************************************************
+ * Main definition of compiler-specific attributes
+ * ************************************************************************** */
 
 #if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_LLVM_COMPILER)
 
