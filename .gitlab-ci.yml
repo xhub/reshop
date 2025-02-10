@@ -60,7 +60,7 @@ build:
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
     - cat compile_commands.json | 
         jq '[.[] | select(.file | contains("apifiles") or contains("PYTHON_wrap") | not )]' | sed -e 's:-fanalyzer::' > compile_commands2.json
-    - mv compile_commands2.json compile_commands_reshop-only.json
+    - mv compile_commands2.json ../build/compile_commands_reshop-only.json
     - mkdir ../build-imgui-only && cd ../build-imgui-only
     - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ../gui
@@ -177,7 +177,7 @@ sanitizer:
   script:
     - mkdir $COMPILER-$SANITIZER && cd $COMPILER-$SANITIZER && cp ../libpath50.so ../liblusol.so .
     - CC=${COMPILER/_*/} CXX=${COMPILER/*_/} cmake -DCMAKE_BUILD_TYPE=$SANITIZER -DWITH_BACKTRACE=0 -DWITH_BACKWARD=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA ../
-    - make -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2)
+    - make -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) || make VERBOSE=1
     - export LD_LIBRARY_PATH=$(pwd); ctest -j$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) || ctest --rerun-failed --output-on-failure
   allow_failure: true
   parallel:
