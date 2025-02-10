@@ -9,7 +9,7 @@ cmake_minimum_required (VERSION 3.21)
 set(CMAKE_OSX_DEPLOYMENT_TARGET 12)
 
 # Set cmake modules directory (i.e. the one which contains all user-defined FindXXX.cmake files among other things)
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
 # include (CMakeDependentOption)
 
@@ -87,7 +87,7 @@ CHECK_INCLUDE_FILE(unistd.h HAS_UNISTD)
 
 
 file(GLOB_RECURSE GUI_C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/utils/*.c)
-list(APPEND GUI_C_FILES ${CMAKE_SOURCE_DIR}/common/rhp_ipc_protocol.c)
+list(APPEND GUI_C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../common/rhp_ipc_protocol.c)
 
 
 file(GLOB_RECURSE IMGUI_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/*.cpp)
@@ -157,15 +157,10 @@ else (glfw3_FOUND)
 
 endif(glfw3_FOUND)
 
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(IMGUI REQUIRED imgui)
-# pkg_check_modules(IMGUI REQUIRED imgui)
-
-
 #This is for reshop_config.h and others
 target_include_directories(reshop_imgui PRIVATE "${CMAKE_BINARY_DIR}/generated/"
-                                                "${CMAKE_SOURCE_DIR}/common"
-                                                "${CMAKE_SOURCE_DIR}/src/dag/"
+                                                "${CMAKE_CURRENT_SOURCE_DIR}/../common"
+                                                "${CMAKE_CURRENT_SOURCE_DIR}/../src/dag/"
                                                 "${CMAKE_CURRENT_SOURCE_DIR}/external/imguial"
                                                 "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
                                                 "${CMAKE_CURRENT_SOURCE_DIR}/utils"
