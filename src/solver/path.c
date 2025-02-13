@@ -128,36 +128,103 @@ if (!FN_NAME) { \
    return OK;
 }
 
-#include "PATH_SDK/Types.h"
+typedef enum
+{
+  PATH_Solved = 1,
+  PATH_NoProgress,
+  PATH_MajorIterationLimit,
+  PATH_MinorIterationLimit,
+  PATH_TimeLimit,
+  PATH_UserInterrupt,
+  PATH_BoundError,
+  PATH_DomainError,
+  PATH_Infeasible,
+  PATH_Error,
+  PATH_Reduced,
+  PATH_LicenseError,
+  PATH_OK,
+} PATH_rc;
+
+typedef enum {
+ Basis_Unknown,
+ Basis_Basic,
+ Basis_SuperBasic,
+ Basis_LowerBound,
+ Basis_UpperBound,
+ Basis_Fixed,
+} PATH_Basis_Status;
+
+#define path_int  int
+#define path_bool int
+
+typedef struct
+{
+  double residual;
+  double distance;
+  double steplength;
+  double total_time;
+  double basis_time;
+
+  double maximum_distance;
+
+  path_int major_iterations;
+  path_int minor_iterations;
+  path_int crash_iterations;
+  path_int function_evaluations;
+  path_int jacobian_evaluations;
+  path_int gradient_steps;
+  path_int restarts;
+
+  path_int generate_output;
+  path_int generated_output;
+
+  path_bool forward;
+  path_bool backtrace;
+  path_bool gradient;
+
+  path_bool use_start;
+  path_bool use_basics;
+
+  path_bool used_start;
+  path_bool used_basics;
+} PATH_Info;
+
+/*****************************************************************************/
+/* Output definitions - flags for the log, status, and listing modes.        */
+/*****************************************************************************/
+
+#define Output_Log     (1 << 0)
+#define Output_Status  (1 << 1)
+#define Output_Listing (1 << 2)
 
 static const char *_path_rc_code_str(int rc)
 {
   switch(rc) {
-  case MCP_Solved:
+  case PATH_Solved:
     return "The problem was solved";
-  case MCP_NoProgress:
+  case PATH_NoProgress:
     return "A stationary point was found";
-  case MCP_MajorIterationLimit:
+  case PATH_MajorIterationLimit:
     return "Major iteration limit met";
-  case MCP_MinorIterationLimit:
+  case PATH_MinorIterationLimit:
     return "Cumulative minor iterlim met";
-  case MCP_TimeLimit:
+  case PATH_TimeLimit:
     return "Ran out of time";
-  case MCP_UserInterrupt:
+  case PATH_UserInterrupt:
     return "Control-C, typically";
-  case MCP_BoundError:
+  case PATH_BoundError:
     return "Problem has a bound error";
-  case MCP_DomainError:
+  case PATH_DomainError:
     return "Could not find starting point";
-  case MCP_Infeasible:
+  case PATH_Infeasible:
     return "Problem has no solution";
-  case MCP_Error:
+  case PATH_Error:
     return "An error occurred within the code";
-  case MCP_Reduced:
+  case PATH_Reduced:
     return "Presolve reduced problem";
-  case MCP_LicenseError:
+  case PATH_LicenseError:
     return "License could not be found";
-  case MCP_OK:
+  case PATH_OK:
     return "Presolve did not perform any modifications";
   default:
     return "unknown code";
@@ -172,37 +239,36 @@ struct _status {
 static struct _status _path_rc2status(int rc)
 {
   switch(rc) {
-  case MCP_Solved:
+  case PATH_Solved:
     return (struct _status){ModelStat_OptimalLocal, SolveStat_Normal};
-  case MCP_NoProgress:
+  case PATH_NoProgress:
     return (struct _status){ModelStat_Feasible, SolveStat_Solver};
-  case MCP_MajorIterationLimit:
+  case PATH_MajorIterationLimit:
     return (struct _status){ModelStat_Feasible, SolveStat_Iteration };
-  case MCP_MinorIterationLimit:
+  case PATH_MinorIterationLimit:
     return (struct _status){ModelStat_Feasible,SolveStat_Iteration };
-  case MCP_TimeLimit:
+  case PATH_TimeLimit:
     return (struct _status){ModelStat_Feasible, SolveStat_Resource };
-  case MCP_UserInterrupt:
+  case PATH_UserInterrupt:
     return (struct _status){ModelStat_ErrorUnknown, SolveStat_User };
-  case MCP_BoundError:
+  case PATH_BoundError:
     return (struct _status){ModelStat_InfeasibleLocal, SolveStat_SetupErr };
-  case MCP_DomainError:
+  case PATH_DomainError:
     return (struct _status){ModelStat_InfeasibleLocal, SolveStat_EvalError };
-  case MCP_Infeasible:
+  case PATH_Infeasible:
     return (struct _status){ModelStat_InfeasibleGlobal, SolveStat_Normal };
-  case MCP_Error:
+  case PATH_Error:
     return (struct _status){ModelStat_ErrorUnknown, SolveStat_SolverErr };
-  case MCP_Reduced:
+  case PATH_Reduced:
     return (struct _status){ModelStat_ErrorUnknown, SolveStat_SolverErr };
-  case MCP_LicenseError:
+  case PATH_LicenseError:
     return (struct _status){ModelStat_LicenseError, SolveStat_License };
-  case MCP_OK:
+  case PATH_OK:
     return (struct _status){ModelStat_ErrorUnknown, SolveStat_Normal };
   default:
     return (struct _status){ModelStat_ErrorUnknown, SolveStat_InternalErr };
   }
 }
-#define path_int Int
 
 static inline BasisStatus basis_path_to_rhp(int basis)
 {
@@ -543,8 +609,8 @@ int solver_path(Model * restrict mdl, struct jacdata * restrict jac)
    int status = OK;
    bool export_hdf5 = false;
 
-   Information path_info;
-   memset(&path_info, 0, sizeof(Information));
+   PATH_Info path_info;
+   memset(&path_info, 0, sizeof(PATH_Info));
 
    unsigned print_level = O_Output & PO_MASK_LEVEL;
    if (print_level >= PO_VV) {
@@ -655,7 +721,7 @@ int solver_path(Model * restrict mdl, struct jacdata * restrict jac)
    S_CHECK_EXIT(mdl_setmodelstat(mdl, stats.model));
    S_CHECK_EXIT(mdl_setsolvestat(mdl, stats.solve));
 
-   if (path_rc != MCP_Solved) {
+   if (path_rc != PATH_Solved) {
       printout(PO_INFO, "PATH return with code %i which most likely means \"%s\".\n"
                          "The model was most likely not solved\n", path_rc,
                          _path_rc_code_str(path_rc));
