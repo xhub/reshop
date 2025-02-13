@@ -8,8 +8,11 @@
 
 //const char* gams_lp_solvers[] = {"baron", "cbc", "conopt", "cplex", "knitro", "minos", "pathnlp", "mosek", "xpress"};
 //// TODO: what breaks here?
-const char* gams_lp_solvers[] = {"baron", "conopt", "cplex", "minos", "pathnlp", "mosek"};
-const char* gams_nlp_solvers[] = {"conopt", "knitro", "minos", "pathnlp", "snopt", "mosek"};
+// FIXME: mosek has execstack problems
+const char* gams_lp_solvers[] = {"baron", "conopt", "cplex", "minos", "pathnlp"};
+const char* gams_nlp_solvers[] = {"conopt", "knitro", "minos", "pathnlp", "snopt"};
+//const char* gams_lp_solvers[] = {"baron", "conopt", "cplex", "minos", "pathnlp", "mosek"};
+//const char* gams_nlp_solvers[] = {"conopt", "knitro", "minos", "pathnlp", "snopt", "mosek"};
 const char* gams_emp_solvers[] = {""};
 
 /* This is to support solver-specific parameters.

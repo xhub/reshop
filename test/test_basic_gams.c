@@ -12,13 +12,15 @@
 
 #if defined(_WIN32)
 
-const char* gams_lp_solvers[] = {"baron", "conopt", "cplex",  "pathnlp", "mosek"};
-const char* gams_nlp_solvers[] = {"conopt", "knitro",  "pathnlp", "snopt", "mosek"};
+// FIXME: mosek has execstack problems
+const char* gams_lp_solvers[] = {"baron", "conopt", "cplex", "pathnlp"};
+const char* gams_nlp_solvers[] = {"conopt", "knitro",  "pathnlp", "snopt"};
 
 #else
 
-const char* gams_lp_solvers[] = {"baron", "conopt", "cplex", "minos", "pathnlp", "mosek"};
-const char* gams_nlp_solvers[] = {"conopt", "knitro", "minos", "pathnlp", "snopt", "mosek"};
+// FIXME: mosek has execstack problems
+const char* gams_lp_solvers[] = {"baron", "conopt", "cplex", "minos", "pathnlp"};
+const char* gams_nlp_solvers[] = {"conopt", "knitro", "minos", "pathnlp", "snopt"};
 
 #endif
 
