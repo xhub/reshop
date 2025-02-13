@@ -342,7 +342,7 @@ solve m using emp;
 
 check(m, x, x_ECVAR, cost_DE, cost_DE_ECVAR, e2, e2_ECVAR, e3, e3_ECVAR)
 
-$exit
+$if not set dev $exit
 
 * Has dual operator encoded in ReSHOP
 
@@ -358,6 +358,7 @@ endEmbeddedCode
 
 * option emp = reshopgdb;
 put_utility 'setEnv' / 'RHP_DISPLAY_EMPDAG' / '1';
+put_utility 'setEnv' / 'RHP_GUI' /;
 
 solve m using emp;
 
