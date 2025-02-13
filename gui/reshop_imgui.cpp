@@ -34,6 +34,7 @@
 #include "rhp_defines.h"
 #include "rhp_socket_server.h"
 #include "rhp_gui_data.h"
+#include "rhpgui_array_utils.h"
 #include "rhpgui_error.h"
 
 
@@ -104,15 +105,46 @@ static void DrawArcVFText(ImVec2 text_center, const char* text, const ImU32 bg_c
 
 // Dummy data structure provided for the example.
 // Note that we storing links as indices (not ID) to make example code shorter.
-static void ShowExampleAppCustomNodeGraph(bool* opened)
+static void ShowEmpDag(GuiData *guidat, bool* opened)
 {
    ImGui::SetNextWindowSize(ImVec2(700, 600), ImGuiCond_FirstUseEver);
-   if (!ImGui::Begin("Example: Custom Node Graph", opened))
+   if (!ImGui::Begin("Empdags", opened))
    {
       ImGui::End();
       return;
    }
 
+    if (ImGui::TreeNode("Models")) {
+
+      ModelGui* mdl_arr = guidat->models->arr;
+      for (u32 i = 0, nmdls = guidat->models->len; i < nmdls; ++i) {
+         ModelGui *m = &mdl_arr[i]; assert(m->name);
+
+        if (ImGui::TreeNode(m->name)) {
+            EmpDagGui *empdag = m->empdags->arr;
+
+            for (u32 j = 0, nempdags = m->empdags->len; j < nempdags; ++j, empdag++) {
+
+               ImGui::PushID((int)j);
+               if (ImGui::TreeNode("", "EmpDag #%u", j)) {
+
+                  MathPrgmGuiArray *mps = empdag->mps;
+                  MathPrgmGui *mp = mps->arr;
+                  for (u32 k = 0, nmps = mps->len; k < nmps; ++k, mp++) {
+                     ImGui::Text("%s", mp->name); //FIXME: this is not a format function ...
+                  }
+
+                  ImGui::TreePop();
+               }
+               ImGui::PopID();
+            }
+            ImGui::TreePop();
+         }
+
+      }
+      ImGui::TreePop();
+   }
+   
    // Dummy
    struct EmpDagNode
    {
@@ -153,7 +185,7 @@ static void ShowExampleAppCustomNodeGraph(bool* opened)
    ImGuiIO& io = ImGui::GetIO();
    if (!inited)
    {
-      #define MY_DEMO
+   //   #define MY_DEMO
 #ifdef MY_DEMO
             nodes.push_back(EmpDagNode(0, "Hydro", ImVec2(140, 50),  1, 0));
             nodes.push_back(EmpDagNode(1, "Thermal", ImVec2(140, 150),  1, 0));
@@ -169,7 +201,7 @@ static void ShowExampleAppCustomNodeGraph(bool* opened)
    int node_hovered_in_list = -1;
    int node_hovered_in_scene = -1;
    ImGui::BeginChild("node_list", ImVec2(100, 0));
-   ImGui::Text("Nodes");
+   ImGui::Text("Models");
    ImGui::Separator();
    for (int node_idx = 0; node_idx < nodes.Size; node_idx++)
    {
@@ -613,11 +645,13 @@ int main(int argc, char *argv[])
    guidat.connected = false;
    guidat.ipc.name = strdup(argv[1]);
    guidat.ipc.server_fd = server_init_socket(guidat.ipc.name, pid_parent);
-   guidat.models = NULL;
+   arr_init_size(guidat.models, 2);
 
    ipc_poll_gui_init(&guidat);
 
+#ifndef GAMS_BUILD
    bool show_demo_window = true;
+#endif
    bool is_log_collapsed = false; // Track Log collapse state
 
    float logHcur = 0;
@@ -738,7 +772,7 @@ int main(int argc, char *argv[])
 
       // Call the function to show the tree
       bool dummy;
-      ShowExampleAppCustomNodeGraph(&dummy);
+      ShowEmpDag(&guidat, &dummy);
 
 
       // Render ImGui

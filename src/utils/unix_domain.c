@@ -169,7 +169,7 @@ void unix_domain_send1(MessageType mtype)
 {
    assert(gui_fd >= 0);
 
-   MessageHeader header = { 0, mtype, {0} };
+   MessageHeader header = { 0, mtype, {0}, {0} };
    CHK_WRITE(write(gui_fd, &header, sizeof(header)))
 }
 
@@ -178,7 +178,7 @@ void unix_domain_send_str(MessageType mtype, const char* message)
    assert(gui_fd >= 0);
    // Send request
    size_t msglen = strlen(message)+1;
-   MessageHeader header = { msglen, mtype, {0} };
+   MessageHeader header = { msglen, mtype, {0}, {0} };
    CHK_WRITE(write(gui_fd, &header, sizeof(header)))
    CHK_WRITE(write(gui_fd, message, msglen))
 

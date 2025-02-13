@@ -16,11 +16,8 @@ extern "C" {
 #include "rhp_defines.h"
 
 typedef enum {
-   DataMp,
-   DataNash,
-   DataVarc,
-   DataCarc,
-   DataNarc,
+   CarcGuiData,
+   CarcGuiDataEnd,
    EventInit,
    EventFini,
    EventReset,
@@ -31,11 +28,21 @@ typedef enum {
    GuiIsClosing,
    LogMsgSolver,
    LogMsgSubSolver,
+   MathPrgmGuiData,
+   MathPrgmGuiDataEnd,
+   MathPrgmGuiName,     // FIXME: delete once proper name in empdag has been implemented
+   NarcGuiData,
+   NarcGuiDataEnd,
+   NashGuiData,
+   NashGuiDataEnd,
+   NashGuiName,         // FIXME: delete once proper name in empdag has been implemented
    NewEmpDagStart,
    NewEmpDagEnd,
    NewModelStart,
    NewModelName,
    NewModelEnd,
+   RarcGuiData,
+   RarcGuiDataEnd,
    RequestCoeffValue,
    RequestEquById,
    RequestEquName,
@@ -45,14 +52,10 @@ typedef enum {
    RequestNashName,
    RequestVarById,
    RequestVarName,
-   MessageTypeMaxValue
+   VarcGuiData,
+   VarcGuiDataEnd,
+   MessageTypeMaxValue,
 } MessageType;
-
-typedef struct {
-    uint32_t length;     // Length of the payload
-    uint8_t type;        // Request type
-    uint8_t reserved[3]; // Reserved bytes
-} MessageHeader;
 
 typedef struct {
    uint32_t len;
@@ -175,43 +178,59 @@ DEF_ARRAY(ModelGui);
 #define DesiredAlignement 32
 #define SimpleLoadSize (MessagePayloadSize-DesiredAlignement)
 
-#define MathPrgmGuiMax (MessagePayloadSize/MpGuiBasicDataSize)
-#define NashGuiMax (MessagePayloadSize/NashGuiBasicDataSize)
-#define VarcGuiMax (MessagePayloadSize/MpGuiBasicDataSize)
-#define CarcGuiMax (MessagePayloadSize/MpGuiBasicDataSize)
-#define NarcGuiMax (MessagePayloadSize/MpGuiBasicDataSize)
+#define MathPrgmGuiMax (SimpleLoadSize/MpGuiBasicDataSize)
+#define NashGuiMax     (SimpleLoadSize/NashGuiBasicDataSize)
+#define VarcGuiMax     (SimpleLoadSize/sizeof(VarcGui))
+#define CarcGuiMax     (SimpleLoadSize/sizeof(CarcGui))
+#define NarcGuiMax     (SimpleLoadSize/sizeof(NarcGui))
+#define RarcGuiMax     (SimpleLoadSize/sizeof(RarcGui))
+#define StrMaxLen      (SimpleLoadSize/sizeof(char))
+
+
+
+typedef struct {
+   uint32_t length;     // Length of the payload
+   uint8_t type;        // Request type
+   uint8_t reserved[3]; // Reserved bytes
+   uint8_t pad[24]; /**< Padding to make simple.load aligned */
+} MessageHeader;
+
+RESHOP_STATIC_ASSERT(sizeof(MessageHeader) == DesiredAlignement, "Adapt padding in MessageHeader")
 
 /*
  * For better performance, we want simple.load to be 32 or bits aligned.
  */
-
 typedef union {
    uint8_t buf[MessagePayloadSize];
    struct {
       MessageHeader header;
-      uint8_t pad[DesiredAlignement-sizeof(MessageHeader)]; /**< Padding to make simple.load aligned */
       union {
          uint8_t load[SimpleLoadSize];
+         char name[StrMaxLen];
  
          ModelGui mdl;
          EmpDagGui empdag;
+         MathPrgmGui mps[MathPrgmGuiMax];
+         NashGui nashs[NashGuiMax];
+         VarcGui varcs[VarcGuiMax];
+         CarcGui carcs[CarcGuiMax];
+         NarcGui narcs[NarcGuiMax];
+         RarcGui rarcs[RarcGuiMax];
       };
-   } simple;
-   MathPrgmGui mps[MathPrgmGuiMax];
-   NashGui nashs[NashGuiMax];
-   VarcGui varcs[VarcGuiMax];
-   CarcGui carcs[CarcGuiMax];
-   NarcGui narcs[NarcGuiMax];
+   } load;
+
 } MessagePayload;
 
-RESHOP_STATIC_ASSERT(offsetof(MessagePayload, simple.load) % DesiredAlignement == 0, "Check padding for load field in MessagePayload")
+RESHOP_STATIC_ASSERT(offsetof(MessagePayload, load.load) % DesiredAlignement == 0, "Check padding for load field in MessagePayload")
+
+RESHOP_STATIC_ASSERT(offsetof(MessagePayload, load.mdl) == sizeof(MessageHeader), "Check MessagePayload")
 
 RESHOP_STATIC_ASSERT(CHAR_BIT == 8, "MessagePayload needs porting to an arch where CHAR_BIT != 8")
 
 #define MessageSimplePayloadSize (offsetof(MessagePayload, mps))
 
-#define NewModelStartPayload (offsetof(MessagePayload, simple.mdl) + ModelGuiBasicDataSize)
-#define NewEmpDagStartPayload (offsetof(MessagePayload, simple.empdag) + EmpDagGuiBasicDataSize)
+#define NewModelStartPayload (offsetof(MessagePayload,  load.mdl) + ModelGuiBasicDataSize)
+#define NewEmpDagStartPayload (offsetof(MessagePayload, load.empdag) + EmpDagGuiBasicDataSize)
 
 extern const MessageInfo msgtype[MessageTypeMaxValue];
 const char* msgtype2str(uint8_t mtyp);

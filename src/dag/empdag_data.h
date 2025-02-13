@@ -60,7 +60,8 @@ typedef struct {
    u32 num_max;
    u32 num_feas;
    u32 num_vi;
-   u32 num_nash;
+   u32 num_mps;
+   u32 num_nashs;
    u32 num_active;
 } EmpDagNodeStats;
 

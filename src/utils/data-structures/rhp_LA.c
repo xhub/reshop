@@ -263,7 +263,7 @@ int rhpmat_row_needs_update(const SpMat* m, unsigned i, unsigned* restrict singl
                double* restrict single_val, unsigned* restrict col_idx_len,
                unsigned** restrict col_idx, double** restrict vals)
 {
-   SpMatColRowWorkingMem wrkmem;
+   SpMatColRowWorkingMem wrkmem = {.single_val = NAN, .single_idx = UINT_MAX};
    S_CHECK(rhpmat_row(m, i, &wrkmem, col_idx_len, col_idx, vals));
    if (*col_idx == &wrkmem.single_idx) {
       *single_idx = **col_idx;
@@ -296,6 +296,9 @@ int rhpmat_row(const SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
                unsigned* restrict row_len, unsigned** restrict row_idxs,
                double** restrict row_vals)
 {
+#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ >= 14)
+#pragma GCC diagnostic ignored "-Wdangling-pointer"
+#endif
    if (m->ppty) {
       if (!(m->ppty & EMPMAT_CSR) || m->ppty & EMPMAT_BLOCK) {
          error("%s :: only CSR matrices are supported\n", __func__);
@@ -330,6 +333,9 @@ int rhpmat_row(const SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
    }
 
    return OK;
+#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ > 11)
+#pragma GCC diagnostic pop
+#endif
 }
 
 int rhpmat_ensure_cscA(M_ArenaLink *arena, SpMat *m)

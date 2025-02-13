@@ -145,7 +145,7 @@ typedef struct empdag_dfs {
    unsigned num_visited;
    unsigned num_visited_dual;
    unsigned num_mps;
-   unsigned num_mpes;
+   unsigned num_nashs;
    unsigned num_nodes;
    unsigned max_depth;
    DfsState * restrict nodes_stat;
@@ -382,13 +382,13 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    dfsdata->num_visited = 0;
    dfsdata->num_visited_dual = 0;
    dfsdata->num_mps = empdag->mps.len;
-   dfsdata->num_mpes = empdag->nashs.len;
+   dfsdata->num_nashs = empdag->nashs.len;
    dfsdata->num_nodes = empdag->mps.len + empdag->nashs.len;
    dfsdata->max_depth = 0;
 
    unsigned num_nodes = dfsdata->num_nodes;
    unsigned num_mps = dfsdata->num_mps;
-   unsigned num_nash = dfsdata->num_mpes;
+   unsigned num_nash = dfsdata->num_nashs;
 
    CALLOC_(dfsdata->nodes_stat, DfsState, num_nodes);
    CALLOC_(dfsdata->preorder, unsigned, num_nodes);

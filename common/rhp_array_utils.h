@@ -10,6 +10,8 @@
 #error "The consumer of this library must define ARR_ERRACTION, the function called in case of an error"
 #endif
 
+#include <assert.h>
+
 #include "rhp_basic_memory.h"
 #include "rhpgui_macros.h"
 
@@ -19,7 +21,7 @@
 
 #define arr_nbytes(a, n) (sizeof(*(a)) + ((sizeof(((a)->arr[0]))) * (n)))
 
-#define arr_add(a, elt) { \
+#define arr_add(a, elt) { assert(a); \
    if ((a)->len >= (a)->max) { \
       (a)->max = RHP_MAX(2*((a)->max), ((a)->len+10)); \
       (a) = myrealloc((a)->arr, arr_nbytes((a), (a)->max)); \
@@ -33,8 +35,21 @@
 
 #define mymalloc malloc
 
+#ifdef __cplusplus
+#define CAST(a) (decltype(a))
+
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202300L)
+
+#define CAST(a) (typeof(a))
+
+#else
+
+#define CAST(a) 
+
+#endif
+
 #define arr_init_size(a, n) { \
-   (a) = mymalloc(arr_nbytes(a, n)); \
+   (a) = CAST(a) mymalloc(arr_nbytes(a, n)); \
    if (!(a)) { \
       ARR_ERRLOG("FATAL ERROR: allocation failure\n"); \
       ARR_ERRACTION; \
@@ -47,10 +62,7 @@
    a->arr[a->len++] = elt; \
 }
 
-#define arr_getnext(a) { \
-   a->arr[a->len++] = elt; \
-   assert(a->len <= a->max); \
-}
+#define arr_getlast(a) ( assert((a)->len > 0), &((a)->arr[(a)->len-1]) )
 
 #define arr_free(a, fn) if (a) { \
    for (u32 i = 0, len = (a)->len; i < len; ++i) { \

@@ -1013,6 +1013,9 @@ int empdag_check(EmpDag *empdag)
    unsigned nash_len = empdag_num_nash(empdag);
    unsigned roots_len = empdag->roots.len;
 
+   empdag->node_stats.num_mps = mp_len;
+   empdag->node_stats.num_nashs = nash_len;
+
    if (roots_len == 0) {
       if (mp_len > 0) {
          error("[empdag:check] ERROR in %s model '%.*s' #%u: There are %u MPs, "
@@ -1338,12 +1341,12 @@ int empdag_subdag_getmplist(const EmpDag *empdag, daguid_t subdag_root,
    return dfs_mplist(empdag, subdag_root, mplist);
 }
 
-// HACK: looks unused!!
+//FIXME: looks unused!!
 int empdag_finalize(Model *mdl)
 {
    EmpDag *empdag = &mdl->empinfo.empdag;
    DagMpArray *mps = &empdag->mps;
-   
+
    for (unsigned i = 0, len = mps->len; i < len; ++i) {
       MathPrgm *mp = mps->arr[i];
 

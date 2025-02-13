@@ -9,11 +9,8 @@
 #include "rhp_ipc_protocol.h"
 
 #define MSGTYPE_STR() \
-DEFSTR(DataMp,"DataMp") \
-DEFSTR(DataNash,"DataNash") \
-DEFSTR(DataVarc,"DataVarc") \
-DEFSTR(DataCarc,"DataCarc") \
-DEFSTR(DataNarc,"DataNarc") \
+DEFSTR(CarcGuiData,"CarcGuiData") \
+DEFSTR(CarcGuiDataEnd,"CarcGuiDataEnd") \
 DEFSTR(EventInit,"EventInit") \
 DEFSTR(EventFini,"EventFini") \
 DEFSTR(EventReset,"EventReset") \
@@ -24,11 +21,21 @@ DEFSTR(GuiRaiseError,"GuiRaiseError") \
 DEFSTR(GuiIsClosing,"GuiIsClosing") \
 DEFSTR(LogMsgSolver,"LogMsgSolver") \
 DEFSTR(LogMsgSubSolver,"LogMsgSubSolver") \
+DEFSTR(NarcGuiData,"NarcGuiData") \
+DEFSTR(NarcGuiDataEnd,"NarcGuiDataEnd") \
+DEFSTR(NashGuiData,"NashGuiData") \
+DEFSTR(NashGuiDataEnd,"NashGuiDataEnd") \
+DEFSTR(NashGuiName,"NashGuiName") \
 DEFSTR(NewEmpDagStart,"NewEmpDagStart") \
 DEFSTR(NewEmpDagEnd,"NewEmpDagEnd") \
 DEFSTR(NewModelStart,"NewModelStart") \
 DEFSTR(NewModelName,"NewModelName") \
 DEFSTR(NewModelEnd,"NewModelEnd") \
+DEFSTR(MathPrgmGuiData,"MathPrgmGuiData") \
+DEFSTR(MathPrgmGuiDataEnd,"MathPrgmGuiDataEnd") \
+DEFSTR(MathPrgmGuiName,"MathPrgmGuiName") \
+DEFSTR(RarcGuiData,"RarcGuiData") \
+DEFSTR(RarcGuiDataEnd,"RarcGuiDataEnd") \
 DEFSTR(RequestCoeffValue,"RequestCoeffValue") \
 DEFSTR(RequestEquById,"RequestEquById") \
 DEFSTR(RequestEquName,"RequestEquName") \
@@ -38,6 +45,8 @@ DEFSTR(RequestNashById,"RequestNashById") \
 DEFSTR(RequestNashName,"RequestNashName") \
 DEFSTR(RequestVarById,"RequestVarById") \
 DEFSTR(RequestVarName,"RequestVarName") \
+DEFSTR(VarcGuiData,"VarcGuiData") \
+DEFSTR(VarcGuiDataEnd,"VarcGuiDataEnd") \
 
 
 #define DEFSTR(id, str) char id[sizeof(str)];
@@ -65,7 +74,7 @@ MSGTYPE_STR()
 };
 
 static_assert(sizeof(msgnames_offsets)/sizeof(msgnames_offsets[0]) == MessageTypeMaxValue,
-              "Check the sizze of rules and enum emptok_type");
+              "Check that all size of MessageType");
 
 
 const char* msgtype2str(u8 mtyp)
@@ -75,11 +84,8 @@ const char* msgtype2str(u8 mtyp)
 }
 
 const MessageInfo msgtype[] = {
-   [DataMp]            = { .len = MpGuiBasicDataSize },
-   [DataNash]          = { .len = NashGuiBasicDataSize },
-   [DataVarc]          = { .len = MessagePayloadArbitrary}, 
-   [DataCarc]          = { .len = MessagePayloadArbitrary},
-   [DataNarc]          = { .len = MessagePayloadArbitrary},
+   [CarcGuiData]       = { .len = MessagePayloadArbitrary },
+   [CarcGuiDataEnd]    = { .len = MessagePayloadArbitrary },
    [EventInit]         = { .len = 0 },
    [EventFini]         = { .len = 0 },
    [EventReset]        = { .len = 0 },
@@ -90,11 +96,18 @@ const MessageInfo msgtype[] = {
    [GuiIsClosing]      = { .len = 0 },
    [LogMsgSolver]      = { .len = MessagePayloadArbitrary },
    [LogMsgSubSolver]   = { .len = MessagePayloadArbitrary },
+   [MathPrgmGuiData]   = { .len = MessagePayloadArbitrary },
+   [MathPrgmGuiDataEnd]= { .len = MessagePayloadArbitrary },
+   [MathPrgmGuiName]   = { .len = MessagePayloadArbitrary },
+   [NarcGuiData]       = { .len = MessagePayloadArbitrary },
+   [NarcGuiDataEnd]    = { .len = MessagePayloadArbitrary },
    [NewEmpDagStart]    = { .len = 0 },
    [NewEmpDagEnd]      = { .len = 0 },
-   [NewModelStart]     = { .len = 0 },
-   [NewModelName]      = { .len = 0 },
+   [NewModelStart]     = { .len = ModelGuiBasicDataSize },
+   [NewModelName]      = { .len = MessagePayloadArbitrary },
    [NewModelEnd]       = { .len = 0 },
+   [RarcGuiData]       = { .len = MessagePayloadArbitrary },
+   [RarcGuiDataEnd]    = { .len = MessagePayloadArbitrary },
    [RequestCoeffValue] = { .len = sizeof(u32) },
    [RequestEquById]    = { .len = sizeof(rhp_idx) },
    [RequestEquName]    = { .len = sizeof(rhp_idx) },
@@ -104,6 +117,8 @@ const MessageInfo msgtype[] = {
    [RequestNashName]   = { .len = sizeof(nashid_t) },
    [RequestVarById]    = { .len = sizeof(rhp_idx) },
    [RequestVarName]    = { .len = sizeof(rhp_idx) },
+   [VarcGuiData]       = { .len = MessagePayloadArbitrary },
+   [VarcGuiDataEnd]    = { .len = MessagePayloadArbitrary },
 };
 
 /* Payloads

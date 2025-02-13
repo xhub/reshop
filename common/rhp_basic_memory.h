@@ -12,6 +12,7 @@ static inline void* myrealloc(void *ptr, size_t size)
 {
 #if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ > 11)
 #pragma GCC diagnostic ignored "-Wuse-after-free"
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
 #endif
    void* oldptr = ptr;
    void *newptr  = realloc(ptr, size); /* NOLINT(bugprone-suspicious-realloc-usage) */

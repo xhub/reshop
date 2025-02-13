@@ -296,7 +296,7 @@ static tlsvar struct printout_ops print_ops = {
 
 static tlsvar int log_fd = -1;
 
-static NONNULL void print_fd(int fd, unsigned mode, const char *buf)
+static NONNULL void print_fd(rhpfd_t fd, unsigned mode, const char *buf)
 {
    assert (fd >= 0);
 
@@ -312,7 +312,7 @@ static NONNULL void print_fd(int fd, unsigned mode, const char *buf)
 
    // Send request
    size_t buflen = strlen(buf)+1;
-   MessageHeader header = {buflen, LogMsgSolver, {lvl, 0, 0} };
+   MessageHeader header = {buflen, LogMsgSolver, {lvl, 0, 0}, {0} };
    if (write(fd, &header, sizeof(header)) == -1) { goto log_ipc_error; }
    if (write(fd, buf, buflen) == -1) { goto log_ipc_error; }
 
