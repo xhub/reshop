@@ -36,7 +36,7 @@
 #define sockerr_log(fmt) {\
    int errno_ = WSAGetLastError(); \
    char msg42[256]; \
-   DWORD length = FormatMessage( \
+   DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
         NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
 \
@@ -46,7 +46,7 @@
 #define sockerr_log2(fmt, ...) {\
    int errno_ = WSAGetLastError(); \
    char msg42[256]; \
-   DWORD length = FormatMessage( \
+   DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
         NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
 \
@@ -56,7 +56,7 @@
 #define sockerr_fatal(fmt) {\
    int errno_ = WSAGetLastError(); \
    char msg42[256]; \
-   DWORD length = FormatMessage( \
+   DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
         NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
 \
@@ -66,7 +66,7 @@
 #define sockerr_fatal2(fmt, ...) {\
    int errno_ = WSAGetLastError(); \
    char msg42[256]; \
-   DWORD length = FormatMessage( \
+   DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
         NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
 \
