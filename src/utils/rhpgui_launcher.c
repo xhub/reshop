@@ -71,10 +71,10 @@ int imgui_start(const char *hint)
     CloseHandle(pi.hThread);
 
 #else
-   sigset_t set;
    int sig;
 
    // Block SIGUSR1 and set up the signal set
+   sigset_t set;
    sigemptyset(&set);
    sigaddset(&set, SIGUSR1);
    sigprocmask(SIG_BLOCK, &set, NULL); // Block SIGUSR1
@@ -95,11 +95,13 @@ int imgui_start(const char *hint)
       if (execlp(imgui_path, arg0, sockpath, pidstr, (char*)NULL) == -1) {
          error_errno("[GUI] ERROR: failed to launch GUI '%s' '%s' '%s': '%s'",
                      imgui_path, sockpath, pidstr);
+         kill(getppid(), SIGUSR1); /* Otherwise parent is stalled */
          return Error_RuntimeError;
       }
 
       return OK;
     } else {
+      // FIXME: use sigtimedwait and specify a timeout.
       sigwait(&set, &sig); // Wait for SIGUSR1
    }
 
