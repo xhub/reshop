@@ -13,3 +13,6 @@ out
 
 # LSP
 compile_commands.json
+
+# clangd
+.cache/
