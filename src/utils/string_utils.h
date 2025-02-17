@@ -24,4 +24,7 @@ static inline unsigned _findname(const char ** list, unsigned len, const char* n
   return UINT_MAX;
 }
 
+/* Fast toupper */
+static inline char RhpToUpper(char c) { return (c >= 'a' && c <= 'z') ? c & ' ' : c; }
+static inline char RhpToLower(char c) { return (c >= 'A' && c <= 'Z') ? c | ' ' : c; }
 

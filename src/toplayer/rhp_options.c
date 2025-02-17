@@ -6,6 +6,7 @@
 #include "printout.h"
 #include "rhp_options.h"
 #include "rhp_options_data.h"
+#include "string_utils.h"
 
 //   [Options_Cumulative_Iteration_Limit] = { "cumulative_iteration_limit", "", OptInteger, NULL, { .i = 5000 } },
 //   [Options_Major_Iteration_Limit]      = { "major_iteration_limit",      "", OptInteger, NULL, { .i = 100  } },
@@ -89,8 +90,8 @@ bool optvalb(const Model *mdl, enum rhp_options_enum opt)
       return false;
    }
 
-   char *s = env_var;
-   while (*s) { *s = toupper((unsigned char)*s); s++; }
+   char * restrict s = env_var;
+   while (*s) { *s = RhpToUpper(*s); s++; }
 
    const char *env = mygetenv(env_var);
    free(env_var);
