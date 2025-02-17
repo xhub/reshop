@@ -397,8 +397,8 @@ typedef struct interpreter {
    enum parser_health health;
    bool peekisactive;
    bool read_gms_symbol;
-   bool err_shown;               /**< Error message already shown */
-   unsigned linenr;
+   bool err_shown;               /**< Error message was already shown */
+   unsigned linenr;              /**< Current line number             */
    size_t read;
    const char *linestart;
    const char *linestart_old;
@@ -423,7 +423,7 @@ typedef struct interpreter {
 
    /* Parser state info */
    InterpParsedKwds   state;
-   KeywordLexemeInfo  last_kw_info;
+   KeywordLexemeInfo  last_kw_info;  /**< Last processed keyword                  */
    IdentData          last_symbol;   /**< Last seen symbol (used for UEL indices) */
    InterpFinalization finalize;
 

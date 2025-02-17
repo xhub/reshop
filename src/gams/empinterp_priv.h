@@ -271,7 +271,7 @@ static inline void _single_mp_to_implicit_Nash(Interpreter *interp)
    interp->state.has_implicit_Nash = true;
 }
 
-static inline bool _has_no_parent(Interpreter *interp)
+static inline bool interp_state_no_parent_seen(Interpreter *interp)
 {
    InterpParsedKwds pk = interp->state;
    return !(pk.has_equilibrium || pk.has_implicit_Nash || pk.has_dag_node ||
