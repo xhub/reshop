@@ -259,7 +259,7 @@ int rhp_syncenv(void)
             O_Output |= PO_MAX_VERBOSITY | PO_ALLDEST;
          }
 
-         /* the 'all' keyword does turn on everything */
+         /* help */
          if (!strncmp("help", envopt, 4)) {
             printf("Help for RHP_LOG values:\n\n");
             for (unsigned i = 0; i < n_opts; ++i) {
