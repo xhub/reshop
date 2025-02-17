@@ -3,7 +3,17 @@
 
 #include "env_utils.h"
 #include "macros.h"
+#include "string_utils.h"
 
+/**
+ * @brief Find the envirronment variable "RHP_<optname>"
+ *
+ * @param optname                   the option name
+ * @param[in,out] env_varname       the buffer for the envirronment variable
+ * @param[in,out] env_varname_max   the max length of env_varname (on both input and output)
+ *
+ * @return                          the value of RHP_<optname>
+ */
 const char *find_rhpenvvar(const char* optname, char **env_varname, size_t *env_varname_max)
 {
    const char prefix[] = "RHP_";
@@ -24,11 +34,11 @@ const char *find_rhpenvvar(const char* optname, char **env_varname, size_t *env_
        * We look for uppercase env variables
        * --------------------------------------------------------------------- */
 
-   char *s = _env_varname;
+   char * restrict s = _env_varname;
    while (*s != '\0') {
-      *s = toupper(*s);
-         s++;
-      }
+      *s = RhpToUpper(*s);
+      s++;
+   }
 
    return mygetenv(_env_varname);
 }

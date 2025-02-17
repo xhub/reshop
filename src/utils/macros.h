@@ -282,6 +282,7 @@ RHP_TRACE_ME(); UNUSED int c42 = getchar(); //NOLINT(bugprone-unused-return-valu
 
 
 
+
 /* FIXME: due to the external requirements of support the intel classic compiler wiht a documented broken preprocess,
  * the following can't be used.
  *
