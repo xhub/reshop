@@ -3281,6 +3281,15 @@ static int err_wildcard(unsigned linenr)
    return Error_EMPIncorrectSyntax;
 }
 
+/**
+ * @brief Parse an optimization problem (min or max)
+ *
+ * @param mp      the optimization MP object
+ * @param interp  the interpreter
+ * @param p       the pointer
+ *
+ * @return        the error code
+ */
 static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
                      unsigned * restrict p)
 {
@@ -3426,6 +3435,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
       }
 
       if (toktype == TOK_GMS_EQU) {
+
          S_CHECK(interp->ops->mp_addcons(interp, mp));
          if (is_flipped) {
             S_CHECK(interp->ops->ctr_markequasflipped(interp));
@@ -3491,6 +3501,16 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
 
       interp->finalize.mp_owns_remaining_equs = mp->id;
       S_CHECK(advance(interp, p, &toktype));
+   } else if (toktype == TOK_GMS_VAR) {
+      /* Help the user understant his probable mistake */
+      int offset;
+      error("[empparser] %nERROR: while parsing '%.*s' MP starting on line %u: "
+            "the GAMS variable '%.*s' appeared a GAMS equation or an EMPDAG labels.\n",
+            &offset, interp->last_kw_info.len, interp->last_kw_info.start,
+            interp->last_kw_info.linenr, tok_fmtargs(&interp->cur));
+      error("%*sAll variables associated with an MP must be provided before the "
+            "constraint part starts.\n", offset, "");
+      status = Error_EMPIncorrectSyntax;
    }
 
    // TODO: check that the MP is not empty (and make a test)
@@ -3744,7 +3764,7 @@ int parse_mp(Interpreter *interp, unsigned *p)
 
       S_CHECK(parse_opt(mp, interp, p));
 
-      /* The old empinfo syntax doesn't have name, try to be better here*/
+      /* The old empinfo syntax doesn't have name, try to be better here */
       if (interp->ops->type == InterpreterOpsImm ) {
          S_CHECK(mp_opt_add_name(mp))
       }
@@ -3771,7 +3791,7 @@ int parse_mp(Interpreter *interp, unsigned *p)
    * If there are no parents, we add this MP as the root
    * ---------------------------------------------------------------------- */
 
-   } else if (_has_no_parent(interp)) {
+   } else if (interp_state_no_parent_seen(interp)) {
       DBGUSED EmpDag *empdag = &interp->mdl->empinfo.empdag;
       assert(empdag->mps.len == 1);
       parsed_single_mp(interp);
