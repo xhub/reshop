@@ -277,6 +277,17 @@ _continue:
       }
     }
 
+#ifndef _WIN32
+   /* RHP_DEV=0 is equivalent to RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 */
+   const char *nodev = mygetenv("RHP_NODEV");
+   if (nodev) {
+      setenv("RHP_NO_STOP", "1", 1);
+      setenv("RHP_NO_BACKTRACE", "1", 1);
+   }
+   myfreeenvval(nodev);
+#endif
+
+
 _exit:
    myfreeenvval(env_varval);
 
