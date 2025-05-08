@@ -406,12 +406,21 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
 
    /* ----------------------------------------------------------------------
     * Prepare the GMO object: set the model type, index base  = 0 (for variable
-    * and equation indices), and set the name
+    * and equation indices), set the name, and reuse optfile name to initialize
+    * the directory where the option file are expected to be found. The proper
+    * logic is done in GMO
     * ---------------------------------------------------------------------- */
 
    gmoIndexBaseSet(gmodst, 0);
    gmoNameModelSet(gmodst, mdl_src->commondata.name);
    gmoModelTypeSet(gmodst, mdltype_to_gams(mdl_src->commondata.mdltype));
+
+   if (mdl_gms_up) {
+      const GmsContainerData *gms = mdl_gms_up->ctr.data;
+      gmoHandle_t gmo = gms->gmo;
+      char buf[GMS_SSSIZE];
+      gmoNameOptFileSet(gmodst, gmoNameOptFile(gmo, buf));
+   }
 
    /* ----------------------------------------------------------------------
     * Set the modeltype here: it is needed and has to be done after the new GAMS

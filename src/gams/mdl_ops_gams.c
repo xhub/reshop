@@ -456,16 +456,28 @@ skip: ; /* Skipping the generation */
        * ------------------------------------------------------------------ */
 
       if (O_Subsolveropt > 0) {
-         gevGetStrOpt(gms->gev, gevNameWrkDir, buf);
-
          if (O_Subsolveropt == 1) {
             SNPRINTF_CHECK(optname, GMS_SSSIZE, "%s.opt", mdldat->solvername);
          } else {
-            SNPRINTF_CHECK(optname, GMS_SSSIZE, "%s.op%d", mdldat->solvername, O_Subsolveropt);
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+            const char *fmtstr;
+            if (O_Subsolveropt < 10) {
+               fmtstr = "%s.op%d";
+            } else if (O_Subsolveropt < 100) {
+               fmtstr = "%s.o%d";
+            } else {
+               fmtstr = "%s.%d";
+            }
+            SNPRINTF_CHECK(optname, GMS_SSSIZE, fmtstr, mdldat->solvername, O_Subsolveropt);
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
          }
 
-         strcat(buf, optname);
-         gmoNameOptFileSet(gms->gmo, buf);
+         gmoNameOptFileSet(gms->gmo, optname);
          gmoOptFileSet(gms->gmo, O_Subsolveropt);
 
       } else if (O_Subsolveropt == -1) {
