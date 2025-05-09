@@ -6,6 +6,8 @@
 *   @brief memory debug defines
 */
 
+#include "rhp_compiler_defines.h"
+
 #ifdef WITH_VALGRIND
 
 #include <valgrind/memcheck.h>
