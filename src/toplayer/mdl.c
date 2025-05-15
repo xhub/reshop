@@ -464,15 +464,16 @@ int mdl_ensure_exportdir(Model *mdl)
    if (mdl->commondata.exports_dir) { return OK; }
 
    if (!mdl->commondata.exports_dir_parent) {
+
 #if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
    char *exports_dir_template;
-   A_CHECK(exports_dir_template, strdup("/tmp/reshop_exports_XXXXXX"));
+   A_CHECK_(exports_dir_template, strdup("/tmp/reshop_exports_XXXXXX"), goto _error;);
    char *res = mkdtemp(exports_dir_template);
 
    if (!res) {
       perror("mkdtemp");
       free(exports_dir_template);
-      return Error_SystemError;
+      goto _error;
    }
 
    mdl->commondata.exports_dir_parent = exports_dir_template;
@@ -488,7 +489,7 @@ int mdl_ensure_exportdir(Model *mdl)
 
       printout(PO_INFO, "[model] %s model '%.*s' #%u has no valid export directory."
                "Set RHP_EXPORT_DIR to provide one.\n", mdl_fmtargs(mdl));
-      return Error_NotFound;
+      goto _error;
 #endif
    }
 
@@ -498,12 +499,17 @@ int mdl_ensure_exportdir(Model *mdl)
 
    if (mkdir(mdl->commondata.exports_dir, S_IRWXU)) {
       perror("mkdir");
-      error("%s ERROR: Could not create directory '%s'\n", __func__,
+      error("[system] ERROR: Could not create directory '%s'\n",
             mdl->commondata.exports_dir);
-      return Error_SystemError;
+      goto _error;
    }
 
    return OK;
+
+_error:
+   error("%s ERROR: could not create an export dir", __func__);
+   return Error_SystemError;
+
 }
 
 McpInfo* mdl_getmcpinfo(Model *mdl)

@@ -74,7 +74,7 @@ static void opcode_print(int *instrs, int *args, int len)
 {
    for (int i = 0; i < len; ++i) {
       printf("Indx [%5d]\t  Instr: %10s, Field: %5d, \n", i,
-             instr_code_name(instrs[i]), args[i]);
+             nlinstr2str(instrs[i]), args[i]);
 
    }
 }
@@ -189,49 +189,49 @@ int main(int argc, const char **argv)
    printf("Testing Ex1: d(-x2*x2) / dx2                  . . .  ");
    size = sizeof(ex1_opcodes) / sizeof(int);
    dcode_size = sizeof(ex1_diff_opcodes) / sizeof(int);
-   status = run_ex(ex1_opcodes, ex1_fields, size, 2,
+   status = run_ex(ex1_opcodes, ex1_args, size, 2,
                    ex1_diff_opcodes, ex1_diff_fields, dcode_size);
    printf("%s\n", (status == OK) ? "OK" : "FAIL");
 
    printf("Testing Ex2: d(-(x2*x2 + x2*x3)) / dx2        . . .  ");
    size = sizeof(ex2_opcodes) / sizeof(int);
    dcode_size = sizeof(ex2_diff_opcodes) / sizeof(int);
-   status = run_ex(ex2_opcodes, ex2_fields, size, 2,
+   status = run_ex(ex2_opcodes, ex2_args, size, 2,
                    ex2_diff_opcodes, ex2_diff_fields, dcode_size);
    printf("%s\n", (status == OK) ? "OK" : "FAIL");
 
    printf("Testing Ex3: d(-(x2*x2 + exp(x2))) / dx2      . . .  ");
    size = sizeof(ex3_opcodes) / sizeof(int);
    dcode_size = sizeof(ex3_diff_opcodes) / sizeof(int);
-   status = run_ex(ex3_opcodes, ex3_fields, size, 2,
+   status = run_ex(ex3_opcodes, ex3_args, size, 2,
                    ex3_diff_opcodes, ex3_diff_fields, dcode_size);
    printf("%s\n", (status == OK) ? "OK" : "FAIL");
 
    printf("Testing Ex4: d(-(3*x2**2)) / dx2              . . .  ");
    size = sizeof(ex4_opcodes) / sizeof(int);
    dcode_size = sizeof(ex4_diff_opcodes) / sizeof(int);
-   status = run_ex(ex4_opcodes, ex4_fields, size, 2,
+   status = run_ex(ex4_opcodes, ex4_args, size, 2,
                    ex4_diff_opcodes, ex4_diff_fields, dcode_size);
    printf("%s\n", (status == OK) ? "OK" : "FAIL");
 
    printf("Testing Ex5: d(-(3*x2**2 + exp(x2*x3))) / dx2 . . .  ");
    size = sizeof(ex5_opcodes) / sizeof(int);
    dcode_size = sizeof(ex5_diff_opcodes) / sizeof(int);
-   status = run_ex(ex5_opcodes, ex5_fields, size, 2,
+   status = run_ex(ex5_opcodes, ex5_args, size, 2,
                    ex5_diff_opcodes, ex5_diff_fields, dcode_size);
    printf("%s\n", (status == OK) ? "OK" : "FAIL");
 
    printf("Testing Ex6: d(-(x2/(1+x3)) / dx3             . . .  ");
    size = sizeof(ex6_opcodes) / sizeof(int);
    dcode_size = sizeof(ex6_diff_opcodes) / sizeof(int);
-   status = run_ex(ex6_opcodes, ex6_fields, size, 3,
+   status = run_ex(ex6_opcodes, ex6_args, size, 3,
                    ex6_diff_opcodes, ex6_diff_fields, dcode_size);
    printf("%s\n", (status == OK) ? "OK" : "FAIL");
 
    printf("Testing Ex7: d(-(log(x2)) / dx2               . . .  ");
    size = sizeof(ex7_opcodes) / sizeof(int);
    dcode_size = sizeof(ex7_diff_opcodes) / sizeof(int);
-   status = run_ex(ex7_opcodes, ex7_fields, size, 2,
+   status = run_ex(ex7_opcodes, ex7_args, size, 2,
                    ex7_diff_opcodes, ex7_diff_fields, dcode_size);
    printf("%s\n", (status == OK) ? "OK" : "FAIL");
 

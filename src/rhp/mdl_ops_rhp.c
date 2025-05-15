@@ -26,12 +26,6 @@
 #include "rmdl_options.h"
 #include "str2idx.h"
 
-#ifndef NDEBUG
-#define SOLREPORT_DEBUG(str, ...) trace_solreport("[solreport] " str "\n", __VA_ARGS__)
-#else
-#define SOLREPORT_DEBUG(...)
-#endif
-
 static int err_hop_mdl(const Model *mdl, const char *fn)
 {
    error("ERROR: %s model '%.*s' #%u is not a simple optimization or VI model, "
@@ -303,7 +297,7 @@ static inline void  _copy_vars(Container *ctr_dst,
       v->value = v_src->value;
       v->multiplier = v_src->multiplier;
       v->basis = v_src->basis;
-      SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " from downstream var '%s'",
+      SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " from downstream var '%s'\n",
                       ctr_printvarname(ctr_dst, i), solreport_gms_v(v), 
                       ctr_printvarname2(ctr_src, i));
    }
@@ -349,7 +343,7 @@ static inline void  copy_vars_fops(Container * ctr_dst,
          v->value = v_src->value;
          v->multiplier = v_src->multiplier;
          v->basis = v_src->basis;
-         SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " from downstream var %s",
+         SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " from downstream var %s\n",
                          ctr_printvarname(ctr_dst, i), solreport_gms_v(v), 
                          ctr_printvarname2(ctr_src, j));
          j++;
@@ -392,7 +386,7 @@ static inline int copy_equs_fops(Container * restrict ctr_dst,
          if (valid_ei(ei_src)) {
             const Equ * restrict e_src = &equs_src[ei_src];
 
-            SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using transformed %s",
+            SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using transformed %s\n",
                             ctr_printequname(ctr_dst, i), solreport_gms(e_src), 
                             ctr_printequname2(ctr_src, ei_src));
 
@@ -421,7 +415,7 @@ static inline int copy_equs_fops(Container * restrict ctr_dst,
          /* If the equation was kept, then look up its new index */
          const Equ * restrict e_src = &equs_src[ei_new];
 
-         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s",
+         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s\n",
                             ctr_printequname(ctr_dst, i), solreport_gms(e_src), 
                             ctr_printequname2(ctr_src, ei_new));
 
@@ -430,6 +424,7 @@ static inline int copy_equs_fops(Container * restrict ctr_dst,
          e->basis = e_src->basis;
 
       } else { /* This case is encountered for any objequ while using an MCP/VI solver */
+
 forgotten_equ:
          /* TODO(xhub) determine whether forgotten eqn is right */
 
@@ -439,6 +434,7 @@ forgotten_equ:
             trace_solreport("[solreport] equ '%s' was forgotten\n",
                      ctr_printequname(ctr_dst, i));
          }
+
          e->value = SNAN;
          e->multiplier = SNAN;
          e->basis = BasisUnset;
@@ -470,7 +466,7 @@ static inline void  copy_vars_rosetta(Container * ctr_dst,
          v->value = v_src->value;
          v->multiplier = v_src->multiplier;
          v->basis = v_src->basis;
-         SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " from downstream var %s",
+         SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " from downstream var %s\n",
                          ctr_printvarname(ctr_dst, i), solreport_gms_v(v), 
                          ctr_printvarname2(ctr_src, vi_src));
       }
@@ -493,7 +489,7 @@ static inline int  copy_equs_rosetta(Container * restrict ctr_dst,
 
          const Equ * restrict e_src = &equs_src[ei_src];
 
-         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s",
+         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s\n",
                             ctr_printequname(ctr_dst, i), solreport_gms(e_src), 
                             ctr_printequname2(ctr_src, ei_src));
 
@@ -518,7 +514,7 @@ static inline int  copy_equs_rosetta(Container * restrict ctr_dst,
       if (valid_ei(ei_src)) {
          const Equ * restrict e_src = &equs_src[ei_src];
 
-         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using transformed %s",
+         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using transformed %s\n",
                          ctr_printequname(ctr_dst, i), solreport_gms(e_src), 
                          ctr_printequname2(ctr_src, ei_src));
 

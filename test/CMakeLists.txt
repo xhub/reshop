@@ -115,6 +115,7 @@ endif (GAMSDIR_TARGET AND GAMSCNTR_DAT_FILE)
 # usually this means no sanitizer are active
 if (RESHOP_INTERNAL_TESTS)
    ADD_INTERNAL_TEST(internal/test_diff.c)
+   ADD_INTERNAL_TEST(internal/test_nlopcode.c)
 if (NOT DARLING AND NOT NEED_WINE)
    ADD_INTERNAL_TEST(internal/test_tree.c
       "${CMAKE_SOURCE_DIR}/test/data/dat1.dat ${CMAKE_SOURCE_DIR}/test/data/dat2.dat")

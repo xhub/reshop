@@ -147,7 +147,7 @@ int gams_opcode_var_to_cst(int opcode)
         return -1;
       default:
          error("%s :: Unsupported opcode %d :: %s\n", __func__,
-                  opcode, instr_code_name(opcode));
+                  opcode, nlinstr2str(opcode));
          return -2;
    }
 }

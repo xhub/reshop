@@ -133,7 +133,7 @@ int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldua
 {
    int status = OK;
    double start = get_thrdtime();
-   M_ArenaTempStamp atmp = ctr_memtemp_begin(&mdl->ctr);
+   M_ArenaTempStamp atmp = ctr_memtmp_init(&mdl->ctr);
 
    /* ----------------------------------------------------------------------
     * Analyze the conic QP structure:
@@ -321,7 +321,7 @@ _exit:
 
    simple_timing_add(&mdl->timings->reformulation.CCF.fenchel, get_thrdtime() - start);
 
-   ctr_memtemp_end(atmp);
+   ctr_memtmp_fini(atmp);
 
    return status;
 }

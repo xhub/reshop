@@ -52,4 +52,19 @@ static inline int error_runtime(void)
 #define solreport_gms(e)          (e)->value, (e)->multiplier, basis_name((e)->basis)
 #define solreport_gms_v(v)        (v)->value, (v)->multiplier, basis_name((v)->basis)
 
+/* Useful debug output */
+#ifndef NDEBUG
+#define GMOEXPORT_DEBUG(str, ...) trace_stack("[GMOexport] " str "\n", __VA_ARGS__) \
+//  { GDB_STOP(); }
+#else
+#define GMOEXPORT_DEBUG(...)
+#endif
+
+#ifndef NDEBUG
+#define SOLREPORT_DEBUG(str, ...) trace_solreport("[solreport] " str, __VA_ARGS__) \
+//  { GDB_STOP(); }
+#else
+#define SOLREPORT_DEBUG(...)
+#endif
+
 #endif /* PRINTOUT_H */

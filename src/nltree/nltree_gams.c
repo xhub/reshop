@@ -73,7 +73,7 @@ static enum NLNODE_OP get_op_class(int opcode)
          return __OPCODE_LEN;
       default:
          error("%s :: Unsupported opcode %d :: %s\n", __func__,
-                  opcode, instr_code_name(opcode));
+                  opcode, nlinstr2str(opcode));
          return -1;
    }
 }
@@ -111,7 +111,7 @@ enum NLNODE_OPARG gams_get_optype(int opcode)
          return NLNODE_OPARG_UNSET;
       default:
          error("%s :: Unsupported opcode %d :: %s\n", __func__,
-                  opcode, instr_code_name(opcode));
+                  opcode, nlinstr2str(opcode));
          return -1;
    }
 }
@@ -195,7 +195,7 @@ bool chk_gms_opcode(int *instr, int *args, unsigned len, const char* equname)
 
    if (instr[0] != nlHeader) {
       error("[%s] opcode @0 is not %s, rather %s\n", __func__,
-            instr_code_name(nlHeader), instr_code_name(instr[0]));
+            nlinstr2str(nlHeader), nlinstr2str(instr[0]));
       res = false;
    }
 
@@ -460,7 +460,7 @@ skip_k_incr:
 
       default:
          error("%s :: unexpected opcode %d :: %s\n", __func__, key,
-             instr_code_name(key));
+             nlinstr2str(key));
          status = Error_UnExpectedData;
          goto _exit;
       }
@@ -718,7 +718,7 @@ int build_gams_opcode_v2(const NlNode * restrict node,
       bool optype_has_instr = true;
 
       /* TODO: 
-       * - case NLNODE_ADD and only 1 operandis bad, but should be explicitely handled
+       * - case NLNODE_ADD and only 1 operand is bad, but should be explicitely handled
        */
 
       /* ---------------------------------------------------------------------

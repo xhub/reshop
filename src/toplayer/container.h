@@ -203,9 +203,9 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
  * Container memory management
  * ---------------------------------------------------------------------- */
 
-void *ctr_getmemtemp(Container *ctr, size_t size) ALLOC_SIZE(2);
-M_ArenaTempStamp ctr_memtemp_begin(Container *ctr) NONNULL;
-int ctr_memtemp_end(M_ArenaTempStamp stamp);
+void *ctr_memtmp_get(Container *ctr, size_t size) ALLOC_SIZE(2);
+M_ArenaTempStamp ctr_memtmp_init(Container *ctr) NONNULL;
+void ctr_memtmp_fini(M_ArenaTempStamp stamp);
 
 void *ctr_getmem_old(Container *ctr, size_t size) ALLOC_SIZE(2);
 void *ctr_ensuremem_old(Container *ctr, size_t cur_size, size_t extra_size);

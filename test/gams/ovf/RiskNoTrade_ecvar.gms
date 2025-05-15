@@ -454,6 +454,12 @@ demandwelfare(s) = -price1*consume1.l -price2(s)*consume2.l(s)+ Dem(consume1.l)
 
 totalwelfare(s) = sum(t,thermalprofit(t,s))+ sum(h,hydroprofit(h,s))+ demandwelfare(s);
 
+* Few checks
+PARAMETER hpobjL(h);
+hpobjL(h) = pi1.l*Util(uh1.l(h)) + CVaRhp.l(h);
+abort$[ smax{h, abs(hpObjL(h) - hpobj.l(h))} > 1e-10 ]  'bad hpobj', hpobjL;
+
+
 parameter tsale(s);
 parameter hpurchase(s);
 parameter cpurchase(s);

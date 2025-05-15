@@ -314,6 +314,7 @@ static int rctr_evalequvar(Container *ctr)
     * first one
     *
     * WARNING: a prerequisite to calling this function is to report the values!
+    * FIXME: add a status for this
     * ---------------------------------------------------------------------- */
 
    S_CHECK(cdat_sort_eval_equvar_(ctr));
@@ -321,14 +322,16 @@ static int rctr_evalequvar(Container *ctr)
    rhp_idx nvars_total = cdat->total_n;
    rhp_idx nequs_total = cdat->total_m;
 
+   trace_solreport("\n[solreport] Start evaluating variables");
+
    for (unsigned cur_stage = cdat->current_stage, k = cur_stage; k <= cur_stage; --k) {
       struct equvar_eval * restrict equvar_evals = &cdat->equvar_evals[k];
 
       unsigned len = equvar_evals->len;
-      trace_solreport("[solreport] stage %u, evaluating %u variables\n", k, len);
-               //mdl_getnamelen2(ctr), mdl_getname2(ctr),
+      trace_solreport("\n[solreport] stage %u, evaluating %u variables\n", k, len);
 
       for (unsigned j = 0; j < len; ++j) {
+
          rhp_idx vi = equvar_evals->pairs[j].var;
          rhp_idx ei = equvar_evals->pairs[j].equ;
          S_CHECK(vi_inbounds(vi, nvars_total, __func__));
@@ -338,16 +341,24 @@ static int rctr_evalequvar(Container *ctr)
          Equ * restrict e = &ctr->equs[ei];
          Lequ * restrict lequ = e->lequ;
          Var * restrict vars = ctr->vars;
+
          /* Multiplying is usually faster than dividing */
          double coeff_inv = NAN;
 
+         /* Init value to zero */
          v->value = 0.;
 
+         SOLREPORT_DEBUG("START: var '%s' #%u using equ '%s' #%u\n",
+                         ctr_printvarname(ctr, vi), vi, ctr_printequname(ctr, ei), ei);
+
          for (unsigned l = 0; l < lequ->len; ++l) {
+
             rhp_idx idx = lequ->vis[l];
             if (idx != vi) {
+
                if (isfinite(lequ->coeffs[l])) {
                   assert(isfinite(vars[idx].value));
+
                   v->value += lequ->coeffs[l] * vars[idx].value;
                }
             } else {
@@ -357,8 +368,8 @@ static int rctr_evalequvar(Container *ctr)
          }
 
          if (!isfinite(coeff_inv)) {
-            error("%s ERROR: the coefficient on the variable '%s' in equation "
-                  "'%s' is not finite: %e\n\n", __func__,
+            error("[model] ERROR: the inverse coefficient on the variable '%s' "
+                  "in equation  '%s' is not finite: %e\n\n",
                   ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei), coeff_inv);
             lequ_print(lequ, PO_ERROR);
             return Error_InvalidValue;
@@ -372,8 +383,8 @@ static int rctr_evalequvar(Container *ctr)
             S_CHECK(nltree_eval(ctr, e->tree, &nlval));
             assert(isfinite(nlval));
 
-            DPRINT("nlval = %e; prev level %e; new level %e\n", nlval, v->level,
-               - nlval - v->level);
+            SOLREPORT_DEBUG("nlval = %e; prev level %e; new level %e\n",
+                            nlval, v->value, - nlval - v->value);
 
             v->value = - nlval - v->value;
          } else {
@@ -381,21 +392,24 @@ static int rctr_evalequvar(Container *ctr)
          }
 
          double cst = equ_get_cst(e);
-         DPRINT("cst = %e; prev level %e; coeff_inv = %e\n", cst, v->level,
-               coeff_inv);
+         SOLREPORT_DEBUG("cst = %e; prev level %e; coeff_inv = %e\n",
+                         cst, v->value, coeff_inv);
 
          v->value = (v->value - cst)*coeff_inv;
 
-         DPRINT("EVAL: variable %s (%d), equation %s (%d) : %e\n",
-                 ctr_printvarname(ctr, vidx), vidx,
-                 ctr_printequname(ctr, eidx), eidx, v->level);
+         SOLREPORT_DEBUG("EVAL: variable '%s' #%u, equation '%s' #%u : %e\n",
+                         ctr_printvarname(ctr, vi), vi, ctr_printequname(ctr, ei),
+                         ei, v->value);
 
          if (!isfinite(v->value)) {
+
             error("%s ERROR: evaluation of variable '%s' via equation '%s' "
                   "yields %e\n", __func__, ctr_printvarname(ctr, vi),
                   ctr_printequname(ctr, ei), v->value);
             equ_print(e);
+
          } else if (O_Output & PO_TRACE_SOLREPORT) {
+
             printout(PO_TRACE_SOLREPORT, "[solreport] variable %s set to %e\n",
                       ctr_printvarname(ctr, vi), v->value);
          }

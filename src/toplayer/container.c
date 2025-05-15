@@ -58,7 +58,7 @@ static void dealloc_(Container *ctr)
       FREE(ctr->fops);
    }
 
-   /* IMPORTANT: do this last to still habe the GAMS object valid */
+   /* IMPORTANT: do this last to still have the GAMS object valid */
    if (ctr->ops) {
       ctr->ops->deallocdata(ctr);
    }
@@ -322,7 +322,7 @@ int ctr_trimmem(Container *ctr)
    return arenaL_empty(&ctr->arenaL_temp);
 }
 
-M_ArenaTempStamp ctr_memtemp_begin(Container *ctr)
+M_ArenaTempStamp ctr_memtmp_init(Container *ctr)
 {
    M_ArenaLink *arena = &ctr->arenaL_temp;
 
@@ -331,14 +331,12 @@ M_ArenaTempStamp ctr_memtemp_begin(Container *ctr)
    return arenaTemp_begin(arena);
 }
 
-int ctr_memtemp_end(M_ArenaTempStamp stamp)
+void ctr_memtmp_fini(M_ArenaTempStamp stamp)
 {
    arenaTemp_end(stamp);
-
-   return OK;
 }
 
-void *ctr_getmemtemp(Container *ctr, size_t size)
+void *ctr_memtmp_get(Container *ctr, size_t size)
 {
    M_ArenaLink *arenatemp = &ctr->arenaL_temp;
    M_Arena *arena = &ctr->arenaL_temp.arena;

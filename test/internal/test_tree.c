@@ -73,8 +73,8 @@ const int * const opcodes[] = {
 };
 
 const int* const args[] = {
-      ex1_fields, ex2_fields, ex3_fields, ex4_fields, ex5_fields,
-      ex6_fields, ex7_fields, ex8_fields,
+      ex1_args, ex2_args, ex3_args, ex4_args, ex5_args,
+      ex6_args, ex7_args, ex8_args,
    };
 
 const unsigned sizes[] = {
@@ -174,8 +174,8 @@ _error:
 
    printf("ERROR: (codelen1  = %zu, codelen2 = %zu\n", codelen1, codelen2);
    printf("failure at indx1 = %zu and indx2 = %zu\n", i, j);
-   printf("   instr = %s arg = %5d\n", instr_code_name(instrs1[i]), args1[i]);
-   printf("   instr = %s arg = %5d\n", instr_code_name(instrs2[j]), args2[j]);
+   printf("   instr = %s arg = %5d\n", nlinstr2str(instrs1[i]), args1[i]);
+   printf("   instr = %s arg = %5d\n", nlinstr2str(instrs2[j]), args2[j]);
 
    return Error_InvalidValue;
 }
@@ -269,10 +269,10 @@ _exit:
 }
 
 #if 0
-static int run_ex(Container *ctr, unsigned *ex_opcodes, int *ex_fields,
+static int run_ex(Container *ctr, unsigned *ex_opcodes, int *ex_args,
                   unsigned size)
 {
-   return _run_ex(ctr, (int*)ex_opcodes, ex_fields);
+   return _run_ex(ctr, (int*)ex_opcodes, ex_args);
 }
 #endif
 
