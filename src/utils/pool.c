@@ -193,7 +193,7 @@ unsigned pool_getidx(NlPool *pool, double val)
          } else if (fabs(val -1./2.) < DBL_EPSILON) {
             pool_idx = nlconst_half;
          } else if (fabs(val - 1./4.) < DBL_EPSILON) {
-            pool_idx = nlconst_quater;
+            pool_idx = nlconst_quarter;
          }
       }
    }

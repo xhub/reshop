@@ -488,7 +488,7 @@ int opcode_diff(int ** restrict deriv_instrs,
 
             default:
                snprintf(errmsg, 256, "*** cannot diff %s %s\n",
-                        instr_code_name(key),
+                        nlinstr2str(key),
                         func_code_name[args[k]]);
                return EXIT_FAILURE;
             }
@@ -518,7 +518,7 @@ int opcode_diff(int ** restrict deriv_instrs,
 
                default:
                   snprintf(errmsg, 256, "*** cannot diff %s %s\n",
-                           instr_code_name(key),
+                           nlinstr2str(key),
                            func_code_name[args[k]]);
                   return EXIT_FAILURE;
                }
@@ -538,7 +538,7 @@ int opcode_diff(int ** restrict deriv_instrs,
 
                default:
                   snprintf(errmsg, 256, "*** cannot diff %s %s\n",
-                           instr_code_name(key),
+                           nlinstr2str(key),
                            func_code_name[args[k]]);
                   return EXIT_FAILURE;
                }
@@ -560,7 +560,7 @@ int opcode_diff(int ** restrict deriv_instrs,
 
                default:
                   snprintf(errmsg, 256, "*** cannot diff %s %s\n",
-                           instr_code_name(key),
+                           nlinstr2str(key),
                            func_code_name[args[k]]);
                   return EXIT_FAILURE;
                }
@@ -569,7 +569,7 @@ int opcode_diff(int ** restrict deriv_instrs,
          break;
 
       case nlFuncArgN:
-         snprintf(errmsg, 256, "*** cannot diff %s\n", instr_code_name(key));
+         snprintf(errmsg, 256, "*** cannot diff %s\n", nlinstr2str(key));
          nargs = args[k];
          k++;
          s = s - nargs + 1;
@@ -577,7 +577,7 @@ int opcode_diff(int ** restrict deriv_instrs,
 
       default:
          snprintf(errmsg, 256, "differ: unknown instruction %s at location %5d\n",
-                  instr_code_name(key), k);
+                  nlinstr2str(key), k);
          return EXIT_FAILURE;
       }
 

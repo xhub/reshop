@@ -207,7 +207,8 @@ int copy_vars_nofops(const Container *ctr_src, Container *ctr_dst,
       assert(ctr_dst->vars[vi].idx == vi);
 
       DPRINT("%s :: new var #%d: lb = %e; ub = %e; value = %e; marginal = %e\n",
-            __func__, vdst->idx, vdst->bnd.lb, vdst->bnd.ub, vdst->level, vdst->marginal);
+            __func__, ctr_dst->vars[vi].idx, ctr_dst->vars[vi].bnd.lb,
+             ctr_dst->vars[vi].bnd.ub, ctr_dst->vars[vi].value, ctr_dst->vars[vi].multiplier);
    }
 
    return OK;
@@ -237,7 +238,8 @@ int copy_vars_permutation(const Container *ctr_src, Container *ctr_dst,
       S_CHECK(rctr_copyvar(ctr_dst, &ctr_src->vars[i]));
 
       DPRINT("%s :: new var #%d: lb = %e; ub = %e; value = %e; marginal = %e\n",
-            __func__, vdst->idx, vdst->bnd.lb, vdst->bnd.ub, vdst->level, vdst->marginal);
+            __func__, ctr_dst->vars[vi].idx, ctr_dst->vars[vi].bnd.lb,
+             ctr_dst->vars[vi].bnd.ub, ctr_dst->vars[vi].value, ctr_dst->vars[vi].multiplier);
    }
 
    *skip_var = skip_var_;
@@ -268,8 +270,9 @@ int copy_vars_fops(const Container *ctr_src, Container *ctr_dst,
       S_CHECK(rctr_copyvar(ctr_dst, &ctr_src->vars[i]));
       assert(ctr_dst->vars[vi].idx == vi);
 
-      DPRINT("%s :: new var #%d: lb = %e; ub = %e; value = %e; marginal = %e\n",
-            __func__, vdst->idx, vdst->bnd.lb, vdst->bnd.ub, vdst->level, vdst->marginal);
+      DPRINT("%s :: new var #%d: lb = %e; ub = %e; level = %e; multiplier = %e\n",
+            __func__, ctr_dst->vars[vi].idx, ctr_dst->vars[vi].bnd.lb,
+             ctr_dst->vars[vi].bnd.ub, ctr_dst->vars[vi].value, ctr_dst->vars[vi].multiplier);
    }
 
    *skip_var = skip_var_;

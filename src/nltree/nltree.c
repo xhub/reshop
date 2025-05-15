@@ -1,3 +1,4 @@
+#include "nltree_style.h"
 #include "reshop_config.h"
 
 #include <fenv.h>
@@ -418,22 +419,26 @@ _exit:
 }
 void nltree_dealloc(NlTree* tree)
 {
-   if (tree) {
-      for (size_t i = 0; i <= tree->nodes.bucket_idx; ++i) {
+   if (tree && tree->root) {
+
+      for (size_t i = 0, len = tree->nodes.bucket_idx; i <= len; ++i) {
          FREE(tree->nodes.pool[i]);
       }
       FREE(tree->nodes.pool);
+      tree->nodes.bucket_idx = 0;
 
       for (size_t i = 0; i <= tree->children.bucket_idx; ++i) {
          FREE(tree->children.pool[i]);
       }
       FREE(tree->children.pool);
+      tree->children.bucket_idx = 0;
 
       _vartree_dealloc(&tree->vt);
       if (tree->v_list) { FREE(tree->v_list->pool); FREE(tree->v_list); }
 
-      FREE(tree);
    }
+
+   free(tree);
 }
 
 
@@ -607,34 +612,34 @@ static void _print_node(const NlNode* node, FILE* f, const Container *ctr)
    char nodestyle[256];
    const char *varname;
 
-   const char ownVarStyle[] = "lightblue1";
-   const char callFnStyle[] = "lightseagreen";
-   const char mulOpStyle[]  = "lightsalmon1";
-
    switch (op) {
    case NlNode_Cst:
       (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
                ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
       nodestyle[0] = 0;
       break;
+
    case NlNode_Var:
       varname = ctr ? ctr_printvarname(ctr, node->value-1) : "??";
       (void)snprintf(oparg, sizeof(oparg), "%u\\n %s", node->value, varname);
-      (void)snprintf(nodestyle, 255, ",color=%s", ownVarStyle);
+      (void)snprintf(nodestyle, 255, ",color=%s", nlTreeStyle_VarNode);
       break;
+
    case NlNode_Call1:
    case NlNode_Call2:
    case NlNode_CallN:
       (void)snprintf(oparg, sizeof(oparg), "(%u): %s", node->value, func_code_name[node->value]);
-      (void)snprintf(nodestyle, 255, ",color=%s", callFnStyle);
+      (void)snprintf(nodestyle, 255, ",color=%s", nlTreeStyle_CallFn);
       break;
+
    case NlNode_Mul:
       if (node->oparg == NLNODE_OPARG_FMA) {
          (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
                   ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
-         (void)snprintf(nodestyle, 255, ",color=%s", mulOpStyle);
+         (void)snprintf(nodestyle, 255, ",color=%s", nlTreeStyle_MulOp);
          break;
       }
+
    FALLTHRU
    case NlNode_Add:
    case NlNode_Sub:
@@ -648,16 +653,17 @@ static void _print_node(const NlNode* node, FILE* f, const Container *ctr)
       case NLNODE_OPARG_VAR:
          varname = ctr ? ctr_printvarname(ctr, node->value-1) : "??";
          (void)snprintf(oparg, sizeof(oparg), "%u\\n %s", node->value, varname);
-         (void)snprintf(nodestyle, 255, ",color=%s", ownVarStyle);
+         (void)snprintf(nodestyle, 255, ",color=%s", nlTreeStyle_VarNode);
          goto print;
       case NLNODE_OPARG_FMA:
          oparg[0] = '\0';
          //(void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
          //               ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
-         (void)snprintf(nodestyle, 255, ",color=%s", mulOpStyle);
+         (void)snprintf(nodestyle, 255, ",color=%s", nlTreeStyle_MulOp);
          goto print;
       default: ;
       }
+
    FALLTHRU
    default:
       nodestyle[0] = 0;
@@ -675,15 +681,12 @@ static void print_edges(const NlNode* node, FILE* f)
 {
    if (!node || node->children_max == 0) return;
 
-   fprintf(f, " A%p -> {", (void*)node);
-   bool first = true;
+   fputs("\n", f);
    for (size_t i = 0; i < node->children_max; ++i)
    {
       if (!node->children[i]) continue;
-      if (!first) { fputs(", ", f); } else { first = false; }
-      fprintf(f, "A%p", (void*)node->children[i]);
+      fprintf(f, " A%p -> A%p [label=\"%zu\"]\n", (void*)node, (void*)node->children[i], i);
    }
-   fputs("}\n", f);
 
    for (size_t i = 0; i < node->children_max; ++i)
    {
@@ -1910,8 +1913,12 @@ static int _check_math_error1(unsigned fn_code, double x1)
 #undef VAR_VAL
 #undef GET_VALUE
 #undef EVAL
-#undef _DPRINT_VAR
+#undef NLTREE_PRINT_VAR
 
+
+/* ----------------------------------------------------------------------
+ * Define the tree evaluation via an include
+ * ---------------------------------------------------------------------- */
 #define EVAL_NAME _evalctr
 #define GETVALUE_NAME _get_valuectr
 
@@ -1925,7 +1932,7 @@ static int _check_math_error1(unsigned fn_code, double x1)
 #define GET_VALUE(NODE, VAL) GETVALUE_NAME(NODE, ctr, VAL)
 #define EVAL(NODE, VAL) EVAL_NAME(NODE, ctr, VAL)
 
-#define _DPRINT_VAR(IDX, VAL) \
+#define NLTREE_PRINT_VAR(IDX, VAL) \
   DPRINT("%s :: var %s (%d) = %e\n", __func__, \
   ctr_printvarname(ctr, VIDX_R(IDX)), VIDX_R(IDX), VAL)
 
@@ -1960,7 +1967,7 @@ int nltree_eval(Container *ctr, NlTree *tree, double *val)
 #undef VAR_VAL
 #undef GET_VALUE
 #undef EVAL
-#undef _DPRINT_VAR
+#undef NLTREE_PRINT_VAR
 
 #define EVAL_NAME _evalat
 #define GETVALUE_NAME _get_valueat
@@ -1975,7 +1982,7 @@ int nltree_eval(Container *ctr, NlTree *tree, double *val)
 #define GET_VALUE(NODE, VAL) GETVALUE_NAME(NODE, x, arr, VAL)
 #define EVAL(NODE, VAL) EVAL_NAME(NODE, x, arr, VAL)
 
-#define _DPRINT_VAR(IDX, VAL) \
+#define NLTREE_PRINT_VAR(IDX, VAL) \
   DPRINT("%s :: var #%d = %e\n", __func__, \
   VIDX_R(IDX), VAL)
 

@@ -67,7 +67,7 @@ static_assert(ARRAY_SIZE(opnames_offsets) == nlOpcode_size,
               "Incompatible sizes!");
 
 
-const char * instr_code_name(enum nlopcode opcode)
+const char * nlinstr2str(enum nlopcode opcode)
 {
    if (opcode >= nlOpcode_size) { return "unknown GAMS opcode"; }   
 
@@ -116,23 +116,23 @@ const char * const func_code_name[fndummy+1] = {
    "dummy"
 };
 
-const char *instr_getfuncname(unsigned ifunc)
+const char *nlopcode_argfunc2str(int arg)
 {
-   if (ifunc == fnpower) {
+   if (arg == fnpower) {
       return "POWER";
    }
-   if (ifunc == fnrpower || ifunc == fncvpower || ifunc == fnvcpower) {
+   if (arg == fnrpower || arg == fncvpower || arg == fnvcpower) {
       return "**";
    }
 
-   return func_code_name[ifunc];
+   return arg < ARRAY_SIZE(func_code_name) ? func_code_name[arg] : "ERROR";
 }
 
-void gams_opcode_print(unsigned mode, int *instrs, int *args, int len)
+void nlopcode_print(unsigned mode, int *instrs, int *args, int len)
 {
    for (int i = 0; i < len; ++i) {
       printout(mode, "[%5d]\t  Instr: %10s, Field: %5d\n",
-               i, instr_code_name(instrs[i]), args[i]);
+               i, nlinstr2str(instrs[i]), args[i]);
 
    }
 }

@@ -45,20 +45,6 @@
 #include "nltree_priv.h"
 #endif
 
-#ifndef NDEBUG
-#define GMOEXPORT_DEBUG(str, ...) trace_stack("[GMOexport] " str "\n", __VA_ARGS__) \
-//  { GDB_STOP(); }
-#else
-#define GMOEXPORT_DEBUG(...)
-#endif
-
-#ifndef NDEBUG
-#define SOLREPORT_DEBUG(str, ...) trace_solreport("[solreport] " str "\n", __VA_ARGS__) \
-//  { GDB_STOP(); }
-#else
-#define SOLREPORT_DEBUG(...)
-#endif
-
 
 UNUSED static int _debug_check_nlcode(int opcode, int value, size_t nvars, size_t poolen)
 {
@@ -148,10 +134,10 @@ static void _debug_var_util(Var *v, int indx, double* jacval, int vidx,
          assert(v->type < VAR_TYPE_LEN);
          _track_NAN(indx, jacval, vidx, v->idx, equidx, isvarNL);
          DPRINT("Adding variable %s #%d (original index = %d) of type %d; lo = %e; lvl = %e; up = %e\n",
-                 buffer, vidx, v->idx, v->type, v->bnd.lb, v->level, v->bnd.ub);
+                 buffer, vidx, v->idx, v->type, v->bnd.lb, v->value, v->bnd.ub);
 
          for (unsigned j = 0; j < (unsigned)indx; ++j) {
-           DPRINT("Equation %d, jacval = %d; isNL = %d; ", equidx[j], jacval[j], isvarNL[j]);
+           DPRINT("Equation %d, jacval = %e; isNL = %d; ", equidx[j], jacval[j], isvarNL[j]);
          }
 
          // this is required to silence the warning
@@ -262,6 +248,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
    assert(rosetta_equs);
 
    for (size_t i = 0, j = 0; i < cdat->total_m; ++i) {
+
      if (fops && !fops->keep_equ(fops->data, i)) {
          EquInfo equinfo;
          S_CHECK(rctr_get_equation(ctr, i, &equinfo));
@@ -291,6 +278,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
                ctr->equs[i].basis = basis;
 
             } else {
+
                ctr->equs[i].value = value;
                ctr->equs[i].multiplier = multiplier;
                ctr->equs[i].basis = basis;
@@ -307,6 +295,9 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
             ctr->equs[i].basis = BasisUnset;
          }
 
+     /* ----------------------------------------------------------------------
+      * This equations was present in the downstrean model
+      * ---------------------------------------------------------------------- */
      } else {
          ctr->equs[i].value = dbl_from_gams(gmoGetEquLOne(gmo, j), gms_pinf, gms_minf, gms_na);
          double marginal = dbl_from_gams(gmoGetEquMOne(gmo, j), gms_pinf, gms_minf, gms_na);
@@ -706,7 +697,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
          if (!NLequs[equidx[indx]] && vtmp->isNL) {
             NLequs[equidx[indx]] = true;
             DPRINT("Equation %d is NL due to variable #%d (#%d)\n",
-                   equidx[indx], vidx, vtmp->vidx);
+                   equidx[indx], vi, vtmp->vi);
          }
 
          indx++;

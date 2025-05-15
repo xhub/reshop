@@ -1,4 +1,6 @@
 #include "asprintf.h"
+#include "ctr_gams.h"
+#include "ctr_rhp.h"
 
 #if defined(_WIN32)
 
@@ -18,6 +20,7 @@
 
 #include "checks.h"
 #include "compat.h"
+#include "dot_png.h"
 #include "mdl.h"
 #include "nltree.h"
 #include "rhp_dot_exports.h"
@@ -75,13 +78,12 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
    FILE* f = fopen(fname, "w");
 
    if (!f) {
-      error("%s :: Could not create file named '%s'\n", __func__, fname);
+      error("[system] ERROR: Could not create file named '%s'\n", fname);
       return Error_SystemError;
    }
 
    IO_CALL_EXIT(fputs("digraph structs {\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
-   IO_CALL_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'",
-                        mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
+   IO_CALL_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
 
    mpid_t mpid = ctr->equmeta ? ctr->equmeta[ei].mp_id : MpId_NA;
 
@@ -111,53 +113,6 @@ _exit:
    return status;
 }
 
-int dot2png(const char *fname)
-{
-   char *cmd;
-   IO_CALL(asprintf(&cmd, "dot -Tpng -O \"%s\"", fname));
-   int rc = system(cmd); /* YOLO */
-   if (rc) {
-      error("[empdag] executing '%s' yielded return code %d\n", cmd, rc);
-      FREE(cmd);
-   }
-   FREE(cmd);
-
-   return OK;
-}
-
-int view_png(const char *fname, Model *mdl)
-{
-   bool free_png_viewer = false;
-   char *png_viewer = optvals(mdl, Options_Png_Viewer);
-
-  if (!png_viewer || png_viewer[0] == '\0') {
-      free(png_viewer); // optvals requires the callee to free
-#ifdef __APPLE__
-      png_viewer = "open -f ";
-#elif defined(__linux__)
-      png_viewer = "feh - &";
-#else
-      png_viewer = NULL;
-#endif
-   } else {
-      free_png_viewer = true;
-   }
-
-   if (png_viewer) {
-      char *cmd;
-      IO_CALL(asprintf(&cmd, "cat \"%s.png\" | %s", fname, png_viewer));
-      int rc = system(cmd); /* YOLO */
-      if (rc) {
-         error("[empdag] ERROR: executing '%s' yielded return code %d\n", cmd, rc);
-      }
-      FREE(cmd);
-   }
-
-   if (free_png_viewer) { FREE(png_viewer); }
-
-   return OK;
-}
-
 int view_equ_as_png(Model *mdl, rhp_idx ei)
 {
    int status = OK;
@@ -165,11 +120,28 @@ int view_equ_as_png(Model *mdl, rhp_idx ei)
 
    S_CHECK(chk_ei(mdl, ei, __func__));
 
+   if (mdl_is_rhp(mdl)) {
+      S_CHECK(rctr_getnl(&mdl->ctr, &mdl->ctr.equs[ei]));
+   } if (mdl->backend == RHP_BACKEND_GAMS_GMO && !mdl->ctr.equs[ei].tree) {
+      int len, *instrs, *args;
+
+      Container *ctr = &mdl->ctr;
+      S_CHECK(gctr_getopcode(ctr, ei, &len, &instrs, &args));
+
+      nlopcode_print(PO_ERROR, instrs, args, len);
+      S_CHECK(equ_nltree_fromgams(&ctr->equs[ei], len, instrs, args));
+
+      // HACK ARENA
+      ctr_relmem_recursive_old(ctr);
+   }
+
+
    S_CHECK_EXIT(equ2dot(mdl, ei, &fname));
 
    if (fname) {
       S_CHECK_EXIT(dot2png(fname));
-      S_CHECK_EXIT(view_png(fname, mdl));
+      S_CHECK_EXIT(view_png_mdl(fname, mdl));
+      /* FIXME free fname? */
    }
 
 _exit:
@@ -186,6 +158,15 @@ NONNULL static int export_all_equs(Model *mdl)
    return OK;
 }
 
+/**
+ * @brief Export (some) equations as DOT files
+ *
+ * The option display_equations controls the behavior of this function
+ *
+ * @param mdl   the model
+ *
+ * @return      the error code 
+ */
 int dot_export_equs(Model *mdl)
 {
    int status = OK;
@@ -197,10 +178,35 @@ int dot_export_equs(Model *mdl)
 
    if (!strncmp(optval, "+all", len)) {
       S_CHECK_EXIT(export_all_equs(mdl));
+      goto _exit;
    }
 
    /* TODO: support filtering once symbol names have been sorted */
+
+   char *start = optval;
+   do {
+      char *end = strchr(start, ',');
+      len = end ? end - start : strlen(start);
+
+      for (size_t i = 0, nequs = mdl_nequs_total(mdl); i < nequs; ++i) {
+         if (!strncasecmp(start, mdl_printequname(mdl, i), len)) {
+            S_CHECK_EXIT(view_equ_as_png(mdl, i));
+         }
+      } 
+
+      start = end ? end + 1 : NULL; /* consumer ',' */
+   } while (start);
+
 _exit:
    free(optval);
    return status;
+}
+
+int view_png_mdl(const char *fname, Model *mdl)
+{
+   char * png_viewer = optvals(mdl, Options_Png_Viewer);
+   int rc = view_png(fname, png_viewer);
+   free(png_viewer); // optvals requires the callee to free
+
+   return rc;
 }

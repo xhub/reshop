@@ -79,8 +79,6 @@ Model *mdl_new(BackendType backend);
 Model *mdl_borrow(Model *mdl);
 int mdl_trimmem(Model *mdl) NONNULL;
 
-void *mdl_getmem(Model *mdl) NONNULL;
-
 int mdl_solve(Model *mdl) NONNULL;
 int mdl_postprocess(Model *mdl) NONNULL;
 
@@ -246,6 +244,30 @@ static inline bool mdl_valid_ei_(const Model *mdl, rhp_idx ei, const char *fn) {
 NONNULL static inline void mdl_resettype(Model *mdl)
 {
    mdl_settype(mdl, MdlType_none);
+}
+
+/**
+ * @brief Get the pool, the array of constant values for the NL expressions
+ *
+ * @param mdl   the model
+ *
+ * @return      the pool pointer
+ */
+static inline NlPool *mdl_getpool(Model *mdl) { return mdl->ctr.pool; }
+
+/* ----------------------------------------------------------------------
+ * Memory management
+ * ---------------------------------------------------------------------- */
+NONNULL static inline M_ArenaTempStamp mdl_memtmp_init(Model *mdl) {
+   return ctr_memtmp_init(&mdl->ctr);
+}
+
+NONNULL static inline void *mdl_memtmp_get(Model *mdl, size_t sz) {
+   return ctr_memtmp_get(&mdl->ctr, sz);
+}
+
+NONNULL static inline void mdl_memtmp_fini(M_ArenaTempStamp astamp) {
+   ctr_memtmp_fini(astamp);
 }
 
 #endif /* RHP_MDL_H */

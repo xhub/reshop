@@ -750,8 +750,7 @@ int equ_nltree_fromgams(Equ* e, unsigned codelen,
                         const int args[VMT(restrict codelen)])
 {
    if (e->tree) {
-      error("%s :: the tree for equation %d already exists\n",
-               __func__, e->idx);
+      error("%s :: the tree for equation %d already exists\n", __func__, e->idx);
       return Error_UnExpectedData;
    }
 

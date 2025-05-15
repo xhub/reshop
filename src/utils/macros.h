@@ -162,6 +162,9 @@ void backtrace_(const char *expr, int status);
 #define A_CHECK(D,EXPR) { (D) = EXPR; if (RHP_UNLIKELY(!(D))) { \
   BACKTRACE(EXPR, Error_InsufficientMemory); return Error_InsufficientMemory; } }
 
+#define A_CHECK_(D,EXPR,ACTION) { (D) = EXPR; if (RHP_UNLIKELY(!(D))) { \
+  BACKTRACE(EXPR, Error_RuntimeError); {ACTION}; } }
+
 #define AA_CHECK(D,EXPR) { (D) = EXPR; if (RHP_UNLIKELY(!(D))) { BACKTRACE(EXPR, Error_NullPointer); \
   return NULL; } }
 

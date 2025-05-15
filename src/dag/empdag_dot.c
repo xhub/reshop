@@ -20,6 +20,7 @@
 #endif
 
 #include "container.h"
+#include "dot_png.h"
 #include "empdag.h"
 #include "empinfo.h"
 #include "mathprgm.h"
@@ -347,7 +348,7 @@ int empdag2dotfile(const EmpDag * empdag, const char* fname)
 
    if (!optvalb(empdag->mdl, Options_Display_EmpDag)) { return OK; }
 
-   return view_png(fname, empdag->mdl);
+   return view_png_mdl(fname, empdag->mdl);
 
 _exit: /* this is reached only when we error */
    SYS_CALL(fclose(f));

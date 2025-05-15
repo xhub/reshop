@@ -99,7 +99,7 @@ enum nlconst {
    nlconst_one       = 1,
    nlconst_ten       = 2,
    nlconst_tenth     = 3,
-   nlconst_quater    = 4,
+   nlconst_quarter   = 4,
    nlconst_half      = 5,
    nlconst_two       = 6,
    nlconst_four      = 7,
@@ -115,8 +115,8 @@ enum nlconst {
    nlconst_size      = nlconst_five,
 };
 
-const char* instr_getfuncname(unsigned ifunc);
-const char* instr_code_name(enum nlopcode instr);
-void gams_opcode_print(unsigned mode, int *instrs, int *args, int len);
+const char* nlopcode_argfunc2str(int ifunc);
+const char* nlinstr2str(enum nlopcode instr);
+void nlopcode_print(unsigned mode, int *instrs, int *args, int len);
 
 #endif /* INSTR_H */

@@ -485,13 +485,14 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
    /* ----------------------------------------------------------------------
     * Delete the nltree for equations coming from the GAMS model
     *
-    * TODO(xhub) this needs to go with lazy loading
+    * FIXME(xhub) clarify ownership here ...
     * ---------------------------------------------------------------------- */
 
    if (delete_equ_trees) {
-      for (size_t i = inherited_equ_start; i < inherited_equ_stop; ++i) {
-         nltree_dealloc(ctr->equs[i].tree);
-      }
+      //for (size_t i = inherited_equ_start; i < inherited_equ_stop; ++i) {
+      //   nltree_dealloc(ctr->equs[i].tree);
+      //   ctr->equs[i].tree = NULL;
+      //}
    }
 
    FREE(ctr->equs);

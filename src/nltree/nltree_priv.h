@@ -30,7 +30,7 @@ typedef enum NLNODE_OP {
    NlNode_Cst,      /**< numerical constant */
    NlNode_Var,      /**< variable */
    NlNode_Add,      /**< Addition */
-   NlNode_Sub,      /**< Substitution */
+   NlNode_Sub,      /**< Substraction */
    NlNode_Mul,      /**< Multiplication */
    NlNode_Div,      /**< Division */
    NlNode_Call1,    /**< function call with 1 argument */
