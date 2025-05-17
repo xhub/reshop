@@ -456,7 +456,7 @@ totalwelfare(s) = sum(t,thermalprofit(t,s))+ sum(h,hydroprofit(h,s))+ demandwelf
 
 * Few checks
 PARAMETER hpobjL(h);
-hpobjL(h) = pi1.l*Util(uh1.l(h)) + CVaRhp.l(h);
+hpobjL(h) = -pi1.l*Util(uh1.l(h)) + CVaRhp.l(h);
 abort$[ smax{h, abs(hpObjL(h) - hpobj.l(h))} > 1e-10 ]  'bad hpobj', hpobjL;
 
 

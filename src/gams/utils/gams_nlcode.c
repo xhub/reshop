@@ -250,6 +250,7 @@ static inline void u32lifo_push(u32 **lifo, u32 elt) {
    **lifo = elt; (*lifo)++;
 }
 
+#ifdef UNUSED_2025_05_16
 static inline void u32lifo_pushN(u32 **lifo, u32 elt, u8 n) {
    NLCODE_DEBUG("STACK_PUSH: %u; %u times\n", elt, n);
    for (u8 i = 0; i < n; ++i) {
@@ -263,6 +264,7 @@ static inline u8 degree_inc(u8 deg)
 
    return deg+1;
 }
+#endif
 
 static inline u8 degree_add(u8 degL, u8 degR)
 {
@@ -309,11 +311,11 @@ static inline u8 degree_div(u8 degNumer, u8 degDenom)
 //   }
 }
 
-static inline bool valid_stack(u8 *stack, u8 *stack_top, u8 sz) {
+DBGUSED static inline bool valid_stack(u8 *stack, u8 *stack_top, u8 sz) {
    return (stack >= stack_top && stack - stack_top < sz);
 }
 
-static inline bool nonempty_stack(u8 *stack, u8 *stack_top) {
+DBGUSED static inline bool nonempty_stack(u8 *stack, u8 *stack_top) {
    return (stack > stack_top);
 }
 
@@ -370,7 +372,6 @@ u32 compute_nlcode_degree(int len, const int instr[VMT(restrict len)],
    u8 stack_arr[25];
    u8 *stack_top = stack_arr, *stack = stack_arr;
    u8 cur_degree = 0, Lchild_degree = 0;
-   u32 nvars = 0;
 
    for (int i = 0; i < len; ++i, instr++, args++) {
       NLCODE_DEG_DEBUG(*instr, *args, cur_degree, stack, stack_arr);
@@ -396,15 +397,15 @@ u32 compute_nlcode_degree(int len, const int instr[VMT(restrict len)],
       case nlUMinV:
       case nlPushV:
          u8lifo_push(&stack, cur_degree); assert(valid_stack(stack, stack_top, sizeof(stack)));
-         cur_degree = 1; nvars++;  /* Reset degree */
+         cur_degree = 1; /* Reset degree */
       break;
       case nlAddV:
       case nlSubV:
-         cur_degree++; nvars++; break;
+         cur_degree++; break;
       case nlMulV:
-         cur_degree = degree_mul(cur_degree, 1); nvars++; break;
+         cur_degree = degree_mul(cur_degree, 1); break;
       case nlDivV:
-         cur_degree = degree_div(cur_degree, 1); nvars++; break;
+         cur_degree = degree_div(cur_degree, 1); break;
 
       case nlMulIAdd:
       case nlAdd:
@@ -506,8 +507,8 @@ u32 compute_nlcode_degree(int len, const int instr[VMT(restrict len)],
    return cur_degree;
 }
 
-int gams_nlcode2dot(Model *mdl, const int instr[VMT(static restrict 1)],
-                    const int args[VMT(static restrict 1)], char **fname_dot)
+int gams_nlcode2dot(Model *mdl, const int * restrict instr,
+                    const int * restrict args, char **fname_dot)
 {
    M_ArenaTempStamp arena_stamp;
 
@@ -981,7 +982,7 @@ GamsOpCodeTree* gams_opcodetree_new(int len, const int instr[VMT(static restrict
    OpCodeTreeSizes tree_sizes = compute_nlcode_tree_sizes(len, instr, args);
 
    GamsOpCodeTree *otree;
-   MALLOC_NULL(otree, GamsOpCodeTree, 1);
+   CALLOC_NULL(otree, GamsOpCodeTree, 1);
 
    u32 *dat, *node_stack;
    MALLOC_EXIT_NULL(dat, u32, tree_sizes.stack_maxlen + tree_sizes.idx_sz + len + 1);

@@ -1,6 +1,8 @@
 #ifndef GAMS_NLCODE_PRIV_H
 #define GAMS_NLCODE_PRIV_H
 
+#include <stdint.h>
+
 #include "rhp_compiler_defines.h"
 #include "rhp_defines.h"
 

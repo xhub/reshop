@@ -130,8 +130,7 @@ _exit:
 
 static bool isdiveq(UNUSED unsigned op1, UNUSED unsigned op2, UNUSED unsigned opp2)
 {
-//   if (op1 == nlDivV && op2 == nlPushV && opp2 == nlDiv) return true;
-   return false;
+   return (op1 == nlDivV && op2 == nlPushV && opp2 == nlDiv);
 }
 
 static int _check_no_diff(const int *instrs1, const int *args1, const int *instrs2,
@@ -156,9 +155,9 @@ static int _check_no_diff(const int *instrs1, const int *args1, const int *instr
             continue;
          }
 
-         if (i+1 < codelen1 && isdiveq(instrs2[j],
-                           instrs1[i], instrs1[i+1])) {
+         if (i+1 < codelen1 && isdiveq(instrs2[j], instrs1[i], instrs1[i+1])) {
             i += 2; ++j;
+            continue;
          }
 
          goto _error;
@@ -172,11 +171,16 @@ _incr:
 
 _error:
 
-   printf("ERROR: (codelen1  = %zu, codelen2 = %zu\n", codelen1, codelen2);
-   printf("failure at indx1 = %zu and indx2 = %zu\n", i, j);
-   printf("   instr = %s arg = %5d\n", nlinstr2str(instrs1[i]), args1[i]);
-   printf("   instr = %s arg = %5d\n", nlinstr2str(instrs2[j]), args2[j]);
+   (void)fprintf(stderr, "ERROR: codelen1  = %zu, codelen2 = %zu\n", codelen1, codelen2);
+   (void)fprintf(stderr, "failure at indx1 = %zu and indx2 = %zu\n", i, j);
+   (void)fprintf(stderr, "   instr = %s arg = %5d\n", nlinstr2str(instrs1[i]), args1[i]);
+   (void)fprintf(stderr, "   instr = %s arg = %5d\n", nlinstr2str(instrs2[j]), args2[j]);
 
+   (void)fputs("\nFirst opcode:\n", stderr);
+   nlopcode_print(PO_ERROR, instrs1, args1, codelen1);
+   (void)fputs("\nSecond opcode:\n", stderr);
+   nlopcode_print(PO_ERROR, instrs2, args2, codelen2);
+ 
    return Error_InvalidValue;
 }
 

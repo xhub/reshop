@@ -137,15 +137,21 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
       case NlNode_Sub: {
          double res;
          double v1 = NAN;
-         ptrdiff_t start = 0;
-         ptrdiff_t len = node->children_max;
+         unsigned len = node->children_max, start = len-1; assert(len > 0);
         /* ----------------------------------------------------------------------
-         * SUB has the folllowing convention: child0 - child1 { - child 2 - ... - childN }
+         * SUB has the folllowing convention: child1 - child0.
+         *
+         * FIXME: This is broken for more than 2 children
          *
          * - child0 is loaded in res
-         * - for 
+         * - 
          *
          * ---------------------------------------------------------------------- */
+
+         if (len > 2) {
+            error("[nltree] ERROR: for sub node, only 2 children are supported for now, got %u\n", len);
+            return Error_NotImplemented;
+         }
 
          NLTREE_PRINT("START: key = %s @ %p;\n", opcode_names[key], (void*)node);
 
@@ -158,11 +164,12 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
             NLTREE_PRINT_VAR(node->value, res);
 
          } else {
-            for (; start < len; ++start) {
+
+            for (; start < len; --start) {
                NlNode *child = node->children[start];
                if (!child) continue;
                S_CHECK(GET_VALUE(child, &res));
-               start++;
+               start--;
                break;
             }
 
@@ -173,7 +180,7 @@ EVAL_DEF(const NlNode * restrict node, double * restrict val)
          }
 
          NLTREE_PRINT("%s :: start = %zd\n", __func__, start);
-         for (; start < len; start++) {
+         for (; start < len; --start) {
             NlNode *child = node->children[start];
             if (!child) continue;
             S_CHECK(GET_VALUE(child, &v1));

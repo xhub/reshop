@@ -17,8 +17,8 @@ typedef struct {
    u32 *node_stack;
 } GamsOpCodeTree;
 
-int gams_nlcode2dot(Model *mdl, const int instr[VMT(static restrict 1)],
-                    const int args[VMT(static restrict 1)],
+int gams_nlcode2dot(Model *mdl, const int * restrict instr,
+                    const int * restrict args,
                     char **fname_dot) NONNULL_AT(4);
 // FIXME: is this necessary?
 //u32 compute_nlcode_tree_sizes(int len, int instr[VMT(static restrict len)],

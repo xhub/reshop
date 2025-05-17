@@ -117,6 +117,6 @@ enum nlconst {
 
 const char* nlopcode_argfunc2str(int ifunc);
 const char* nlinstr2str(enum nlopcode instr);
-void nlopcode_print(unsigned mode, int *instrs, int *args, int len);
+void nlopcode_print(unsigned mode, const int *instrs, const int *args, int len);
 
 #endif /* INSTR_H */
