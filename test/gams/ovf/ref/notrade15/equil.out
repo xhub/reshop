@@ -146,5 +146,5 @@ scenario        n = 1        n = 2       n = 1      n = 2
 
 Objective values       Thermal                Hydro
                   n = 1        n = 2       n = 1      n = 2
-                 -0.29562        -0.19852
+                 -0.29562       -15.11714
 

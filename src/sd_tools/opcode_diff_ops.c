@@ -47,6 +47,8 @@ static inline void copyblock(int ** restrict deriv_instrs,
    int i, istart = 0, iend = -1;
 
    if (expend[s] > -1) {
+      /* ohuber: added assert(s > 0) to fix bug reading before start */
+      assert(s > 0);
       if (expend[s-1] >= -1) {          /* no swap */
          istart = expend[s-1] + 1;
          iend = expend[s];

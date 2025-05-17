@@ -128,7 +128,7 @@ const char *nlopcode_argfunc2str(int arg)
    return arg < ARRAY_SIZE(func_code_name) ? func_code_name[arg] : "ERROR";
 }
 
-void nlopcode_print(unsigned mode, int *instrs, int *args, int len)
+void nlopcode_print(unsigned mode, const int *instrs, const int *args, int len)
 {
    for (int i = 0; i < len; ++i) {
       printout(mode, "[%5d]\t  Instr: %10s, Field: %5d\n",

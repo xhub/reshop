@@ -82,7 +82,7 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
       return Error_SystemError;
    }
 
-   IO_CALL_EXIT(fputs("digraph structs {\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
+   IO_CALL_EXIT(fputs("digraph structs {ordering=out;\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
    IO_CALL_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
 
    mpid_t mpid = ctr->equmeta ? ctr->equmeta[ei].mp_id : MpId_NA;

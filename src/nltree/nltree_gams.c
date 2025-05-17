@@ -122,6 +122,10 @@ static size_t _greedy_build(const int * restrict instrs, const int *args,
    size_t k_orig = ++k;
    enum NLNODE_OP op_class = get_op_class(opcode);
 
+   if (op_class == NlNode_Sub || op_class == NlNode_Div) {
+      return k - k_orig;
+   }
+
    while (k < kmax) {
       int instr = instrs[k];
       enum NLNODE_OP iclass = get_op_class(instr);
@@ -276,9 +280,9 @@ NlTree* nltree_buildfromgams(unsigned codelen,
    while (k < codelen) {
 skip_k_incr:
      {
-      const enum nlopcode key = instrs[k];
+      const enum nlopcode instr = instrs[k];
 
-      switch (key) {
+      switch (instr) {
       case nlNoOp:
       case nlHeader:
          break;
@@ -294,33 +298,27 @@ skip_k_incr:
          PUSH_ON_STACK(s, &nodestack, &codelen);
          A_CHECK_EXIT(curnode, nlnode_alloc_nochild(tree));
          nb_nodes++;
-         curnode->op = get_op_class(key);
+         curnode->op = get_op_class(instr);
          curnode->oparg = NLNODE_OPARG_UNSET;
 //         _set_print_now(curnode);
-         curnode->value = (key != nlPushZero) ? args[k] : 0;
+         curnode->value = (instr != nlPushZero) ? args[k] : 0;
          nodestack[s] = curnode;
          break;
 
       case nlAdd:
-      case nlSub:
       case nlMul:
-      case nlDiv:
       case nlAddV:
-      case nlSubV:
       case nlMulV:
-      case nlDivV:
       case nlAddI:
-      case nlSubI:
       case nlMulI:
-      case nlDivI:
       case nlMulIAdd:
       {
          // TODO(xhub) memory assignment is not great, since if we
          // have terms like (pushV MulIAdd)
-         size_t fwd = _greedy_build(instrs, args, key, k, codelen);
+         size_t fwd = _greedy_build(instrs, args, instr, k, codelen);
          A_CHECK_EXIT(curnode, nlnode_alloc(tree, fwd+2));
          nb_nodes++;
-         curnode->op = get_op_class(key);
+         curnode->op = get_op_class(instr);
          /*  TODO(Xhub) this NLNODE_OPARG_FMA case is really a mess */
          if (fwd == 0 && gams_get_optype(instrs[k]) == NLNODE_OPARG_FMA) {
             curnode->oparg = NLNODE_OPARG_FMA;
@@ -329,13 +327,17 @@ skip_k_incr:
             curnode->oparg = NLNODE_OPARG_UNSET; //gams_get_optype(key);
             curnode->value = 0;
          }
+
          size_t offset = k;
          S_CHECK_EXIT(nlnode_add_child(curnode, nodestack[s], 0));
          POP_FROM_STACK(s);
+
          size_t d = 0;
+
          for (size_t i = 1; i + d < fwd + 2; ++i) {
             bool inner_prod_case = false;
             size_t kk = offset + i - 1 + d;
+
             if (get_op_class(instrs[kk]) != curnode->op) {
                assert(get_op_class(instrs[kk+1]) == curnode->op);
                assert(instrs[kk+1] == nlMulIAdd);
@@ -343,8 +345,10 @@ skip_k_incr:
                d++;
                inner_prod_case = true;
             }
+
             enum NLNODE_OPARG optype = gams_get_optype(instrs[kk]);
             switch (optype) {
+
             case NLNODE_OPARG_CST:
             {
                S_CHECK_EXIT(nlnode_add_child(curnode, nlnode_alloc_nochild(tree), i));
@@ -354,6 +358,7 @@ skip_k_incr:
                curnode->children[i]->value = args[kk];
                break;
             }
+
             case NLNODE_OPARG_VAR: {
                S_CHECK_EXIT(nlnode_add_child(curnode, nlnode_alloc_nochild(tree), i));
                nb_nodes++;
@@ -362,6 +367,7 @@ skip_k_incr:
                curnode->children[i]->value = args[kk];
                break;
             }
+
             case NLNODE_OPARG_FMA: {
                // mulI part
                NlNode *tmpnode = nlnode_alloc_fixed(tree, 1);
@@ -401,20 +407,74 @@ skip_k_incr:
             }
             k += inner_prod_case ? 2 : 1 ;
          }
-         for (size_t i = curnode->children_max - d; i < curnode->children_max;
-               ++i) {
-            curnode->children[i] = NULL;
+
+         for (size_t cmax = curnode->children_max, j = cmax - d; j < cmax; ++j) {
+            curnode->children[j] = NULL;
          }
+
          PUSH_ON_STACK(s, &nodestack, &codelen);
          nodestack[s] = curnode;
          goto skip_k_incr;
       }
          break;
 
+      case nlSub:
+      case nlDiv:
+      case nlSubV:
+      case nlDivV:
+      case nlSubI:
+      case nlDivI:
+      {
+         // TODO(xhub) memory assignment is not great, since if we
+         // have terms like (pushV MulIAdd)
+         A_CHECK_EXIT(curnode, nlnode_alloc(tree, 2));
+         nb_nodes++;
+         curnode->op = get_op_class(instr);
+         curnode->oparg = NLNODE_OPARG_UNSET;
+         curnode->value = 0;
+
+        enum NLNODE_OPARG optype = gams_get_optype(instr);
+        switch (optype) {
+
+        case NLNODE_OPARG_CST:
+        {
+           S_CHECK_EXIT(nlnode_add_child(curnode, nlnode_alloc_nochild(tree), 0));
+           nb_nodes++;
+           curnode->children[0]->op = NlNode_Cst;
+           curnode->children[0]->oparg = optype;
+           curnode->children[0]->value = args[k];
+           break;
+        }
+
+        case NLNODE_OPARG_VAR: {
+           S_CHECK_EXIT(nlnode_add_child(curnode, nlnode_alloc_nochild(tree), 0));
+           nb_nodes++;
+           curnode->children[0]->op = NlNode_Var;
+           curnode->children[0]->oparg = optype;
+           curnode->children[0]->value = args[k];
+           break;
+        }
+
+        default:
+        {
+           S_CHECK_EXIT(nlnode_add_child(curnode, nodestack[s], 0));
+           POP_FROM_STACK(s);
+        }
+         }
+
+        S_CHECK_EXIT(nlnode_add_child(curnode, nodestack[s], 1))
+        POP_FROM_STACK(s);
+
+
+         PUSH_ON_STACK(s, &nodestack, &codelen);
+         nodestack[s] = curnode;
+         }
+         break;
+
       case nlUMin:
          curnode = nlnode_alloc_fixed(tree, 1);
          nb_nodes++;
-         curnode->op = get_op_class(key);
+         curnode->op = get_op_class(instr);
          curnode->oparg = NLNODE_OPARG_UNSET;
          curnode->value = 0;
          S_CHECK_EXIT(nlnode_add_child(curnode, nodestack[s], 0));
@@ -425,7 +485,7 @@ skip_k_incr:
          PUSH_ON_STACK(s, &nodestack, &codelen);
          curnode = nlnode_alloc_nochild(tree);
          nb_nodes++;
-         curnode->op = get_op_class(key);
+         curnode->op = get_op_class(instr);
          curnode->oparg = NLNODE_OPARG_VAR;
          curnode->value = args[k];
          nodestack[s] = curnode;
@@ -434,7 +494,7 @@ skip_k_incr:
       case nlCallArg1:
          curnode = nlnode_alloc_fixed(tree, 1);
          nb_nodes++;
-         curnode->op = get_op_class(key);
+         curnode->op = get_op_class(instr);
          curnode->oparg = NLNODE_OPARG_UNSET;
          curnode->value = args[k];
          S_CHECK_EXIT(nlnode_add_child(curnode, nodestack[s], 0));
@@ -445,7 +505,7 @@ skip_k_incr:
          assert(s >= 1);
          curnode = nlnode_alloc_fixed(tree, 2);
          nb_nodes++;
-         curnode->op = get_op_class(key);
+         curnode->op = get_op_class(instr);
          curnode->oparg = NLNODE_OPARG_UNSET;
          S_CHECK_EXIT(nlnode_add_child(curnode, nodestack[s-1], 0));
          S_CHECK_EXIT(nlnode_add_child(curnode, nodestack[s], 1));
@@ -459,8 +519,8 @@ skip_k_incr:
          break;
 
       default:
-         error("%s :: unexpected opcode %d :: %s\n", __func__, key,
-             nlinstr2str(key));
+         error("%s :: unexpected opcode %d :: %s\n", __func__, instr,
+             nlinstr2str(instr));
          status = Error_UnExpectedData;
          goto _exit;
       }
@@ -536,7 +596,6 @@ int process_arithm_child(const NlNode * restrict child,
    return build_gams_opcode_v2(child, instrs, args, indx);
 
 }
-#endif
 
 /* ---------------------------------------------------------------------
  * This function processed the last 2 children of a arithmetic OP node
@@ -596,6 +655,7 @@ static NONNULL int arithm_last_children(const NlNode * restrict children[2],
    if (indx < 0) return indx;
    return build_gams_opcode_v2(child1, instrs, args, indx);
 }
+#endif
 
 static NONNULL
 int build_gams_opcode_v2(const NlNode * restrict node,
@@ -630,7 +690,8 @@ int build_gams_opcode_v2(const NlNode * restrict node,
       indx++;
       break;
 
-   case NlNode_Div: {
+   case NlNode_Div: 
+   case NlNode_Sub: {
 
       /* ---------------------------------------------------------------------
        * SUB and DIV require 2 children, either be local + 1 child or 2 children
@@ -649,63 +710,41 @@ int build_gams_opcode_v2(const NlNode * restrict node,
        * XxxI or XxxV instruction.
        * --------------------------------------------------------------------- */
 
-      bool optype_has_instr;
-      switch(optype) {
-      case NLNODE_OPARG_CST: case NLNODE_OPARG_VAR: {
-         assert(key == NlNode_Add || key == NlNode_Mul);
-         enum NLNODE_OP op = optype == NLNODE_OPARG_CST ? NlNode_Cst : NlNode_Var;
-         _translate_instr(key, &instrs[indx], op);
-         args[indx] = node->value;
-         indx++;
-         optype_has_instr = true;
-         break;
-      }
-      case NLNODE_OPARG_UNSET: /* the node has no parameter, only children*/
-         optype_has_instr = false;
-         break;
-      default:
-         error("%s :: ERROR: unexpected optype value %d for op %s \n", __func__,
-               optype, opcode_names[key]);
-         nlnode_print(node, PO_ERROR, true);
-         return -Error_RuntimeError;
-      }
-
-      /* ---------------------------------------------------------------------
-       * Explore the children
-       * --------------------------------------------------------------------- */
-
-      const NlNode * restrict children[2];
-      if (!node->children[0]) {
-         error("%s :: ERROR: for a node of type %s, the first child is NULL!\n",
+      const NlNode * restrict child0 = node->children[0];
+      if (!child0) {
+         error("%s :: ERROR: for a node of type %s, the second child is NULL!\n",
                __func__, opcode_names[key]);
          nlnode_print(node, PO_ERROR, true);
          return -Error_InvalidOpCode;
       }
 
-      children[0] = node->children[0];
+      _translate_instr(key, &instrs[indx], child0->op);
 
-      if (!optype_has_instr) {
-         if(!node->children[1]) {
-            error("%s :: ERROR: for a node of type %s, the second child is NULL "
-                  "and optype has no instruction!\n", __func__, opcode_names[key]);
-            nlnode_print(node, PO_ERROR, true);
-            return -Error_InvalidOpCode;
-         }
-         children[1] = node->children[1];
-         return arithm_last_children(children, instrs, args, indx, key);
+      switch (child0->op) {
+      case NlNode_Var:
+      case NlNode_Cst:
+         args[indx++] = child0->value;
+      break;
+
+      default:
+         args[indx++] = 0;
+         indx = build_gams_opcode_v2(child0, instrs, args, indx);
+         if (indx < 0) return indx;
       }
 
-      /* ---------------------------------------------------------------------
-       * If we have only one child, we already emitted a XxxI or XxxV instruction
-       * We can just emit the rest.
-       * --------------------------------------------------------------------- */
+      const NlNode *child1 = node->children[1];
+      if (!child1) {
+         error("%s :: ERROR: for a node of type %s, the second child is NULL!\n",
+               __func__, opcode_names[key]);
+         nlnode_print(node, PO_ERROR, true);
+         return -Error_InvalidOpCode;
+      }
 
-      return build_gams_opcode_v2(children[0], instrs, args, indx);
+      return build_gams_opcode_v2(child1, instrs, args, indx);
    }
 
    case NlNode_Add:
    case NlNode_Mul: {
-   case NlNode_Sub:
       if (node->children_max == 0) { goto _child_expected_error; }
 
       /* ---------------------------------------------------------------------
