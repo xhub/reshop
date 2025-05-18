@@ -1,5 +1,7 @@
 $ TITLE test nltree
 
+$if %system.Platform%==WEX $exit
+
 SET i /1*4/;
 
 VARIABLE x1, x2, x3, x4, obj;
@@ -22,7 +24,7 @@ SCALAR tol / %TESTTOL% /;
 put_utility 'save' / 'test-nltree';
 
 * We can't get the subsitution to work 
-$onEchoV > subgms.in
+$onEchoV > /tmp/subgms.in
 EQUATION defobj, defobj2;
 
 PARAMETER xvalL(i), xvalM(i), objval;
@@ -160,15 +162,11 @@ abort$[ smax{i, abs(xvalL(i) - xrhpL(i))} > tol ]    'Nash: bad x.l values';
 abort$[ smax{i, abs(xvalM(i) - xrhpM(i))} > tol ]    'Nash: bad x.m values'; 
 abort$[ abs(objval - obj.l)               > tol ]    'Nash bad obj.l values: ' objval obj.l; 
 
-
-
 $offEcho
 
 $macro mysolve(expr) \
-put_utility 'shell.checkErrorLevel' / "sed -e 's:XXX:expr:' subgms.in > /tmp/subgms.gms"; \
-execute.checkErrorLevel "gams subgms.gms r=test-nltree emp=%system.emp%"; \
-
-$if %system.Platform%==WEX $exit
+put_utility 'shell.checkErrorLevel' / "sed -e 's:XXX:expr:' /tmp/subgms.in > /tmp/subgms.gms"; \
+execute.checkErrorLevel "gams /tmp/subgms.gms r=test-nltree emp=%system.emp%"; \
 
 
 mysolve((cst - x1 + x2) * x3 + x4)
