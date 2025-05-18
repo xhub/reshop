@@ -165,7 +165,7 @@ build-wei:
 
     - Copy-Item -Path "C:\Cache\gams-installs\$gmsdirname" -Destination "gamsdir" -Recurse -Force 
 
-    - $vcvarsallPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
+    - $vcvarsallPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat"
     - '& $vcvarsallPath x86_amd64'
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -S .
