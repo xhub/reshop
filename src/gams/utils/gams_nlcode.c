@@ -337,7 +337,7 @@ static int create_dotfile(Model *mdl, int idx, char **fname_dot)
 
       char *exports_dir_template;
 
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
+#if defined(__APPLE__) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
 
       A_CHECK(exports_dir_template, strdup("/tmp/reshop_exports_XXXXXX"));
       export_dir = mkdtemp(exports_dir_template);
@@ -354,7 +354,7 @@ static int create_dotfile(Model *mdl, int idx, char **fname_dot)
 
 #else
 
-      fprintf("\nNo model provided and unsupported platform regarding temporary directory\n", stderr)
+      fputs("\nNo model provided and unsupported platform regarding temporary directory\n", stderr)
       goto _exit;
 
 #endif
