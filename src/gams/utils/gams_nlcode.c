@@ -1,3 +1,5 @@
+#include "asprintf.h"
+
 #include "gams_nlcode.h"
 #include "gams_nlcode_priv.h"
 #include "instr.h"
