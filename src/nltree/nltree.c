@@ -417,9 +417,10 @@ _exit:
    FREE(t);
    return NULL;
 }
+
 void nltree_dealloc(NlTree* tree)
 {
-   if (tree && tree->root) {
+   if (tree) {
 
       for (size_t i = 0, len = tree->nodes.bucket_idx; i <= len; ++i) {
          FREE(tree->nodes.pool[i]);
