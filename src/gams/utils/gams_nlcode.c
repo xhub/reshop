@@ -331,17 +331,21 @@ DBGUSED static inline bool nonempty_stack(u8 *stack, u8 *stack_top) {
 
 static int create_dotfile(Model *mdl, int idx, char **fname_dot)
 {
-   const char *export_dir;
+   char *export_dir;
+   bool free_export_dir;
+   int status = OK;
    if (mdl) {
  
       S_CHECK(mdl_ensure_exportdir(mdl));
       export_dir = mdl->commondata.exports_dir;
+      free_export_dir = false;
 
    } else {
 
-      char *exports_dir_template;
-
+      free_export_dir = true;
 #if defined(__APPLE__) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
+
+      char *exports_dir_template;
 
       A_CHECK(exports_dir_template, strdup("/tmp/reshop_exports_XXXXXX"));
       export_dir = mkdtemp(exports_dir_template);
@@ -354,7 +358,13 @@ static int create_dotfile(Model *mdl, int idx, char **fname_dot)
 
 #elif defined(_WIN32)
 
-   A_CHECK(exports_dir_template, win_gettmpdir());
+   A_CHECK(export_dir, win_gettmpdir());
+   if (mkdir(export_dir, S_IRWXU)) {
+      perror("mkdir");
+      error("\n[system] ERROR: Could not create directory '%s'\n", export_dir);
+      status = Error_SystemError;
+      goto _exit;
+   }
 
 #else
 
@@ -365,9 +375,16 @@ static int create_dotfile(Model *mdl, int idx, char **fname_dot)
 
    }
 
-   IO_CALL(asprintf(fname_dot, "%s%snlcode%d.dot", export_dir, DIRSEP, idx));
+   IO_CALL_EXIT(asprintf(fname_dot, "%s" DIRSEP "nlcode%d.dot", export_dir, idx));
+
+   if (free_export_dir) { free(export_dir); }
 
    return OK;
+
+_exit:
+   if (free_export_dir) { free(export_dir); }
+
+   return status;
 }
 
 u32 compute_nlcode_degree(int len, const int instr[VMT(restrict len)],
