@@ -8,6 +8,8 @@
 #include "nltree_style.h"
 #include "pool.h"
 #include "printout.h"
+#include "win-compat.h"
+
 
 #if defined(_WIN32)
 
