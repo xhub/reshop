@@ -101,9 +101,16 @@ int rctr_getnl(const Container* ctr, Equ *e)
    case RHP_BACKEND_GAMS_GMO:
    {
       int len, *instrs, *args;
+      Equ *e_up = &ctr_up->equs[ei_up];
+
+      if (e_up->tree && e_up->tree->root) {
+         e->tree = e_up->tree;
+         return OK;
+      }
 
       S_CHECK(gctr_getopcode(ctr_up, ei_up, &len, &instrs, &args));
       S_CHECK(equ_nltree_fromgams(e, len, instrs, args));
+      e_up->tree = e->tree;
 
       // HACK ARENA
       ctr_relmem_recursive_old(ctr_up);
