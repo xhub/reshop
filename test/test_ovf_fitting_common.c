@@ -407,7 +407,7 @@ static int add_v2(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
     /*  The DIV */
     struct rhp_nlnode **div_node = NULL;
     RESHOP_CHECK(rhp_nltree_getchild(exp_node, &div_node, 0));
-    RESHOP_CHECK(rhp_nltree_arithm(tree, &div_node, 5, 2));
+    RESHOP_CHECK(rhp_nltree_arithm(tree, &div_node, 6, 2));
 
     /* Deal with the denominator now  */
     child = NULL;
@@ -417,7 +417,7 @@ static int add_v2(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
     /* The numerator is an ADD (sum) node with 3 terms */
     struct rhp_nlnode **lin_term = NULL;
     RESHOP_CHECK(rhp_nltree_getchild(div_node, &lin_term, 1));
-    RESHOP_CHECK(rhp_nltree_arithm(tree, &lin_term, 2, 3));
+    RESHOP_CHECK(rhp_nltree_arithm(tree, &lin_term, 3, 3));
     child = NULL;
 
     /* y[i] */
@@ -584,7 +584,7 @@ static int add_v4(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
     /*  The DIV */
     struct rhp_nlnode **div_node = NULL;
     RESHOP_CHECK(rhp_nltree_getchild(exp_node, &div_node, 0));
-    RESHOP_CHECK(rhp_nltree_arithm(tree, &div_node, 5, 2));
+    RESHOP_CHECK(rhp_nltree_arithm(tree, &div_node, 6, 2));
 
     /* Deal with the denominator now  */
     child = NULL;
@@ -594,7 +594,7 @@ static int add_v4(struct rhp_mdl *mdl, struct rhp_mathprgm *mp, const char *loss
     /* The numerator is an ADD (sum) node with 3 terms */
     struct rhp_nlnode **lin_term = NULL;
     RESHOP_CHECK(rhp_nltree_getchild(div_node, &lin_term, 1));
-    RESHOP_CHECK(rhp_nltree_arithm(tree, &lin_term, 2, 3));
+    RESHOP_CHECK(rhp_nltree_arithm(tree, &lin_term, 3, 3));
     child = NULL;
 
     /* y[i] */

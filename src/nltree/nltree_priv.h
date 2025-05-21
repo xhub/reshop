@@ -27,6 +27,7 @@ typedef enum NLNODE_OPARG {
 
 /** Type of operation */
 typedef enum NLNODE_OP {
+   NlNode_Unset = 0,/**< Unset node type                                     */
    NlNode_Cst,      /**< numerical constant */
    NlNode_Var,      /**< variable */
    NlNode_Add,      /**< Addition */
@@ -221,7 +222,8 @@ static inline int nlnode_next_child(NlTree *tree, NlNode*** node)
    return OK;
 }
 
-static inline void nlnode_default(NlNode *node, enum NLNODE_OP op)
+NONNULL static inline
+void nlnode_default(NlNode *node, enum NLNODE_OP op)
 {
    node->op = op;
    node->oparg = NLNODE_OPARG_UNSET;
@@ -238,9 +240,18 @@ static inline void nlnode_setvar(NlNode *node, rhp_idx vi)
 }
 
 NONNULL static inline
-int nlnode_mulcst(Container *ctr, NlNode *node, double cst)
+void nlnode_mulcst(NlNode *node, unsigned pidx)
 {
    assert(node->op == NlNode_Mul);
+   node->oparg = NLNODE_OPARG_CST;
+   node->value = pidx;
+}
+
+NONNULL static inline
+int nlnode_mulcstnew(Container *ctr, NlNode *node, double cst)
+{
+   node->op = NlNode_Mul;
+
    node->oparg = NLNODE_OPARG_CST;
    unsigned idx = rctr_poolidx(ctr, cst);
    if (idx == UINT_MAX) {
