@@ -3792,8 +3792,7 @@ int parse_mp(Interpreter *interp, unsigned *p)
    * ---------------------------------------------------------------------- */
 
    } else if (interp_state_no_parent_seen(interp)) {
-      DBGUSED EmpDag *empdag = &interp->mdl->empinfo.empdag;
-      assert(empdag->mps.len == 1);
+      assert(!interp->mdl || interp->mdl->empinfo.empdag.mps.len == 1);
       parsed_single_mp(interp);
       /* TODO GITLAB #126 */
       //interp->finalize.mp_owns_remaining_vars = mp->id;
