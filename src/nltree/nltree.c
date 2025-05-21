@@ -30,7 +30,7 @@ typedef double(*fnarg1)(double x1);
 typedef double(*fnarg2)(double x1, double x2);
 
 
-const char * const opcode_names[] = { "Cst", "Var", "Add", "Sub", "Mul", "Div",
+const char * const opcode_names[] = { "Unset", "Cst", "Var", "Add", "Sub", "Mul", "Div",
                                      "Call1", "Call2", "CallN", "Umin", "UNKNOWN"};
 
 const char * const oparg_names[] = { "NONE", "CST", "VAR", "FMA", "LINEAR" };
@@ -879,19 +879,13 @@ int nltree_scal(Container *ctr, NlTree* tree, double coeff)
    switch (root->op) {
    case NlNode_Umin:
       if (root->oparg == NLNODE_OPARG_UNSET) {
-         nlnode_default(root, NlNode_Mul);
-         unsigned pidx = rctr_poolidx(ctr, -coeff);
-         if (pidx == UINT_MAX) { return -Error_InsufficientMemory; }
-         root->value = pidx;
+         nlnode_mulcstnew(ctr, root, -coeff);
          return OK;
       }
    FALLTHRU
    default:
       A_CHECK(tree->root, nlnode_alloc_fixed(tree, 1));
-      nlnode_default(tree->root, NlNode_Mul);
-      unsigned pidx = rctr_poolidx(ctr, coeff);
-      if (pidx == UINT_MAX) { return -Error_InsufficientMemory; }
-      tree->root->value = pidx;
+      nlnode_mulcstnew(ctr, tree->root, coeff);
       tree->root->children[0] = root;
    }
 
@@ -1007,7 +1001,7 @@ int rctr_nltree_add_bilin(Container *ctr, NlTree* tree, NlNode ** restrict *node
          S_CHECK(nltree_umin(tree, node));
          (**node)->children[0] = lnode;
       } else if (coeff != 1.) {
-         S_CHECK(nlnode_mulcst(ctr, lnode, coeff));
+         S_CHECK(nlnode_mulcstnew(ctr, lnode, coeff));
       }
 
       **node = lnode;

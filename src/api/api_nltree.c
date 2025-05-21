@@ -220,7 +220,7 @@ int rhp_nltree_arithm(NlTree *tree, NlNode ***node,
       break;
    }
    default:
-    error("%s :: unsupported opcode %s (%d)", __func__,
+    error("%s :: unsupported opcode %s (%d)\n", __func__,
              opcode < __OPCODE_LEN ? opcode_names[opcode] : "invalid", opcode);
     return Error_InvalidValue;
    }

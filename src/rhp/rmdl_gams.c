@@ -229,7 +229,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
        ctr->vars[i].multiplier = multiplier;
        ctr->vars[i].basis = basis_from_gams(b_pointer[j]);
 
-       SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " using var %s",
+       SOLREPORT_DEBUG("VAR %-30s " SOLREPORT_FMT " using var %s\n",
                        ctr_printvarname(ctr, i), solreport_gms_v(&ctr->vars[i]), 
                        ctr_printvarname2(ctr_gms, j));
 

@@ -1030,8 +1030,9 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   struct rhp_nlnode **root_node = NULL;
   struct rhp_nlnode **add_node = NULL;
   RESHOP_CHECK(rhp_nltree_getroot(tree, &root_node));
+
   /* "+" of the sum  */
-  RESHOP_CHECK(rhp_nltree_arithm(tree, &root_node, 2, 3));
+  RESHOP_CHECK(rhp_nltree_arithm(tree, &root_node, 3, 3));
   add_node = root_node;
 
   for (unsigned i = 0; i < 3; ++i) {
@@ -1046,7 +1047,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
          continue;
     }
     /* create a "*" node with two nodes for s[i] * log(x[i]) */
-    RESHOP_CHECK(rhp_nltree_arithm(tree, &log_node, 4, 2));
+    RESHOP_CHECK(rhp_nltree_arithm(tree, &log_node, 5, 2));
     /* deal with s[i]  */
     RESHOP_CHECK(rhp_nltree_getchild(log_node, &child, 0));
     RESHOP_CHECK(rhp_nltree_cst(mdl, tree, &child, s[i]));

@@ -157,15 +157,17 @@ int rctr_evalfuncs(Container *ctr)
     * the objective functions and also the deleted equations.
     * --------------------------------------------------------------------- */
 
-  for (unsigned i = 0, len = aequ_size(ctr->func2eval); i < len; ++i) {
-    rhp_idx ei = aequ_fget(ctr->func2eval, i);
-    S_CHECK(ei_inbounds(ei, m, __func__));
+   for (unsigned i = 0, len = aequ_size(ctr->func2eval); i < len; ++i) {
+      rhp_idx ei = aequ_fget(ctr->func2eval, i);
+      S_CHECK(ei_inbounds(ei, m, __func__));
 
-      S_CHECK(rctr_evalfunc(ctr, ei, &ctr->equs[ei].value));
-      assert(isfinite(ctr->equs[ei].value));
+      Equ *e = &ctr->equs[ei];
+      S_CHECK(rctr_evalfunc(ctr, ei, &e->value));
+      assert(isfinite(e->value));
+//      e->value += equ_get_cst(e);
       trace_solreport("[solreport] equ %s #%u: evaluated to % 2.3e\n",
-                      ctr_printequname(ctr, ei), ei, ctr->equs[ei].value);
-  }
+                      ctr_printequname(ctr, ei), ei, e->value);
+   }
 
    if (!cdat->deleted_equs) { return OK; }
 
@@ -174,8 +176,10 @@ int rctr_evalfuncs(Container *ctr)
 
       if (!cdat->deleted_equs[ei]) { continue; }
 
-      S_CHECK(rctr_evalfunc(ctr, ei, &ctr->equs[ei].value));
-      assert(isfinite(ctr->equs[ei].value));
+      Equ *e = &ctr->equs[ei];
+      S_CHECK(rctr_evalfunc(ctr, ei, &e->value));
+      assert(isfinite(e->value));
+      e->value += equ_get_cst(e);
       trace_solreport("[solreport] equ %s #%u: evaluated to % 2.3e\n",
                       ctr_printequname(ctr, ei), ei, ctr->equs[ei].value);
   }
