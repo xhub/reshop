@@ -21,7 +21,7 @@ const char* aequvar_typestr(enum a_equvar_type type)
    }
 }
 
-const char * badidx_str(rhp_idx idx)
+const char * badidx2str(rhp_idx idx)
 {
    switch (idx) {
    case IdxInvalid:

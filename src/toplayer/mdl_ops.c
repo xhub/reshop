@@ -512,7 +512,7 @@ int mdl_checkmetadata(Model *mdl)
              errmc("[metadata check] ERROR: %s '%s' has invalid dual variable index ",
                    equrole2str(equ_md->role), ctr_printequname(ctr, i));
              if (vi_dual >= IdxMaxValid) {
-                errmc("%s\n", badidx_str(vi_dual));
+                errmc("%s\n", badidx2str(vi_dual));
              } else {
                 errmc("%zu.\n", (size_t)vi_dual);
              }

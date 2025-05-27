@@ -534,22 +534,29 @@ int mdl_solreport(Model *mdl_dst, Model *mdl_src)
    S_CHECK(ctr_evalequvar(&mdl_dst->ctr));
 
    /* ------------------------------------------------------------------
-       * Get the solve and model status
-       * ------------------------------------------------------------------ */
+    * Get the solve and model status
+    * ------------------------------------------------------------------ */
 
    S_CHECK(mdl_getmodelstat(mdl_src, &mstat));
    S_CHECK(mdl_setmodelstat(mdl_dst, mstat));
    S_CHECK(mdl_getsolvestat(mdl_src, &sstat));
    S_CHECK(mdl_setsolvestat(mdl_dst, sstat));
 
-   if (mdl_is_rhp(mdl_dst)) {
-      /* deleted equations and equations in func2eval */
-      S_CHECK(rctr_evalfuncs(&mdl_dst->ctr));
-      /* if required, set the objective function value to the objvar one */
-      S_CHECK(rmdl_fix_objequ_value(mdl_dst));
+   struct mp_namedarray *mps = &mdl_dst->empinfo.empdag.mps;
+
+   /* Set multiplier of objective equation of any MP */
+   for (unsigned i = 0, len = mps->len; i < len; ++i) {
+      MathPrgm *mp = mps->arr[i];
+      if (!mp) continue;
+
+      S_CHECK(mp_objequ_setmultiplier(mp));
    }
 
-   return OK;
+   /* Backend-specific operations:
+    * - rhp-based: evaluate deleted equations and equations in func2eval
+    * - set objective function and multiplier
+    */
+   return mdl_dst->ops->solreport(mdl_dst);
 }
 
 /**

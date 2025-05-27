@@ -42,7 +42,6 @@ struct mp_opt {
   rhp_idx objvar; /**< index of the objective variable             */
   rhp_idx objequ; /**< index of the objective equation             */
   double objcoef; /**< coefficient of the objective variable       */
-  bool objvarval2objequval; /**< If true, set the objequ value from the objvar */
 };
 
 /**
@@ -134,8 +133,7 @@ unsigned mp_getnumcons(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumzerofunc(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumvars(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumoptvars(const MathPrgm *mp) NONNULL;
-int mp_objvarval2objequval(MathPrgm *mp) NONNULL;
-int mp_fixobjequval(MathPrgm *mp) NONNULL;
+int mp_objequ_setmultiplier(MathPrgm *mp) NONNULL;
 
 int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei) NONNULL;
 

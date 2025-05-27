@@ -81,18 +81,11 @@ static inline VarPptyType _getvarsubtype(MathPrgm *mp, rhp_idx vi)
    return (mp->mdl->ctr.varmeta)[vi].ppty;
 }
 
-static inline bool mp_isobj(const MathPrgm *mp)
-{
-   assert(mp->sense < RhpNoSense);
-   return mp->type == MpTypeOpt;
-}
-
 static inline void mpopt_init(struct mp_opt *opt)
 {
    opt->objvar = IdxNA;
    opt->objequ = IdxNA;
    opt->objcoef = 1.;
-   opt->objvarval2objequval = false;
 }
 
 static inline void mpvi_init(struct mp_vi *vi)

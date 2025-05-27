@@ -121,12 +121,12 @@ int rctr_nltree_add_quad_coo_rel(Container *ctr, Equ * e, NlNode **addr,
       rhp_idx v2     = avar_fget(v_col, j[k]);
       if (!valid_vi(v1)) {
          error("%s :: invalid index %u for avar of size %u, err is %s\n",
-                            __func__, i[k], avar_size(v_row), badidx_str(v1));
+                            __func__, i[k], avar_size(v_row), badidx2str(v1));
       }
 
       if (!valid_vi(v2)) {
          error("%s :: invalid index %u for avar of size %u, err is %s\n",
-                            __func__, j[k], avar_size(v_col), badidx_str(v2));
+                            __func__, j[k], avar_size(v_col), badidx2str(v2));
       }
 
       /* ---------------------------------------------------------------

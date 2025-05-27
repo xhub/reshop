@@ -487,7 +487,7 @@ const char* ctr_printvarname(const Container *ctr, rhp_idx vi)
    int status;
    
    if (!valid_vi(vi)) {
-      strncpy(bufvar, badidx_str(vi), sizeof(bufvar)-1);
+      strncpy(bufvar, badidx2str(vi), sizeof(bufvar)-1);
       return bufvar;
    }
 
@@ -516,7 +516,7 @@ const char* ctr_printvarname2(const Container *ctr, rhp_idx vi)
    int status;
    
    if (!valid_vi(vi)) {
-      strncpy(bufvar2, badidx_str(vi), sizeof(bufvar2)-1);
+      strncpy(bufvar2, badidx2str(vi), sizeof(bufvar2)-1);
       return bufvar2;
    }
 
@@ -542,7 +542,7 @@ const char* ctr_printvarname2(const Container *ctr, rhp_idx vi)
 const char* ctr_printequname(const Container *ctr, rhp_idx ei)
 {
    if (!valid_ei(ei)) {
-      strncpy(bufequ, badidx_str(ei), sizeof(bufequ)-1);
+      strncpy(bufequ, badidx2str(ei), sizeof(bufequ)-1);
       return bufequ;
    }
 
@@ -570,7 +570,7 @@ const char* ctr_printequname(const Container *ctr, rhp_idx ei)
 const char* ctr_printequname2(const Container *ctr, rhp_idx ei)
 {
    if (!valid_ei(ei)) {
-      strncpy(bufequ2, badidx_str(ei), sizeof(bufequ2)-1);
+      strncpy(bufequ2, badidx2str(ei), sizeof(bufequ2)-1);
       return bufequ2;
    }
 

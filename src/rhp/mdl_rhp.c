@@ -526,25 +526,25 @@ int rmdl_fix_objequ_value(Model *mdl)
    rmdl_getobjvar(mdl, &objvar);
    rmdl_getobjequ(mdl, &objequ);
 
-   if (valid_vi(objequ) && cdat->objequ_val_eq_objvar) {
-      if (!valid_vi(objvar)) {
-         error("%s :: Expecting a valid objective variable\n", __func__);
-         return Error_Inconsistency;
+   if (valid_vi(objequ) && valid_vi(objvar)) {
+
+      Equ *e = &mdl->ctr.equs[objequ];
+      double objvarcoeff;
+      unsigned pos;
+      lequ_find(e->lequ, objvar, &objvarcoeff, &pos);
+
+      /* TODO: what is going on if it is not linear? */
+      if (isfinite(objvarcoeff)) {
+         trace_solreport("[solreport] %s model '%.*s' #%u: setting objequ multiplier to %e.\n", mdl_fmtargs(mdl), 1./objvarcoeff);
+         e->multiplier = 1./objvarcoeff;
       }
 
-      mdl->ctr.equs[objequ].value = mdl->ctr.vars[objvar].value;
-      double val = mdl->ctr.vars[objvar].value;
-      trace_solreport("[solreport] %s model '%.*s' #%u: setting objequ value to %e.\n",
-                      mdl_fmtargs(mdl), val);
-   }
-
-   struct mp_namedarray *mps = &mdl->empinfo.empdag.mps;
-
-   for (unsigned i = 0, len = mps->len; i < len; ++i) {
-      MathPrgm *mp = mps->arr[i];
-      if (!mp) continue;
-
-      S_CHECK(mp_fixobjequval(mp));
+      /* TODO: this looks wrong */
+      if (cdat->objequ_val_eq_objvar) {
+         mdl->ctr.equs[objequ].value = mdl->ctr.vars[objvar].value;
+         double val = mdl->ctr.vars[objvar].value;
+         trace_solreport("[solreport] %s model '%.*s' #%u: setting objequ value to %e.\n", mdl_fmtargs(mdl), val);
+      }
    }
 
    return OK;

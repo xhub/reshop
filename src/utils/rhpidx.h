@@ -35,7 +35,7 @@ static inline bool valid_ei(rhp_idx ei) {
    return (ei >= 0 && ei <= IdxMaxValid);
 }
 
-const char * badidx_str(rhp_idx idx);
+const char * badidx2str(rhp_idx idx);
 
 static inline bool valid_idx(unsigned idx) {
    return idx <= IdxMaxValid;

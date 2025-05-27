@@ -488,7 +488,7 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       root_cpy_expr->coeff = 1.;
 
       MathPrgm *mp_root_src = mps->arr[mpid];
-      if (!mp_isobj(mp_root_src)) {
+      if (!mp_isopt(mp_root_src)) {
          error("[empdag] ERROR: cannot contract with root MP(%s) of type %s\n",
                empdag_getmpname(empdag, mpid), mp_gettypestr(mp_root_src));
       }
