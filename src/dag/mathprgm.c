@@ -13,6 +13,7 @@
 #include "empinfo.h"
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
+#include "lequ.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mathprgm_helpers.h"
@@ -305,7 +306,6 @@ MathPrgm *mp_dup(const MathPrgm *mp_src, Model *mdl)
    switch (mp->type) {
    case MpTypeOpt:
       memcpy(&mp->opt, &mp_src->opt, sizeof(mp->opt));
-      mp->opt.objvarval2objequval = false;
       break;
    case MpTypeVi:
       memcpy(&mp->vi, &mp_src->vi, sizeof(mp->vi));
@@ -320,13 +320,6 @@ MathPrgm *mp_dup(const MathPrgm *mp_src, Model *mdl)
       error("[MP] ERROR while duplicating MP(%s): type %s is not implemented\n",
             mp_getname(mp_src), mptype2str(mp->type));
       return NULL;
-   }
-
-   if (mp_isobj(mp)) {
-      memcpy(&mp->opt, &mp_src->opt, sizeof(mp->opt));
-      mp->opt.objvarval2objequval = false;
-   } else {
-      memcpy(&mp->vi, &mp_src->vi, sizeof(mp->vi));
    }
 
    assert(rhp_idx_chksorted(&mp_src->equs));
@@ -433,7 +426,7 @@ int mp_setobjequ(MathPrgm *mp, rhp_idx ei)
  */
 int mp_setobjcoef(MathPrgm *mp, double coef) {
    assert(isfinite(coef));
-   if (mp_isobj(mp)) {
+   if (mp_isopt(mp)) {
       mp->opt.objcoef = coef;
    } else {
       return err_noobj(mp);
@@ -446,7 +439,7 @@ int mp_setobjequ_internal(MathPrgm *mp, rhp_idx objequ)
 {
    assert(valid_ei(objequ));
 
-   if (!mp_isobj(mp)) {
+   if (!mp_isopt(mp)) {
       return err_noobj(mp);
    }
 
@@ -474,7 +467,7 @@ int mp_setobjvar(MathPrgm *mp, rhp_idx vi)
    assert(mp_isvalid(mp));
 
    if (!valid_vi(vi)) {
-      if (vi == IdxNA && mp_isobj(mp)) {
+      if (vi == IdxNA && mp_isopt(mp)) {
          rhp_idx objvar_old = mp->opt.objvar;
          mp->opt.objvar = IdxNA;
 
@@ -517,7 +510,7 @@ int mp_setobjvar(MathPrgm *mp, rhp_idx vi)
 
 int mp_setobjvar_internal(MathPrgm *mp, rhp_idx vi)
 {
-   if (mp_isobj(mp)) {
+   if (mp_isopt(mp)) {
       mp->opt.objvar = vi;
 
       /*  TODO(xhub) harder check: we should only allow a special value here */
@@ -546,36 +539,34 @@ int mp_setobjvar_internal(MathPrgm *mp, rhp_idx vi)
 }
 
 
-int mp_objvarval2objequval(MathPrgm *mp) {
-   assert(mp_isobj(mp) && valid_vi(mp->opt.objvar) && valid_ei(mp->opt.objequ));
+/**
+ * @brief Fix the objective equation multiplier of the MP to be the marginal if it was a constraint
+ *
+ * @param mp  the MP
+ *
+ * @return    the error code
+ */
+int mp_objequ_setmultiplier(MathPrgm *mp) {
 
-   mp->opt.objvarval2objequval = true;
-
-   trace_process("[process] MP %u: adding objvar %s to objequ %s.\n", mp->id,
-                 ctr_printvarname(&mp->mdl->ctr, mp->opt.objvar),
-                 ctr_printequname(&mp->mdl->ctr, mp->opt.objequ));
-   
-   return OK;
-}
-
-int mp_fixobjequval(MathPrgm *mp) {
-
-   if (!mp_isobj(mp) || !mp->opt.objvarval2objequval) { return OK; }
+   if (!mp_isopt(mp)) { return OK; }
 
    rhp_idx objequ = mp->opt.objequ;
    rhp_idx objvar = mp->opt.objvar;
 
-   if (!valid_vi(objvar)) { return OK; }
+   if (!valid_vi(objvar) || !valid_ei(objequ)) { return OK; }
 
-   assert(valid_ei(objequ) && valid_vi(objvar));
+   Equ *e = &mp->mdl->ctr.equs[objequ];
+   double objvarcoeff;
+   unsigned pos;
+   lequ_find(e->lequ, objvar, &objvarcoeff, &pos);
 
-   double objvarval = mp->mdl->ctr.vars[objvar].value;
-   trace_solreport("[solreport] MP(%s): setting objequ '%s' value to objvar '%s' "
-                   "value %e\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id),
-                   ctr_printequname(&mp->mdl->ctr, objequ),
-                   ctr_printvarname(&mp->mdl->ctr, objvar), objvarval);
-
-   mp->mdl->ctr.equs[objequ].value = objvarval;
+   /* TODO: what is going on if it is not linear? */
+   if (isfinite(objvarcoeff)) {
+      assert(mp->mdl);
+      /* We can't set e->multiplier since we could have a non-rhp backend */
+      Container *ctr = &mp->mdl->ctr;
+      S_CHECK(ctr->ops->setequmult(ctr, objequ, 1./objvarcoeff));
+   }
 
    return OK;
 }
@@ -781,7 +772,7 @@ int mp_finalize(MathPrgm *mp)
       goto _finalize;
    }
 
-   if (!mp_isobj(mp)) { goto _finalize; }
+   if (!mp_isopt(mp)) { goto _finalize; }
 
   /* ----------------------------------------------------------------------
    * We can't enforce the exitence of objvar or objequ if we called from
@@ -835,7 +826,7 @@ _finalize:
 mpid_t mp_getid(const MathPrgm *mp) { return mp->id; }
 
 double mp_getobjjacval(const MathPrgm *mp) {
-   if (mp_isobj(mp)) {
+   if (mp_isopt(mp)) {
       return mp->opt.objcoef;
    }
 
@@ -854,7 +845,7 @@ RhpSense mp_getsense(const MathPrgm *mp) {
 }
 
 rhp_idx mp_getobjequ(const MathPrgm *mp) {
-   if (mp_isobj(mp)) {
+   if (mp_isopt(mp)) {
       return mp->opt.objequ;
    }
 
@@ -867,7 +858,7 @@ rhp_idx mp_getobjequ(const MathPrgm *mp) {
 
 rhp_idx mp_getobjvar(const MathPrgm *mp)
 {
-   if (mp_isobj(mp)) {
+   if (mp_isopt(mp)) {
       return mp->opt.objvar;
    }
 
@@ -943,7 +934,7 @@ void mp_print(MathPrgm *mp, const Model *mdl) {
 
    printout(PO_INFO, " - mathprgm %5d", mp->id);
 
-   if (mp_isobj(mp)) {
+   if (mp_isopt(mp)) {
       printout(PO_INFO, " (%s) of type %s (%d)\n\n", "optimization",
                mdl_getprobtypetxt(mp_getprobtype(mp)),
                mp_gettype(mp));

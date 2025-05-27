@@ -1190,11 +1190,11 @@ static int gams_reportvalues_from_rhp(Model *mdl, const Model *mdl_src)
 
       double marginal = flip_multiplier ? -v->multiplier : v->multiplier;
       GMSCHK(gmoSetSolutionVarRec(gms->gmo,
-                                      i,
-                                      dbl_to_gams(v->value, gms_pinf, gms_minf, gms_na),
-                                      dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na),
-                                      basis_to_gams(v->basis),
-                                      gmoCstat_OK));
+                                  i,
+                                  dbl_to_gams(v->value, gms_pinf, gms_minf, gms_na),
+                                  dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na),
+                                  basis_to_gams(v->basis),
+                                  gmoCstat_OK));
    }
 
    assert(ctr->m == gmoM(gms->gmo));
@@ -1217,14 +1217,12 @@ static int gams_reportvalues_from_rhp(Model *mdl, const Model *mdl_src)
 
       double marginal = flip_multiplier ? -e->multiplier : e->multiplier;
 
-
-
       GMSCHK(gmoSetSolutionEquRec(gms->gmo,
-                                      i,
-                                      dbl_to_gams(value, gms_pinf, gms_minf, gms_na),
-                                      dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na),
-                                      basis_to_gams(e->basis),
-                                      gmoCstat_OK));
+                                  i,
+                                  dbl_to_gams(value, gms_pinf, gms_minf, gms_na),
+                                  dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na),
+                                  basis_to_gams(e->basis),
+                                  gmoCstat_OK));
    }
 
    return OK;
@@ -1280,6 +1278,11 @@ static int gams_setobjvar(Model *mdl, rhp_idx objvar)
    return OK;
 }
 
+static int gams_solreport(Model *mdl)
+{
+   return OK;
+}
+
 static int gams_setsolvestat(Model *mdl, int solvestat)
 {
    gmoSolveStatSet(((GmsContainerData *) mdl->ctr.data)->gmo, solvestat);
@@ -1323,5 +1326,6 @@ const ModelOps mdl_ops_gams = {
    .setobjvar           = gams_setobjvar,
    .setsolvestat        = gams_setsolvestat, /* DEL -> solveinfos */
    .setsolvername       = gams_setsolvername,
+   .solreport           = gams_solreport,
    .solve               = gams_solve,
 };

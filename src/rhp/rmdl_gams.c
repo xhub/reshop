@@ -284,7 +284,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
                ctr->equs[i].basis = basis;
             }
 //            assert(isfinite(ctr->equs[i].value));
-            SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s",
+            SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s\n",
                             ctr_printequname(ctr, i), solreport_gms(&ctr->equs[i]), 
                             ctr_printequname2(ctr_gms, ei_new));
 
@@ -305,7 +305,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
          ctr->equs[i].multiplier = multiplier;
          ctr->equs[i].basis = basis_from_gams(gmoGetEquStatOne(gmo, j));
 //         assert(isfinite(ctr->equs[i].value));
-         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s",
+         SOLREPORT_DEBUG("EQU %-30s " SOLREPORT_FMT " using equ %s\n",
                          ctr_printequname(ctr, i), solreport_gms(&ctr->equs[i]), 
                          ctr_printequname2(ctr_gms, j));
 

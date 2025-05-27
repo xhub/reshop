@@ -149,6 +149,7 @@ void rctr_inherited_equs_are_not_borrowed(Container *ctr)
 int rctr_evalfuncs(Container *ctr)
 {
   if (!ctr->func2eval) { return OK; }
+
   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
   size_t m = cdat->total_m;
 
@@ -172,18 +173,19 @@ int rctr_evalfuncs(Container *ctr)
    if (!cdat->deleted_equs) { return OK; }
 
    /* TODO: investigate performance */
-  for (rhp_idx ei = 0; ei < m; ++ei) {
+   for (rhp_idx ei = 0; ei < m; ++ei) {
 
       if (!cdat->deleted_equs[ei]) { continue; }
 
       Equ *e = &ctr->equs[ei];
       S_CHECK(rctr_evalfunc(ctr, ei, &e->value));
       assert(isfinite(e->value));
-      e->value += equ_get_cst(e);
+      e->value -= equ_get_cst(e);
       trace_solreport("[solreport] equ %s #%u: evaluated to % 2.3e\n",
-                      ctr_printequname(ctr, ei), ei, ctr->equs[ei].value);
+                      ctr_printequname(ctr, ei), ei, e->value);
+
   }
-    
+  
   return OK;
 }
 

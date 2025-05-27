@@ -56,7 +56,7 @@ static int chk_nashid_(const EmpDag *empdag, nashid_t nashid)
 {
    if (nashid >= empdag->nashs.len) {
       if (!valid_idx(nashid)) {
-         error("%s :: %s\n", __func__, badidx_str(nashid));
+         error("%s :: %s\n", __func__, badidx2str(nashid));
       } else {
          error("%s :: no Nash with index %d, the number of Nash nodes is %u "
                   "in %s model '%.*s' #%u\n", __func__, nashid, empdag->nashs.len,
@@ -1431,7 +1431,7 @@ NONNULL static inline bool chk_Varc_basic(const ArcVFBasicData *arc, const Model
                ei, ctr_nequs_total(&mdl->ctr));
       } else {
          error("[empdag] ERROR: invalid arcVF equation index '%s'\n",
-               badidx_str(ei));
+               badidx2str(ei));
       }
 
       return false;
@@ -1630,7 +1630,7 @@ bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Container *ctr
       /* Only the magic value IdxObjFunc or IdxCcflib is valid */
       if (ei == IdxObjFunc || ei == IdxCcflib ) { return true; }
 
-      error("[empdag] ERROR: magic value '%s' used in a VF arc\n", badidx_str(ei));
+      error("[empdag] ERROR: magic value '%s' used in a VF arc\n", badidx2str(ei));
       return false;
    }
 

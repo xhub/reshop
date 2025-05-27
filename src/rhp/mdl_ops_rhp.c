@@ -924,59 +924,6 @@ static UNUSED NONNULL_AT(1) int ensure_objvar_exists(Model *mdl, Fops *fops)
    return OK;
 }
 
-#if 0
-static int objvarmp_gamschk(Model *mdl, MathPrgm *mp, Fops *fops)
-{
-   rhp_idx objvar, objequ;
-   EmpDag *empdag = &mdl->empinfo.empdag;
-   RhpContainerData *ctrdat = mdl->ctr.data;
-
-   if (!mp) {
-      assert(empdag->type == EmpDag_Empty);
-      objvar = empdag->simple_data.objvar;
-      objequ = empdag->simple_data.objequ;
-   } else {
-      objvar = mp_getobjvar(mp);
-      objequ = mp_getobjequ(mp);
-   }
-
-   rhp_idx objvar_bck = objvar, objequ_bck = objequ;
-   bool update_objequ = !valid_ei(objequ);
-
-   S_CHECK(objvar_gamschk(mdl, &objvar, &objequ, fops));
-
-   if (update_objequ) {
-      if (mp) {
-         S_CHECK(mp_setobjequ(mp, objequ));
-      } else {
-         trace_process("[process] %s model %.*s #%u: objequ is now %s\n",
-                       mdl_fmtargs(mdl), mdl_printequname(mdl, objequ));
-         S_CHECK(rmdl_setobjequ(mdl, objequ));
-      }
-   } else {
-      assert(objequ_bck == objequ);
-   }
-
-   if (objvar_bck != objvar) {
-      if (mp) {
-         S_CHECK(mp_setobjvar(mp, objvar));
-         S_CHECK(mp_objvarval2objequval(mp));
-      } else {
-         assert(mdl->empinfo.empdag.type == EmpDag_Empty);
-
-         trace_process("[process] %s model %.*s #%u: adding objvar %s to objequ %s\n",
-                       mdl_fmtargs(mdl), mdl_printvarname(mdl, objvar),
-                       mdl_printequname(mdl, objequ));
-
-         empdag->simple_data.objvar = objvar;
-         ctrdat->objequ_val_eq_objvar = true;
-      }
-   }
-
-   return OK;
-}
-#endif
-
 static int rctr_convert_metadata_togams(Container *ctr, Container *ctr_gms)
 {
    /* ----------------------------------------------------------------------
@@ -1292,6 +1239,16 @@ static int rmdl_export(Model *mdl, Model *mdl_dst)
    return OK;
 }
 
+static int rmdl_solreport(Model *mdl)
+{
+   /* deleted equations and equations in func2eval */
+   S_CHECK(rctr_evalfuncs(&mdl->ctr));
+   /* if required, set the objective function value to the objvar one */
+   S_CHECK(rmdl_fix_objequ_value(mdl));
+
+   return OK;
+}
+
 static int rmdl_solve(Model *mdl)
 {
    const char *subsolver_log = mygetenv("RHP_OUTPUT_SUBSOLVER_LOG");
@@ -1351,5 +1308,6 @@ const ModelOps mdl_ops_rhp = {
    .setobjvar           = rmdl_setobjvar,
    .setsolvername       = rmdl_setsolvername,
    .setsolvestat        = rmdl_setsolvestat,
+   .solreport           = rmdl_solreport,
    .solve               = rmdl_solve,
 };

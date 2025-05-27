@@ -36,6 +36,7 @@ typedef struct model_ops {
    int (*setsense)(Model *mdl, RhpSense objsense);
    int (*setsolvername)(Model *mdl, const char *solvername);
    int (*setsolvestat)(Model *mdl, int solvestat);
+   int (*solreport)(Model *mdl);
    int (*solve)(Model *mdl);
 } ModelOps;
 
