@@ -939,13 +939,16 @@ static int gams_setequname(Container *ctr, rhp_idx ei, const char *name)
 
 static int gams_setequmult(Container *ctr, rhp_idx ei, double mult)
 {
+   GmsContainerData *gms = ((struct ctrdata_gams *) ctr->data);
+   assert(ctr->m == gmoM(gms->gmo));
+
    S_CHECK(ei_inbounds(ei, ctr->m, __func__));
 
    ctr->equs[ei].multiplier = mult;
+
    struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
    A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, ctr->m*sizeof(double)));
    double *mults = (double*)working_mem.ptr;
-   GmsContainerData *gms = ((struct ctrdata_gams *) ctr->data);
    GMSCHK(gmoGetEquM(gms->gmo, mults));
    mults[ei] = mult;
    GMSCHK(gmoSetEquM(gms->gmo, mults));
