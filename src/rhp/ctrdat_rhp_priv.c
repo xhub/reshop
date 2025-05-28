@@ -236,10 +236,11 @@ VecNamesFoocLookup* vnames_lookup_new(unsigned len, const Model *mdl_fooc,
                                       const rhp_idx *ei_fooc2vi_fooc)
 {
    VecNamesFoocLookup *dat;
-   MALLOCBYTES_NULL(dat, VecNamesFoocLookup, sizeof(VecNames)+sizeof(VecNamesLookupTypes)*len);
-   memset(dat->types, 0, sizeof(VecNamesLookupTypes)*len);
+   MALLOCBYTES_NULL(dat, VecNamesFoocLookup, sizeof(VecNamesFoocLookup)+sizeof(VecNamesLookupTypes)*len);
+   dat->len = len;
    dat->ei_fooc2vi_fooc = ei_fooc2vi_fooc;
    dat->mdl_fooc = mdl_fooc;
+   memset(dat->types, 0, sizeof(VecNamesLookupTypes)*len);
 
    return dat;
 }
