@@ -24,7 +24,7 @@ SCALAR tol / %TESTTOL% /;
 put_utility 'save' / 'test-nltree';
 
 * We can't get the subsitution to work 
-$onEchoV > /tmp/subgms.in
+$onEchoV > %gams.scrdir%subgms.in
 EQUATION defobj, defobj2;
 
 PARAMETER xvalL(i), xvalM(i), objval;
@@ -53,8 +53,6 @@ xvalM('3')  = x3.m;
 xvalM('4')  = x4.m;
 objval      = obj.l; 
 
-put_utility 'stdErr' / '    ' / 'objVal (pathnlp): ' objval;
-
 embeddedCode ReSHOP:
 root: min obj x1 x2 x3 x4 defobj
 endEmbeddedCode
@@ -62,8 +60,6 @@ endEmbeddedCode
 solve mEMP using emp;
 abort$[mEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mEMP.solveStat; 
 abort$[mEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', mEMP.modelStat; 
-
-put_utility 'stdErr' / 'objVal (reshop NLP): ' obj.l;
 
 xrhpL('1')  = x1.l;
 xrhpL('2')  = x2.l;
@@ -85,8 +81,6 @@ endEmbeddedCode
 solve mEMP using emp; 
 abort$[mEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mEMP.solveStat; 
 abort$[mEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]   'solve failed', mEMP.modelStat; 
-
-put_utility 'stdErr' / 'objVal (reshop Nash): ' obj.l;
 
 xrhpL('1')  = x1.l;
 xrhpL('2')  = x2.l;
@@ -125,8 +119,6 @@ solve m2EMP using emp;
 abort$[m2EMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m2EMP.solveStat; 
 abort$[m2EMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m2EMP.modelStat; 
 
-put_utility 'stdErr' / 'objVal (reshop NLP): ' obj.l;
-
 xrhpL('1')  = x1.l;
 xrhpL('2')  = x2.l;
 xrhpL('3')  = x3.l;
@@ -148,8 +140,6 @@ solve m2EMP using emp;
 abort$[m2EMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m2EMP.solveStat; 
 abort$[m2EMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m2EMP.modelStat; 
 
-put_utility 'stdErr' / 'objVal (reshop Nash): ' obj.l;
-
 xrhpL('1')  = x1.l;
 xrhpL('2')  = x2.l;
 xrhpL('3')  = x3.l;
@@ -165,8 +155,8 @@ abort$[ abs(objval - obj.l)               > tol ]    'Nash bad obj.l values: ' o
 $offEcho
 
 $macro mysolve(expr) \
-put_utility 'shell.checkErrorLevel' / "sed -e 's:XXX:expr:' /tmp/subgms.in > /tmp/subgms.gms"; \
-execute.checkErrorLevel "gams /tmp/subgms.gms r=test-nltree emp=%system.emp%"; \
+put_utility 'shell.checkErrorLevel' / "sed -e 's:XXX:expr:' %gams.scrdir%subgms.in > %gams.scrdir%subgms.gms"; \
+execute.checkErrorLevel "gams %gams.scrdir%subgms.gms lo=%gams.lo% r=test-nltree emp=%system.emp%"; \
 
 
 mysolve((cst - x1 + x2) * x3 + x4)
