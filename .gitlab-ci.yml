@@ -196,8 +196,8 @@ upload:
     - cp build/gcc.log public/ || true
     - cp -r cppcheck public/ || true
     - cp -r build/docs/html public/doxygen || true
-    - cp -r scan-build-reshop/scan-build public/scan-buil-reshop || true
-    - cp -r scan-build-imgui/scan-build public/scan-buil-imgui || true
+    - cp -r scan-build-reshop/scan-build public/scan-build-reshop || true
+    - cp -r scan-build-imgui/scan-build public/scan-build-imgui || true
     - cp -r infer-out/report.html public/report-fbinfer || true
     - cp *.gms public || true
     - cp build/Testing/Temporary/MemoryChecker*.log public/valgrind/ || true
