@@ -82,6 +82,7 @@ build:
       - build/makeself
       - build/swig
       - build/test
+      - build-reshop-only/generated
       - libpath50.so
       - liblusol.so
 
