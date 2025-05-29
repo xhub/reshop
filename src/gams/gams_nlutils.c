@@ -184,22 +184,23 @@ _end:
    equs->pool = *pool;
    equs->pool_len = len;
 
-   for (size_t i = 0; i < len; ++i)
-   {
+   for (size_t i = 0; i < len; ++i) {
       double v;
       IO_READ(fread(&v, sizeof(v), 1,f), filename);
       (*pool)[i] = v;
    }
 
-   while (!feof(f))
-   {
+   while (!feof(f)) {
       double v;
-      if (!fread(&v, sizeof(v), 1,f)) {
-         if (ferror(f)) {
-            printf("Error reading file %s\n", filename);
+      int ret = fread(&v, sizeof(v), 1, f);
+      if (1 != ret) {
+         if (errno) {
+            int errno_ = errno;
+            (void)fprintf(stderr, "Error reading file %s: ret is %d; errno is %d\n", filename, ret, errno_);
+            goto _exit;
          }
       } else {
-      if (fabs(v) > 0.) printf("%e\n", v);
+         if (fabs(v) > 0.) printf("%e\n", v);
       }
    }
 

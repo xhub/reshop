@@ -5,6 +5,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32)
+
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <windows.h>
+#include <fileapi.h>
+
+#define fileno(X) (X)
+#define fsync(X) !FlushFileBuffers((HANDLE)(X))
+
+#else
+
+#include <unistd.h>
+
+#endif
+
 #include "container.h"
 #include "ctr_gams.h"
 #include "ctrdat_gams.h"
@@ -34,6 +50,8 @@
 
 #include "gevmcc.h"
 #include "gmomcc.h"
+
+static int gams_solve(Model *mdl) NONNULL;
 
 /* ---------------------------------------------------------------------
  * Kludge for JAMS and equilibrium
@@ -219,6 +237,146 @@ static int gams_getmodelstat(const Model *mdl, int *modelstat)
    return OK;
 }
 
+static int gams_dumpmodel(Model *mdl)
+{
+   int status = OK;
+   assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+
+   Container *ctr = &mdl->ctr;
+   GmsModelData *mdldat = mdl->data;
+   GmsContainerData *gms = ctr->data;
+
+   char slvname_bck[GMS_SSSIZE+1], optname[GMS_SSSIZE+3];
+   gevGetStrOpt(gms->gev, gevNameScrDir, optname);
+   size_t len_scrdir = strlen(optname);
+
+   /* ---------------------------------------------------------------------
+    * Perform the necessary work to use convert:
+    *   - backup the existing solvername
+    *   - set the solver name
+    *   - set the option file
+    * --------------------------------------------------------------------- */
+
+   if (mdldat->solvername[0] != '\0') {
+      STRNCPY_FIXED(slvname_bck, mdldat->solvername);
+   } else {
+      slvname_bck[0] = '\0';
+   }
+
+   STRNCPY_FIXED(mdldat->solvername, "convert");
+   strncat(optname, DIRSEP"convert.opt", sizeof(optname)-len_scrdir-1);
+
+   FILE *opt = fopen(optname, "w");
+   if (!opt) {
+      error("[gams] ERROR: could not create convert option file %s\n", optname);
+      perror("fopen");
+      return Error_NullPointer;
+   }
+
+   gmoNameOptFileSet(gms->gmo, optname);
+
+   /* Reset optname to the scratch directory */
+   optname[len_scrdir] = '\0';
+
+   size_t mdlname_len = mdl_getnamelen(mdl);
+   assert(mdlname_len > 0);
+
+   struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
+   A_CHECK_EXIT(working_mem.ptr, ctr_getmem_old(ctr, (1+mdlname_len) * sizeof(char)));
+   char *mdlname = working_mem.ptr;
+   memcpy(mdlname, mdl_getname(mdl), mdlname_len);
+   mdlname[mdlname_len] = '\0';
+
+   char * restrict name = mdlname;
+   while (*name != '\0') {
+      char c = *name;
+      if (!(c >= 'a' && c <= 'z') &&
+         !(c >= 'A' && c <= 'Z') &&
+         !(c >= '0' && c <= '9') &&
+         !(c == '_')) {
+
+         *name = '_';
+      }
+
+      name++;
+   }
+
+   IO_CALL_EXIT(fprintf(opt, "gams %s" DIRSEP "%s-%u.gms\n", optname,
+                   mdlname, mdl->id));
+   IO_CALL_EXIT(fprintf(opt, "Dict=%s" DIRSEP "dict-%s-%u.txt", optname,
+                   mdlname, mdl->id));
+   IO_CALL_EXIT(fsync(fileno(opt)));
+   IO_CALL(fclose(opt));
+
+   int old_O_Subsolveropt = O_Subsolveropt;
+   O_Subsolveropt = -1;
+   gmoOptFileSet(gms->gmo, 1);
+
+   /* ---------------------------------------------------------------------
+    * Create the convert export
+    * --------------------------------------------------------------------- */
+
+   S_CHECK(gams_solve(mdl));
+
+   int offset;
+   printout(PO_INFO, "[GAMS] %n%s model '%.*s' #%u was dumped via convert as %s" DIRSEP "%s-%u.gms\n",
+            &offset, mdl_fmtargs(mdl), optname, mdlname, mdl->id);
+
+#if defined(__linux__) || defined(__APPLE__)
+
+#if defined(__GNUC__)
+   #pragma GCC diagnostic push
+   #pragma GCC diagnostic ignored "-Wformat"
+#endif
+
+   char *cmd;
+   int ret = asprintf(&cmd, "sed -n -e 'y/(),-/____/' -e 's:^ *\\([exbi][0-9][0-9]*\\)  \\(.*\\):s/\\1/\\2/g:gp' "
+                      "'%s" DIRSEP "dict-%s-%u.txt' | sed -n '1!G;h;$p' > '%s" DIRSEP "%s-%u.sed'",
+                      optname, mdlname, mdl->id, optname, mdlname, mdl->id);
+
+   if (ret == -1) { goto skip; }
+   ret = system(cmd);
+   free(cmd);
+
+   ret = asprintf(&cmd, "sed -f '%1$s" DIRSEP "%2$s-%3$u.sed' '%1$s" DIRSEP "%2$s-%3$u.gms' > '%1$s" DIRSEP "%2$s-%3$u-named.gms'",
+                  optname, mdlname, mdl->id);
+
+   if (ret == -1) { goto skip; }
+   ret = system(cmd);
+   free(cmd);
+
+   printout(PO_INFO, "%*sA version with approximate names was created at %s" DIRSEP "%s-%u-named.gms\n",
+            offset, "", optname, mdlname, mdl->id);
+#if defined(__GNUC__)
+   #pragma GCC diagnostic pop
+#endif
+
+skip: ; /* Skipping the generation */
+
+#endif
+
+   /* ------------------------------------------------------------------
+    * Restore the original solver name
+    * ------------------------------------------------------------------ */
+
+   if (slvname_bck[0] != '\0') {
+      STRNCPY_FIXED(mdldat->solvername, slvname_bck);
+   } else {
+      mdldat->solvername[0] = '\0';
+   }
+
+   optname[0] = '\0';
+
+   O_Subsolveropt = old_O_Subsolveropt;
+
+   return OK;
+
+_exit: /* This is only when */
+
+   SYS_CALL(fclose(opt));
+   return status;
+}
+
 /**
  * @brief Solve the model (stored in GMO) using GAMS gev interface
  *
@@ -256,129 +414,7 @@ static int gams_solve(Model *mdl)
 
    if (optvalb(mdl, Options_Dump_Scalar_Models) &&
          strncasecmp(mdldat->solvername, "convert", strlen("convert")) != 0) {
-
-      gevGetStrOpt(gms->gev, gevNameScrDir, optname);
-      size_t len_scrdir = strlen(optname);
-
-      /* ------------------------------------------------------------------
-       * Perform the necessary work to use convert:
-       *   - backup the existing solvername
-       *   - set the solver name
-       *   - set the option file
-       * ------------------------------------------------------------------ */
-
-      if (mdldat->solvername[0] != '\0') {
-         strncpy(buf, mdldat->solvername, GMS_SSSIZE-1);
-         buf[GMS_SSSIZE-1] = '\0';
-
-      } else {
-         buf[0] = '\0';
-      }
-
-      STRNCPY_FIXED(mdldat->solvername, "convert");
-      strncat(optname, DIRSEP"convert.opt", sizeof(optname)-len_scrdir-1);
-
-      FILE *opt = fopen(optname, "w");
-      if (!opt) {
-         error("%s ERROR: could not create file %s\n", __func__, optname);
-         perror("fopen");
-         return Error_NullPointer;
-      }
-
-      gmoNameOptFileSet(gms->gmo, optname);
-
-      /* Reset optname to the scratch directory */
-      optname[len_scrdir] = '\0';
-
-      size_t mdlname_len = mdl_getnamelen(mdl);
-      assert(mdlname_len > 0);
-
-      struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-      A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, (1+mdlname_len) * sizeof(char)));
-      char *mdlname = working_mem.ptr;
-      memcpy(mdlname, mdl_getname(mdl), mdlname_len);
-      mdlname[mdlname_len] = '\0';
-
-      char * restrict name = mdlname;
-      while (*name != '\0') {
-         char c = *name;
-         if (!(c >= 'a' && c <= 'z') &&
-             !(c >= 'A' && c <= 'Z') &&
-             !(c >= '0' && c <= '9') &&
-             !(c == '_')) {
-
-            *name = '_';
-         }
-
-         name++;
-      }
-
-      IO_CALL(fprintf(opt, "gams %s" DIRSEP "%s-%u.gms\n", optname,
-                      mdlname, mdl->id));
-      IO_CALL(fprintf(opt, "Dict=%s" DIRSEP "dict-%s-%u.txt", optname,
-                      mdlname, mdl->id));
-      IO_CALL(fclose(opt));
-
-      int old_O_Subsolveropt = O_Subsolveropt;
-      O_Subsolveropt = -1;
-      gmoOptFileSet(gms->gmo, 1);
-
-      /* ------------------------------------------------------------------
-       * Create the convert export
-       * ------------------------------------------------------------------ */
-
-      S_CHECK(gams_solve(mdl));
-
-      int offset;
-      printout(PO_INFO, "[GAMS] %n%s model '%.*s' #%u was dumped via convert as %s" DIRSEP "%s-%u.gms\n",
-               &offset, mdl_fmtargs(mdl), optname, mdlname, mdl->id);
-
-#if defined(__linux__) || defined(__APPLE__)
-
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat"
-#endif
-
-     char *cmd;
-      int ret = asprintf(&cmd, "sed -n -e 'y/(),-/____/' -e 's:^ *\\([exbi][0-9][0-9]*\\)  \\(.*\\):s/\\1/\\2/g:gp' "
-                         "'%s" DIRSEP "dict-%s-%u.txt' | sed -n '1!G;h;$p' > '%s" DIRSEP "%s-%u.sed'",
-                         optname, mdlname, mdl->id, optname, mdlname, mdl->id);
-
-      if (ret == -1) { goto skip; }
-      ret = system(cmd);
-      FREE(cmd);
-
-      ret = asprintf(&cmd, "sed -f '%1$s" DIRSEP "%2$s-%3$u.sed' '%1$s" DIRSEP "%2$s-%3$u.gms' > '%1$s" DIRSEP "%2$s-%3$u-named.gms'",
-                     optname, mdlname, mdl->id);
-
-      if (ret == -1) { goto skip; }
-      ret = system(cmd);
-      FREE(cmd);
-
-      printout(PO_INFO, "%*sA version with approximate names was created at %s" DIRSEP "%s-%u-named.gms\n",
-               offset, "", optname, mdlname, mdl->id);
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-
-skip: ; /* Skipping the generation */
-
-#endif
-      /* ------------------------------------------------------------------
-       * Restore the original solver name
-       * ------------------------------------------------------------------ */
-
-      if (buf[0] != '\0') {
-         STRNCPY_FIXED(mdldat->solvername, buf);
-      } else {
-         mdldat->solvername[0] = '\0';
-      }
-
-      optname[0] = '\0';
-
-      O_Subsolveropt = old_O_Subsolveropt;
-      
+      S_CHECK(gams_dumpmodel(mdl));
    }
 
    /* ---------------------------------------------------------------------

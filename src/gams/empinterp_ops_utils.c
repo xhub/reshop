@@ -428,7 +428,6 @@ int find_uelidx(Interpreter * restrict interp, const char uelstr[static 1],
       }
       FALLTHRU
    case IdentSet: case IdentParam: case IdentVector:
-      gmd = interp->gmd;
       return find_uelidx_gmd(interp->gmd, uelstr, uelidx);
    default:
       return runtime_error(interp->linenr);
