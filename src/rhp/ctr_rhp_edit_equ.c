@@ -474,10 +474,10 @@ int rctr_equ_add_newmap(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, d
    unsigned len = le_src->len;
    if (!le_dst) {
       A_CHECK(edst->lequ, lequ_new(len+1));
+      le_dst = edst->lequ;
    } else {
       S_CHECK(lequ_reserve(le_dst, len));
    }
-
 
    double cst = equ_get_cst(&ctr->equs[ei]);
    equ_add_cst(edst, cst*coeff);

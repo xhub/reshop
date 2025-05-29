@@ -1324,7 +1324,7 @@ int mp_packing_display(const MathPrgm *mp, uint8_t buf[VMT(static 1024)])
    case MpTypeVi:
       memcpy(buf, &mp->vi.num_cons, sizeof(u32)); buf += sizeof(u32);
       memcpy(buf, &mp->vi.num_zeros, sizeof(u32)); buf += sizeof(u32);
-      memcpy(buf, &mp->vi.num_matches, sizeof(u32)); buf += sizeof(u32);
+      memcpy(buf, &mp->vi.num_matches, sizeof(u32));
       break;
 
    case MpTypeDual:

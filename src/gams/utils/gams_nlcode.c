@@ -233,6 +233,7 @@ static inline u8 u8lifo_popN(u8 **lifo, int nargs, const u8 *lifo_top) {
    if (lifo_top + nargs > *lifo) {
       return UINT8_MAX;
    }
+
    *lifo -= nargs;
    return 0;
 }
@@ -495,7 +496,7 @@ u32 compute_nlcode_degree(int len, const int instr[VMT(restrict len)],
       }
       case nlCallArgN:
       case nlFuncArgN: {
-         int nargs = *args;
+         int nargs = *args; assert(stack-stack_top >= nargs);
          int rc = u8lifo_popN(&stack, nargs, stack_top);
          if (rc) {
             error("[nlopcode] ERROR: stack depth should be at least %d, got %d",
@@ -507,6 +508,7 @@ u32 compute_nlcode_degree(int len, const int instr[VMT(restrict len)],
          cur_degree = cur_degree == 0 ? 0 : DegFullyNl;
          break;
       }
+
       case nlChk:
       case nlAddO:
       case nlPushO:
@@ -574,16 +576,16 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
       IO_CALL_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'\";", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
    }
 
-
    OpCodeTreeSizes tree_sizes = compute_nlcode_tree_sizes(len, instr, args);
+   u32 idx_lifo_stacklen = MAX(tree_sizes.stack_maxlen, 1);
 
 
    if (mdl) {
-      idx_lifo_stack = mdl_memtmp_get(mdl, tree_sizes.stack_maxlen*sizeof(u32));
-      ind_start = mdl_memtmp_get(mdl, tree_sizes.stack_maxlen);
+      idx_lifo_stack = mdl_memtmp_get(mdl, idx_lifo_stacklen*sizeof(u32));
+      ind_start = mdl_memtmp_get(mdl, idx_lifo_stacklen);
    } else {
-      MALLOC_(idx_lifo_stack, u32, tree_sizes.stack_maxlen);
-      MALLOC_(ind_start, u8, tree_sizes.stack_maxlen);
+      MALLOC_(idx_lifo_stack, u32, idx_lifo_stacklen);
+      MALLOC_(ind_start, u8, idx_lifo_stacklen);
    }
 
    double *pool = NULL;
@@ -612,9 +614,8 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
    while (nidx < len-1) {
 
       int opcode = instr[nidx], arg = args[nidx];
-      const char *opname = nlinstr2str(opcode);
 
-      opname = opcode2name(opcode, arg);
+      const char *opname = opcode2name(opcode, arg);
       opcode2arg(opcode, arg, sizeof oparg, oparg, style, pool, mdl);
 
      /* ----------------------------------------------------------------------
@@ -669,6 +670,7 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
             opcode2arg(nlPushI, arg, sizeof oparg, oparg, style, pool, mdl);
             (void)fprintf(f, " AR_MUL_R%d [label=\"%s %s\" %s];\n", nidx, opname, oparg, style);
 
+            assert(idx_lifo > idx_lifo_stack);
             sidx = u32lifo_pop(&idx_lifo);
             (void)fprintf(f, "A%d -> A%d;\n", nidx, sidx);
             (void)fprintf(f, "A%d -> AR_MUL%d;\n", nidx, nidx);
@@ -680,6 +682,7 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
          case nlSub:
          case nlMul:
          case nlDiv:
+            assert(idx_lifo > idx_lifo_stack);
             sidx = u32lifo_pop(&idx_lifo);
             (void)fprintf(f, "A%d -> A%d;\n", nidx, sidx);
             (void)fprintf(f, "A%d -> A%d;\n", nidx, cidx);
@@ -691,6 +694,7 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
          break;
 
          case nlCallArg2:
+            assert(idx_lifo > idx_lifo_stack);
             // FIXME: clarify if need to pop once or twice
             sidx = u32lifo_pop(&idx_lifo);
             (void)fprintf(f, "A%d -> A%d;\n", nidx, sidx);
@@ -699,6 +703,7 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
 
          case nlCallArgN:
          case nlFuncArgN:
+         assert(idx_lifo + args[nidx] > idx_lifo_stack);
          // FIXME: clarify how many times we want to pop
             for (u8 j = 0, jlen = args[nidx] - 1; j < jlen; j++) {
                sidx = u32lifo_pop(&idx_lifo);
@@ -803,9 +808,8 @@ int gams_opcodetree2dot(Model *mdl, GamsOpCodeTree *otree, char **fname_dot)
    for (u32 nidx = 1, len = otree->len; nidx < len-1; ++nidx) {
 
       int opcode = instr[nidx], arg = args[nidx];
-      const char *opname = nlinstr2str(opcode);
 
-      opname = opcode2name(opcode, arg);
+      const char *opname = opcode2name(opcode, arg);
       opcode2arg(opcode, arg, sizeof oparg, oparg, style, pool, mdl);
 
       /* Print name */
