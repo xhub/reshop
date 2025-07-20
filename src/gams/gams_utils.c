@@ -2,12 +2,12 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "consts.h"
 #include "gams_utils.h"
 #include "instr.h"
 #include "printout.h"
 
 #include "gmomcc.h"
+#include "gevmcc.h"
 
 static void sub_brackets(char *str, size_t len, char c_open, char c_close)
 {
@@ -31,25 +31,34 @@ static void sub_brackets(char *str, size_t len, char c_open, char c_close)
 }
 
 /* Per https://www.gams.com/latest/docs/UG_GAMSPrograms.html#UG_GAMSPrograms_Identifiers */
-UNUSED static bool valid_gams_identifier(const char *name)
+UNUSED static bool valid_gams_identifier(const char * restrict name)
 {
    const char *name_bck = name;
-   while (*name != '\0') {
-      if (!(*name >= 'a' && *name <= 'z') &&
-          !(*name >= 'A' && *name <= 'Z') &&
-          !(*name >= '0' && *name <= '9') &&
-          !(*name == '_')) {
 
-         error("[GAMS] ERROR: invalid GAMS identifier '%s'", name_bck);
+   /* First character must be a letter */
+   char c = *name++;
+   if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z')) { 
+         error("[GAMS] ERROR: invalid GAMS identifier '%s': first character must "
+               "be a letter, got '%c'\n", name_bck, c);
+      return false;
+   }
+
+   while (*name != '\0') {
+      c = *name++;
+
+      if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z') &&
+          !(c >= '0' && c <= '9') && !(c == '_')) {
+         error("[GAMS] ERROR: invalid GAMS identifier '%s': character '%c' is "
+               "invalid", name_bck, c);
          return false;
       }
-   name++;
    }
+
    return true;
 }
 
 
-void gams_fix_equvar_names(char *name)
+void gams_fix_equvar_names(char * restrict name)
 {
    size_t len = strlen(name);
 
@@ -62,10 +71,10 @@ void gams_fix_equvar_names(char *name)
    /* 2023.11.10: we are currently putting the UEL in the symbol name, so the
     * above doesn't work. GITLAB #113*/
    while (*name != '\0') {
-      if (!(*name >= 'a' && *name <= 'z') &&
-          !(*name >= 'A' && *name <= 'Z') &&
-          !(*name >= '0' && *name <= '9') &&
-          !(*name == '_')) {
+
+      char c = *name;
+      if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z') &&
+          !(c >= '0' && c <= '9') && !(c == '_')) {
 
          *name = '_';
       }
@@ -146,8 +155,8 @@ int gams_opcode_var_to_cst(int opcode)
       case nlUMinV:
         return -1;
       default:
-         error("%s :: Unsupported opcode %d :: %s\n", __func__,
-                  opcode, nlinstr2str(opcode));
+         error("[GAMS] ERROR: unsupported opcode %d '%s'\n", opcode,
+               nlinstr2str(opcode));
          return -2;
    }
 }
@@ -190,4 +199,3 @@ const char *gams_equtype_name(int equtype)
       return "ERROR unknonwn type";
    }
 }
-

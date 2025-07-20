@@ -28,6 +28,7 @@
 #include "equvar_helpers.h"
 #include "equvar_metadata.h"
 #include "gams_exportempinfo.h"
+#include "gams_logging.h"
 #include "gams_macros.h"
 #include "gams_rosetta.h"
 #include "gams_solve.h"
@@ -177,6 +178,11 @@ static int gams_allocdata(Model *mdl)
    mdldat->last_solverid = -1;
    mdldat->delete_scratch = false; /* TODO: should we change this? GG #12 */
    mdldat->slvptr = NULL;
+
+   mdldat->gevloggercbdata.prefixchar = '=';
+   mdldat->gevloggercbdata.copymode = false;
+   mdldat->gevloggercbdata.mdl_solver = mdl;
+   mdldat->gevloggercbdata.mdl_cmex   = NULL;
 
    return OK;
 }
@@ -474,13 +480,14 @@ static int gams_solve(Model *mdl)
 
       /* ------------------------------------------------------------------
        * Set the subsolver's logging mode.
-       *  - gevSolverSameStreams: output into the same stream of RESHOP.
+       *  - gevSolverSameStreams: output into the same stream of ReSHOP.
        *  - gevSolverQuiet      : no output
        * ------------------------------------------------------------------ */
 
       const char *subsolver_log = mygetenv("RHP_OUTPUT_SUBSOLVER_LOG");
       if (O_Output_Subsolver_Log || subsolver_log) {
          solverlog = gevSolverSameStreams;
+
       } else {
          solverlog = gevSolverQuiet;
       }
@@ -547,19 +554,23 @@ static int gams_solve(Model *mdl)
       }
       myfreeenvval(subsolver_log);
 
+
       trace_stack("[GAMS] Solving %s model '%.*s' #%u with solver='%s', "
                   "gamsdir='%s', gamscntr='%s', sl=%d\n", mdl_fmtargs(mdl),
                   mdldat->solvername, mdldat->gamsdir, mdldat->gamscntr, solvelink);
+
       int status_jmp = RESHOP_SETJMP_INTERNAL_START;
       if (status_jmp == OK) {
          rc = gevCallSolver(gms->gev,
                             gms->gmo,
                             "",                      /* name of control file   */
-                            mdldat->solvername,         /* name of solver         */
-                            solvelink, /*  solvelink option       */
+                            mdldat->solvername,      /* name of solver         */
+                            solvelink,              /*  solvelink option       */
                             solverlog,               /* log option             */
-                            mdldat->logname,            /* log file name          */
-                            mdldat->statusname,         /* status file name       */
+                            NULL,                   /* log file name          */
+                            NULL,                   /* status file name       */
+                            //mdldat->logname,            /* log file name          */
+                            //mdldat->statusname,         /* status file name       */
                             GMS_SV_NA,               /* resource limit         */
                             GMS_SV_NAINT,            /* iteration limit        */
                             GMS_SV_NAINT,            /* domain violation limit */

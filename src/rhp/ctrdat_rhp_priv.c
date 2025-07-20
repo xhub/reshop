@@ -266,7 +266,7 @@ int vnames_lookup_copyname(VecNamesFoocLookup *dat, unsigned idx, char *name,
    rhp_idx vi_fooc = dat->ei_fooc2vi_fooc ? dat->ei_fooc2vi_fooc[idx] : idx;
    assert(vi_fooc < ctr_nvars_total(&mdl_fooc->ctr));
    RhpContainerData *cdat_fooc = (RhpContainerData *)mdl_fooc->ctr.data;
-   rhp_idx vi_up = cdat_var_inherited(cdat_fooc, vi_fooc);
+   rhp_idx vi_up = cdat_vi_upstream(cdat_fooc, vi_fooc);
 
    if (!valid_vi_(vi_up, ctr_nvars_total(ctr_up), __func__)) {
       STRNCPY(name, "ERROR: invalid source variable index", len);

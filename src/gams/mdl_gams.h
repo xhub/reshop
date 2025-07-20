@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include "gams_logging.h"
 #include "mdl_data.h"
 #include "rhp_fwd.h"
 
@@ -25,6 +26,8 @@ typedef struct gams_modeldata {
    int last_solverid;
    bool delete_scratch;
    void *slvptr;
+
+   GevLoggingCallbackData gevloggercbdata; /**< GEV logger callback data     */
 } GmsModelData;
 
 int gams_chk_mdl(const Model* mdl, const char *fn) NONNULL;

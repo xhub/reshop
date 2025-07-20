@@ -422,7 +422,7 @@ int gctr_genopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
     * the opcode is generated from the parent ctr
     * ---------------------------------------------------------------------- */
 
-   rhp_idx ei_up = cdat_equ_inherited(ctr->data, ei);
+   rhp_idx ei_up = cdat_ei_upstream(ctr->data, ei);
    if (valid_ei(ei_up)) {
       Container *ctr_up = ctr->ctr_up;
 

@@ -343,7 +343,7 @@ static int preprocess_ovfargs(Model *mdl, OvfDef *ovf_def, mpid_t mpid)
    if (ovf_def->eis) { 
       rhp_idx *eis = ovf_def->eis;
 
-      if (!vmd | !emd) {
+      if (!vmd || !emd) {
          errormsg("[OVF] ERROR: runtime error. Please file a bug report\n");
          return Error_RuntimeError;
       }

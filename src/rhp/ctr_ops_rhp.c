@@ -572,7 +572,7 @@ static int rctr_copyvarname_v(const Container *ctr, int vi, char *str, unsigned 
 {
   const struct ctrdata_rhp *ctrdat = (struct ctrdata_rhp *) ctr->data;
 
-  rhp_idx vi_up = cdat_var_inherited(ctrdat, vi);
+  rhp_idx vi_up = cdat_vi_upstream(ctrdat, vi);
   if (valid_vi(vi_up)) {
     return ctr_copyvarname(ctr->ctr_up, vi_up, str, len);
 
@@ -653,7 +653,7 @@ static int rctr_copyequname_v(const Container *ctr, int ei, char *str, unsigned 
 {
    const RhpContainerData *cdat = (RhpContainerData *) ctr->data;
 
-   rhp_idx ei_up = cdat_equ_inherited(cdat, ei);
+   rhp_idx ei_up = cdat_ei_upstream(cdat, ei);
    if (!valid_ei(ei_up)) {
       ei_up = cdat_equname_inherited(cdat, ei);
    }
@@ -737,7 +737,7 @@ static int rctr_copyvarname_s(const Container *ctr, int vi, char *str, unsigned 
    const struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
 
    rhp_idx vi_up;
-   if ((vi_up = cdat_var_inherited(model, vi)) && valid_vi(vi_up)) {
+   if ((vi_up = cdat_vi_upstream(model, vi)) && valid_vi(vi_up)) {
       return ctr_copyvarname(ctr->ctr_up, vi_up, str, len);
    } else if ((unsigned)vi < model->total_n) {
       if ((unsigned)vi < model->var_names.s.max && model->var_names.s.names[vi]) {
@@ -911,7 +911,7 @@ static int rctr_copyequname_s(const Container *ctr, int ei, char *str, unsigned 
    const struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
 
    rhp_idx ei_up;
-   if ((ei_up = cdat_equ_inherited(model, ei)) && valid_ei(ei_up)) {
+   if ((ei_up = cdat_ei_upstream(model, ei)) && valid_ei(ei_up)) {
       return ctr_copyequname(ctr->ctr_up, ei_up, str, len);
    } else if ((unsigned)ei < model->total_m) {
       if ((unsigned)ei < model->equ_names.s.max) {
@@ -1385,7 +1385,7 @@ static int rctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *ty
    const RhpContainerData *cdat = (RhpContainerData *) ctr->data;
    S_CHECK(ei_inbounds(ei, cdat->total_m, __func__));
 
-   rhp_idx ei_up = cdat_equ_inherited(cdat, ei);
+   rhp_idx ei_up = cdat_ei_upstream(cdat, ei);
    if (valid_ei(ei_up)) {
       return ctr_getequexprtype(ctr->ctr_up, ei_up, type);
    }

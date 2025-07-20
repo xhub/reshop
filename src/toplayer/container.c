@@ -339,6 +339,10 @@ void ctr_memtmp_fini(M_ArenaTempStamp stamp)
 void *ctr_memtmp_get(Container *ctr, size_t size)
 {
    M_ArenaLink *arenatemp = &ctr->arenaL_temp;
+   if (!arenatemp) {
+      return NULL;
+   }
+
    M_Arena *arena = &ctr->arenaL_temp.arena;
 
    void *mem = arena_alloc(arena, size);

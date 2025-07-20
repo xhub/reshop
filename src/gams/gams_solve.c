@@ -50,7 +50,7 @@ static int gmdl_gmo2gmo_fops(Model *mdl, Model *mdl_dst, Fops* fops)
 
    dctSetBasicCounts(dctdst, nvars, nequs, nuels);
 
-   return OK;
+   TO_IMPLEMENT("gmo2gmo with FOPS");
 }
 
 static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
