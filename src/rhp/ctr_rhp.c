@@ -82,7 +82,7 @@ int rctr_getnl(const Container* ctr, Equ *e)
     * --------------------------------------------------------------------- */
 
    if (e->tree ||
-       ((ei_up = cdat_equ_inherited(ctr->data, ei)) && !valid_ei(ei_up))) {
+       ((ei_up = cdat_ei_upstream(ctr->data, ei)) && !valid_ei(ei_up))) {
       return OK;
    }
 

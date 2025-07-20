@@ -329,6 +329,117 @@ static int _check_deleted_equ(struct ctrdata_rhp *cdat, rhp_idx i)
    return Error_Inconsistency;
 }
 
+static int chk_nlpool(NlPool *pool, Model *mdl_src)
+{
+   if (!pool) {
+      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool is missing!",
+            mdl_fmtargs(mdl_src));
+      return Error_Inconsistency;
+   }
+
+   if (pool->type != RHP_BACKEND_GAMS_GMO) {
+      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool has type %s, but "
+            "the expected type is %s\n", mdl_fmtargs(mdl_src),
+            backend_name(pool->type), backend_name(RHP_BACKEND_GAMS_GMO));
+      return Error_Inconsistency;
+   }
+
+   if (pool->len > INT_MAX) {
+      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool has size %zu, but "
+            "GAMS has a maximum size limit of %d", mdl_fmtargs(mdl_src),
+            pool->len, INT_MAX);
+      return Error_SizeTooLarge;
+   }
+
+   return OK;
+}
+
+static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Container *ctr_gms)
+{
+   int status = OK;
+
+   assert(gmoDictionary(gmo));
+   assert(gmoDict(gmo));
+
+   /* Some checks  */
+   assert(gmoM(gmo) == ctr_gms->m && gmoN(gmo) == ctr_gms->n);
+
+   bool do_expensive_check = optvalb(mdl_src, Options_Expensive_Checks);
+
+   if (do_expensive_check) {
+      Container *ctr_src = &mdl_src->ctr;
+      RhpContainerData *cdat = ctr_src->data;
+
+      size_t maxdim = MAX(ctr_gms->n, ctr_gms->m);
+
+      M_ArenaTempStamp mstamp = mdl_memtmp_init(mdl_src);
+      int *equidx = mdl_memtmp_get(mdl_src, sizeof(int)*maxdim);
+      int *isvarNL = mdl_memtmp_get(mdl_src, sizeof(int)*maxdim);
+      double *jacval = mdl_memtmp_get(mdl_src, sizeof(double)*maxdim);
+
+      for (int i = 0, m = ctr_gms->m, ei = 0; i < m; ++i, ++ei) {
+         int nz, nlnz;
+         gmoGetRowSparse(gmo, i, equidx, jacval, isvarNL, &nz, &nlnz);
+
+         while (!valid_ei(ctr_src->rosetta_equs[ei])) { ei++; assert(ei < cdat->total_m); }
+         CMatElt *ce = cdat->equs[ei];
+         int nz_rhp = 0, nlnz_rhp = 0;
+         while (ce) { nz_rhp++; if (ce->isNL) { nlnz_rhp++; } ce = ce->next_var; }
+
+         if (nz != nz_rhp || nlnz != nlnz_rhp) {
+            error("[GMOexport] ERROR for equation %s: GMO nz = %d, nlnz = %d; RHP "
+                  "nz = %d, nlnz = %d\n", ctr_printequname(ctr_src, ei), nz, nlnz, nz_rhp,
+                  nlnz_rhp);
+            status = Error_RuntimeError;
+         }
+         printout(PO_VVV, "EQU %s involves %d variables (nl: %d)\n",
+                  ctr_printequname(ctr_src, ei), nz, nlnz);
+
+      }
+
+      int * vidxs = equidx;
+
+      for (int i = 0, n = ctr_gms->n, vi = 0; i < n; ++i, ++vi) {
+         int nz, nlnz;
+         gmoGetColSparse(gmo, i, vidxs, jacval, isvarNL, &nz, &nlnz);
+
+         while (!valid_ei(ctr_src->rosetta_vars[vi])) { vi++; assert(vi < cdat->total_n); }
+         CMatElt *ce = cdat->vars[vi];
+         int nz_rhp = 0, nlnz_rhp = 0;
+         while (ce) { nz_rhp++; if (ce->isNL) { nlnz_rhp++; } ce = ce->next_equ; }
+
+         if (nz != nz_rhp || nlnz != nlnz_rhp) {
+
+            error("[GMOexport] ERROR for variable %s: GMO nz = %d, nlnz = %d; RHP "
+                  "nz = %d, nlnz = %d\n", ctr_printvarname(ctr_src, vi), nz, nlnz, nz_rhp,
+                  nlnz_rhp);
+            status = Error_RuntimeError;
+         }
+         printout(PO_VVV, "VAR %s is present in %d equations (nl: %d)\n",
+                  ctr_printvarname(ctr_src, vi), nz, nlnz);
+
+      }
+
+      ctr_memtmp_fini(mstamp);
+   }
+
+   if (status != OK) { return status; }
+
+   if (gmoM(gmo) != dctNRows(dct)) {
+      error("[GMOexport] ERROR: There are %d equations in the DCT, but %d are "
+            "expected\n", dctNRows(dct), gmoM(gmo));
+      return Error_RuntimeError;
+   }
+
+   if (gmoN(gmo) != dctNCols(dct)) {
+      error("[GMOexport] ERROR: There are %d variables in the DCT, but %d are "
+            "expected\n", dctNCols(dct), gmoN(gmo));
+      return Error_RuntimeError;
+   }
+
+   return OK;
+
+}
 /**
  * @brief Export an RHP model to a GAMS GMO object
  *
@@ -588,9 +699,10 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
 
    CALLOC_EXIT(NLequs, bool, ctr_gms->m);
 
-   MALLOC_EXIT(equidx, int, ctr_gms->m);
-   MALLOC_EXIT(jacval, double, ctr_gms->m);
-   MALLOC_EXIT(isvarNL, int, ctr_gms->m);
+   size_t maxdim = MAX(ctr_gms->n, ctr_gms->m);
+   MALLOC_EXIT(equidx, int, maxdim);
+   MALLOC_EXIT(jacval, double, maxdim);
+   MALLOC_EXIT(isvarNL, int, maxdim);
 
    for (size_t i = 0, len = cdat->total_n; i < len; ++i) {
 
@@ -798,30 +910,9 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
        DPRINT("Equation %d: isNL = %s\n", j, NLequs[j] ? "true" : "false");
    }
 
-   if (!ctr_src->pool) {
-      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool is missing!",
-            mdl_fmtargs(mdl_src));
-      status = Error_Inconsistency;
-      goto _exit;
-   }
-
-   if (ctr_src->pool->type != RHP_BACKEND_GAMS_GMO) {
-      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool has type %s, but "
-            "the expected type is %s\n", mdl_fmtargs(mdl_src),
-            backend_name(ctr_src->pool->type), backend_name(RHP_BACKEND_GAMS_GMO));
-      status = Error_Inconsistency;
-      goto _exit;
-   }
+   S_CHECK_EXIT(chk_nlpool(ctr_src->pool, mdl_src));
 
    double *nlpool = ctr_src->pool->data;
-
-   if (ctr_src->pool->len > INT_MAX) {
-      error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool has size %zu, but "
-            "GAMS has a maximum size limit of %d", mdl_fmtargs(mdl_src),
-            ctr_src->pool->len, INT_MAX);
-      status = Error_SizeTooLarge;
-      goto _exit;
-   }
    int nlpool_len = (int)ctr_src->pool->len;
 
    /* ----------------------------------------------------------------------
@@ -965,6 +1056,8 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
     gmoObjVarSet(gmo, -1);
   }
 
+   assert(!mdltype_isopt(probtype) || gmoGetObjName(gmo, buffer));
+
    /* ----------------------------------------------------------------------
     * Set dictionary and finalize the GMO
     * ---------------------------------------------------------------------- */
@@ -973,82 +1066,8 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
    gmoDictionarySet(gmo, 1);
 
    GMSCHK_BUF_EXIT(gmoCompleteData, gmo, buffer);
-   assert(gmoDictionary(gmo));
-   assert(gmoDict(gmo));
 
-   /* Some checks  */
-   assert(gmoM(gmo) == ctr_gms->m && gmoN(gmo) == ctr_gms->n);
-   assert(!mdltype_isopt(probtype) || gmoGetObjName(gmo, buffer));
-
-   bool do_expensive_check = optvalb(mdl_src, Options_Expensive_Checks);
-
-   if (do_expensive_check) {
-
-      if (ctr_gms->n > ctr_gms->m) {
-         REALLOC_EXIT(equidx, int, ctr_gms->n);
-         REALLOC_EXIT(jacval, double, ctr_gms->n);
-         REALLOC_EXIT(isvarNL, int, ctr_gms->n);
-      }
-
-      for (int i = 0, m = ctr_gms->m, ei = 0; i < m; ++i, ++ei) {
-         int nz, nlnz;
-         gmoGetRowSparse(gmo, i, equidx, jacval, isvarNL, &nz, &nlnz);
-
-         while (!valid_ei(ctr_src->rosetta_equs[ei])) { ei++; assert(ei < cdat->total_m); }
-         CMatElt *ce = cdat->equs[ei];
-         int nz_rhp = 0, nlnz_rhp = 0;
-         while (ce) { nz_rhp++; if (ce->isNL) { nlnz_rhp++; } ce = ce->next_var; }
-
-         if (nz != nz_rhp || nlnz != nlnz_rhp) {
-            error("[GMOexport] ERROR for equation %s: GMO nz = %d, nlnz = %d; RHP "
-                  "nz = %d, nlnz = %d\n", ctr_printequname(ctr_src, ei), nz, nlnz, nz_rhp,
-                  nlnz_rhp);
-            status = Error_RuntimeError;
-         }
-         printout(PO_VVV, "EQU %s involves %d variables (nl: %d)\n",
-                  ctr_printequname(ctr_src, ei), nz, nlnz);
-
-      }
-
-      int * vidxs = equidx;
-
-      for (int i = 0, n = ctr_gms->n, vi = 0; i < n; ++i, ++vi) {
-         int nz, nlnz;
-         gmoGetColSparse(gmo, i, vidxs, jacval, isvarNL, &nz, &nlnz);
-
-         while (!valid_ei(ctr_src->rosetta_vars[vi])) { vi++; assert(vi < cdat->total_n); }
-         CMatElt *ce = cdat->vars[vi];
-         int nz_rhp = 0, nlnz_rhp = 0;
-         while (ce) { nz_rhp++; if (ce->isNL) { nlnz_rhp++; } ce = ce->next_equ; }
-
-         if (nz != nz_rhp || nlnz != nlnz_rhp) {
-
-            error("[GMOexport] ERROR for variable %s: GMO nz = %d, nlnz = %d; RHP "
-                  "nz = %d, nlnz = %d\n", ctr_printvarname(ctr_src, vi), nz, nlnz, nz_rhp,
-                  nlnz_rhp);
-            status = Error_RuntimeError;
-         }
-         printout(PO_VVV, "VAR %s is present in %d equations (nl: %d)\n",
-                  ctr_printvarname(ctr_src, vi), nz, nlnz);
-
-      }
-   }
-
-   if (status != OK) { goto _exit; }
-
-   if (gmoM(gmo) != dctNRows(dct)) {
-      error("[GMOexport] ERROR: There are %d equations in the DCT, but %d are "
-            "expected\n", dctNRows(dct), gmoM(gmo));
-      status = Error_RuntimeError;
-      goto _exit;
-   }
-
-   if (gmoN(gmo) != dctNCols(dct)) {
-      error("[GMOexport] ERROR: There are %d variables in the DCT, but %d are "
-            "expected\n", dctNCols(dct), gmoN(gmo));
-      status = Error_RuntimeError;
-      goto _exit;
-   }
+   S_CHECK_EXIT(chk_newgmodct(gmo, dct, mdl_src, ctr_gms));
 
    /* Complete the initialization of   */
    /*  TODO(Xhub) factorize code */

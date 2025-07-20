@@ -710,4 +710,46 @@ int mdl_analyze_modeltype(Model *mdl)
    return OK;
 }
 
+rhp_idx mdl_getei_inmdlup(const Model *mdl, rhp_idx ei, const Model *mdl_up)
+{
+   const Model *mdl_cur = mdl;
+   rhp_idx ei_up = ei;
 
+   while (mdl_cur != mdl_up) {
+      ei_up = mdl_getcurrentei(mdl_cur, ei_up);
+
+      if (!valid_ei(ei_up)) { return ei_up; }
+
+      if (!mdl_cur->mdl_up) {
+         error("[model] ERROR: %s model '%.*s' #%u is not a parent of %s model '%.*s' #%u",
+               mdl_fmtargs(mdl_up), mdl_fmtargs(mdl));
+         return IdxError;
+      }
+
+      mdl_cur = mdl_cur->mdl_up;
+   }
+
+   return ei_up;
+}
+
+rhp_idx mdl_getvi_inmdlup(const Model *mdl, rhp_idx vi, const Model *mdl_up)
+{
+   const Model *mdl_cur = mdl;
+   rhp_idx vi_up = vi;
+
+   while (mdl_cur != mdl_up) {
+      vi_up = mdl_getcurrentei(mdl_cur, vi_up);
+
+      if (!valid_ei(vi_up)) { return vi_up; }
+
+      if (!mdl_cur->mdl_up) {
+         error("[model] ERROR: %s model '%.*s' #%u is not a parent of %s model '%.*s' #%u",
+               mdl_fmtargs(mdl_up), mdl_fmtargs(mdl));
+         return IdxError;
+      }
+
+      mdl_cur = mdl_cur->mdl_up;
+   }
+
+   return vi_up;
+}

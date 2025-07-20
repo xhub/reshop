@@ -105,7 +105,7 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
    while (mdl) {
       switch (mdl->backend) {
       case RHP_BACKEND_RHP: {
-         rhp_idx ei_up = cdat_equ_inherited(mdl->ctr.data, ei);
+         rhp_idx ei_up = cdat_ei_upstream(mdl->ctr.data, ei);
 
          if (valid_ei(ei_up)) {
             ei = ei_up;

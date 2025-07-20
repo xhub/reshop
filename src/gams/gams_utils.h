@@ -11,4 +11,6 @@ int gams_opcode_var_to_cst(int opcode);
 
 const char *gams_equtype_name(int equtype);
 
+void gams_process_subsolver_log(const char *msg, int mode, void *usrmem);
+
 #endif

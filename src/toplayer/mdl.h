@@ -133,6 +133,8 @@ int mdl_getnamelen2(const Model *mdl);
 
 rhp_idx mdl_getcurrentei(const Model *mdl, rhp_idx ei) NONNULL;
 rhp_idx mdl_getcurrentvi(const Model *mdl, rhp_idx vi) NONNULL;
+rhp_idx mdl_getei_inmdlup(const Model *mdl, rhp_idx ei, const Model *mdl_up) NONNULL;
+rhp_idx mdl_getvi_inmdlup(const Model *mdl, rhp_idx vi, const Model *mdl_up) NONNULL;
 
 int mdl_settype(Model *mdl, ModelType probtype) NONNULL;
 int mdl_setobjvar(Model *mdl, rhp_idx vi) NONNULL;

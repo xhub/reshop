@@ -1,3 +1,4 @@
+#include "gams_logging.h"
 #include "gams_macros.h"
 #include "reshop_config.h"
 #include "asprintf.h"
@@ -35,7 +36,6 @@
 static tlsvar char *gamsdir = NULL;
 static tlsvar char *gamscntr = NULL;
 
-
 #ifndef CLEANUP_FNS_HAVE_DECL
 static
 #endif
@@ -44,25 +44,6 @@ void DESTRUCTOR_ATTR cleanup_gams(void)
   FREE(gamsdir);
   FREE(gamscntr);
    gams_unload_libs();
-}
-
-/** @brief print function for GAMS
- *
- * @param msg   message to print
- * @param mode  type of message
- * @param data  user data (not used for us)
- */
-static void GEV_CALLCONV reshop_printfn_gams(const char *msg, int mode, UNUSED void *data)
-{
-   /* TODO(GAMS) review this:
-    * - where is the value of mode documented?
-    * - it seems that the string in msg is not NUL-terminated. Is that correct?
-    */
-   size_t i = 0;
-   while(msg[i] != '\n') { i++; }
-   ((char*)msg)[i+1] = '\0';
-
-   printstr(mode << 2 | PO_ALLDEST, msg);
 }
 
 
@@ -284,7 +265,7 @@ int gmdl_ensuresimpleprob(Model *mdl)
  */
 int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
 {
-   char gamsctrl_new[GMS_SSSIZE], scrdir[GMS_SSSIZE];
+   char gamsctrl_new[GMS_SSSIZE], scrdir[GMS_SSSIZE], buf[GMS_SSSIZE];
    GmsModelData *mdldat = mdl_gms->data;
 
    /* ----------------------------------------------------------------------
@@ -305,7 +286,9 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
       mdl_gms_up = mdl_gms_up->mdl_up;
    }
 
+   /* FIXME: shouldn't this be has_gmsdata ?*/
    if (mdl_gms_up) {
+      assert(mdl_gms_up->backend == RHP_BACKEND_GAMS_GMO);
       const GmsModelData *mdldat_up = mdl_gms_up->data;
       Container *ctr_up = &mdl_gms_up->ctr;
       const GmsContainerData *gms = ctr_up->data;
@@ -342,6 +325,10 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
          return Error_SystemError;
       }
 
+      trace_model("[GAMS] %s model '%.*s' #%u: original scrdir is '%s'\n",
+                  mdl_fmtargs(mdl_gms), scrdir);
+
+      S_CHECK(ensure_matrixfile(scrdir));
       size_t len_namescr = strlen(scrdir);
       const char * dirname = mdl_gms->commondata.name ? mdl_gms->commondata.name : "reshop";
       strncat(scrdir, dirname, GMS_SSSIZE - len_namescr + 1);
@@ -358,8 +345,8 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
       /* \TODO(xhub) understand why we need a logfile */
       char logfile_new[GMS_SSSIZE];
       STRNCPY_FIXED(logfile_new, scrdir);
-      strncat(logfile_new, "gamslog.dat", strlen(logfile_new)-1);
 
+      strncat(logfile_new, DIRSEP "gamslog.dat", strlen(logfile_new)-1);
 
       if (gevDuplicateScratchDir(gev, scrdir, logfile_new, gamsctrl_new)) {
          errormsg("[GAMS] ERROR: call to gevDuplicateScratchDir failed\n");
@@ -405,7 +392,7 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
    assert(0 == dctNRows(dctdst) && 0 == dctNCols(dctdst));
 
    /* ----------------------------------------------------------------------
-    * Prepare the GMO object: set the model type, index base  = 0 (for variable
+    * Prepare the GMO object: set the model type, index base = 0 (for variable
     * and equation indices), set the name, and reuse optfile name to initialize
     * the directory where the option file are expected to be found. The proper
     * logic is done in GMO
@@ -418,7 +405,6 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
    if (mdl_gms_up) {
       const GmsContainerData *gms = mdl_gms_up->ctr.data;
       gmoHandle_t gmo = gms->gmo;
-      char buf[GMS_SSSIZE];
       gmoNameOptFileSet(gmodst, gmoNameOptFile(gmo, buf));
    }
 
@@ -432,19 +418,10 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
    /* TODO(xhub) make an option for that */
    gevSetIntOpt(gmsdst->gev, gevKeep, 1);
 
-   /* ----------------------------------------------------------------------
-    * If the gev doesn't come from GAMS, set the call to reshop_printfn_gams
-    * ---------------------------------------------------------------------- */
+   /* Set the GEV callback */
+   S_CHECK(gev_logger_callback_init(mdl_gms, has_gmsdata ? GevLoggerCbUpstream : GevLoggerCbRhp));
 
-   if (!has_gmsdata) {
-      gevRegisterWriteCallback(gmsdst->gev, reshop_printfn_gams, 1, NULL);
-   }
-
-   /* -----------------------------------------------------------------------
-    * Initialize the GMO object with the problem size
-    * ---------------------------------------------------------------------- */
-
-   char buf[GMS_SSSIZE];
+   /* Initialize the GMO object with the problem size */
    GMSCHK_ERRMSG(gmoInitData(gmodst, ctrgms->m, ctrgms->n, 0), gmodst, buf);
 
    /* -----------------------------------------------------------------------
@@ -452,7 +429,10 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
     * TODO: we need the number of UELs here
     * ---------------------------------------------------------------------- */
 
-   dctSetBasicCounts(dctdst, ctrgms->m, ctrgms->n, 0);
+   if (!dctSetBasicCountsEx(dctdst, ctrgms->m, ctrgms->n, 0, buf, sizeof buf)) {
+      error("[GAMS/DCT] ERROR while calling dctSetBasicCountsEx: %s\n", buf);
+      return Error_GamsCallFailed;
+   }
 
    return OK;
 }

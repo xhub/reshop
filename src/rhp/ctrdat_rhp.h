@@ -57,16 +57,16 @@ struct auxmdl {
 };
 
 /** Inherited equations  */
-struct e_inh {
+typedef struct e_inh {
    Aequ e;       /**< Inherited equations in the current indexspace   */
    Aequ e_src;   /**< Inherited equations in the original indexspace  */
-    };
+} EquInherited;
 
 /** Inherited variables  */
-struct v_inh {
+typedef struct v_inh {
    Avar v;       /**< Inherited variables in the current indexspace   */
    Avar v_src;   /**< Inherited variables in the original indexspace  */
-};
+} VarInherited;
 
 typedef struct vnames {
    VecNamesType type;
@@ -175,7 +175,7 @@ int cdat_varname_end(RhpContainerData* cdat ) NONNULL;
 int cdat_add2free(RhpContainerData *cdat, void *mem) NONNULL;
 
 static NONNULL inline
-rhp_idx cdat_equ_inherited(const RhpContainerData *cdat, rhp_idx ei)
+rhp_idx cdat_ei_upstream(const RhpContainerData *cdat, rhp_idx ei)
 {
    const struct e_inh *e_inh = &cdat->equ_inherited;
    unsigned idx = aequ_findidx(&e_inh->e, ei); 
@@ -207,7 +207,7 @@ bool cdat_equ_isinherited(const RhpContainerData *cdat, rhp_idx ei)
 }
 
 static NONNULL inline
-rhp_idx cdat_var_inherited(const RhpContainerData *cdat, rhp_idx vi)
+rhp_idx cdat_vi_upstream(const RhpContainerData *cdat, rhp_idx vi)
 {
    const struct v_inh *v_inh = &cdat->var_inherited;
    unsigned idx = avar_findidx(&v_inh->v, vi); 
