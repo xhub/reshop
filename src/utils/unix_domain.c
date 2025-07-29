@@ -144,7 +144,7 @@ static int unix_domain_getfd(const char *sockpath)
 int unix_domain_client_init(const char *sockpath)
 {
    gui_fd = unix_domain_getfd(sockpath);
-   if (gui_fd <= 0) { 
+   if (!valid_fd(gui_fd)) { 
       return Error_SystemError;
    }
 
@@ -167,7 +167,7 @@ int unix_domain_client_init(const char *sockpath)
 
 void unix_domain_send1(MessageType mtype)
 {
-   assert(gui_fd >= 0);
+   assert(valid_fd(gui_fd));
 
    MessageHeader header = { 0, mtype, {0}, {0} };
    CHK_WRITE(write(gui_fd, &header, sizeof(header)))
@@ -175,7 +175,7 @@ void unix_domain_send1(MessageType mtype)
 
 void unix_domain_send_str(MessageType mtype, const char* message)
 {
-   assert(gui_fd >= 0);
+   assert(valid_fd(gui_fd));
    // Send request
    size_t msglen = strlen(message)+1;
    MessageHeader header = { msglen, mtype, {0}, {0} };

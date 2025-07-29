@@ -24,7 +24,7 @@
 
 int imgui_start(const char *hint)
 {
-   if (gui_fd >= 0) { return OK; }
+   if (valid_fd(gui_fd)) { return OK; }
    const char *arg0, *imgui_path;
 
    if (hint && hint[0] != '\0') {
