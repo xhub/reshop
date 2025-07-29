@@ -93,7 +93,7 @@ DEFINE_STR()
 };
 #undef ERRSTR
 
-const unsigned char n_empdag_errs = sizeof(empdag_errs_offset)/sizeof(empdag_errs_offset[0]);
+static const unsigned char n_empdag_errs = sizeof(empdag_errs_offset)/sizeof(empdag_errs_offset[0]);
 
 static inline const char* empdag_errstr(int rc)
 {

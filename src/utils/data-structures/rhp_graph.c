@@ -129,8 +129,8 @@ int rhp_graph_gen_dfs(struct rhp_graph_gen ** restrict nodes, unsigned n_nodes,
   return OK;
 }
 
-const char * const nodestyle_ovf  = "style=filled,color=lightblue1";
-const char * const arcstyle_ovf   = "color=red";
+static const char * const nodestyle_ovf  = "style=filled,color=lightblue1";
+static const char * const arcstyle_ovf   = "color=red";
 
 static int _print_ovfgraph_nodes(const OvfDef* ovf, FILE* f,
                                  const Container *ctr)

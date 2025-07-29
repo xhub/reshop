@@ -502,6 +502,7 @@ NONNULL static int _real(const char *str, void *obj)
 }
 
 //NOLINTBEGIN
+#ifdef IMPLEMENT_PARSE_RULE
 static inline int _string(const char *str, void *strcopy)
 {
   TO_IMPLEMENT("string parse");
@@ -521,6 +522,7 @@ static inline int _binary(const char *str, void *ttt)
 {
   TO_IMPLEMENT("binary parse");
 }
+#endif
 //NOLINTEND
 
 typedef int (*parse_fn)(const char *, void *);
@@ -531,7 +533,8 @@ struct parse_rules {
    enum precedence prec;
 };
 
-const struct parse_rules rules[] = {
+#ifdef IMPLEMENT_PARSE_RULE
+static const struct parse_rules rules[] = {
    /* Modeling keywords */
    [TOK_BILEVEL]       = {NULL,      NULL,     PREC_NONE},
    [TOK_DAG]           = {NULL,      NULL,     PREC_NONE},
@@ -607,6 +610,7 @@ const struct parse_rules rules[] = {
 
 static_assert(sizeof(rules)/sizeof(rules[0]) == 1+TOK_UNSET,
               "Check the sizes of rules and TokenType");
+#endif
 
 static inline void _tok_defvar(Token *tok, const char *str)
 {

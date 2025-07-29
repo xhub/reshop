@@ -30,15 +30,15 @@
 #include "toplayer_utils.h"
 
 
-const char * const nodestyle_min   =  "color=lightblue1";
-const char * const nodestyle_max   =  "color=lightsalmon1";
-const char * const nodestyle_vi    =  "color=lightseagreen";
-const char * const nodestyle_dual  =  "color=darkorange";
-const char * const nodestyle_nash  =  "color=lightgreen";
+static const char * const nodestyle_min   =  "color=lightblue1";
+static const char * const nodestyle_max   =  "color=lightsalmon1";
+static const char * const nodestyle_vi    =  "color=lightseagreen";
+static const char * const nodestyle_dual  =  "color=darkorange";
+static const char * const nodestyle_nash  =  "color=lightgreen";
 
-const char * const arcstyle_CTRL = "color=\"magenta:invis:magenta\"";
-const char * const arcstyle_NASH = "color=lightgreen, arrowhead=box";
-const char * const arcstyle_VF   = "color=red";
+static const char * const arcstyle_CTRL = "color=\"magenta:invis:magenta\"";
+static const char * const arcstyle_NASH = "color=lightgreen, arrowhead=box";
+static const char * const arcstyle_VF   = "color=red";
 
 typedef struct {
    const char *labelcolor;

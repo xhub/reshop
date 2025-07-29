@@ -29,7 +29,6 @@ struct sd_ops {
    void (*deallocdata)(struct sd_tool *ad_tool);
    int (*assemble)(struct sd_tool *ad_tool, Container *ctr, EmpInfo *empinfo);
    int (*deriv)(struct sd_tool *adt, int vidx, Equ *e);
-
 };
 
 void sd_tool_free(struct sd_tool *adt);

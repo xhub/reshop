@@ -19,7 +19,7 @@ typedef struct {
    OperatorKeywordType type;
    unsigned position;
    union {
-      const char **kwstrs;
+      const char * const *kwstrs;
    };
    union {
       setter_operator_optchoice strsetter;

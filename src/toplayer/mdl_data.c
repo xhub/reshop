@@ -27,7 +27,7 @@ DEFSTR(MdlProbType_vi,"vi") \
 DEFSTR(MdlProbType_emp,"emp") \
 DEFSTR(MdlProbType_cns,"cns") \
 
-const size_t backendnamelen = sizeof(mdl_backendnames)/sizeof(char*);
+static const size_t backendnamelen = sizeof(mdl_backendnames)/sizeof(char*);
 RESHOP_STATIC_ASSERT(sizeof(mdl_backendnames)/sizeof(char*) == (RHP_BACKEND_AMPL+1),
       "Inconsistency in model backends")
 
