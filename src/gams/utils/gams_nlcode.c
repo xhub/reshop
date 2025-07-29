@@ -39,8 +39,8 @@
 #define NLCODE_DEBUG(...) printf(__VA_ARGS__);
 
 
-char varName[3*sizeof(unsigned)*CHAR_BIT/8+5];
-char cstString[3*sizeof(unsigned)*CHAR_BIT/8+5];
+tlsvar char varName[3*sizeof(unsigned)*CHAR_BIT/8+5];
+//char cstString[3*sizeof(unsigned)*CHAR_BIT/8+5];
 
 static const char * opcode2name(int opcode, int arg)
 {

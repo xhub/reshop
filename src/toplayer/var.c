@@ -7,7 +7,7 @@
 #include "status.h"
 #include "var.h"
 
-static const char* var_type_names[] = {
+static const char* const var_type_names[] = {
    "continuous",
    "binary",
    "integer",

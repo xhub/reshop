@@ -31,7 +31,7 @@ tlsvar const char* libpath_fname = NULL;
 #include "path_func.h"
 
 
-static const char *path_libnames[] = {
+static const char * const path_libnames[] = {
    DLL_FROM_NAME("path47"),
    DLL_FROM_NAME("path50"),
    DLL_FROM_NAME("path51"),

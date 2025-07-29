@@ -110,7 +110,7 @@ const char * identtype2str(IdentType type)
 }
 
 // HACK: this should not be here
-static const char *smoothing_scheme_options[] =
+static const char * const smoothing_scheme_options[] =
    {"LogSumExp", NULL};
 
 static void smoothing_scheme_setter(void *dat, unsigned idx)
