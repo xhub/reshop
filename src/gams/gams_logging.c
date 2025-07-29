@@ -162,7 +162,8 @@ static void process_equvar_msg(GevLoggingCallbackData *dat, const char *msg)
 
    const Model *mdl_gms = dat->mdl_cmex;
    size_t msglen = strlen(endptr);
-   char str[strlen(endptr)+20];
+   size_t strsz = msglen > 2028 ? 2048 : msglen + 20;
+   char str[strsz];
 
    rhp_idx idx = idx_msg-1;
    if (mdl_gms) {
@@ -291,7 +292,8 @@ static void process_collected_errors(GevLoggingCallbackData *dat, const char *ms
 
    const Model *mdl_gms = dat->mdl_cmex;
    size_t msglen = strlen(endptr);
-   char str[strlen(endptr)+20];
+   size_t strsz = msglen > 2028 ? 2048 : msglen + 20;
+   char str[strsz];
 
    switch (errcat) {
    case EquErr:

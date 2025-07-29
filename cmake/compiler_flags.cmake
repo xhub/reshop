@@ -77,7 +77,7 @@ macro(SET_C_WARNINGS _TARGETS)
 
     set (_error_warnings "trampolines;incompatible-pointer-types;restrict;shadow;alloc-zero;strict-prototypes")
     list(APPEND _error_warnings "return-type;switch;enum-conversion;implicit-function-declaration;init-self")
-    list(APPEND _error_warnings "missing-prototypes;missing-declarations;type-limits;vla-larger-than=0")
+    list(APPEND _error_warnings "missing-prototypes;missing-declarations;type-limits;vla-larger-than=2048")
     list(APPEND _error_warnings "int-to-pointer-cast;pointer-to-int-cast;format-security;unreachable-code")
     list(APPEND _error_warnings "inconsistent-dllimport;redundant-decls;undef;bad-function-cast;pedantic")
     list(APPEND _error_warnings "duplicated-branches;duplicated-cond;attribute-alias;nonnull;stringop-overread")
