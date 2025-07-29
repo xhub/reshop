@@ -502,7 +502,7 @@ static int gams_solve(Model *mdl)
          if (O_Subsolveropt == 1) {
             SNPRINTF_CHECK(optname, GMS_SSSIZE, "%s.opt", mdldat->solvername);
          } else {
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined (__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
@@ -515,7 +515,7 @@ static int gams_solve(Model *mdl)
                fmtstr = "%s.%d";
             }
             SNPRINTF_CHECK(optname, GMS_SSSIZE, fmtstr, mdldat->solvername, O_Subsolveropt);
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined (__clang__)
 #pragma GCC diagnostic pop
 #endif
          }
