@@ -106,8 +106,8 @@ static int test_nlopcode2dot(const int *instrs, const int *args, const char *tes
       goto exit_;
    }
 
-   char *do_display = mygetenv("RHP_TEST_NLOPCODE_DISPLAY");
-   
+   const char *do_display = mygetenv("RHP_TEST_NLOPCODE_DISPLAY");
+ 
    if (do_display) {
       if ((rc = dot2png(fname_dot))) { goto exit_; }
       if ((rc = view_png(fname_dot, NULL))) { goto exit_; }
@@ -130,7 +130,7 @@ static int test_nlopcode2otree(const int *instrs, const int *args, const char *t
       (void)fprintf(stderr, "ERROR while create opcode tree of %s\n", testname);
    }
 
-   char *do_display = mygetenv("RHP_TEST_NLOPCODE_DISPLAY");
+   const char *do_display = mygetenv("RHP_TEST_NLOPCODE_DISPLAY");
  
    if (do_display) {
       rc = gams_opcodetree2dot(NULL, otree, &fname_dot);
