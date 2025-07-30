@@ -21,7 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install LLVM
-      uses: KyleMayes/install-llvm-action@2.0.7
+      uses: KyleMayes/install-llvm-action@v2
       with:
         version: "20" # Specify the desired LLVM version
     - name: Set reusable strings
