@@ -90,14 +90,6 @@ endfunction ()
 
 
 
-ADD_PUBLIC_TEST(test_ovf_fitting_reshop.c test_ovf_fitting_common.c)
-#add_test(ovf_fitting_reshop_initvar test_ovf_fitting_reshop)
-#set_tests_properties(ovf_fitting_reshop_initvar PROPERTIES ENVIRONMENT "RHP_OVF_INIT_NEW_VARIABLES=1" )
-ADD_PUBLIC_TEST(test_basic_reshop.c test_basic.c test_common.c)
-ADD_PUBLIC_TEST(test_crm_reshop.c test_crm.c test_common.c ../src/utils/os/asprintf.c)
-
-ADD_PUBLIC_TEST(test_ovf_reshop.c test_ovf.c test_common.c)
-
 # Poor man's test of GAMS availability
 if (GAMSDIR_TARGET AND GAMSCNTR_DAT_FILE)
 
@@ -125,3 +117,44 @@ endif()
 
    #set_tests_properties(tree_1 PROPERTIES LABELS "darling_fails")
 endif()
+
+# If not GAMS install has been detected, rely on the "julia" binaries to get PATH
+if (NOT GAMS_IS_INSTALLED)
+
+   set(PATH_BASEURL "https://pages.cs.wisc.edu/~ferris/path/julia")
+
+   if (WINDOWS AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+      set (PATH_LIBS "path50.dll;lusol.dll")
+   elseif(APPLE)
+      set (PATH_LIBS "path50.dylib;lusol.dylib")
+      if (CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+         set (URL_SUBDIR "/path_libraries")
+      endif()
+   elseif (LINUX)
+      if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+         set (PATH_LIBS "path50.so;lusol.so")
+      endif()
+
+   else()
+      message(STATUS "No PATH binaries are available for OS ${CMAKE_SYSTEM_NAME} and arch ${CMAKE_SYSTEM_PROCESSOR}")
+      message(STATUS "Either make a GAMS installation available (either by putting it in PATH or via the GAMSDIR option)")
+      message(STATUS "Tests requiring the PATH solver won't be build/run.")
+      return()
+   endif()
+
+   foreach(_F in ${PATH_LIBS})
+
+   file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
+        TIMEOUT 10)
+
+endif(NOT GAMS_IS_INSTALLED)
+
+# We have ensured that the PATH libraries are available
+
+ADD_PUBLIC_TEST(test_ovf_fitting_reshop.c test_ovf_fitting_common.c)
+#add_test(ovf_fitting_reshop_initvar test_ovf_fitting_reshop)
+#set_tests_properties(ovf_fitting_reshop_initvar PROPERTIES ENVIRONMENT "RHP_OVF_INIT_NEW_VARIABLES=1" )
+ADD_PUBLIC_TEST(test_basic_reshop.c test_basic.c test_common.c)
+ADD_PUBLIC_TEST(test_crm_reshop.c test_crm.c test_common.c ../src/utils/os/asprintf.c)
+
+ADD_PUBLIC_TEST(test_ovf_reshop.c test_ovf.c test_common.c)
