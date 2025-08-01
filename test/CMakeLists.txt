@@ -143,7 +143,7 @@ if (NOT GAMS_IS_INSTALLED)
    endif()
 
    foreach(_F in ${PATH_LIBS})
-
+      MESSAGE(STATUS "Downloading file ${_F} to ${CMAKE_BINARY_DIR}/test/${_F}")
       file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
            TIMEOUT 10)
    endforeach()
