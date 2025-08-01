@@ -126,13 +126,13 @@ if (NOT GAMS_IS_INSTALLED)
    if (WINDOWS AND CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
       set (PATH_LIBS "path50.dll;lusol.dll")
    elseif(APPLE)
-      set (PATH_LIBS "path50.dylib;lusol.dylib")
+      set (PATH_LIBS "libpath50.dylib;liblusol.dylib")
       if (CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
          set (URL_SUBDIR "/path_libraries")
       endif()
    elseif (LINUX)
       if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-         set (PATH_LIBS "path50.so;lusol.so")
+         set (PATH_LIBS "libpath50.so;liblusol.so")
       endif()
 
    else()
@@ -148,11 +148,13 @@ if (NOT GAMS_IS_INSTALLED)
       MESSAGE(STATUS "Downloading file ${_F} to ${CMAKE_BINARY_DIR}/test/${_F}")
       file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
            TIMEOUT 10
-           SHOW_PROGRESS)
+           STATUS "D_RC;D_MSG")
 
-      # ON WINDOWS, the linker looks for dll in the same directory as the binary
-      # On linux, RPATH is '$ORIGIN' for reshop, so we copy the file up
-      file(COPY ${CMAKE_BINARY_DIR}/test/${_F} DESTINATION ${CMAKE_BINARY_DIR})
+      if (NOT D_RC EQUAL 0)
+         MESSAGE(STATUS "ERROR: Couldn't download file ${_F}: exit code is ${D_RC}; message is '${D_MSG}'")
+         return ()
+      endif()
+
    endforeach()
 
 endif(NOT GAMS_IS_INSTALLED)
