@@ -33,7 +33,7 @@ typedef u32 b32;
 #define Kilobytes(count) (u64) (((u64)(count)) * 1024)
 
 #ifdef _WIN32
-#include <BaseTsd.h>
+#include <basetsd.h>
 
 typedef UINT_PTR  rhpfd_t;
 #define FDP       "%llu"
