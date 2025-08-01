@@ -123,7 +123,7 @@ if (NOT GAMS_IS_INSTALLED)
 
    set(PATH_BASEURL "https://pages.cs.wisc.edu/~ferris/path/julia")
 
-   if (WINDOWS AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+   if (WINDOWS AND CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
       set (PATH_LIBS "path50.dll;lusol.dll")
    elseif(APPLE)
       set (PATH_LIBS "path50.dylib;lusol.dylib")
@@ -142,10 +142,13 @@ if (NOT GAMS_IS_INSTALLED)
       return()
    endif()
 
-   foreach(_F in ${PATH_LIBS})
+   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+   foreach(_F ${PATH_LIBS})
       MESSAGE(STATUS "Downloading file ${_F} to ${CMAKE_BINARY_DIR}/test/${_F}")
       file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
-           TIMEOUT 10)
+           TIMEOUT 10
+           SHOW_PROGRESS)
    endforeach()
 
 endif(NOT GAMS_IS_INSTALLED)
