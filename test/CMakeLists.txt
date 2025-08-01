@@ -151,7 +151,7 @@ if (NOT GAMS_IS_INSTALLED)
            STATUS "D_RC;D_MSG")
 
       if (NOT D_RC EQUAL 0)
-         MESSAGE(STATUS "ERROR: Couldn't download file ${_F}: exit code is ${D_RC}; message is '${D_MSG}'")
+         MESSAGE(STATUS "ERROR: Couldn't download file ${_F} from URL ${PATH_BASEURL}${URL_SUBDIR}/${_F}: exit code is ${D_RC}; message is '${D_MSG}'")
          return ()
       endif()
 
