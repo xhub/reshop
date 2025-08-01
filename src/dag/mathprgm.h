@@ -53,7 +53,7 @@ struct mp_vi {
    u32 num_cons;    /**< number of constraints in the VI             */
    u32 num_zeros;   /**< number of VI zero func (\f$ F_i(x) \equiv 0 \f$) */
    u32 num_matches; /**< number of matches*/
-   bool has_kkt;         /**< True of the MP contains the KKT of another MP    */
+   bool has_kkt;    /**< True of the MP contains the KKT of another MP    */
 };
 
 struct mp_ccflib {

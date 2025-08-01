@@ -76,6 +76,9 @@ check_status(biobjective);
 abort$[abs(x_l - x.l) > tol] "wrong solution", x_l, x.l;
 abort$[abs(x_m - x.m) > tol] "wrong solution", x_m, x.m;
 
+option clear=x;
+x.lo = 10;
+
 * Equilibrium solve
 embeddedCode ReSHOP:
   deffn f(i) defcost(i)

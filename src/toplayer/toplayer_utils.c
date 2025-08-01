@@ -1,16 +1,20 @@
 
 #include "toplayer_utils.h"
-#include "reshop.h"
+#include "mdl_data.h"
 
 const char* sense2str(unsigned sense)
 {
    switch(sense) {
-   case RHP_MIN:
+   case RhpMin:
       return "min";
-   case RHP_MAX:
+   case RhpMax:
       return "max";
-   case RHP_FEAS:
+   case RhpFeasibility:
       return "feasibility";
+   case RhpDualSense:
+      return "dual sense";
+   case RhpNoSense:
+      return "no sense";
    default:
       return "invalid sense";
    }

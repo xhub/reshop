@@ -144,8 +144,9 @@ if (NOT GAMS_IS_INSTALLED)
 
    foreach(_F in ${PATH_LIBS})
 
-   file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
-        TIMEOUT 10)
+      file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
+           TIMEOUT 10)
+   endforeach()
 
 endif(NOT GAMS_IS_INSTALLED)
 

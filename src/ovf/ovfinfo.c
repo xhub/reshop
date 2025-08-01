@@ -274,11 +274,12 @@ void ovf_print(const struct ovfinfo *ovf_info, const Model *mdl)
 {
    printout(PO_INFO, " ** Information about OVF annotation\n");
    bool has_ovf = false;
+
    if (ovf_info->ovf_def) {
       has_ovf = true;
       OvfDef *ovf = ovf_info->ovf_def;
-      while (ovf) {
 
+      while (ovf) {
          ovf_def_print(ovf, PO_INFO, mdl);
          ovf = ovf->next;
       }

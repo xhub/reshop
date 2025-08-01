@@ -520,7 +520,7 @@ static int preprocess_ccflibargs(Model *mdl, OvfDef *ovf_def, MathPrgm *mp)
       assert(vi < ctr_nvars_total(&mdl->ctr));
 
       if (vmd) {
-         mpid_t vmpid =  vmd[vi].mp_id;
+         mpid_t vmpid = vmd[vi].mp_id;
          if (valid_mpid(vmpid)) {
             error("[OVF] ERROR in OVF %s: variable '%s' is already affected to "
                   "the MP(%s), it should not\n", ovf_getname(ovf_def),
@@ -611,5 +611,3 @@ int ccflib_finalize(Model *mdl, OvfDef *ovf_def, MathPrgm* mp)
 
    return OK;
 }
-
-

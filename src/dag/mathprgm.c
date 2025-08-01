@@ -149,7 +149,8 @@ static inline int mp_addequchk(MathPrgm *mp, rhp_idx ei)
    return rc;
 }
 
-static inline int _setequrolechk(MathPrgm *mp, rhp_idx ei, EquRole role) {
+static inline int _setequrolechk(MathPrgm *mp, rhp_idx ei, EquRole role)
+{
    EquRole equrole = _getequrole(mp, ei);
    if (equrole != EquUndefined) {
       equmeta_rolemismatchmsg(&mp->mdl->ctr, ei, equrole, EquUndefined, __func__);
@@ -161,12 +162,15 @@ static inline int _setequrolechk(MathPrgm *mp, rhp_idx ei, EquRole role) {
    return OK;
 }
 
-static int err_noobj(MathPrgm *mp) {
-   error("[empdag] ERROR: MP is of type %s (#%u) which does not have"
-         " an objective function\n", mptype2str(mp->type), mp->type);
+static int err_noobj(MathPrgm *mp)
+{
+   error("[empdag] ERROR: MP(%s) is of type %s (#%u) which does not have"
+         " an objective function\n", mp_getname(mp), mptype2str(mp->type), mp->type);
+
    if (MpTypeUndef == mp->type) {
       errormsg("\tMP has undefined type\n");
    }
+
    return Error_InvalidValue;
 }
 
@@ -280,7 +284,7 @@ MathPrgm *mp_new(mpid_t id, RhpSense sense, Model *mdl)
       mp->type = MpTypeUndef;
    }
 
-   MP_DEBUG("Starting MP #%u\n", mp->id);
+   MP_DEBUG("Starting MP #%u of sense %s\n", mp->id, sense2str(sense));
 
    return mp;
 }
@@ -315,10 +319,17 @@ MathPrgm *mp_dup(const MathPrgm *mp_src, Model *mdl)
       break;
    case MpTypeCcflib:
       mp->ccflib.ccf = ovfdef_borrow(mp_src->ccflib.ccf);
+      if (mp_src->ccflib.mp_instance) {
+         errormsg("[MP] ERROR: need to implement duplication of CCFLIB with instance\n");
+         mp_free(mp);
+         return NULL;
+      }
+      mp->ccflib.mp_instance = NULL;
       break;
    default:
       error("[MP] ERROR while duplicating MP(%s): type %s is not implemented\n",
             mp_getname(mp_src), mptype2str(mp->type));
+      mp_free(mp);
       return NULL;
    }
 
