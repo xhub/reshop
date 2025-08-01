@@ -152,7 +152,7 @@ if (NOT GAMS_IS_INSTALLED)
 
       # ON WINDOWS, the linker looks for dll in the same directory as the binary
       # On linux, RPATH is '$ORIGIN' for reshop, so we copy the file up
-      file(COPY ${CMAKE_BINARY_DIR}/test/${_F} ${CMAKE_BINARY_DIR}/${_F})
+      file(COPY ${CMAKE_BINARY_DIR}/test/${_F} DESTINATION ${CMAKE_BINARY_DIR})
    endforeach()
 
 endif(NOT GAMS_IS_INSTALLED)
