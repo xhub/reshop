@@ -149,6 +149,10 @@ if (NOT GAMS_IS_INSTALLED)
       file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
            TIMEOUT 10
            SHOW_PROGRESS)
+
+      # ON WINDOWS, the linker looks for dll in the same directory as the binary
+      # On linux, RPATH is '$ORIGIN' for reshop, so we copy the file up
+      file(COPY ${CMAKE_BINARY_DIR}/test/${_F} ${CMAKE_BINARY_DIR}/${_F})
    endforeach()
 
 endif(NOT GAMS_IS_INSTALLED)
