@@ -148,10 +148,10 @@ if (NOT GAMS_IS_INSTALLED)
       MESSAGE(STATUS "Downloading file ${_F} to ${CMAKE_BINARY_DIR}/test/${_F}")
       file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
            TIMEOUT 10
-           STATUS "D_RC;D_MSG")
+           STATUS DL_STATUS)
 
-      if (NOT D_RC EQUAL 0)
-         MESSAGE(STATUS "ERROR: Couldn't download file ${_F} from URL ${PATH_BASEURL}${URL_SUBDIR}/${_F}: exit code is ${D_RC}; message is '${D_MSG}'")
+      if(NOT DL_STATUS MATCHES "0;")
+         MESSAGE(STATUS "ERROR: Couldn't download file ${_F} from URL ${PATH_BASEURL}${URL_SUBDIR}/${_F} got status ${DL_STATUS}")
          return ()
       endif()
 
