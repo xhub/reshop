@@ -125,7 +125,7 @@ static inline NONNULL rhp_idx aequ_fget(const Aequ *e, unsigned i)
    assert(e->size > 0);
    switch (e->type) {
    case EquVar_Compact:
-      return e->start + i; //NOLINT
+      return e->start + (rhp_idx)i; //NOLINT
    case EquVar_List:
       return e->list[i];
    case EquVar_SortedList:
@@ -133,6 +133,7 @@ static inline NONNULL rhp_idx aequ_fget(const Aequ *e, unsigned i)
    case EquVar_Block:
       return aequ_block_get(e->blocks, i);
    case EquVar_Unset:
+   default:
       return IdxError;
    }
 
