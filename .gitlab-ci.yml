@@ -183,7 +183,7 @@ sanitizer:
   allow_failure: true
   parallel:
     matrix:
-      - COMPILER: ["gcc-14_g++-14", "clang-19_clang++-19"]
+      - COMPILER: ["gcc-14_g++-14", "clang-20_clang++-20"]
         SANITIZER: [Asan, UBsan]
 
 

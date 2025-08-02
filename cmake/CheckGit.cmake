@@ -27,7 +27,16 @@ function(CheckGitRead git_hash)
 endfunction()
 
 function(CheckGitVersion)
+
+   find_program(GIT_EXECUTABLE git)
+
+   if (NOT GIT_EXECUTABLE AND NOT DEFINED GIT_HASH)
+      message(STATUS "No git executable found")
+      set (GIT_HASH "nogithash")
+   endif()
+
     if (DEFINED GIT_HASH)
+         message(STATUS "Using given git hash value >${GIT_HASH}<")
         configure_file(${pre_configure_file} ${post_configure_file} @ONLY)
         return()
     endif ()
@@ -40,6 +49,11 @@ function(CheckGitVersion)
         OUTPUT_VARIABLE GIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
+
+   if (NOT GIT_HASH)
+      message(STATUS "No git hash could be extracted")
+      set (GIT_HASH "nogithash")
+   endif()
 
     CheckGitRead(GIT_HASH_CACHE)
     if (NOT EXISTS ${post_configure_dir})
