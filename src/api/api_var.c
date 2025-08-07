@@ -32,12 +32,12 @@ void rhp_avar_free(Avar* v)
    avar_free(v);
 }
 
-int rhp_avar_get(const Avar *v, unsigned i, rhp_idx *vi)
+int rhp_avar_get(const Avar *v, unsigned i, rhp_idx *idx)
 {
    S_CHECK(chk_arg_nonnull(v, 1, __func__));
-   S_CHECK(chk_arg_nonnull(vi, 3, __func__));
+   S_CHECK(chk_arg_nonnull(idx, 3, __func__));
 
-   return avar_get(v, i, vi);
+   return avar_get(v, i, idx);
 }
 
 int rhp_avar_set_list(Avar *v, unsigned size, rhp_idx *list)
@@ -48,9 +48,33 @@ int rhp_avar_set_list(Avar *v, unsigned size, rhp_idx *list)
    return avar_set_list(v, size, list);
 }
 
-unsigned rhp_avar_size(const Avar *v)
+int rhp_avar_get_list(struct rhp_avar *v, rhp_idx **list)
 {
    S_CHECK(chk_arg_nonnull(v, 1, __func__));
+   S_CHECK(chk_arg_nonnull((void*)list, 2, __func__));
+
+   *list = v->list;
+
+   return OK;
+}
+
+unsigned rhp_avar_gettype(const struct rhp_avar *v)
+{
+   if (chk_arg_nonnull(v, 1, __func__) != OK) { return EquVar_Invalid; }
+
+   return v->type;
+}
+
+bool rhp_avar_ownmem(const struct rhp_avar *v)
+{
+   if (chk_arg_nonnull(v, 1, __func__) != OK) { return false; }
+
+   return v->own;
+}
+
+unsigned rhp_avar_size(const Avar *v)
+{
+   if (chk_arg_nonnull(v, 1, __func__) != OK) { return 0; }
 
    return avar_size(v);
 }
@@ -76,5 +100,3 @@ char rhp_avar_contains(const Avar *v, rhp_idx vi)
 
   return avar_contains(v, vi) ? 1 : 0;
 }
-
-

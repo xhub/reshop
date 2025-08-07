@@ -25,7 +25,7 @@
 #define C_to_target_lang1_alloc(out, outarray, dim, FAILED_ACTION) \
 { \
   npy_intp pydims[] = { dim }; \
-  outarray = PyArray_SimpleNew(1, pydims, NPY_DOUBLE); \
+  outarray = (SN_ARRAY_TYPE*)PyArray_SimpleNew(1, pydims, NPY_DOUBLE); \
   if (!outarray) { SWIG_Error(SWIG_RuntimeError, "Could not create an array"); FAILED_ACTION; } \
   out = (double*) array_data(outarray); \
 }

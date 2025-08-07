@@ -110,6 +110,11 @@ unsigned equ_get_nladd_estimate(Equ *e) NONNULL;
 
 void equ_err_cone(const char *fn, const Equ * restrict e);
 
+inline static bool valid_aequ(const Aequ *e)
+{
+   return e->type < EquVar_Unset;
+}
+
 /**
  * @brief Get the equation index at position i
  *
@@ -122,7 +127,8 @@ void equ_err_cone(const char *fn, const Equ * restrict e);
  */
 static inline NONNULL rhp_idx aequ_fget(const Aequ *e, unsigned i)
 {
-   assert(e->size > 0);
+   assert(e->size > 0); assert(valid_aequ(e));
+
    switch (e->type) {
    case EquVar_Compact:
       return e->start + (rhp_idx)i; //NOLINT
@@ -142,10 +148,13 @@ static inline NONNULL rhp_idx aequ_fget(const Aequ *e, unsigned i)
 
 static NONNULL inline bool aequ_contains(const Aequ *e, rhp_idx ei)
 {
+
    unsigned size = e->size;
-   if (size == 0) {
+   if (size == 0 || !valid_ei(ei) || e->type >= EquVar_Unset) {
       return false;
    }
+
+   assert(valid_aequ(e));
 
    switch (e->type) {
    case EquVar_Compact:
@@ -220,17 +229,19 @@ static inline NONNULL void aequ_setandownsortedlist(Aequ *e, unsigned size, rhp_
 
 static inline NONNULL struct aequ_block* aequ_getblocks(Aequ *e)
 {
+   assert(valid_aequ(e));
    return e->blocks;
 }
 
 static inline NONNULL void aequ_setsize(Aequ *e, unsigned size)
 {
+   assert(valid_aequ(e));
    e->size = size;
 }
 
 static inline NONNULL bool aequ_nonempty(const Aequ *e)
 {
-   return e->type != EquVar_Unset && e->size > 0;
+   return valid_aequ(e) && e->size > 0;
 }
 
 static inline void equ_add_cst(Equ *e, double val)

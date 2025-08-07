@@ -450,7 +450,7 @@ void avar_free(Avar* v)
 {
    if (v) {
      avar_empty(v);
-     FREE(v);
+     free(v);
    }
 }
 

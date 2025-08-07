@@ -111,6 +111,11 @@ int chk_avar(const Avar *v, const char *fn)
       return Error_InvalidValue;
    }
 
+   if (v->type > EquVar_Unset) {
+      error("%s ERROR: the variable object has an invalid type\n", fn);
+      return Error_InvalidValue;
+   }
+
    return OK;
 }
 

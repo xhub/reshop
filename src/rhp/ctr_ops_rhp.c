@@ -1132,10 +1132,10 @@ static int rctr_getequtype(const Container *ctr, rhp_idx ei, unsigned *type, uns
    return OK;
 }
 
-static int rctr_getspecialfloats(const Container *ctr, double *pinf, double *minf, double* nan)
+static int rctr_getspecialfloats(const Container *ctr, double *minf, double *pinf, double* nan)
 {
-  *pinf = INFINITY;
   *minf = -INFINITY;
+  *pinf = INFINITY;
   *nan = NAN;
 
   return OK;

@@ -485,17 +485,17 @@ int rhp_add_varsinboxnamed(Model *mdl, unsigned size, Avar *vout, const char *na
  * @param       mdl    the model
  * @param       size   the number of variables
  * @param[out]  vout   the 
- * @param       lb     the optional lower bound; if not set, then -infinity
- * @param       ub     the optional upper bound; if not set, then +infinity
+ * @param       lbs    the optional lower bound; if not set, then -infinity
+ * @param       ubs    the optional upper bound; if not set, then +infinity
  *
  * @return             the error code
  */
-int rhp_add_varsinboxes(Model *mdl, unsigned size, Avar *vout, double *lb, double *ub)
+int rhp_add_varsinboxes(Model *mdl, unsigned size, Avar *vout, double *lbs, double *ubs)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_arg_nonnull(vout, 3, __func__));
 
-   return rctr_add_box_vars(&mdl->ctr, size, vout, lb, ub);
+   return rctr_add_box_vars(&mdl->ctr, size, vout, lbs, ubs);
 }
 
 /**
@@ -507,12 +507,12 @@ int rhp_add_varsinboxes(Model *mdl, unsigned size, Avar *vout, double *lb, doubl
  * @param       size   the number of variables
  * @param[out]  vout   the variable
  * @param       name   the variable name
- * @param       lb     the common lower bound (optional: if not set, then -infinity)
- * @param       ub     the common upper bound (optional: if not set, then +infinity)
+ * @param       lbs    the common lower bound (optional: if not set, then -infinity)
+ * @param       ubs    the common upper bound (optional: if not set, then +infinity)
  *
  * @return             the error code
  */
-int rhp_add_varsinboxesnamed(Model *mdl, unsigned size, Avar *vout, const char *name, double *lb, double *ub)
+int rhp_add_varsinboxesnamed(Model *mdl, unsigned size, Avar *vout, const char *name, double *lbs, double *ubs)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_arg_nonnull(vout, 3, __func__));
@@ -524,7 +524,7 @@ int rhp_add_varsinboxesnamed(Model *mdl, unsigned size, Avar *vout, const char *
    A_CHECK(vname, strdup(name));
 
    S_CHECK(cdat_varname_start(ctrdat, vname));
-   S_CHECK(rctr_add_box_vars(&mdl->ctr, size, vout, lb, ub));
+   S_CHECK(rctr_add_box_vars(&mdl->ctr, size, vout, lbs, ubs));
    return cdat_varname_end(ctrdat);
 }
 
@@ -1035,6 +1035,32 @@ int rhp_set_var_sos2(Model *mdl, Avar *v, double *weights)
 }
 
 /**
+ * @brief Get the type of an option
+ *
+ * @param       mdl      the model
+ * @param       optname  the name of the option
+ * @param[out]  type     the option type
+ *
+ * @return               the error code
+ */
+int rhp_mdl_getopttype(const Model *mdl, const char *optname, unsigned *type)
+{
+   if (chk_arg_nonnull(mdl, 1, __func__)) {
+      return Error_NullPointer;
+   }
+
+   if (chk_arg_nonnull(optname, 2, __func__)) {
+      return Error_NullPointer;
+   }
+
+   if (chk_arg_nonnull(type, 3, __func__)) {
+      return Error_NullPointer;
+   }
+
+   return rmdl_getopttype(mdl, optname, type);
+}
+
+/**
  * @brief Set a boolean option
  *
  * @ingroup publicAPI
@@ -1045,12 +1071,32 @@ int rhp_set_var_sos2(Model *mdl, Avar *v, double *weights)
  *
  * @return         the error code
  */
-int rhp_set_option_b(const Model *mdl, const char *optname, unsigned char opt)
+int rhp_mdl_setopt_b(const Model *mdl, const char *optname, unsigned char opt)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
    union opt_t val;
    val.b = (bool)opt;
+   return rmdl_setoption(mdl, optname, val);
+}
+
+/**
+ * @brief Set an option of type string
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl      the model
+ * @param optname  the name of the option
+ * @param choice   the choice for the option
+ *
+ * @return         the error code
+ */
+int rhp_mdl_setopt_c(const Model *mdl, const char *optname, char *choice)
+{
+   S_CHECK(chk_rmdl(mdl, __func__));
+
+   union opt_t val;
+   val.s = choice;
    return rmdl_setoption(mdl, optname, val);
 }
 
@@ -1065,7 +1111,7 @@ int rhp_set_option_b(const Model *mdl, const char *optname, unsigned char opt)
  *
  * @return         the error code
  */
-int rhp_set_option_d(const Model *mdl, const char *optname, double optval)
+int rhp_mdl_setopt_d(const Model *mdl, const char *optname, double optval)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
@@ -1085,7 +1131,7 @@ int rhp_set_option_d(const Model *mdl, const char *optname, double optval)
  *
  * @return         the error code
  */
-int rhp_set_option_i(const Model *mdl, const char *optname, int optval)
+int rhp_mdl_setopt_i(const Model *mdl, const char *optname, int optval)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
@@ -1105,7 +1151,7 @@ int rhp_set_option_i(const Model *mdl, const char *optname, int optval)
  *
  * @return         the error code
  */
-int rhp_set_option_s(const Model *mdl, const char *optname, char *optstr)
+int rhp_mdl_setopt_s(const Model *mdl, const char *optname, char *optstr)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
@@ -1803,16 +1849,16 @@ NlTree* rhp_mdl_getnltree(const Model *mdl, rhp_idx ei)
  * @warning this function should not be used when there also
  *          is an objective variable
  *
- * @param mdl     the model
- * @param objequ  the objective equation index
+ * @param mdl   the model
+ * @param ei    the objective equation index
  *
  * @return        the error code
  */
-int rhp_mdl_setobjequ(Model *mdl, rhp_idx objequ)
+int rhp_mdl_setobjequ(Model *mdl, rhp_idx ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
-   return rmdl_setobjfun(mdl, objequ);
+   return rmdl_setobjfun(mdl, ei);
 }
 
 

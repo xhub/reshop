@@ -6,28 +6,28 @@
 #include "rmdl_options.h"
 #include "printout.h"
 
-#define SET_OPT_BOOL(S, STR, DEFAULT_VAL) S.name = STR; S.type = RMDL_OPTION_BOOL; S.p.b = DEFAULT_VAL;
-#define SET_OPT_DBL(S, STR, DEFAULT_VAL) S.name = STR; S.type = RMDL_OPTION_DBL; S.p.d = DEFAULT_VAL;
-#define SET_OPT_INT(S, STR, DEFAULT_VAL) S.name = STR; S.type = RMDL_OPTION_INT; S.p.i = DEFAULT_VAL;
-#define SET_OPT_STR(S, STR, DEFAULT_VAL) S.name = STR; S.type = RMDL_OPTION_STR; S.p.s = DEFAULT_VAL;
+#define SET_OPT_BOOL(S, STR, DEFAULT_VAL) S.name = STR; S.type = OptBoolean; S.p.b = DEFAULT_VAL;
+#define SET_OPT_DBL(S, STR, DEFAULT_VAL) S.name = STR; S.type = OptDouble; S.p.d = DEFAULT_VAL;
+#define SET_OPT_INT(S, STR, DEFAULT_VAL) S.name = STR; S.type = OptInteger; S.p.i = DEFAULT_VAL;
+#define SET_OPT_STR(S, STR, DEFAULT_VAL) S.name = STR; S.type = OptString; S.p.s = DEFAULT_VAL;
 
 static NONNULL void rmdl_options_getvalue(struct rmdl_option *opt, void *val) 
 {
    switch (opt->type) {
-   case RMDL_OPTION_BOOL:
+   case OptBoolean:
       (*(bool *)val) = opt->p.b;
       break;
-   case RMDL_OPTION_DBL:
+   case OptDouble:
       (*(double *)val) = opt->p.d;
       break;
-   case RMDL_OPTION_INT:
+   case OptInteger:
       (*(int *)val) = opt->p.i;
       break;
-   case RMDL_OPTION_STR:
+   case OptString:
       (*(char **)val) = opt->p.s;
       break;
-   case RMDL_OPTION_UNSET:
-      error("%s :: option name %s is unset!\n", __func__, opt->name);
+  default:
+      error("[option] ERROR: option name %s has unknown type %d!\n", opt->name, opt->type);
    }
 
 }
@@ -35,20 +35,20 @@ static NONNULL void rmdl_options_getvalue(struct rmdl_option *opt, void *val)
 static NONNULL void rmdl_options_setvalue(struct rmdl_option *opt, union opt_t val)
 {
    switch (opt->type) {
-   case RMDL_OPTION_BOOL:
+   case OptBoolean:
       opt->p.b = val.b;
       break;
-   case RMDL_OPTION_DBL:
+   case OptDouble:
       opt->p.d = val.d;
       break;
-   case RMDL_OPTION_INT:
+   case OptInteger:
       opt->p.i = val.i;
       break;
-   case RMDL_OPTION_STR:
+   case OptString:
       opt->p.s = val.s;
       break;
-   case RMDL_OPTION_UNSET:
-      error("%s :: option name %s is unset!\n", __func__, opt->name);
+  default:
+      error("[option] ERROR: option name %s has unknown type %d!\n", opt->name, opt->type);
    }
 
 }
@@ -68,10 +68,36 @@ struct rmdl_option *rmdl_set_options(void)
    return opt;
 }
 
+int rmdl_getopttype(const Model *mdl, const char *optname, unsigned *type)
+{
+   RhpModelData *mdldat = mdl->data;
+   assert(mdldat->options);
+
+   size_t i = 0;
+   while(mdldat->options[i].name) {
+      if (!strcmp(optname, mdldat->options[i].name)) {
+         *type = mdldat->options[i].type;
+         return OK;
+      }
+      i++;
+    }
+
+   error("[option] ERROR: no option named '%s' found\nThe available ones are:", optname);
+   i = 0;
+   while(mdldat->options[i].name) {
+     error(" %s", mdldat->options[i].name);
+     i++;
+   }
+
+   errormsg("\n");
+
+   return Error_OptionNotFound;
+}
+
 int rmdl_getoption(const Model *mdl, const char *opt, void *val)
 {
    RhpModelData *mdldat = mdl->data;
-   assert(val && mdldat->options);
+   assert(mdldat->options);
 
    size_t i = 0;
    while(mdldat->options[i].name) {

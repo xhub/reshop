@@ -68,12 +68,30 @@ enum rhp_basis_status {
    RHP_BASIS_LEN   = 6,
 };
 
+enum { RHP_OK = 0 };
+#define RHP_INVALID_IDX  (SIZE_MAX-1)
+
+/** Abstract equation or variable type */
+enum rhp_equvar_type {
+   RHP_EQUVAR_COMPACT     = 0,  /**< Compact: continuous indices */
+   RHP_EQUVAR_LIST        = 1,  /**< List: given as a list of indices */
+   RHP_EQUVAR_SORTEDLIST  = 2,  /**< List: given as a sorted list of indices */
+   RHP_EQUVAR_BLOCK       = 3,  /**< Block: collection of abstract variable/equation */
+   RHP_EQUVAR_UNSET       = 4,   /**< Unset */
+};
+
+/** Option type */
+enum rhp_option_type {
+   RhpOptBoolean = 0,            /**< Boolean option  */
+   RhpOptChoice,                 /**< Choice option   */
+   RhpOptDouble,                 /**< Double option   */
+   RhpOptInteger,                /**< Integer option  */
+   RhpOptString,                 /**< String option   */
+};
+
 /** @brief Custom print function */
 typedef void (*rhp_print_fn)(void *data, unsigned mode, const char *buf);
 typedef void (*rhp_flush_fn)(void* env);
-
-enum { RHP_OK = 0 };
-#define RHP_INVALID_IDX  (SIZE_MAX-1)
 
 /** @brief option values */
 union rhp_optval {
@@ -159,13 +177,21 @@ RHP_PUBLIB RHP_MALLOC(rhp_avar_free)
 struct rhp_avar* rhp_avar_newlistcopy(unsigned size, rhp_idx *vis);
 
 RHP_PUBLIB
-int rhp_avar_get(const struct rhp_avar *v, unsigned i, rhp_idx *vi);
+int rhp_avar_get(const struct rhp_avar *v, unsigned i, rhp_idx *idx);
 RHP_PUBLIB
 int rhp_avar_set_list(struct rhp_avar *v, unsigned size, rhp_idx *list);
 RHP_PUBLIB
+int rhp_avar_get_list(struct rhp_avar *v, rhp_idx **list);
+RHP_PUBLIB
 unsigned rhp_avar_size(const struct rhp_avar *v);
 RHP_PUBLIB
+unsigned rhp_avar_gettype(const struct rhp_avar *v);
+RHP_PUBLIB
 const char* rhp_avar_gettypename(const struct rhp_avar *v);
+RHP_PUBLIB
+bool rhp_avar_ownmem(const struct rhp_avar *v);
+RHP_PUBLIB
+char rhp_avar_contains(const struct rhp_avar *v, rhp_idx vi);
 
 /* -------------------------------------------------------------------------
  * Equation functions
@@ -183,14 +209,18 @@ RHP_PUBLIB RHP_MALLOC(rhp_aequ_free)
 struct rhp_aequ* rhp_aequ_newlistcopy(unsigned size, rhp_idx *eis);
 
 RHP_PUBLIB
-int rhp_aequ_get(const struct rhp_aequ *e, unsigned i, rhp_idx *ei);
+int rhp_aequ_get(const struct rhp_aequ *e, unsigned i, rhp_idx *idx);
 RHP_PUBLIB
 unsigned rhp_aequ_size(const struct rhp_aequ *e);
 RHP_PUBLIB
-const char* rhp_aequ_gettypename(const struct rhp_aequ *e);
-
+int rhp_aequ_get_list(struct rhp_aequ *e, rhp_idx **list);
 RHP_PUBLIB
-char rhp_avar_contains(const struct rhp_avar *v, rhp_idx vi);
+unsigned rhp_aequ_gettype(const struct rhp_aequ *e);
+RHP_PUBLIB
+const char* rhp_aequ_gettypename(const struct rhp_aequ *e);
+RHP_PUBLIB
+bool rhp_aequ_ownmem(const struct rhp_aequ *e);
+
 RHP_PUBLIB
 char rhp_aequ_contains(const struct rhp_aequ *e, rhp_idx ei);
 
@@ -215,17 +245,17 @@ struct rhp_mdl *rhp_mdl_new(unsigned backend);
 RHP_PUBLIB
 int rhp_mdl_fixvar(struct rhp_mdl *mdl, rhp_idx vi, double val);
 RHP_PUBLIB
-int rhp_mdl_getvarsmult(const struct rhp_mdl *mdl, struct rhp_avar *v, double *mult);
+int rhp_mdl_getvarsmult(const struct rhp_mdl *mdl, struct rhp_avar *v, double *vars_mult);
 RHP_PUBLIB
-int rhp_mdl_getvarsbasis(const struct rhp_mdl *mdl, struct rhp_avar *v, int *basis_status);
+int rhp_mdl_getvarsbasis(const struct rhp_mdl *mdl, struct rhp_avar *v, int *vars_basis);
 RHP_PUBLIB
-int rhp_mdl_getvarsval(const struct rhp_mdl *mdl, struct rhp_avar *v, double *vals);
+int rhp_mdl_getvarsval(const struct rhp_mdl *mdl, struct rhp_avar *v, double *vars_val);
 RHP_PUBLIB
-int rhp_mdl_getequsmult(const struct rhp_mdl *mdl, struct rhp_aequ *e, double *mult);
+int rhp_mdl_getequsmult(const struct rhp_mdl *mdl, struct rhp_aequ *e, double *equs_mult);
 RHP_PUBLIB
-int rhp_mdl_getequsbasis(const struct rhp_mdl *mdl, struct rhp_aequ *e, int *basis_status);
+int rhp_mdl_getequsbasis(const struct rhp_mdl *mdl, struct rhp_aequ *e, int *equs_basis);
 RHP_PUBLIB
-int rhp_mdl_getequsval(const struct rhp_mdl *mdl, struct rhp_aequ *e, double *vals);
+int rhp_mdl_getequsval(const struct rhp_mdl *mdl, struct rhp_aequ *e, double *equs_val);
 RHP_PUBLIB
 int rhp_mdl_getequbyname(const struct rhp_mdl *mdl, const char* name, rhp_idx *ei);
 RHP_PUBLIB
@@ -269,7 +299,7 @@ int rhp_mdl_getsolvername(const struct rhp_mdl *mdl, char const ** solvername);
 RHP_PUBLIB
 int rhp_mdl_getsolvestat(const struct rhp_mdl *mdl, int *solvestat);
 RHP_PUBLIB
-int rhp_mdl_getspecialfloats(const struct rhp_mdl *mdl, double *minf, double *pinf, double* nan);
+int rhp_mdl_getspecialfloats(const struct rhp_mdl *mdl, double *minf, double *pinf, double *nan);
 RHP_PUBLIB
 int rhp_mdl_getvarperp(const struct rhp_mdl *mdl, rhp_idx vi, rhp_idx *ei);
 RHP_PUBLIB
@@ -279,7 +309,7 @@ int rhp_mdl_getvarbounds(const struct rhp_mdl *mdl, rhp_idx vi, double* lb, doub
 RHP_PUBLIB
 int rhp_mdl_getvarbyname(const struct rhp_mdl *mdl, const char* name, rhp_idx *vi);
 RHP_PUBLIB
-int rhp_mdl_getvarlb(const struct rhp_mdl *mdl, rhp_idx vi, double *lower_bound);
+int rhp_mdl_getvarlb(const struct rhp_mdl *mdl, rhp_idx vi, double *lb);
 RHP_PUBLIB
 int rhp_mdl_getvarval(const struct rhp_mdl *mdl, rhp_idx vi, double *val);
 RHP_PUBLIB
@@ -287,7 +317,7 @@ int rhp_mdl_getvarmult(const struct rhp_mdl *mdl, rhp_idx vi, double *mult);
 RHP_PUBLIB
 int rhp_mdl_getvartype(const struct rhp_mdl *mdl, rhp_idx vi, unsigned *type);
 RHP_PUBLIB
-int rhp_mdl_getvarub(const struct rhp_mdl *mdl, rhp_idx vi, double *upper_bound);
+int rhp_mdl_getvarub(const struct rhp_mdl *mdl, rhp_idx vi, double *ub);
 RHP_PUBLIB
 unsigned rhp_mdl_nequs(const struct rhp_mdl *mdl);
 RHP_PUBLIB
@@ -505,10 +535,10 @@ RHP_PUBLIB
 int rhp_add_varsinboxnamed(struct rhp_mdl *mdl, unsigned size, struct rhp_avar *vout, const char* name,
                            double lb, double ub);
 RHP_PUBLIB
-int rhp_add_varsinboxes(struct rhp_mdl *mdl, unsigned size, struct rhp_avar *vout, double *lb, double *ub);
+int rhp_add_varsinboxes(struct rhp_mdl *mdl, unsigned size, struct rhp_avar *vout, double *lbs, double *ubs);
 RHP_PUBLIB
 int rhp_add_varsinboxesnamed(struct rhp_mdl *mdl, unsigned size, struct rhp_avar *vout, const char* name,
-                             double *lb, double *ub);
+                             double *lbs, double *ubs);
 
 
 RHP_PUBLIB
@@ -538,7 +568,7 @@ RHP_PUBLIB
 int rhp_add_funcsnamed(struct rhp_mdl *mdl, unsigned size, struct rhp_aequ *eout, const char *name);
 
 RHP_PUBLIB
-int rhp_mdl_setobjequ(struct rhp_mdl *mdl, rhp_idx objequ);
+int rhp_mdl_setobjequ(struct rhp_mdl *mdl, rhp_idx ei);
 /*  TODO: see if we can delete the rest */
 //RHP_PUBLIB
 //int rmdl_addinit_equs(struct rhp_mdl *mdl, unsigned nb);
@@ -582,8 +612,7 @@ int rhp_equ_addbilin(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v1,
 RHP_PUBLIB
 int rhp_equ_addlin(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v, const double *coeffs);
 RHP_PUBLIB
-int rhp_equ_addlinchk(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v,
-                      const double *coeffs);
+int rhp_equ_addlinchk(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v, const double *coeffs);
 RHP_PUBLIB
 int rhp_equ_addlincoeff(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v, const double *vals, double coeff);
 
@@ -771,16 +800,20 @@ int rhp_get_var_sos2(struct rhp_mdl *mdl, rhp_idx vi, unsigned **grps);
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-int rhp_set_option_b(const struct rhp_mdl *mdl, const char *optname, unsigned char opt);
+int rhp_mdl_setopt_b(const struct rhp_mdl *mdl, const char *optname, unsigned char opt);
 RHP_PUBLIB
-int rhp_set_option_d(const struct rhp_mdl *mdl, const char *optname, double optval);
+int rhp_mdl_setopt_c(const struct rhp_mdl *mdl, const char *optname, char *choice);
 RHP_PUBLIB
-int rhp_set_option_i(const struct rhp_mdl *mdl, const char *optname, int optval);
+int rhp_mdl_setopt_d(const struct rhp_mdl *mdl, const char *optname, double optval);
 RHP_PUBLIB
-int rhp_set_option_s(const struct rhp_mdl *mdl, const char *optname, char *optstr);
+int rhp_mdl_setopt_i(const struct rhp_mdl *mdl, const char *optname, int optval);
+RHP_PUBLIB
+int rhp_mdl_setopt_s(const struct rhp_mdl *mdl, const char *optname, char *optstr);
+RHP_PUBLIB
+int rhp_mdl_getopttype(const struct rhp_mdl *mdl, const char *optname, unsigned *type);
 
 RHP_PUBLIB
-int rhp_opt_setb(const char *name, int bval);
+int rhp_opt_setb(const char *name, unsigned char bval);
 RHP_PUBLIB
 int rhp_opt_setc(const char *name, const char *str);
 RHP_PUBLIB

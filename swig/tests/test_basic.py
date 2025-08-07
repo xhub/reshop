@@ -7,13 +7,13 @@ from pytest import approx
 
 def init(backend=rhp.RHP_BACKEND_RHP):
     mdl = rhp.Model(backend)
-    rhp.set_option_d(mdl, "rtol", 1e-9)
+    rhp.mdl_set_option(mdl, "rtol", 1e-9)
     return mdl
 
 
 def init_solver(backend=rhp.RHP_BACKEND_RHP):
     mdl_solver = rhp.Model(backend)
-    rhp.set_option_d(mdl_solver, "rtol", 1e-9)
+    rhp.mdl_set_option(mdl_solver, "rtol", 1e-9)
     return mdl_solver
 
 
@@ -23,10 +23,10 @@ def solve(mdl, mdl_solver, will_sucess=True):
     model_stat = rhp.mdl_getmodelstat(mdl_solver)
     solve_stat = rhp.mdl_getsolvestat(mdl_solver)
     if will_sucess:
-        assert model_stat in (1, 2)
-        assert solve_stat == 1
+        assert model_stat.code in (1, 2)
+        assert solve_stat.code == 1
     else:
-        assert model_stat not in (1, 2)
+        assert model_stat.code not in (1, 2)
 
     rhp.postprocess(mdl_solver)
 
@@ -466,14 +466,14 @@ def test_cvar():
 
     rhp.mdl_resize(mdl, len(d) + 1, len(d) + 1)
 
-    rho = rhp.add_varsnamed(mdl, 1, "rho_cvar")
+    rho = rhp.add_vars(mdl, 1, "rho_cvar")
 
-    objequ = rhp.add_funcnamed(mdl, "objequ")
+    objequ = rhp.add_func(mdl, "objequ")
     rhp.equ_addlvar(mdl, objequ, rho[0], 1.0)
     rhp.mdl_setobjequ(mdl, objequ)
     rhp.mdl_setobjsense(mdl, rhp.RHP_MIN)
 
-    v_arg_cvar = rhp.add_varsnamed(mdl, len(d), "cvar_arg")
+    v_arg_cvar = rhp.add_vars(mdl, len(d), "cvar_arg")
 
     # set equations z[i] = d[i]
     for i in range(len(d)):

@@ -195,9 +195,9 @@ int rhp_mdl_ ## name (const Model *mdl, Avar *v, argtype argname) { \
    return mdl->ctr.ops->name (&mdl->ctr, v, argname); \
 }
 
-WRAP_VARS_GETTER(getvarsmult,double*,mult)
-WRAP_VARS_GETTER(getvarsval,double*,values)
-WRAP_VARS_GETTER(getvarsbasis,int*,bstat)
+WRAP_VARS_GETTER(getvarsmult,double*,vars_mult)
+WRAP_VARS_GETTER(getvarsval,double*,vars_vals)
+WRAP_VARS_GETTER(getvarsbasis,int*,vars_basis)
 
 
 #define WRAP_EQU_GETTER(name, argtype, argname) \
@@ -222,9 +222,9 @@ int rhp_mdl_ ## name (const Model *mdl, Aequ *e, argtype argname) { \
    return mdl->ctr.ops->name (&mdl->ctr, e, argname); \
 }
 
-WRAP_EQUS_GETTER(getequsmult,double*,mult)
-WRAP_EQUS_GETTER(getequsval,double*,values)
-WRAP_EQUS_GETTER(getequsbasis,int*,bstat)
+WRAP_EQUS_GETTER(getequsmult,double*,equs_mult)
+WRAP_EQUS_GETTER(getequsval,double*,equs_val)
+WRAP_EQUS_GETTER(getequsbasis,int*,equs_basis)
 
 #define WRAP_SINGLE_SETTER(name, argtype, argname) \
 int rhp_mdl_set ## name (Model *mdl, argtype argname) { \

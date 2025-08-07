@@ -127,7 +127,7 @@ struct rhp_mdl * test_init(void)
   struct rhp_mdl *mdl = rhp_mdl_new(RHP_BACKEND_RHP);
   if (!mdl) { return NULL; }
 
-  rhp_set_option_d(mdl, "rtol", TOL_EPS/10.);
+  rhp_mdl_setopt_d(mdl, "rtol", TOL_EPS/10.);
 
   return mdl;
 }

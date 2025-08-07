@@ -12,12 +12,13 @@ enum option_setid {
    OptSet_Last = OptSet_OVF,
 };
 
+/** Option type */
 typedef enum option_type {
-   OptBoolean = 0,
-   OptChoice,
-   OptDouble,
-   OptInteger,
-   OptString,
+   OptBoolean = 0,            /**< Boolean option  */
+   OptChoice,                 /**< Choice option   */
+   OptDouble,                 /**< Double option   */
+   OptInteger,                /**< Integer option  */
+   OptString,                 /**< String option   */
    OptType_Last = OptString,
 } OptType;
 

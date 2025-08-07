@@ -32,7 +32,7 @@ static int chk_opttype(struct option *opt, OptType type, const char *fn)
    return OK;
 }
 
-int rhp_opt_setb(const char *name, int bval)
+int rhp_opt_setb(const char *name, unsigned char bval)
 {
    unsigned index;
    struct option_set *optset;
@@ -171,11 +171,11 @@ int rhp_opt_gets(const char *name, const char **str)
    return Error_OptionNotFound;
 }
 
-/* This seems unused while refactoring option handling  */
 /**
  * @brief Get the type of an option
  *
- * @param  name  the name of the option
+ * @param       name  the name of the option
+ * @param[out]  type  the option type
  *
  * @return the type of option, or INT_MAX if there is no option with this name
  */
@@ -193,7 +193,8 @@ int rhp_opt_gettype(const char *name, unsigned *type)
       return OK;
    }
 
-   error("%s ERROR: unknown option %s\n", __func__, name);
+   error("[option] ERROR: unknown option %s\n", name);
+
    return Error_OptionNotFound;
 }
 

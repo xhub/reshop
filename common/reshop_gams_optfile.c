@@ -203,6 +203,7 @@ int opt_pushtosolver(rhpRec_t *jh)
          optGetNameNr(oh, i, s);
          int ival;
          double dval;
+         unsigned char bval;
 
          switch (opttype) {
          case optTypeInteger:
@@ -219,6 +220,7 @@ int opt_pushtosolver(rhpRec_t *jh)
             optGetStrNr(oh, i, fatbuf);
             CHK(rhp_opt_sets, s, fatbuf);
             break;
+
          case optTypeEnumStr:
             optGetStrNr(oh, i, fatbuf);
             CHK(rhp_opt_setc, s, fatbuf);
@@ -226,8 +228,8 @@ int opt_pushtosolver(rhpRec_t *jh)
 
          case optTypeBoolean:
             optGetIntNr(oh, i, &ival);
-            ival = ival ? 1 : 0;
-            CHK(rhp_opt_setb, s, ival);
+            bval = ival ? 1 : 0;
+            CHK(rhp_opt_setb, s, bval);
             break;
 
          default:

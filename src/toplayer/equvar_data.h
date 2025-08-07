@@ -17,7 +17,8 @@ __extension__ typedef enum a_equvar_type ENUM_U8 {
    EquVar_List        = 1,  /**< List: given as a list of indices */
    EquVar_SortedList  = 2,  /**< List: given as a sorted list of indices */
    EquVar_Block       = 3,  /**< Block: collection of abstract variable/equation */
-   EquVar_Unset       = 4,   /**< Unset */
+   EquVar_Unset       = 4,  /**< Unset */
+   EquVar_Invalid     = 5,  /**< Invalid */
 } AbstractEquVarType;
 
 __extension__ typedef enum ENUM_U8 {

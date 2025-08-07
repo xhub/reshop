@@ -216,7 +216,7 @@ int fitting_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const char *re
   if (loss_idx == SIZE_MAX) { status = 1; goto _exit; }
 
   unsigned nb_equ = sizeof x / sizeof(double);
-  rhp_set_option_d(mdl, "rtol", TOL_EPS/10.);
+  rhp_mdl_setopt_d(mdl, "rtol", TOL_EPS/10.);
 
   RESHOP_CHECK(ovf_printsolveinfo(mdl_solver, __func__, loss_fn, reformulation));
 
@@ -708,7 +708,7 @@ int fitting_v_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const char *
   if (loss_idx == SIZE_MAX) { status = 1; goto _exit; }
 
   unsigned nb_equ = sizeof x / sizeof(double);
-  rhp_set_option_d(mdl, "rtol", TOL_EPS/10.);
+  rhp_mdl_setopt_d(mdl, "rtol", TOL_EPS/10.);
 
   RESHOP_CHECK(ovf_printsolveinfo(mdl_solver, __func__, loss_fn, reformulation));
   printf(ANSI_COLOR_MAGENTA "Testing v%u" ANSI_COLOR_RESET ANSI_CURSOR_SAVE"\n", ver);
@@ -769,7 +769,7 @@ int fitting_equil_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const ch
   if (loss_idx == SIZE_MAX) { status = 1; goto _exit; }
 
   unsigned nb_equ = sizeof x / sizeof(double);
-  rhp_set_option_d(mdl, "rtol", TOL_EPS/10.);
+  rhp_mdl_setopt_d(mdl, "rtol", TOL_EPS/10.);
 
   RESHOP_CHECK(ovf_printsolveinfo(mdl_solver, __func__, loss_fn, reformulation));
 

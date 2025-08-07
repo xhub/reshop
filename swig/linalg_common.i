@@ -1,4 +1,7 @@
 #ifdef SWIGPYTHON
+
+%ignore is_Pyobject_scipy_sparse_matrix;
+
 %inline %{
 
 static inline bool is_Pyobject_scipy_sparse_matrix(PyObject* o, PyObject* scipy_mod)

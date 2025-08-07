@@ -16,6 +16,8 @@ const char* aequvar_typestr(enum a_equvar_type type)
       return "block";
    case EquVar_Unset:
       return "unset";
+   case EquVar_Invalid:
+      return "invalid";
    default:
       return "error";
    }

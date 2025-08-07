@@ -143,6 +143,11 @@ int var_set_bounds(struct var *v, double lb, double ub);
 void var_update_bnd(struct var *var, enum var_type type);
 
 
+inline static bool valid_avar(const Avar *v)
+{
+   return v->type < EquVar_Unset;
+}
+
 /**
  * @brief Get the variable index at position i
  *
@@ -153,7 +158,7 @@ void var_update_bnd(struct var *var, enum var_type type);
  */
 static inline NONNULL rhp_idx avar_fget(const Avar *v, unsigned i)
 {
-   assert(v->size > 0);
+   assert(v->size > 0); assert(valid_avar(v));
    switch (v->type) {
    case EquVar_Compact:
       return v->start + (rhp_idx)i;
@@ -182,9 +187,11 @@ static inline NONNULL rhp_idx avar_fget(const Avar *v, unsigned i)
 static NONNULL inline bool avar_contains(const Avar *v, rhp_idx vi)
 {
    unsigned size = v->size;
-   if (size == 0 || !valid_vi(vi)) {
+   if (size == 0 || !valid_vi(vi) || v->type >= EquVar_Unset) {
       return false;
    }
+
+   assert(valid_avar(v));
 
    switch (v->type) {
    case EquVar_Compact:
@@ -259,11 +266,13 @@ static inline NONNULL void avar_setandownsortedlist(Avar *v, unsigned size, rhp_
 
 static inline NONNULL struct avar_block* avar_getblock(Avar *v)
 {
+   assert(valid_avar(v));
    return v->blocks;
 }
 
 static inline NONNULL void avar_setsize(Avar *v, unsigned size)
 {
+   assert(valid_avar(v));
    assert(v);
    v->size = size;
 }

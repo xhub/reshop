@@ -42,7 +42,7 @@ static int gams_chk_ctrdata(const Container *ctr, const char *fn)
 int gams_chk_ctr(const Container *ctr, const char *fn)
 {
    if (ctr->backend != RHP_BACKEND_GAMS_GMO) {
-      error("%s :: the container.has the wrong type: expected %s "
+      error("%s :: the container has the wrong type: expected %s "
                          "(id %d), got %s (id %d).\n", fn,
                          backend_name(RHP_BACKEND_GAMS_GMO), RHP_BACKEND_GAMS_GMO,
                          backend_name(ctr->backend), ctr->backend);

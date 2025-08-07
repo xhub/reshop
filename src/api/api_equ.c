@@ -31,12 +31,13 @@ Aequ* rhp_aequ_newlistcopy(unsigned size, rhp_idx *eis)
    return aequ_newlistcopy(size, eis);
 }
 
-int rhp_aequ_get(const Aequ *e, unsigned i, rhp_idx *ei)
+/* NOTE: we can't use ei here as it would trigger a typemap in SWIG */
+int rhp_aequ_get(const Aequ *e, unsigned i, rhp_idx *idx)
 {
    S_CHECK(chk_arg_nonnull(e, 1, __func__));
-   S_CHECK(chk_arg_nonnull(ei, 3, __func__));
+   S_CHECK(chk_arg_nonnull(idx, 3, __func__));
 
-   return aequ_get(e, i, ei);
+   return aequ_get(e, i, idx);
 }
 
 void rhp_aequ_free(Aequ* e)
@@ -46,7 +47,8 @@ void rhp_aequ_free(Aequ* e)
 
 unsigned rhp_aequ_size(const Aequ *e)
 {
-   S_CHECK(chk_arg_nonnull(e, 1, __func__));
+   if (chk_arg_nonnull(e, 1, __func__) != OK ) { return 0; }
+
    return aequ_size(e);
 }
 
@@ -54,6 +56,36 @@ const char* rhp_aequ_gettypename(const struct rhp_aequ *e)
 {
    SN_CHECK(chk_arg_nonnull(e, 1, __func__));
    return aequvar_typestr(e->type);
+}
+
+int rhp_aequ_get_list(struct rhp_aequ *e, rhp_idx **list)
+{
+   S_CHECK(chk_arg_nonnull(e, 1, __func__));
+   S_CHECK(chk_arg_nonnull((void*)list, 2, __func__));
+
+   if (e->type != EquVar_List && e->type != EquVar_SortedList) {
+      e->list = NULL;
+      return Error_RuntimeError;
+   }
+
+   *list = e->list;
+
+   return OK;
+
+}
+
+unsigned rhp_aequ_gettype(const struct rhp_aequ *e)
+{
+   if (chk_arg_nonnull(e, 1, __func__) != OK) { return EquVar_Invalid; }
+
+   return e->type;
+}
+
+bool rhp_aequ_ownmem(const struct rhp_aequ *v)
+{
+   if(chk_arg_nonnull(v, 1, __func__) != OK) { return false; }
+
+   return v->own;
 }
 
 /**

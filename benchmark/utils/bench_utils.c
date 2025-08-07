@@ -7,7 +7,7 @@ struct rhp_mdl* bench_init(double tol)
    struct rhp_mdl *mdl = rhp_mdl_new(RHP_BACKEND_RHP);
    if (!mdl) { return NULL; }
 
-   rhp_set_option_d(mdl, "rtol", tol);
+   rhp_mdl_setopt_d(mdl, "rtol", tol);
 
    return mdl;
 }
