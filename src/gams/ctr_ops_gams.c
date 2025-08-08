@@ -144,6 +144,7 @@ static int gams_equvarcounts(Container *ctr)
          error("[gams] ERROR: equation '%s' has unsupported order %d",
                ctr_printequname(ctr, i), idx);
          status = Error_GamsCallFailed;
+         continue;
       }
 
       equorders_cnt[idx]++;

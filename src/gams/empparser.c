@@ -850,7 +850,7 @@ static bool tok_UELstr(Token *tok, const char * restrict buf, unsigned * restric
    * The callee is responsible for checking that we have an ending quote
    * ---------------------------------------------------------------------- */
 
-   unsigned _p = (*pos), pos_ini = (*pos);
+   unsigned _p = (*pos), pos_ini = _p;
 
    while (validc(buf[_p]) && isspace(buf[_p]) && buf[_p] != '\n') _p++;
 

@@ -473,7 +473,8 @@ bool arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
    }
    default:
       error("%s :: Unsupported arcVF type %u", __func__, arc->type);
-      return Error_NotImplemented;
+      assert(0);
+      return false;
    }
 }
 
@@ -514,7 +515,8 @@ bool arcVF_has_abstract_objfunc(const ArcVFData *arc)
       return arcVFb_has_abstract_objfunc(arc);
    default:
       error("%s :: Unsupported arcVF type %u", __func__, arc->type);
-      return Error_NotImplemented;
+      assert(0);
+      return false;
    }
 }
 

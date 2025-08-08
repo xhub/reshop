@@ -19,7 +19,7 @@
 #include "var.h"
 
 typedef struct filter_deactivated {
-   IdxArray vars;    
+   IdxArray vars;
    IdxArray equs;
    Avar v;
    Aequ e;
@@ -951,7 +951,6 @@ Fops* fops_subdag_activevars_new(Model *mdl, daguid_t uid)
    dat->parent = mdl->ctr.fops;
    dat->subdag_root = uid;
 
-   fops->data = dat;
    fops->freedata = &subdag_freedata;
    fops->get_sizes = &subdag_active_get_sizes;
    fops->keep_var = &subdag_active_keep_var;

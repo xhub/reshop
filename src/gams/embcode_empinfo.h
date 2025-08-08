@@ -5,6 +5,6 @@
 
 #define EMBCODE_GMDOUT_FNAME "embrhp_gdx.dat"
 
-int embcode_process_empinfo(void *gmd, const char *scrdir, const char *fname) NONNULL;
+int embcode_process_empinfo(void *gmdobj, const char *scrdir, const char *fname) NONNULL;
 
 #endif

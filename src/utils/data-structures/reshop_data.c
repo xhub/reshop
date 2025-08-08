@@ -519,7 +519,7 @@ int rhp_uint_addsorted(UIntArray * restrict dat, unsigned v)
    }
 
    /*  TODO(xhub) we should be able to start from pos = dat->len-1 :( */
-   unsigned len = dat->len, pos = dat->len;
+   unsigned len = dat->len, pos = len;
    for (unsigned i = 0; i < len; ++i) {
       --pos;
       if (dat->arr[pos] < v) {

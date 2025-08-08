@@ -6,7 +6,7 @@ scan-build-$LLVM_MVER --use-cc=clang-$LLVM_MVER --use-c++=clang++-$LLVM_MVER -o 
    cmake -DBUILD_GAMS_DRIVER=0 -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA -DBUILD_IMGUI=0 "$@"
 
 # We used to be able to do 1300 ...
-scan-build-$LLVM_MVER --use-cc=clang-$LLVM_MVER --use-c++=clang++-$LLVM_MVER -maxloop 600 -o scan-build --exclude apifiles/C/api -enable-checker \
+scan-build-$LLVM_MVER --use-cc=clang-$LLVM_MVER --use-c++=clang++-$LLVM_MVER -maxloop 500 -o scan-build --exclude apifiles/C/api -enable-checker \
 deadcode.DeadStores,\
 nullability.NullableDereferenced,\
 nullability.NullablePassedToNonnull,\

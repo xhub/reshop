@@ -171,7 +171,7 @@ static void mdl_commondata_init(Model *mdl)
    dat->exports_dir = NULL;
    dat->exports_dir_parent = NULL;
    dat->own_exports_dir_parent = false;
-   dat->exports_dir_parent = false;
+   dat->delete_exports_dir = false;
    dat->mdltype = MdlType_none;
 }
 

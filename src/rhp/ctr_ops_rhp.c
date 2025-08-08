@@ -582,7 +582,7 @@ static int rctr_copyvarname_v(const Container *ctr, int vi, char *str, unsigned 
 
     const struct vnames *vnames = &ctrdat->var_names.v;
 
-    if (vnames && vi < vnames->start) {
+    if (vi < vnames->start) {
       goto _notfound;
 /*      error("%s :: variable index %u less than vname start %u\n",
           __func__, vi, vnames->start);
@@ -671,7 +671,7 @@ static int rctr_copyequname_v(const Container *ctr, int ei, char *str, unsigned 
 
    const struct vnames *vnames = &cdat->equ_names.v;
 
-   if (vnames && ei < vnames->start) {
+   if (ei < vnames->start) {
       goto _notfound;
    }
 

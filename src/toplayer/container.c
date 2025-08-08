@@ -339,10 +339,6 @@ void ctr_memtmp_fini(M_ArenaTempStamp stamp)
 void *ctr_memtmp_get(Container *ctr, size_t size)
 {
    M_ArenaLink *arenatemp = &ctr->arenaL_temp;
-   if (!arenatemp) {
-      return NULL;
-   }
-
    M_Arena *arena = &ctr->arenaL_temp.arena;
 
    void *mem = arena_alloc(arena, size);
@@ -911,7 +907,8 @@ bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid)
    EquMeta *emeta = &ctr->equmeta[ei];
 
    if (equmeta_is_shared(emeta)) {
-      TO_IMPLEMENT("SHAREDEQU");
+      errormsg("SHAREDEQU is not yet implemented\n");
+      return false;
    }
 
    return emeta->mp_id == mpid;

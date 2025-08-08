@@ -396,7 +396,7 @@ u32 compute_nlcode_degree(int len, const int instr[VMT(restrict len)],
    u8 cur_degree = 0, Lchild_degree = 0;
 
    for (int i = 0; i < len; ++i, instr++, args++) {
-      NLCODE_DEG_DEBUG(*instr, *args, cur_degree, stack, stack_arr);
+      NLCODE_DEG_DEBUG(*instr, *args, cur_degree, stack, stack_top);
 
       switch (*instr) {
       case nlNoOp:

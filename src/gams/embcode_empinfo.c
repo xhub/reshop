@@ -506,7 +506,5 @@ _exit:
    empinterp_free(&interp);
 
    return status;
-
-   return OK;
 }
 
