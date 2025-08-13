@@ -87,34 +87,3 @@ Model *rhp_newsolvermdl(Model *mdl)
 
    return rhp_mdl_new(mdl_type);
 }
-
-/* For compatibility, remove with GAMS 49 */
-#if defined(reshop_static_build)  /* static build: no need for declspec */
-#  define RHP_PUBDLL_ATTR 
-#elif defined _WIN32 || defined __CYGWIN__
-  #ifdef reshop_EXPORTS
-    #ifdef __GNUC__
-      #define RHP_PUBDLL_ATTR __attribute__ ((dllexport))
-    #else
-      #define RHP_PUBDLL_ATTR __declspec(dllexport) // Note: actually gcc seems to also supports this syntax.
-    #endif
-  #else
-    #ifdef __GNUC__
-      #define RHP_PUBDLL_ATTR __attribute__ ((dllimport))
-    #else
-      #define RHP_PUBDLL_ATTR __declspec(dllimport) // Note: actually gcc seems to also supports this syntax.
-    #endif
-  #endif
-#else /* defined _WIN32 || defined __CYGWIN__ */
-  #if (__GNUC__ >= 4) || defined(__clang__)
-    #define RHP_PUBDLL_ATTR __attribute__ ((visibility ("default")))
-  #else
-    #define RHP_PUBDLL_ATTR
-  #endif
-#endif
-
-RHP_PUBDLL_ATTR Model *rhp_getsolvermdl(Model *mdl) MALLOC_ATTR(rhp_mdl_free);
-Model *rhp_getsolvermdl(Model *mdl)
-{
-   return rhp_newsolvermdl(mdl);
-}
