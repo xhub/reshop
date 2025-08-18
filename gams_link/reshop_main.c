@@ -20,7 +20,10 @@
 
 #define EPNAME(FNAME) GAMSSOLVER_CONCAT(GAMSSOLVER_ID, FNAME)
 
-DllExport void STDCALL EPNAME(Initialize)(void)
+#ifndef _WIN32
+__attribute__((constructor))
+#endif
+static void rhpInit(void)
 {
    gmoInitMutexes();
    gevInitMutexes();
@@ -31,7 +34,10 @@ DllExport void STDCALL EPNAME(Initialize)(void)
 #endif
 }
 
-DllExport void STDCALL EPNAME(Finalize)(void)
+#ifndef _WIN32
+__attribute__((destructor))
+#endif
+static void rhpFini(void)
 {
    gmoFiniMutexes();
    gevFiniMutexes();
@@ -41,6 +47,33 @@ DllExport void STDCALL EPNAME(Finalize)(void)
    palFiniMutexes();
 #endif
 }
+
+#ifdef _WIN32
+#include <windows.h>
+BOOL WINAPI DllMain(
+   HINSTANCE hInst,
+   DWORD     reason,
+   LPVOID    reserved
+)
+{
+   switch( reason )
+   {
+      case DLL_PROCESS_ATTACH:
+         rhpInit();
+         break;
+      case DLL_PROCESS_DETACH:
+         rhpFini();
+         break;
+      case DLL_THREAD_ATTACH:
+         /* ignored */
+         break;
+      case DLL_THREAD_DETACH:
+         /* ignored */
+         break;
+   }
+   return TRUE;
+}
+#endif
 
 /** @brief Create a RESHOP object.
  *
