@@ -333,7 +333,7 @@ int empdag2dotfile(const EmpDag * empdag, const char* fname)
    if (empdag->mps.len == 0) return OK;
 
    int status = OK;
-   FILE* f = fopen(fname, "w");
+   FILE* f = fopen(fname, RHP_WRITE_TEXT);
 
    if (!f) {
       error("%s ERROR: Could not create file named '%s'\n", __func__, fname);

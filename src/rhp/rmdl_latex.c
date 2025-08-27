@@ -476,7 +476,7 @@ static int rmdl_latex(Model *mdl, const char *fname)
    //struct var_meta * restrict vmd = ctr->varmeta;
    struct equ_meta * restrict emd = ctr->equmeta;
 
-   FILE *f = fopen(fname, "w+");
+   FILE *f = fopen(fname, RHP_WRITE_TEXT "+");
    if (!f) {
       error("%s :: error opening file named %s\n", __func__, fname);
       return Error_FileOpenFailed;

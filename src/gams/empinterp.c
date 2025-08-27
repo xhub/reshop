@@ -212,15 +212,7 @@ int interp_read_empinfo(Interpreter *interp)
 
    const char *fname = interp->empinfo_fname;
 
-   FILE *fptr = fopen(fname,
-
-/* On windows, we need to translate the linefeed to '\n' */
-#ifdef _WIN32
-                      "rt"
-#else
-                      "r"
-#endif
-                      );
+   FILE *fptr = fopen(fname, RHP_READ_TEXT);
 
    if (!fptr) {
       error("[empinterp] ERROR: could not open empinfo file '%s'.\n", fname);

@@ -272,9 +272,9 @@ static int gams_dumpmodel(Model *mdl)
    STRNCPY_FIXED(mdldat->solvername, "convert");
    strncat(optname, DIRSEP"convert.opt", sizeof(optname)-len_scrdir-1);
 
-   FILE *opt = fopen(optname, "w");
+   FILE *opt = fopen(optname, RHP_WRITE_TEXT);
    if (!opt) {
-      error("[gams] ERROR: could not create convert option file %s\n", optname);
+      error("[gams] ERROR: could not create convert option file '%s'\n", optname);
       perror("fopen");
       return Error_NullPointer;
    }

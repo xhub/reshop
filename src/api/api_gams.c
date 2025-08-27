@@ -192,7 +192,7 @@ int rhp_gms_newfromcntr(const char *cntrfile, Model **mdlout)
    *mdlout = NULL;
    S_CHECK(chk_arg_nonnull(cntrfile, 1, __func__));
    
-   FILE* fptr = fopen(cntrfile, "r");
+   FILE* fptr = fopen(cntrfile, RHP_READ_TEXT);
    if (!fptr) {
       error("[GAMS] ERROR: couldn't open control file '%s'\n", cntrfile);
       return Error_RuntimeError;

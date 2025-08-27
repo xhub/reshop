@@ -114,7 +114,7 @@ static void _display(struct gen_data *dat, const char* name, unsigned dim)
 
 static int _savetxt(struct gen_data *dat, const char* name, unsigned dim)
 {
-   FILE* f = fopen(name, "w");
+   FILE* f = fopen(name, RHP_WRITE_TEXT);
 
    if (!f) {
       int lerrno = errno;

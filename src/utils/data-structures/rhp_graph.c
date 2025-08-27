@@ -174,7 +174,7 @@ int ovfgraph_dot(const struct ovfinfo *ovf_info, struct rhp_graph_gen **nodes,
    if (!ovf_info->ovf_def) return OK;
    int status = OK;
 
-   FILE* f = fopen(fname, "w");
+   FILE* f = fopen(fname, RHP_WRITE_TEXT);
 
    if (!f) {
       error("%s :: Could not create file named '%s'\n", __func__, fname);

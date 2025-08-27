@@ -562,7 +562,7 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
    S_CHECK_EXIT(create_dotfile(mdl, ei, &fname));
    *fname_dot = fname;
 
-   f = fopen(fname, "w");
+   f = fopen(fname, RHP_WRITE_TEXT);
 
    if (!f) {
       error("[system] ERROR: Could not create file named '%s'\n", fname);
@@ -770,7 +770,7 @@ int gams_opcodetree2dot(Model *mdl, GamsOpCodeTree *otree, char **fname_dot)
    S_CHECK(create_dotfile(mdl, ei, &fname));
    *fname_dot = fname;
 
-   f = fopen(fname, "w");
+   f = fopen(fname, RHP_WRITE_TEXT);
 
    if (!f) {
       error("[system] ERROR: Could not create file named '%s'\n", fname);

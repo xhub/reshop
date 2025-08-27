@@ -5,13 +5,19 @@
 #include "rhp_compiler_defines.h"
 
 
-/* Note: _WIN32 is depfined for all targets of interest
+/* Note: _WIN32 is defined for all targets of interest
  *       _WIN64 is defined for amd64 and arm64
+ *
+ * On windows, we need to translate the linefeed to '\n', then use "t" mode
  */
 #ifdef _WIN32
 # define DIRSEP "\\"
+# define RHP_WRITE_TEXT "wt"
+# define RHP_READ_TEXT  "rt"
 #else
 # define DIRSEP "/"
+# define RHP_WRITE_TEXT "w"
+# define RHP_READ_TEXT  "r"
 #endif
 
 #ifdef _WIN32

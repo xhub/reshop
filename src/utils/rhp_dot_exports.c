@@ -75,7 +75,7 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
    IO_CALL(asprintf(&fname, "%s%sequ%d.dot", export_dir, DIRSEP, ei));
    *fname_dot = fname;
 
-   FILE* f = fopen(fname, "w");
+   FILE* f = fopen(fname, RHP_WRITE_TEXT);
 
    if (!f) {
       error("[system] ERROR: Could not create file named '%s'\n", fname);

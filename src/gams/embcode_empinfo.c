@@ -337,9 +337,9 @@ NONNULL static int write_empinfo(Interpreter *interp, const char *fname)
    int status = OK;
    FILE *f = NULL;
 
-   f = fopen(fname, "wb");
+   f = fopen(fname, RHP_WRITE_TEXT);
    if (!f) {
-      error("[embcode] ERROR: cannot open file named %s\n", fname);
+      error("[embcode] ERROR: cannot open file named '%s'\n", fname);
       return Error_FileOpenFailed;
    }
 
@@ -347,7 +347,7 @@ NONNULL static int write_empinfo(Interpreter *interp, const char *fname)
 
    if (writes != interp->read) {
       error("[embcode] ERROR while writing output EMPinfo file '%s': wrote %zu "
-             "chars, but was exepcting to write %zu\n", fname, writes, interp->read);
+             "chars, but was expecting to write %zu\n", fname, writes, interp->read);
       status = Error_SystemError;
       goto _exit;
    }
@@ -382,7 +382,7 @@ NONNULL static int interp_setup_embparse(Interpreter *interp, gmdHandle_t gmd)
 
    gmdHandle_t gmdcpy;
    if (!gmdCreate(&gmdcpy, msg, sizeof(msg))) {
-      error("[embcode] ERROR: cannot create output GMD object: %s\n", msg);
+      error("[embcode] ERROR: cannot create output GMD object: '%s'\n", msg);
       return Error_EMPRuntimeError;
    }
 

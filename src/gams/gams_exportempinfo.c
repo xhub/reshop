@@ -343,13 +343,13 @@ static int _prep_jams_solver(GmsModelData *mdldat, struct ctrdata_gams *gms,
 
   strncat(buf, DIRSEP "empinfo.dat", sizeof(buf) - strlen(buf) - 1);
 
-  file->empinfo_file = fopen(buf, "w");
+  file->empinfo_file = fopen(buf, RHP_WRITE_TEXT);
   file->line_len = 0;
 
   if (!file->empinfo_file) {
     int lerrno = errno;
     perror("fopen");
-    error("%s :: failed to create GAMS empinfo file %s: error %d\n",
+    error("%s :: failed to create GAMS empinfo file '%s': error %d\n",
              __func__, buf, lerrno);
     return Error_SystemError;
   }
