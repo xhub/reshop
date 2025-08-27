@@ -26,7 +26,7 @@ const char * identtype2str(IdentType type);
  * --------------------------------------------------------------------- */
 
 int skip_spaces_commented_lines(Interpreter *interp, unsigned *p) NONNULL;
-int interp_create_buf(Interpreter *interp) NONNULL;
+int interp_read_empinfo(Interpreter *interp) NONNULL;
 NONNULL_AT(1,3)
 void empinterp_init(Interpreter *interp, Model *mdl, const char *fname);
 NONNULL void empinterp_free(Interpreter *interp);

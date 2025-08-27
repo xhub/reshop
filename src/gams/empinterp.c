@@ -198,14 +198,30 @@ NONNULL void empinterp_free(Interpreter *interp)
    assert(interp->health != PARSER_OK || !gmsindices_isactive(&interp->gmsindices));
 }
 
-int interp_create_buf(Interpreter *interp)
+/**
+ * @brief Read the empinfo file
+ *
+ * @param interp the empinfo interpreter
+ *
+ * @return       the error code
+ */
+int interp_read_empinfo(Interpreter *interp)
 {
    assert(interp->empinfo_fname);
    int status = OK;
 
    const char *fname = interp->empinfo_fname;
 
-   FILE *fptr = fopen(fname, "rb");
+   FILE *fptr = fopen(fname,
+
+/* On windows, we need to translate the linefeed to '\n' */
+#ifdef _WIN32
+                      "rt"
+#else
+                      "r"
+#endif
+                      );
+
    if (!fptr) {
       error("[empinterp] ERROR: could not open empinfo file '%s'.\n", fname);
       return Error_FileOpenFailed;
@@ -417,7 +433,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
     * Read the file content in memory. If there is a GMD filename, load it
     * --------------------------------------------------------------------- */
 
-   S_CHECK_EXIT(interp_create_buf(&interp));
+   S_CHECK_EXIT(interp_read_empinfo(&interp));
 
    if (gmd_fname) {
       char msg[GMS_SSSIZE];

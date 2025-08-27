@@ -4311,7 +4311,6 @@ int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
    char *gdxfile = NULL, *gmsopt = NULL;
    int status = OK;
 
-
    unsigned p2 = *p;
 
    /* ---------------------------------------------------------------------
@@ -4336,8 +4335,8 @@ int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
          char *gdxfile2;
          IO_CALL_EXIT(asprintf(&gdxfile2, "%s%s", gdxfile, gmsopt));
 
-         FREE(gdxfile);
-         FREE(gmsopt);
+         free(gdxfile);
+         free(gmsopt);
          gdxfile = gdxfile2;
 
       } else { /* Here we just copy the string until the EOL or the next '%' */
@@ -4351,7 +4350,7 @@ int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
                                emptok_getstrlen(&interp->cur),
                                emptok_getstrstart(&interp->cur)));
 
-         FREE(gdxfile);
+         free(gdxfile);
          gdxfile = gdxfile2;
       }
 
@@ -4372,14 +4371,14 @@ int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
    S_CHECK(advance(interp, p, &toktype));
 
 _exit:
-   FREE(gmsopt);
-   FREE(gdxfile);
+   free(gmsopt);
+   free(gdxfile);
 
    return status;
 
 _err_EOF_fname:
-   FREE(gmsopt);
-   FREE(gdxfile);
+   free(gmsopt);
+   free(gdxfile);
 
    errormsg("[empparser] while parsing the filename of 'gdxin', got end-of-file");
    return Error_EMPIncorrectSyntax;

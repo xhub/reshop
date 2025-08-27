@@ -390,7 +390,7 @@ NONNULL static int interp_setup_embparse(Interpreter *interp, gmdHandle_t gmd)
 
    S_CHECK(copy_UELs(gmd, gmdcpy));
 
-   S_CHECK(interp_create_buf(interp));
+   S_CHECK(interp_read_empinfo(interp));
 
    return OK;
 }
