@@ -1056,8 +1056,6 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
     gmoObjVarSet(gmo, -1);
   }
 
-   assert(!mdltype_isopt(probtype) || gmoGetObjName(gmo, buffer));
-
    /* ----------------------------------------------------------------------
     * Set dictionary and finalize the GMO
     * ---------------------------------------------------------------------- */
@@ -1068,6 +1066,9 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
    GMSCHK_BUF_EXIT(gmoCompleteData, gmo, buffer);
 
    S_CHECK_EXIT(chk_newgmodct(gmo, dct, mdl_src, ctr_gms));
+
+   /* This must be after setting the dictionary */
+   assert(!mdltype_isopt(probtype) || gmoGetObjName(gmo, buffer));
 
    /* Complete the initialization of   */
    /*  TODO(Xhub) factorize code */
