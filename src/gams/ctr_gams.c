@@ -41,11 +41,11 @@ static int gams_chk_ctrdata(const Container *ctr, const char *fn)
 
 int gams_chk_ctr(const Container *ctr, const char *fn)
 {
-   if (ctr->backend != RHP_BACKEND_GAMS_GMO) {
+   if (ctr->backend != RhpBackendGamsGmo) {
       error("%s :: the container has the wrong type: expected %s "
                          "(id %d), got %s (id %d).\n", fn,
-                         backend_name(RHP_BACKEND_GAMS_GMO), RHP_BACKEND_GAMS_GMO,
-                         backend_name(ctr->backend), ctr->backend);
+                         backend2str(RhpBackendGamsGmo), RhpBackendGamsGmo,
+                         backend2str(ctr->backend), ctr->backend);
       return Error_InvalidValue;
    }
 
@@ -352,7 +352,7 @@ void gcdat_free_handles(GmsContainerData *gms)
  */
 int gctr_getopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int **args)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((GmsContainerData *)ctr->data)->gmo;
    assert(gmo);
 
@@ -433,7 +433,7 @@ int gctr_genopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
           * just have to transform it
           * --------------------------------------------------------------------- */
 
-         case RHP_BACKEND_GAMS_GMO:
+         case RhpBackendGamsGmo:
             {
                S_CHECK(gctr_getopcode(ctr_up, ei_up, codelen, instrs, args));
 
@@ -448,8 +448,8 @@ int gctr_genopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
           * on-demand expression tree
           * ---------------------------------------------------------------- */
 
-         case RHP_BACKEND_RHP:
-         case RHP_BACKEND_JULIA: {
+         case RhpBackendReSHOP:
+         case RhpBackendJulia: {
 
             Equ *e = &ctr_up->equs[ei_up];
             S_CHECK(rctr_getnl(ctr_up, e));
@@ -462,7 +462,7 @@ int gctr_genopcode(Container *ctr, rhp_idx ei, int *codelen, int **instrs, int *
          }
          default:
             error("%s :: unsupported container %s (%d)\n", __func__,
-                  backend_name(ctr_up->backend), ctr_up->backend);
+                  backend2str(ctr_up->backend), ctr_up->backend);
       }
 
    } else {

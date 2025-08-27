@@ -75,6 +75,13 @@ DEFINE_STR()
 static const unsigned modelstatlen = sizeof(modelstatnames_offsets)/sizeof(modelstatnames_offsets[0]);
 
 
+/** @brief Get the textual description of a model status
+ *
+ * @param mdl       the model
+ * @param modelstat the model status 
+ *
+ * @return          the string describing the model status
+ */
 const char* mdl_modelstattxt(const Model *mdl, int modelstat)
 {
    if (modelstat >= modelstatlen) return "ERROR unknown model stat";
@@ -125,6 +132,13 @@ DEFINE_STR()
 static const unsigned solvestatlen = sizeof(solvestatnames_offsets)/sizeof(solvestatnames_offsets[0]);
 
 
+/** @brief Get the textual description of a solve status
+ *
+ * @param mdl       the model
+ * @param solvestat the solve status 
+ *
+ * @return          the string describing the solve status
+ */
 const char* mdl_solvestattxt(const Model *mdl, int solvestat)
 {
    if (solvestat >= solvestatlen) return "ERROR unknown solve stat";
@@ -188,15 +202,15 @@ Model* mdl_new(BackendType backend)
    mdl_commondata_init(mdl);
 
    switch (backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       mdl->ops = &mdl_ops_gams;
       break;
-   case RHP_BACKEND_JULIA:
-   case RHP_BACKEND_RHP:
+   case RhpBackendJulia:
+   case RhpBackendReSHOP:
       mdl->ops = &mdl_ops_rhp;
       break;
    default:
-      error("%s :: unsupported backend '%s'", __func__, backend_name(backend));
+      error("%s :: unsupported backend '%s'", __func__, backend2str(backend));
       goto _exit;
    }
 
@@ -297,6 +311,14 @@ rhp_idx mdl_getcurrentei(const Model * const mdl, rhp_idx ei)
    return ei;
 }
 
+/**
+ * @brief Return the MP (mathematical program) associated with a variable, if any
+ *
+ * @param mdl  the model
+ * @param vi   the variable index
+ *
+ * @return     the MP owning this variable
+ */
 MathPrgm* mdl_getmpforvar(const Model *mdl, rhp_idx vi)
 {
    SN_CHECK(vi_inbounds(vi, ctr_nvars_total(&mdl->ctr), __func__));
@@ -305,12 +327,20 @@ MathPrgm* mdl_getmpforvar(const Model *mdl, rhp_idx vi)
 
    const EmpDag *empdag = &mdl->empinfo.empdag;
 
-   unsigned mp_id = mdl->ctr.varmeta[vi].mp_id;
+   mpid_t mp_id = mdl->ctr.varmeta[vi].mp_id;
    if (!mpid_regularmp(mp_id)) return NULL;
 
    return empdag_getmpfast(empdag, mp_id);
 }
 
+/**
+ * @brief Return the MP (mathematical program) associated with a equation, if any
+ *
+ * @param mdl  the model
+ * @param ei   the equation index
+ *
+ * @return     the MP owning this equation
+ */
 MathPrgm* mdl_getmpforequ(const Model *mdl, rhp_idx ei)
 {
    SN_CHECK(ei_inbounds(ei, ctr_nequs_total(&mdl->ctr), __func__));
@@ -352,10 +382,18 @@ const char *mdl_getprobtypetxt(enum mdl_type probtype)
    }
 }
 
-int mdl_getobjequs(const Model *mdl, Aequ *objs)
+/**
+ * @brief Get the objective equations in a model
+ *
+ * @param      mdl  the model
+ * @param[out] eout the array of objective equations
+ *
+ * @return     the error code
+ */
+int mdl_getobjequs(const Model *mdl, Aequ *eout)
 {
   S_CHECK(chk_mdl(mdl, __func__));
-  S_CHECK(chk_aequ_nonnull(objs, __func__));
+  S_CHECK(chk_aequ_nonnull(eout, __func__));
 
   const Container *ctr = &mdl->ctr;
   if (ctr->equmeta) {
@@ -377,15 +415,15 @@ int mdl_getobjequs(const Model *mdl, Aequ *objs)
       }
     }
 
-    aequ_setandownlist(objs, size, list);
+    aequ_setandownlist(eout, size, list);
   } else {
     rhp_idx ei;
     S_CHECK(mdl_getobjequ(mdl, &ei));
 
       if (valid_ei(ei)) {
-         aequ_setcompact(objs, 1, ei);
+         aequ_setcompact(eout, 1, ei);
       } else {
-         aequ_reset(objs);
+         aequ_reset(eout);
       }
   }
 

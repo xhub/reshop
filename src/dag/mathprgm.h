@@ -110,9 +110,9 @@ rhp_idx mp_getobjequ(const MathPrgm *mp);
 rhp_idx mp_getobjvar(const MathPrgm *mp);
 ModelType mp_getprobtype(const MathPrgm *mp) NONNULL;
 RhpSense mp_getsense(const MathPrgm *mp) NONNULL;
-void mp_print(MathPrgm *mp, const Model *mdl);
-int mp_setobjequ(MathPrgm *mp, rhp_idx ei);
-int mp_setobjvar(MathPrgm *mp, rhp_idx vi);
+void mp_print(MathPrgm *mp);
+int mp_setobjequ(MathPrgm *mp, rhp_idx objequ);
+int mp_setobjvar(MathPrgm *mp, rhp_idx objvar);
 int mp_setprobtype(MathPrgm *mp, unsigned probtype);
 int mp_from_ccflib(MathPrgm *mp, unsigned ccflib_idx) NONNULL;
 

@@ -103,7 +103,7 @@ int rmdl_initctrfromfull(Model *mdl, Model *mdl_up)
       return Error_RuntimeError;
    }
 
-   assert(mdl_is_rhp(mdl) && (mdl_up->backend == RHP_BACKEND_GAMS_GMO || mdl_is_rhp(mdl_up)));
+   assert(mdl_is_rhp(mdl) && (mdl_up->backend == RhpBackendGamsGmo || mdl_is_rhp(mdl_up)));
 
    trace_process("[process] %s model %.*s #%u: initializing from %s model %.*s #%u\n",
                  mdl_fmtargs(mdl), mdl_fmtargs(mdl_up));
@@ -263,7 +263,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
       Equ * restrict eobj = &mdl->ctr.equs[objequ];
       EquObjectType equtype = eobj->object;
       if (equtype == ConeInclusion) {
-         assert(mdl_up->backend == RHP_BACKEND_GAMS_GMO);
+         assert(mdl_up->backend == RhpBackendGamsGmo);
 
          rhp_idx objvar;
          rmdl_getobjvar(mdl, &objvar);

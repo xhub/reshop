@@ -32,7 +32,7 @@ static int chk_opttype(struct option *opt, OptType type, const char *fn)
    return OK;
 }
 
-int rhp_opt_setb(const char *name, unsigned char bval)
+int rhp_opt_setb(const char *name, unsigned char boolval)
 {
    unsigned index;
    struct option_set *optset;
@@ -40,7 +40,7 @@ int rhp_opt_setb(const char *name, unsigned char bval)
 
    if (opt_find(name, &optset, &index)) {
       S_CHECK(chk_opttype(&optset->opts[index], OptBoolean, __func__))
-      optset->opts[index].value.b = bval;
+      optset->opts[index].value.b = boolval;
 
       if (!strcmp(name, "gui")) {
          imgui_start(NULL);

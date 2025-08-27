@@ -403,7 +403,7 @@ int cdat_alloc(Container *ctr, unsigned max_n, unsigned max_m)
    cdat->equvar_evals_size = 3;
    CALLOC_(cdat->equvar_evals, struct equvar_eval, cdat->equvar_evals_size);
 
-   if (ctr->backend == RHP_BACKEND_RHP) {
+   if (ctr->backend == RhpBackendReSHOP) {
       cdat->var_names.v.type = VNAMES_UNSET;
       cdat->var_names.v.next = NULL;
       cdat->equ_names.v.type = VNAMES_UNSET;
@@ -449,7 +449,7 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
          inherited_equ_stop = inherited_equ_start + e_inh->e.size;
       }
 
-      if (ctr->ctr_up->backend == RHP_BACKEND_GAMS_GMO) {
+      if (ctr->ctr_up->backend == RhpBackendGamsGmo) {
         /* TODO(xhub) This is obscure  */
          delete_equ_trees = true;
       }
@@ -510,12 +510,12 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
    FREE(cdat->stage_auxmdl);
 
    /*  TODO(xhub) URG this should not depend on the model type */
-   if (ctr->backend == RHP_BACKEND_RHP) {
+   if (ctr->backend == RhpBackendReSHOP) {
      /* The usage of vnames is just to circumvent some compiler warnings  */
      vnames_freefrommdl(&cdat->var_names.v);
      vnames_freefrommdl(&cdat->equ_names.v);
 
-   } else if (ctr->backend == RHP_BACKEND_JULIA) {
+   } else if (ctr->backend == RhpBackendJulia) {
      /*  TODO(xhub) URG this looks broken */
       assert(cdat->var_names.s.names || cdat->var_names.s.max == 0);
       assert(cdat->equ_names.s.names || cdat->equ_names.s.max == 0);
@@ -533,7 +533,7 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
       cdat->equ_names.s.max = 0;
    } else {
       error("%s :: don't know how to deallocate names for backend %s\n",
-            __func__, backend_name(ctr->backend));
+            __func__, backend2str(ctr->backend));
    }
 
    /* ----------------------------------------------------------------------
@@ -727,7 +727,7 @@ int cdat_add_subctr(RhpContainerData* ctrdat, struct filter_subset* fs)
 int rctr_walkallequ(const Container *ctr, rhp_idx ei, void **iterator, double *val,
                     rhp_idx *vi, bool *nlflag)
 {
-   assert(ctr->backend == RHP_BACKEND_RHP);
+   assert(ctr->backend == RhpBackendReSHOP);
    const RhpContainerData *cdat = (const RhpContainerData *)ctr->data;
 
    CMatElt *e = (CMatElt*)*iterator;

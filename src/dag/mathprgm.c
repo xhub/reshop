@@ -417,10 +417,18 @@ int mp_addequ(MathPrgm *mp, rhp_idx ei)
    return OK;
 }
 
-int mp_setobjequ(MathPrgm *mp, rhp_idx ei)
+/**
+ * @brief Set the objective equation of an MP
+ *
+ * @param mp      the MP
+ * @param objequ  the objective equation
+ *
+ * @return    the error code
+ */
+int mp_setobjequ(MathPrgm *mp, rhp_idx objequ)
 {
-   S_CHECK(mp_setobjequ_internal(mp, ei));
-   S_CHECK(mp_addequchk(mp, ei));
+   S_CHECK(mp_setobjequ_internal(mp, objequ));
+   S_CHECK(mp_addequchk(mp, objequ));
 
    return OK;
 }
@@ -473,12 +481,20 @@ int mp_setobjequ_internal(MathPrgm *mp, rhp_idx objequ)
 }
 
 /* TODO: merge the 2 functions? */
-int mp_setobjvar(MathPrgm *mp, rhp_idx vi)
+/**
+ * @brief Set the objective variable of an MP
+ *
+ * @param mp      the MP
+ * @param objvar  the objective variable
+ *
+ * @return    the error code
+ */
+int mp_setobjvar(MathPrgm *mp, rhp_idx objvar)
 {
    assert(mp_isvalid(mp));
 
-   if (!valid_vi(vi)) {
-      if (vi == IdxNA && mp_isopt(mp)) {
+   if (!valid_vi(objvar)) {
+      if (objvar == IdxNA && mp_isopt(mp)) {
          rhp_idx objvar_old = mp->opt.objvar;
          mp->opt.objvar = IdxNA;
 
@@ -504,17 +520,17 @@ int mp_setobjvar(MathPrgm *mp, rhp_idx vi)
       return Error_EMPRuntimeError;
    }
 
-   unsigned mp_id = mp->mdl->ctr.varmeta[vi].mp_id;
+   unsigned mp_id = mp->mdl->ctr.varmeta[objvar].mp_id;
    if (!valid_mpid(mp_id)) {
-      S_CHECK(mp_addvarchk(mp, vi));
+      S_CHECK(mp_addvarchk(mp, objvar));
    } else if (mp_id != mp->id) {
       error("[MP] ERROR: Trying to set objective variable of MP(%.*s) (ID #%u) "
             "to '%s', but the latter belong to MP(%s)\n", mp_fmtargs(mp),
-            mdl_printvarname(mp->mdl, vi), mpid_getname(mp->mdl, mp_id));
+            mdl_printvarname(mp->mdl, objvar), mpid_getname(mp->mdl, mp_id));
       return Error_EMPRuntimeError;
    }
 
-   S_CHECK(mp_setobjvar_internal(mp, vi));
+   S_CHECK(mp_setobjvar_internal(mp, objvar));
 
    return OK;
 }
@@ -582,6 +598,13 @@ int mp_objequ_setmultiplier(MathPrgm *mp) {
    return OK;
 }
 
+/** @brief Add a constraint to this MP
+ *
+ * @param mp the MP
+ * @param ei the constraint to add
+ *
+ * @return   the error code
+ */
 int mp_addconstraint(MathPrgm *mp, rhp_idx ei)
 {
    S_CHECK(mp_addequchk(mp, ei));
@@ -622,13 +645,28 @@ int mp_addconstraints(MathPrgm *mp, Aequ *e) {
    return OK;
 }
 
-int mp_addvar(MathPrgm *mp, rhp_idx vidx) {
-   S_CHECK(mp_addvarchk(mp, vidx));
-   _setvarrole(mp, vidx, VarPrimal);
+/** @brief Add a variable to an MP
+ *
+ *  @param mp  the MP
+ *  @param vi  the variable index
+ *
+ *  @return    the error code
+ */
+int mp_addvar(MathPrgm *mp, rhp_idx vi)
+{
+   S_CHECK(mp_addvarchk(mp, vi));
+   _setvarrole(mp, vi, VarPrimal);
 
    return OK;
 }
 
+/** @brief Add variables to an MP
+ *
+ *  @param mp  the MP
+ *  @param v   the variable container
+ *
+ *  @return    the error code
+ */
 int mp_addvars(MathPrgm *mp, Avar *v)
 {
    for (size_t i = 0; i < v->size; ++i) {
@@ -643,15 +681,14 @@ int mp_addvars(MathPrgm *mp, Avar *v)
 /**
  *  @brief Add a vi pair (equ,var) to the MP
  *
- *  @ingroup publicAPI
- *
- *  @param  mp    the mathematical programm
+ *  @param  mp    the MP
  *  @param  ei    the equation index. If invalid, the equ is the zero function
  *  @param  vi    the variable index
  *
  *  @return       the error code
  */
-int mp_addvipair(MathPrgm *mp, rhp_idx ei, rhp_idx vi) {
+int mp_addvipair(MathPrgm *mp, rhp_idx ei, rhp_idx vi)
+{
    /* ---------------------------------------------------------------------
    * Add variable.
    * --------------------------------------------------------------------- */
@@ -691,12 +728,9 @@ int mp_isconstraint(const MathPrgm *mp, rhp_idx ei) {
 #endif
 }
 
-/**
- *  @brief Add a vi pair (equ var) to the MP
+/** @brief Add a vi pair (equ var) to the MP
  *
- *  @ingroup publicAPI
- *
- *  @param  mp    the mathematical programm
+ *  @param  mp    the MP
  *  @param  e     the equation indices
  *  @param  v     the variable indices
  *
@@ -729,8 +763,7 @@ static int mp_ccflib_finalize(MathPrgm *mp)
    return OK;
 }
 
-/**
- * @brief Finalize the MP creation
+/** @brief Finalize the MP creation
  *
  * Call this when the MP has been completed. This functions looks to set the
  * objective function
@@ -834,6 +867,13 @@ _finalize:
  * GETTERS
  * --------------------------------------------------------------------- */
 
+/**
+ * @brief Get the ID of an MP
+ *
+ * @param mp the MP
+ *
+ * @return   the ID
+ */
 mpid_t mp_getid(const MathPrgm *mp) { return mp->id; }
 
 double mp_getobjjacval(const MathPrgm *mp) {
@@ -855,6 +895,13 @@ RhpSense mp_getsense(const MathPrgm *mp) {
    return mp->sense;
 }
 
+/**
+ * @brief Get the objective equation of an MP
+ *
+ * @param mp the MP
+ *
+ * @return the objective equation index (could be invalid)
+ */
 rhp_idx mp_getobjequ(const MathPrgm *mp) {
    if (mp_isopt(mp)) {
       return mp->opt.objequ;
@@ -867,6 +914,12 @@ rhp_idx mp_getobjequ(const MathPrgm *mp) {
    return IdxInvalid;
 }
 
+/** @brief Get the objective variable of an MP
+ *
+ * @param mp the MP
+ *
+ * @return the objective variable index (could be invalid)
+ */
 rhp_idx mp_getobjvar(const MathPrgm *mp)
 {
    if (mp_isopt(mp)) {
@@ -940,7 +993,14 @@ unsigned mp_getnumcons(const MathPrgm *mp)
    }
 }
 
-void mp_print(MathPrgm *mp, const Model *mdl) {
+/**
+ * @brief Print the content of an MP
+ *
+ * @param mp  the MP
+ */
+void mp_print(MathPrgm *mp)
+{
+   const Model *mdl = mp->mdl;
    const Container *ctr = &mdl->ctr;
 
    printout(PO_INFO, " - mathprgm %5d", mp->id);
@@ -981,7 +1041,7 @@ void mp_print(MathPrgm *mp, const Model *mdl) {
       printout(PO_INFO, "   [%5d] %s\n", eidx, ctr_printequname(ctr, eidx));
    }
 
-   if (mdl->backend != RHP_BACKEND_RHP) {
+   if (mdl->backend != RhpBackendReSHOP) {
       return;
    }
 

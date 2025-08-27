@@ -109,7 +109,7 @@ int mdl_getmodelstat(const Model *mdl, int *modelstat) NONNULL;
 const char *mdl_getmodelstatastxt(const Model *mdl) NONNULL;
 const char *mdl_modelstattxt(const Model *mdl, int modelstat) NONNULL;
 int mdl_getobjequ(const Model *mdl, rhp_idx *objequ) NONNULL;
-int mdl_getobjequs(const Model *mdl, Aequ *objs) NONNULL;
+int mdl_getobjequs(const Model *mdl, Aequ *eout) NONNULL;
 int mdl_getsense(const Model *mdl, RhpSense *objsense) NONNULL;
 int mdl_getobjvar(const Model *mdl, rhp_idx *objvar) NONNULL;
 int mdl_getsolvername(const Model *mdl, char const ** solvername) NONNULL;
@@ -137,7 +137,7 @@ rhp_idx mdl_getei_inmdlup(const Model *mdl, rhp_idx ei, const Model *mdl_up) NON
 rhp_idx mdl_getvi_inmdlup(const Model *mdl, rhp_idx vi, const Model *mdl_up) NONNULL;
 
 int mdl_settype(Model *mdl, ModelType probtype) NONNULL;
-int mdl_setobjvar(Model *mdl, rhp_idx vi) NONNULL;
+int mdl_setobjvar(Model *mdl, rhp_idx objvar) NONNULL;
 
 int mdl_ensure_exportdir(Model *mdl) NONNULL;
 int mdl_export_gms(Model *mdl, const char *phase_name) NONNULL;
@@ -151,9 +151,9 @@ int mdl_solreport(Model *mdl_dst, Model *mdl_src) NONNULL;
 int mdl_setdualvars(Model *mdl, Avar *v, Aequ *e) NONNULL;
 
 static inline bool mdl_is_rhp(const Model *mdl) {
-  return mdl->backend == RHP_BACKEND_RHP ||
-         mdl->backend == RHP_BACKEND_JULIA ||
-         mdl->backend == RHP_BACKEND_AMPL;
+  return mdl->backend == RhpBackendReSHOP ||
+         mdl->backend == RhpBackendJulia ||
+         mdl->backend == RhpBackendAmpl;
 }
 
 static inline const char* mdl_printvarname(const Model *mdl, rhp_idx vi) {
@@ -207,13 +207,27 @@ static inline void mdl_unsetallchecks(Model *mdl) {
    empdag_unsetallchecks(&mdl->empinfo.empdag);
 }
 
-#define mdl_fmtargs(mdl) backend_name((mdl)->backend), mdl_getnamelen(mdl), mdl_getname(mdl), (mdl)->id
+#define mdl_fmtargs(mdl) backend2str((mdl)->backend), mdl_getnamelen(mdl), mdl_getname(mdl), (mdl)->id
 
-static inline unsigned mdl_nequs(const Model *mdl){
+/** @brief Get the number of (active) equations in the model
+ *
+ *  @param mdl  the model
+ *
+ *  @return     the number of active equations
+ */
+static inline unsigned mdl_nequs(const Model *mdl)
+{
    return  ctr_nequs(&mdl->ctr);
 }
 
-static inline unsigned mdl_nequs_total(const Model *mdl){
+/** @brief Get the total number of equations in the model
+ *
+ *  @param mdl  the model
+ *
+ *  @return     the total number of equations
+ */
+static inline unsigned mdl_nequs_total(const Model *mdl)
+{
    return  ctr_nequs_total(&mdl->ctr);
 }
 
@@ -221,11 +235,25 @@ static inline unsigned mdl_nequs_max(const Model *mdl){
    return  ctr_nequs_max(&mdl->ctr);
 }
 
-static inline unsigned mdl_nvars(const Model *mdl){
+/** @brief Get the number of (active) variables in the model
+ *
+ *  @param mdl  the model
+ *
+ *  @return     the number of active variables
+ */
+static inline unsigned mdl_nvars(const Model *mdl)
+{
    return  ctr_nvars(&mdl->ctr);
 }
 
-static inline unsigned mdl_nvars_total(const Model *mdl){
+/** @brief Get the total number of variables in the model
+ *
+ *  @param mdl  the model
+ *
+ *  @return     the total number of variables
+ */
+static inline unsigned mdl_nvars_total(const Model *mdl)
+{
    return  ctr_nvars_total(&mdl->ctr);
 }
 

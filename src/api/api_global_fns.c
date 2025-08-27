@@ -64,115 +64,200 @@
 #  define RHP_OS "Unknown"
 #endif
 
+/**
+ * @brief Print the ReSHOP banner
+ * @ingroup publicAPI
+ *
+ */
 void rhp_print_banner(void)
 {
   printout(PO_INFO, "\nReSHOP %s on " RHP_OS " / " RHP_ARCH "\t Author: Olivier Huber\n\n", rhp_git_hash);
 }
 
+/**
+ * @brief Return the string representation of the ReSHOP version
+ *
+ * @ingroup publicAPI
+ *
+ * @return  the string representing the ReSHOP version
+ */
 const char* rhp_version(void)
 {
   return rhp_git_hash;
 }
 
 
-void rhp_show_backendinfo(unsigned char val)
+/** @brief Control the output of (debugging) backend information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the backend information is not displayed. Otherwise it is not.
+ */
+void rhp_show_backendinfo(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_BACKEND;
   } else {
     O_Output &= ~PO_BACKEND;
   }
 }
 
-void rhp_show_refcnttrace(unsigned char val)
+/**
+ * @brief Control the output of reference counting information in the log for debugging purposes
+ *
+ * @ingroup publicAPI
+ *
+ * @param boolval if non-zero, the reference counting information is not displayed. Otherwise it is not.
+ */
+void rhp_show_refcnttrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_REFCNT;
   } else {
     O_Output &= ~PO_TRACE_REFCNT;
   }
 }
 
-void rhp_show_empinterptrace(unsigned char val)
+/** @brief Control the output of (debugging) EMP interpreter information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the EMP interpreter information is not displayed. Otherwise it is not.
+ */
+void rhp_show_empinterptrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_EMPINTERP;
   } else {
     O_Output &= ~PO_TRACE_EMPINTERP;
   }
 }
 
-void rhp_show_empparsertrace(unsigned char val)
+/** @brief Control the output of (debugging) EMP parser information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the EMP parser information is not displayed. Otherwise it is not.
+ */
+void rhp_show_empparsertrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_EMPPARSER;
   } else {
     O_Output &= ~PO_TRACE_EMPPARSER;
   }
 }
 
-void rhp_show_solreporttrace(unsigned char val)
+/** @brief Control the output of (debugging) solution reporting information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the solution reporting information is not displayed. Otherwise it is not.
+ */
+void rhp_show_solreporttrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_SOLREPORT;
   } else {
     O_Output &= ~PO_TRACE_SOLREPORT;
   }
 }
 
-void rhp_show_processtrace(unsigned char val)
+/** @brief Control the output of (debugging) model processing information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the model processing information is not displayed. Otherwise it is not.
+ */
+void rhp_show_processtrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_PROCESS;
   } else {
     O_Output &= ~PO_TRACE_PROCESS;
   }
 }
 
-void rhp_show_containertrace(unsigned char val)
+/** @brief Control the output of (debugging) container information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the container information is not displayed. Otherwise it is not.
+ */
+void rhp_show_containertrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_CONTAINER;
   } else {
     O_Output &= ~PO_TRACE_CONTAINER;
   }
 }
 
-void rhp_show_empdagtrace(unsigned char val)
+/** @brief Control the output of (debugging) EMPDAG information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the EMPDAG information is not displayed. Otherwise it is not.
+ */
+void rhp_show_empdagtrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_EMPDAG;
   } else {
     O_Output &= ~PO_TRACE_EMPDAG;
   }
 }
 
-void rhp_show_fooctrace(unsigned char val)
+/** @brief Control the output of (debugging) first-order optimality condition information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the first-order optimality condition information is not displayed. Otherwise it is not.
+ */
+void rhp_show_fooctrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_FOOC;
   } else {
     O_Output &= ~PO_TRACE_FOOC;
   }
 }
 
-void rhp_show_ccftrace(unsigned char val)
+/** @brief Control the output of (debugging) CCF information in the log for debugging purposes
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the CCF information is not displayed. Otherwise it is not.
+ */
+void rhp_show_ccftrace(unsigned char boolval)
 {
-  if (val) {
+  if (boolval) {
     O_Output |= PO_TRACE_CCF;
   } else {
     O_Output &= ~PO_TRACE_CCF;
   }
 }
 
-static void rhp_show_timings(unsigned char val)
+/** @brief Control the output of (debugging) timings information in the log
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the timings information is not displayed. Otherwise it is not.
+ */
+void rhp_show_timings(unsigned char boolval)
 {
-   rhp_options[Options_Display_Timings].value.b = val > 0;
+   rhp_options[Options_Display_Timings].value.b = boolval > 0;
 }
 
-static void rhp_show_solver_log(unsigned char val)
+/** @brief Control the output of (debugging) subsolver log
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param boolval if non-zero, the subsolver log. Otherwise it is not.
+ */
+void rhp_show_solver_log(unsigned char boolval)
 {
-   O_Output_Subsolver_Log = val > 0;
+   O_Output_Subsolver_Log = boolval > 0;
 }
 
 struct log_opt {
@@ -181,6 +266,13 @@ struct log_opt {
    const char *help;
 };
 
+/**
+ * @brief Synchronize the ReSHOP options and switches with the current environment variable values
+ *
+ * @ingroup publicAPI
+ *
+ * @return the error code
+ */
 int rhp_syncenv(void)
 {
    int status = OK;

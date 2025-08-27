@@ -36,7 +36,7 @@
 UNUSED static size_t _pool_zero(enum rhp_backendtype type)
 {
    switch (type) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       return nlconst_zero-1;
    default:
       error("%s ERROR: not implemented for container %d\n", __func__,
@@ -49,8 +49,8 @@ int rhp_chk_ctr(const Container *ctr, const char *fn)
 {
    if (!ctr_is_rhp(ctr)) {
       error("%s ERROR: the container.has the wrong type: expected %d, %d"
-                         "or %d, got %d\n", fn, RHP_BACKEND_RHP, RHP_BACKEND_JULIA,
-                         RHP_BACKEND_AMPL, ctr->backend);
+                         "or %d, got %d\n", fn, RhpBackendReSHOP, RhpBackendJulia,
+                         RhpBackendAmpl, ctr->backend);
       return Error_InvalidValue;
    }
 
@@ -98,7 +98,7 @@ int rctr_getnl(const Container* ctr, Equ *e)
     * 2. Build the expression tree
     * --------------------------------------------------------------------- */
 
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
    {
       int len, *instrs, *args;
       Equ *e_up = &ctr_up->equs[ei_up];
@@ -118,8 +118,8 @@ int rctr_getnl(const Container* ctr, Equ *e)
       /* No need to free instrs or args, it comes from a container workspace */
       break;
    }
-   case RHP_BACKEND_RHP:
-   case RHP_BACKEND_JULIA:
+   case RhpBackendReSHOP:
+   case RhpBackendJulia:
    {
       /* We know there is an upstream container: recurse and update e->tree */
       Equ *e_up = &ctr_up->equs[ei_up];
@@ -128,7 +128,7 @@ int rctr_getnl(const Container* ctr, Equ *e)
       break;
    }
    default:
-      error("%s ERROR: unsupported container %s (%d)\n", __func__, backend_name(backend), backend);
+      error("%s ERROR: unsupported container %s (%d)\n", __func__, backend2str(backend), backend);
       return Error_RuntimeError;
    }
 
@@ -216,10 +216,8 @@ int rctr_func2eval_add(Container *ctr, rhp_idx ei)
  *
  * @warning this function is quite destructive, and offers no guarantee
  *
- * @ingroup publicAPI
- *
  * @param ctr   the container
- * @param vi  the variable to remove
+ * @param vi    the variable to remove
  *
  * @return      the error code
  */

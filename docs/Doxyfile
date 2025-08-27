@@ -2216,8 +2216,13 @@ PREDEFINED             = "NONNULL=" \
                          "NONNULL_AT(IDX)=" \
                          "NONNULL_AT(E1, A)=" \
                          "NONNULL_AT(E1, A, B)=" \
-                         "MALLOC_ATTR=" \
+                         "MALLOC_ATTR(...)=" \
                          "UNUSED=" \
+                         "VMT(...)=" \
+                         "__counted_by(...)=" \
+                         "DESTRUCTOR_ATTR(...)=" \
+                         "CONSTRUCTOR_ATTR(...)=" \
+                         "RESHOP_STATIC_ASSERT(...)=" \
                          "ACCESS_ATTR(TYPE, ...)="
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this

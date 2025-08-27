@@ -39,11 +39,27 @@
 %rename(Aequ)              rhp_aequ;
 %rename(MathPrgm)          rhp_mathprgm;
 %rename(NashEquilibrium)   rhp_nash_equilibrium;
+%rename(BackendType)       RhpBackendType;
+
 %rename(VariableRef)       rhp_variable_ref;
 %rename(EquationRef)       rhp_equation_ref;
 
 /* Overload `rhp_add_XXX_YYY` with `rhp_add_XXX_YYY_named` */
-%include rename_named.i
+%include generated/rename_named.i
+
+/* Give our docstrings */
+%include generated/reshop_docs.i
+%include generated/pyobj_methods_docstring.i
+%feature("autodoc", "2") rhp_backendtype;
+%feature("autodoc", "2") rhp_mp_type;
+%feature("docstring") rhp_variable_ref::dual "Get the equation dual to this variable";
+%feature("docstring") rhp_equation_ref::dual "Get the variable dual to this equation";
+%feature("docstring") *::lo "Get the lower bound";
+%feature("docstring") *::up "Get the upper bound";
+%feature("docstring") *::basis "Get the basis status";
+%feature("docstring") *::multiplier "Get the multiplier value";
+%feature("docstring") *::marginal "Get the marginal value";
+%feature("docstring") *::value "Get the (level) value";
 
 /* Overload (set|get)_option */
 
@@ -85,6 +101,7 @@
 
 %handle_exception(set_option);
 %handle_exception(mdl_set_option);
+
 void set_option(const char *name, SWIG_Object o);
 void mdl_set_option(struct rhp_mdl *mdl, const char *name, SWIG_Object o);
 
@@ -97,13 +114,21 @@ void mdl_set_option(struct rhp_mdl *mdl, const char *name, SWIG_Object o);
 // These are the classical Numpy -> double *
 %apply double *rhp_dblin { const double *coeffs };
 
-%apply ( int DIM1, double* IN_ARRAY1 ) { (unsigned n_vals, double *vals) };
+%apply ( int DIM1, double* IN_ARRAY1 ) {  (unsigned size, double *vec) };
+%apply ( int DIM1, rhp_idx* IN_ARRAY1 ) { 
+                                          (unsigned size, rhp_idx *vis),
+                                          (unsigned size, rhp_idx *vis) };
+%apply ( int DIM1, rhp_idx* IN_ARRAY1 ) { (unsigned size, rhp_idx *vlist) };
+
+//%apply ( unsigned* DIM1, double** ARGOUTVIEW_ARRAY1 ) { (unsigned *len, double **vals) };
+//%apply ( unsigned* DIM1, rhp_idx** ARGOUTVIEW_ARRAY1 ) { (unsigned *len, rhp_idx **idxs) };
+
 %apply double IN_ARRAY1[ANY] { double *lbs, double *ubs };
 
 %apply (size_t nnz, unsigned *i, unsigned *j, double *x ) { (size_t nnz, rhp_idx *i, rhp_idx *j, double *x) };
 
 /* For option setting */
-%apply bool { unsigned char opt, unsigned char bval};
+%apply bool { unsigned char opt, unsigned char boolval};
 
 %apply double *OUTPUT { double *dval };
 %apply int *OUTPUT      { int *ival };
@@ -124,6 +149,24 @@ void mdl_set_option(struct rhp_mdl *mdl, const char *name, SWIG_Object o);
 
 /* numinputs=0 make the argument disappear from the target language */
 /* noblock=1 prevents { } from being added to the generated code */
+
+%typemap(in,numinputs=0)
+  (unsigned* len, rhp_idx **idxs, double **vals)
+  (unsigned  dim_temp, double*  data_temp = NULL, rhp_idx *idx_temp = NULL )
+{
+  $1 = &dim_temp;
+  $2 = &idx_temp;
+  $3 = &data_temp;
+}
+%typemap(argout,
+         fragment="NumPy_Backward_Compatibility")
+  (unsigned* len, rhp_idx **idxs, double **vals)
+{
+  struct rhp_linear_equation *equlin = new_rhp_linear_equation(arg1,*$1,*$2,*$3);
+  %set_output(SWIG_NewPointerObj_(SWIG_as_voidptr(equlin), $descriptor(rhp_linear_equation*), SWIG_POINTER_OWN | %newpointer_flags));
+}
+
+
 %define %abstract_types(init_arg, Type)
  %typemap(in,numinputs=0,noblock=1)
    Type *vout ($*1_ltype temp), 
@@ -140,6 +183,7 @@ void mdl_set_option(struct rhp_mdl *mdl, const char *name, SWIG_Object o);
 /* TODO: what do we want to achieve here? */
 abstract_types(rhp_avar_new, struct rhp_avar);
 abstract_types(rhp_aequ_new, struct rhp_aequ);
+
 
 %typemap(in,numinputs=0,noblock=1) 
   int *ei ($*1_ltype temp, int res = SWIG_TMPOBJ) {
@@ -209,6 +253,9 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
    }
 }
 
+%apply rhp_idx vi { rhp_idx objvar };
+%apply rhp_idx ei { rhp_idx objequ };
+
 /* ----------------------------------------------------------------------
  * Typemap int *bstat -> return one of the basis constant objects
  * ---------------------------------------------------------------------- */
@@ -223,9 +270,27 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
    if (!bstat) { SWIG_fail; }
 
    %set_output(bstat);
+
 #else
 
    %set_output(SWIG_From_int(temp$argnum));
+
+#endif
+}
+
+/* ----------------------------------------------------------------------
+ * Typemap enum rhp_backendtype -> constant object
+ * ---------------------------------------------------------------------- */
+%typemap(out,noblock=1) enum rhp_backendtype {
+#ifdef SWIGPYTHON
+   PyObject *o = backendtype_getobj($1);
+   if (!o) { SWIG_fail; }
+
+   %set_output(o);
+
+#else
+
+   %set_output(SWIG_From_int($1));
 
 #endif
 }
@@ -277,37 +342,6 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
 }
 
 %apply rhp_idx *rhpRhpIdxOut { rhp_idx *idx }
-
-/* ----------------------------------------------------------------------
- * Typemap (model|solve)stat -> Custom (Model|Solve)Status
- * ---------------------------------------------------------------------- */
-%typemap(in,numinputs=0,noblock=1) 
-  int *modelstat ($*1_ltype temp, int res = SWIG_TMPOBJ) {
-  $1 = &temp;
-}
-
-%typemap(argout,noblock=1) int *modelstat {
-  ModelStatus *mstat = (ModelStatus *)PyMem_RawMalloc(sizeof(ModelStatus));
-  if (!mstat) { SWIG_fail; }
-  mstat->code = temp$argnum;
-  mstat->mdl = arg1; /* Automagic: the first argument is always the model */
-
-  %set_output(SWIG_NewPointerObj_(mstat, $descriptor(ModelStatus*), (SWIG_POINTER_OWN | %newpointer_flags)));
-}
-
-%typemap(in,numinputs=0,noblock=1) 
-  int *solvestat ($*1_ltype temp, int res = SWIG_TMPOBJ) {
-  $1 = &temp;
-}
-
-%typemap(argout,noblock=1) int *solvestat {
-  SolveStatus *sstat = (SolveStatus *)PyMem_RawMalloc(sizeof(SolveStatus));
-  if (!sstat) { SWIG_fail; }
-  sstat->code = temp$argnum;
-  sstat->mdl = arg1; /* Automagic: the first argument is always the model */
-
-  %set_output(SWIG_NewPointerObj_(sstat, $descriptor(SolveStatus*), (SWIG_POINTER_OWN | %newpointer_flags)));
-}
 
 
 
@@ -367,6 +401,12 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
     %set_output(SWIG_NewPointerObj_((void*)($1), $1_descriptor, new_flags));
 }
 
+%typemap(out,noblock=1) struct rhp_aequ *, struct rhp_avar * {
+    int new_flags = (SWIG_POINTER_OWN | %newpointer_flags);
+    %set_output(SWIG_NewPointerObj_((void*)($1), $1_descriptor, new_flags));
+}
+
+
 %typemap(in,numinputs=0,noblock=1) struct rhp_ovfdef **ovf_def ($*1_ltype temp) {
   $1 = &temp;
 }
@@ -375,6 +415,15 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
   int new_flags = 0;
   %set_output(SWIG_NewPointerObj((void*)(*$1), $*1_descriptor, new_flags));
 }
+
+%typemap(in,numinputs=0,noblock=1) struct rhp_mdl **mdlout ($*1_ltype temp) {
+  $1 = &temp;
+}
+%typemap(argout,noblock=1) struct rhp_mdl **mdlout {
+   int new_flags = (SWIG_POINTER_OWN | %newpointer_flags);
+  %set_output(SWIG_NewPointerObj((void*)(*$1), $*1_descriptor, new_flags));
+}
+
 
 %typemap(in, fragment="NumPy_Fragments")
   (double* rhp_array)
@@ -391,13 +440,40 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
 
 %apply double* rhp_array { double *lbs, double *ubs };
 
-%apply ( int DIM1, rhp_idx* IN_ARRAY1 ) { (unsigned size, rhp_idx *vis) };
-%apply ( int DIM1, rhp_idx* IN_ARRAY1 ) { (unsigned size, rhp_idx *eis) };
-%apply ( int DIM1, rhp_idx* IN_ARRAY1 ) { (unsigned size, rhp_idx *list) };
-
 /* ----------------------------------------------------------------------
  * START specialized typemaps
  * ---------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+ * Typemap (model|solve)stat -> Custom (Model|Solve)Status
+ * ---------------------------------------------------------------------- */
+%typemap(in,numinputs=0,noblock=1) 
+  int *modelstat ($*1_ltype temp, int res = SWIG_TMPOBJ) {
+  $1 = &temp;
+}
+
+%typemap(argout,noblock=1) int *modelstat {
+  ModelStatus *mstat = (ModelStatus *)PyMem_RawMalloc(sizeof(ModelStatus));
+  if (!mstat) { SWIG_fail; }
+  mstat->code = temp$argnum;
+  mstat->mdl = arg1; /* Automagic: the first argument is always the model */
+
+  %set_output(SWIG_NewPointerObj_(mstat, $descriptor(ModelStatus*), (SWIG_POINTER_OWN | %newpointer_flags)));
+}
+
+%typemap(in,numinputs=0,noblock=1) 
+  int *solvestat ($*1_ltype temp, int res = SWIG_TMPOBJ) {
+  $1 = &temp;
+}
+
+%typemap(argout,noblock=1) int *solvestat {
+  SolveStatus *sstat = (SolveStatus *)PyMem_RawMalloc(sizeof(SolveStatus));
+  if (!sstat) { SWIG_fail; }
+  sstat->code = temp$argnum;
+  sstat->mdl = arg1; /* Automagic: the first argument is always the model */
+
+  %set_output(SWIG_NewPointerObj_(sstat, $descriptor(SolveStatus*), (SWIG_POINTER_OWN | %newpointer_flags)));
+}
 
 /* getspecialfloats */
 %typemap(in,numinputs=1,noblock=1) (const struct rhp_mdl *mdl, double * minf, double * pinf, double * nan) (void *argp, double minf_, double pinf_, double nan_) {
@@ -482,20 +558,23 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
 %feature("python:slot", "sq_contains", functype="objobjproc") __contains__;
 
 %feature("python:slot", "tp_str", functype="reprfunc") __str__;
+%feature("python:slot", "nb_int", functype="unaryfunc") __nb_int__;
 
 %feature("python:tp_iter") rhp_avar "rhp_avar_iter";
 %feature("python:tp_iter") rhp_aequ "rhp_aequ_iter";
 
+%ignore RhpBackendType::backend;
 
 %immutable;
 %include "python_structs.h"
 
-%inline %{
+%runtime %{
 #define SWIG_NewPointerObj_(ptr, type, flags) SWIG_InternalNewPointerObj(ptr, type, flags)
 %}
 
 #else
-%inline %{
+
+%runtime %{
 #define SWIG_NewPointerObj_(ptr, type, flags) SWIG_NewPointerObj(ptr, type, flags)
 %}
 
@@ -532,11 +611,31 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
 %constant struct BasisStatus BasisFixed = BasisFixedObj;
 %constant struct BasisStatus BasisInvalid = BasisInvalidObj;
 
+%constant RhpBackendType BackendGamsGmo = BackendGamsGmoObj;
+%constant RhpBackendType BackendReSHOP  = BackendReSHOPObj;
+%constant RhpBackendType BackendJulia   = BackendJuliaObj;
+%constant RhpBackendType BackendAmpl    = BackendAmplObj;
+%constant RhpBackendType BackendInvalid = BackendInvalidObj;
 
 %extend BasisStatus {
+   long __nb_int__() {
+      return $self->status;
+   }
 
   const char *__str__() {
      return rhp_basis_str($self->status);
+  }
+
+   def_pretty_print()
+};
+
+%extend RhpBackendType {
+   long __nb_int__() {
+      return $self->backend;
+   }
+
+  const char *__str__() {
+     return rhp_backend_str($self->backend);
   }
 
    def_pretty_print()
@@ -604,6 +703,8 @@ equvar_add_buffer_iface(Avar,avar);
 equvar_add_buffer_iface(Aequ,aequ);
 
 %newobject rhp_avar::__str__;
+%feature("docstring") rhp_avar "Variable container";
+
 typedef struct rhp_avar {
    %extend {
   rhp_avar() { return rhp_avar_new(); }
@@ -645,6 +746,7 @@ fail:
 } Avar;
 
 %newobject rhp_aequ::__str__;
+%feature("docstring") rhp_aequ "Equation container";
 typedef struct rhp_aequ {
    %extend {
   rhp_aequ() { return rhp_aequ_new(); }
@@ -678,13 +780,86 @@ fail:
    }
 } Aequ;
 
+%newobject rhp_linear_equation::__str__;
+%feature("docstring") rhp_linear_equation "Linear equation";
+%extend struct rhp_linear_equation {
+  rhp_linear_equation(struct rhp_mdl *mdl, unsigned size, rhp_idx *vis, double *vals) {
+     LinearEquation * lin_equ = PyMem_RawMalloc(sizeof(LinearEquation));
+     if (!lin_equ) { SWIG_exception_fail(SWIG_MemoryError, "malloc failed"); }
+     lin_equ->mdl = mdl;
+     lin_equ->len = size;
+     lin_equ->vis = vis;
+     lin_equ->vals = vals;
+     return lin_equ;
+     fail: return NULL;
+     }
+  ~rhp_linear_equation() { ; }
+
+  size_t __len__() const { return $self->len; }
+
+  const char *__str__() {
+     char *str;
+     IO_CALL_SWIG(asprintf(&str, "Linear Equation of size %u", $self->len));
+     return str;
+     fail:
+     return NULL;
+  }
+
+   def_pretty_print_alloc()
+
+  PyObject * __getitem__(size_t i) const {
+     if (i > $self->len) {
+       SWIG_exception(SWIG_IndexError, "Index out of bounds");
+     }
+     VariableRef * vref = PyMem_RawMalloc(sizeof(VariableRef));
+      if (!vref) { SWIG_exception_fail(SWIG_MemoryError, "malloc failed"); }
+
+      vref->mdl = $self->mdl;
+      vref->vi = $self->vis[i];
+
+      PyObject *vref_py = SWIG_NewPointerObj_(SWIG_as_voidptr(vref),$descriptor(VariableRef *), SWIG_POINTER_OWN | %newpointer_flags);
+
+      return PyTuple_Pack(2, vref, PyFloat_FromDouble($self->vals[i]));
+      fail: return NULL;
+   }
+
+  short __contains__(rhp_idx vi) const {
+     rhp_idx *vis = $self->vis;
+     for (unsigned i = 0, len = $self->len; i < len; ++i) {
+        if (vi == vis[i]) { return 1; }
+     }
+
+     return 0;
+  }
+/*  const rhp_idx py__setitem__(size_t i) const { */
+
+};
+
 %handle_exception(rhp_mdl::solve);
 
 %newobject rhp_mdl::__str__;
+%newobject rhp_mdl_vars_get;
+//%newobject rhp_mdl::equs;
+%feature("docstring") rhp_mdl "Top-level Model";
+%feature("docstring") rhp_mdl::solve "solve(gdxname=None)
+--
+
+Solve the model.
+
+Parameters
+----------
+
+gdxname : str, optional
+    if provided, dump the solution into a gdxfile
+";
+
 typedef struct rhp_mdl {
    %extend {
+      const struct rhp_avar *vars;
 
       rhp_mdl(unsigned backend) { return rhp_mdl_new(backend); } 
+
+      rhp_mdl(RhpBackendType *backend) { return rhp_mdl_new(backend->backend); } 
 
       rhp_mdl(const char *gms_controlfile) {
          struct rhp_mdl *mdl;
@@ -764,7 +939,7 @@ typedef struct rhp_mdl {
 
 
      void solve(const char *gdxname) {
-        struct rhp_mdl *solver = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+        struct rhp_mdl *solver = rhp_mdl_new(RhpBackendGamsGmo);
         RHP_FAIL(rhp_process($self, solver), "Couldn't process the model");   
         RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");   
         RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");   
@@ -773,7 +948,7 @@ typedef struct rhp_mdl {
      }
 
      void solve() {
-        struct rhp_mdl *solver = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+        struct rhp_mdl *solver = rhp_mdl_new(RhpBackendGamsGmo);
         RHP_FAIL(rhp_process($self, solver), "Couldn't process the model");   
         RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");   
         RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");   
@@ -783,10 +958,15 @@ typedef struct rhp_mdl {
   }
 } Model;
 
+%{
+struct rhp_avar* rhp_mdl_vars_get(struct rhp_mdl *mdl) {
+      return rhp_avar_newcompact(rhp_mdl_nvars(mdl), 0);
+}
+%}
+
 /* ----------------------------------------------------------------------
  * Custom attributes. Right now only use for VariableRef/EquationRef
  * ---------------------------------------------------------------------- */
-
 
 /* IMPORTANT: now attributes are MUTABLE by default!*/
 // FIXME: why do we need that
@@ -1073,5 +1253,5 @@ typedef struct rhp_nash_equilibrium {
   }
 }
 
-%include pyobj_methods.i
+%include generated/pyobj_methods.i
 

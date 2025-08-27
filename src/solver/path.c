@@ -755,6 +755,15 @@ _exit:
    return status;
 }
 
+/**
+ * @brief Set the filename of the PATH library
+ *
+ * @ingroup publicAPI
+ *
+ * @param fname  the filename of the PATH library
+ *
+ * @return       the error code
+ */
 int rhp_PATH_setfname(const char* fname)
 {
    if (!fname) {

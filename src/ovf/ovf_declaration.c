@@ -171,7 +171,7 @@ int ovf_params_sync(OvfDef * restrict ovf, OvfParamList * restrict params)
    return OK;
 }
 
-/*
+/**
  *  @brief Add an OVF variable 
  *
  *  This is mainly for declaring OVF variable via an API.
@@ -188,8 +188,7 @@ int ovf_params_sync(OvfDef * restrict ovf, OvfParamList * restrict params)
  *
  *  @return                the return code
  */
-int rhp_ovf_add(Model *mdl, const char* name, rhp_idx ovf_vi,
-                Avar *v_args, OvfDef **ovf_def)
+int rhp_ovf_add(Model *mdl, const char* name, rhp_idx ovf_vi, Avar *v_args, OvfDef **ovf_def)
 {
     S_CHECK(chk_mdl(mdl, __func__));
 

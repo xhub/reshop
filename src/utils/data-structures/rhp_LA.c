@@ -5,90 +5,49 @@
 #include "allocators.h"
 #include "macros.h"
 #include "printout.h"
-#include "reshop.h"
 #include "rhp_LA.h"
 #include "rhp_LA_sparsetools.h"
 #include "rhp_defines.h"
 #include "status.h"
 #include "lequ.h" /* for some debug info  */
 
-SparseMatrix* spmat_allocA(M_ArenaLink *arena, RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
+/** @file rhp_LA.c */
+
+/** @brief Free a matrix
+ *
+ *  @param m  the matrix to free
+ */
+void rhpmat_free(SpMat *m)
 {
-   SparseMatrix *mat = NULL;
-
-   u64 lenp = type == RHP_TRIPLET ? 1+nnzmax : 1+n;
-   RHP_INT *i = NULL, *p = NULL;
-   double *x = NULL;
-
-   void *mems[] = {mat, i, p, x};
-   u64 sizes[] = {sizeof(SparseMatrix), sizeof(RHP_INT)*nnzmax, sizeof(RHP_INT)*lenp, sizeof(double)*nnzmax};
-
-   RESHOP_STATIC_ASSERT(ARRAY_SIZE(mems) == ARRAY_SIZE(sizes), "");
-
-   SN_CHECK_EXIT(arenaL_alloc_blocks(arena, ARRAY_SIZE(sizes), mems, sizes));
-
-   assert(mat && i && p && x);
-
-   mat->m = m;
-   mat->n = n;
-   mat->nnz = 0;
-   mat->nnzmax = nnzmax;
-   mat->i = i;
-   mat->p = p;
-   mat->x = x;
-
-   return mat;
-
-_exit:
-   return NULL;
-}
-
-SparseMatrix* rhp_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
-{
-   SparseMatrix *mat;
-   CALLOC_NULL(mat, SparseMatrix, 1);
-
-   mat->m = m;
-   mat->n = n;
-   mat->nnz = 0;
-   mat->nnzmax = nnzmax;
-   MALLOC_EXIT_NULL(mat->i, RHP_INT, nnzmax);
-   MALLOC_EXIT_NULL(mat->p, RHP_INT, type == RHP_TRIPLET ? 1+nnzmax : 1+n);
-   MALLOC_EXIT_NULL(mat->x, double, nnzmax);
-
-   return mat;
-
-_exit:
-   FREE(mat->i);
-   FREE(mat->p);
-   FREE(mat->x);
-   FREE(mat);
-   return NULL;
-}
-
-void rhp_spfree(SparseMatrix *m)
-{
-   if (!m) { return; }
-
-   FREE(m->i);
-   FREE(m->p);
-   FREE(m->x);
-   FREE(m);
+   if (m->csr) { rhpmat_spfree(m->csr); }
+   if (m->csc) { rhpmat_spfree(m->csc); }
+   if (m->triplet) { rhpmat_spfree(m->triplet); }
+   if (m->block) {
+      struct block_spmat *bmat = m->block;
+      if (bmat->blocks) {
+         for (size_t i = 0; i < bmat->number; ++i) {
+            rhpmat_spfree(bmat->blocks[i]);
+         }
+      }
+      FREE(bmat->blocks);
+      FREE(bmat->row_starts);
+      FREE(bmat->col_starts);
+      FREE(m->block);
+   }
 }
 
 /** @brief build a triplet matrix
  *
- *  @param n the number of columns
- *  @param m the number of rows
- *  @param nnz the number of non-zero elements
- *  @param rowidx the row indices
- *  @param colidx the column indices
- *  @param val the values
+ *  @param n       the number of columns
+ *  @param m       the number of rows
+ *  @param nnz     the number of non-zero elements
+ *  @param rowidx  the row indices
+ *  @param colidx  the column indices
+ *  @param data    the values
  *
- *  @return the matrix 
+ *  @return        the matrix 
  */
-SpMat* rhpmat_triplet(unsigned n, unsigned m, unsigned nnz,
-                                 int *rowidx, int *colidx, double *val)
+SpMat* rhpmat_triplet(unsigned n, unsigned m, unsigned nnz, int *rowidx, int *colidx, double *data)
 {
    DPRINT("%s :: row:", __func__);
    DPRINTF(for (unsigned i = 0; i < nnz; ++i) { printout(PO_DEBUG, " %d", rowidx[i]); } );
@@ -127,7 +86,7 @@ SpMat* rhpmat_triplet(unsigned n, unsigned m, unsigned nnz,
       csm->p[i] = colidx[i];
       csm->i[i] = rowidx[i];
    }
-   memcpy(csm->x, val, nnz * sizeof(double));
+   memcpy(csm->x, data, nnz * sizeof(double));
 
    return mat;
 
@@ -135,6 +94,74 @@ _exit:
    rhpmat_free(mat);
    FREE(mat);
    return NULL;
+}
+
+SparseMatrix* rhpmat_allocA(M_ArenaLink *arena, RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
+{
+   SparseMatrix *mat = NULL;
+
+   u64 lenp = type == RHP_TRIPLET ? 1+nnzmax : 1+n;
+   RHP_INT *i = NULL, *p = NULL;
+   double *x = NULL;
+
+   void *mems[] = {mat, i, p, x};
+   u64 sizes[] = {sizeof(SparseMatrix), sizeof(RHP_INT)*nnzmax, sizeof(RHP_INT)*lenp, sizeof(double)*nnzmax};
+
+   RESHOP_STATIC_ASSERT(ARRAY_SIZE(mems) == ARRAY_SIZE(sizes), "");
+
+   SN_CHECK_EXIT(arenaL_alloc_blocks(arena, ARRAY_SIZE(sizes), mems, sizes));
+
+   assert(mat && i && p && x);
+
+   mat->m = m;
+   mat->n = n;
+   mat->nnz = 0;
+   mat->nnzmax = nnzmax;
+   mat->i = i;
+   mat->p = p;
+   mat->x = x;
+
+   return mat;
+
+_exit:
+   return NULL;
+}
+
+SparseMatrix* rhpmat_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type)
+{
+   SparseMatrix *mat;
+   CALLOC_NULL(mat, SparseMatrix, 1);
+
+   mat->m = m;
+   mat->n = n;
+   mat->nnz = 0;
+   mat->nnzmax = nnzmax;
+   MALLOC_EXIT_NULL(mat->i, RHP_INT, nnzmax);
+   MALLOC_EXIT_NULL(mat->p, RHP_INT, type == RHP_TRIPLET ? 1+nnzmax : 1+n);
+   MALLOC_EXIT_NULL(mat->x, double, nnzmax);
+
+   return mat;
+
+_exit:
+   FREE(mat->i);
+   FREE(mat->p);
+   FREE(mat->x);
+   FREE(mat);
+   return NULL;
+}
+
+/** @brief Free a sparse matrix
+ *
+ * @param m  the sparse matrix to free
+ */
+void rhpmat_spfree(SparseMatrix *m)
+{
+   if (!m) { return; }
+
+   FREE(m->i);
+   FREE(m->p);
+   FREE(m->x);
+   free(m);
 }
 
 void rhpmat_copy_row_neg(SpMat* M, unsigned i, double *vals,
@@ -188,27 +215,7 @@ void rhpmat_copy_row_neg(SpMat* M, unsigned i, double *vals,
 
 }
 
-void rhpmat_free(SpMat* m)
-{
-   if (m->csr) { rhp_spfree(m->csr); }
-   if (m->csc) { rhp_spfree(m->csc); }
-   if (m->triplet) { rhp_spfree(m->triplet); }
-   if (m->block) {
-      struct block_spmat *bmat = m->block;
-      if (bmat->blocks) {
-         for (size_t i = 0; i < bmat->number; ++i) {
-            rhp_spfree(bmat->blocks[i]);
-         }
-      }
-      FREE(bmat->blocks);
-      FREE(bmat->row_starts);
-      FREE(bmat->col_starts);
-      FREE(m->block);
-   }
-}
-
-/** 
- *  @brief return the size of the matrix
+/** @brief return the size of the matrix
  *
  *  @param     mat   the matrix
  *  @param[out] n    the number of columns
@@ -346,7 +353,7 @@ int rhpmat_ensure_cscA(M_ArenaLink *arena, SpMat *m)
    SparseMatrix * restrict csr = m->csr, *csc;
 
    RHP_INT mrow = csr->m, nrow = csr->n;
-   A_CHECK(m->csc, spmat_allocA(arena, mrow, nrow, csr->nnz, RHP_CS));
+   A_CHECK(m->csc, rhpmat_allocA(arena, mrow, nrow, csr->nnz, RHP_CS));
    csc = m->csc;
    csr_tocsc(csr->m, csr->n, csr->p, csr->i, csr->x, csc->p, csc->i, csc->x);
 
@@ -390,7 +397,7 @@ int rhpmat_col(SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
             SparseMatrix * restrict csr = m->csr, *csc;
 
             RHP_INT mrow = csr->m, nrow = csr->n;
-            A_CHECK(m->csc, rhp_spalloc(mrow, nrow, csr->nnz, RHP_CS));
+            A_CHECK(m->csc, rhpmat_spalloc(mrow, nrow, csr->nnz, RHP_CS));
             csc = m->csc;
             csr_tocsc(csr->m, csr->n, csr->p, csr->i, csr->x, csc->p, csc->i, csc->x);
 

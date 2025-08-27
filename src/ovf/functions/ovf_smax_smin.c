@@ -14,7 +14,7 @@ static int unit_simplex_gen_A(unsigned n, const void *env, SpMat *mat)
    if (mat->ppty & EMPMAT_CSC) {
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(n+1, n, 2*n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(n+1, n, 2*n, RHP_CS));
 
       mat->csr->m = n;
       mat->csr->n = n+1;
@@ -31,7 +31,7 @@ static int unit_simplex_gen_A(unsigned n, const void *env, SpMat *mat)
 
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(n, n+1, 2*n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(n, n+1, 2*n, RHP_CS));
       mat->csr->m = n+1;
       mat->csr->n = n;
 
@@ -58,7 +58,7 @@ static int unit_simplex_gen_A_nonbox(unsigned n, const void *env, SpMat *mat)
    if (mat->ppty & EMPMAT_CSC) {
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(1, n, n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(1, n, n, RHP_CS));
 
       mat->csr->m = n;
       mat->csr->n = 1;
@@ -73,7 +73,7 @@ static int unit_simplex_gen_A_nonbox(unsigned n, const void *env, SpMat *mat)
 
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(n, n+1, n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(n, n+1, n, RHP_CS));
       mat->csr->m = 1;
       mat->csr->n = n;
 

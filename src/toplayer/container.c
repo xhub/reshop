@@ -90,11 +90,10 @@ void ctr_fini(Container *ctr)
 /**
  * @brief Allocate a model for a given architecture
  *
- * @ingroup publicAPI
- *
+ * @param  ctr      the container to initialize
  * @param  backend  the backend (GAMS, Julia, ReSHOP) of the model
  *
- * @return       the model structure, or NULL if the allocation failed
+ * @return          the error code
  */
 int ctr_init(Container *ctr, BackendType backend)
 {
@@ -110,13 +109,13 @@ int ctr_init(Container *ctr, BackendType backend)
    fesetround(FE_TONEAREST);
 
    switch (backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       ctr->ops = &ctr_ops_gams;
       break;
-   case RHP_BACKEND_RHP:
+   case RhpBackendReSHOP:
       ctr->ops = &ctr_ops_rhp;
       break;
-   case RHP_BACKEND_JULIA:
+   case RhpBackendJulia:
       ctr->ops = &ctr_ops_julia;
       break;
    default:
@@ -132,7 +131,7 @@ int ctr_init(Container *ctr, BackendType backend)
    SN_CHECK_EXIT(ctr->ops->allocdata(ctr));
 
    /* Julia want anonymous variable to have no names ... */
-   if (backend != RHP_BACKEND_JULIA) {
+   if (backend != RhpBackendJulia) {
      ctr_setneednames(ctr);
    }
 
@@ -527,6 +526,7 @@ const char* ctr_printvarname2(const Container *ctr, rhp_idx vi)
 
    return bufvar2;
 }
+
 /**
  * @brief Return the name of a equation
  *
@@ -583,6 +583,15 @@ const char* ctr_printequname2(const Container *ctr, rhp_idx ei)
    return bufequ2;
 }
 
+/**
+ * @brief Set the RHS of an equation
+ *
+ * @param ctr the container
+ * @param ei  the equation index
+ * @param val the value of the RHS
+ *
+ * @return    the error code
+ */
 int ctr_setequrhs(Container *ctr, rhp_idx ei, double val)
 {
 
@@ -594,7 +603,7 @@ int ctr_setequrhs(Container *ctr, rhp_idx ei, double val)
    case CONE_R_MINUS:
    case CONE_R:
    case CONE_0:
-      return ctr_setcst(ctr, ei, -val);
+      return ctr_setequcst(ctr, ei, -val);
    case CONE_POLYHEDRAL:
    case CONE_SOC:
    case CONE_RSOC:

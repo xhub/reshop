@@ -20,7 +20,7 @@
 	int getmodelstat(int * modelstat);
 	int getobjequ(rhp_idx * objequ);
 	int getobjequs(struct rhp_aequ * objs);
-	int getsense(unsigned int * objsense);
+	int getsense(unsigned int * sense);
 	int getobjvar(rhp_idx * objvar);
 	int gettype(unsigned int * type);
 	int getsolvername(const char ** solvername);
@@ -46,13 +46,13 @@
 	int setequval(rhp_idx ei, double level);
 	int settype(unsigned int type);
 	int setobjsense(unsigned int objsense);
-	int setobjvar(rhp_idx vi);
+	int setobjvar(rhp_idx objvar);
 	int setequrhs(rhp_idx ei, double val);
 	int setsolvername(const char * solvername);
 	int setvarbasis(rhp_idx vi, int basis_status);
 	int setvarbounds(rhp_idx vi, double lb, double ub);
 	int setvarlb(rhp_idx vi, double lb);
-	int setvarmult(rhp_idx vi, double varm);
+	int setvarmult(rhp_idx vi, double mult);
 	int setvarname(rhp_idx vi, const char * name);
 	int setvartype(rhp_idx vi, unsigned int type);
 	int setvarub(rhp_idx vi, double ub);
@@ -64,7 +64,7 @@
 	int gms_setgamscntr(const char * cntrfile);
 	int gms_setgamsdir(const char * gamsdir);
 	int gms_writesol2gdx(const char * gdxname);
-	int empdag_mpaddmpVF(struct rhp_mathprgm * mp, struct rhp_mathprgm * mp_child, struct rhp_empdag_arcVF * edgeVF);
+	int empdag_mpaddmpVF(struct rhp_mathprgm * mp, struct rhp_mathprgm * mp_child, struct rhp_empdag_arcVF * arcVF);
 	int empdag_mpaddmpCTRL(struct rhp_mathprgm * mp, struct rhp_mathprgm * mp_child);
 	int empdag_mpeaddmp(struct rhp_nash_equilibrium * mpe, struct rhp_mathprgm * mp);
 	int add_var(rhp_idx * vi);
@@ -107,9 +107,7 @@
 	int equ_addbilin(rhp_idx ei, struct rhp_avar * v1, struct rhp_avar * v2, double coeff);
 	int equ_addlin(rhp_idx ei, struct rhp_avar * v, const double * coeffs);
 	int equ_addlinchk(rhp_idx ei, struct rhp_avar * v, const double * coeffs);
-	int equ_addlincoeff(rhp_idx ei, struct rhp_avar * v, const double * vals, double coeff);
-	int equ_addquadrelative(rhp_idx ei, struct rhp_avar * v_row, struct rhp_avar * v_col, size_t nnz, unsigned int * i, unsigned int * j, double * x, double coeff);
-	int equ_addquadabsolute(rhp_idx ei, size_t nnz, unsigned int * i, unsigned int * j, double * x, double coeff);
+	int equ_addlincoeff(rhp_idx ei, struct rhp_avar * v, const double * coeffs, double coeff);
 	int equ_addlvar(rhp_idx ei, rhp_idx vi, double val);
 	int equ_addnewlvar(rhp_idx ei, rhp_idx vi, double val);
 	int equ_setcst(rhp_idx ei, double val);
@@ -123,7 +121,7 @@
 	int nltree_cst(struct rhp_nltree * tree, struct rhp_nlnode *** node, double cst);
 	int nltree_var(struct rhp_nltree * tree, struct rhp_nlnode *** node, rhp_idx vi, double coeff);
 	int nltree_addquad(rhp_idx ei, struct rhp_spmat * mat, struct rhp_avar * v, double coeff);
-	int nltree_addlin(rhp_idx ei, double * vals, struct rhp_avar * v, double coeff);
+	int nltree_addlin(rhp_idx ei, double * c, struct rhp_avar * v, double coeff);
 	int reserve_equs(unsigned int size);
 	int reserve_vars(unsigned int size);
 	int latex(const char * filename);
@@ -133,11 +131,7 @@
 	int postprocess(void);
 	int get_var_sos1(rhp_idx vi, unsigned int ** grps);
 	int get_var_sos2(rhp_idx vi, unsigned int ** grps);
-	int setopt_b(const char * optname, unsigned char opt);
 	int setopt_c(const char * optname, char * choice);
-	int setopt_d(const char * optname, double optval);
-	int setopt_i(const char * optname, int optval);
-	int setopt_s(const char * optname, char * optstr);
 	int getopttype(const char * optname, unsigned int * type);
 	unsigned int nequs(void);
 	unsigned int nvars(void);
@@ -179,8 +173,8 @@
 	int getobjequ(void);
 	int getobjvar(void);
 	int setname(const char * name);
-	int setobjequ(rhp_idx ei);
-	int setobjvar(rhp_idx vi);
+	int setobjequ(rhp_idx objequ);
+	int setobjvar(rhp_idx objvar);
 	unsigned int getid(void);
 	const struct rhp_mdl * getmdl(void);
 	unsigned int getsense(void);
@@ -244,8 +238,6 @@
 #define rhp_mdl_equ_addlin rhp_equ_addlin
 #define rhp_mdl_equ_addlinchk rhp_equ_addlinchk
 #define rhp_mdl_equ_addlincoeff rhp_equ_addlincoeff
-#define rhp_mdl_equ_addquadrelative rhp_equ_addquadrelative
-#define rhp_mdl_equ_addquadabsolute rhp_equ_addquadabsolute
 #define rhp_mdl_equ_addlvar rhp_equ_addlvar
 #define rhp_mdl_equ_addnewlvar rhp_equ_addnewlvar
 #define rhp_mdl_equ_setcst rhp_equ_setcst

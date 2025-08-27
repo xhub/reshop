@@ -88,14 +88,6 @@ static_assert(ARRAY_SIZE(errmsgs_offsets) == Error_LastError+1,
 
 
 
-const char *rhp_status_descr(int status)
-{
-   if (status < 0 || status > Error_LastError) {
-      return "unknown error";
-   }
-
-   return errmsgs.dummystr + errmsgs_offsets[status];
-}
 
 const char *status_descr(int status)
 {

@@ -15,7 +15,7 @@ int cvar_gen_A(unsigned n, const void *env, SpMat *mat)
    if (mat->ppty & EMPMAT_CSC) {
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(2*n+1, n, 3*n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(2*n+1, n, 3*n, RHP_CS));
       mat->csr->m = n;
       mat->csr->n = 2*n+1;
 
@@ -32,7 +32,7 @@ int cvar_gen_A(unsigned n, const void *env, SpMat *mat)
    } else {
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(n, 2*n+1, 3*n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(n, 2*n+1, 3*n, RHP_CS));
       mat->csr->m = 2*n+1;
       mat->csr->n = n;
 
@@ -60,7 +60,7 @@ int cvar_gen_A_nonbox(unsigned n, const void *env, SpMat *mat)
    if (mat->ppty & EMPMAT_CSC) {
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(1, n, n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(1, n, n, RHP_CS));
       mat->csr->m = n;
       mat->csr->n = 1;
 
@@ -73,7 +73,7 @@ int cvar_gen_A_nonbox(unsigned n, const void *env, SpMat *mat)
    } else {
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(n, 1, n, RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(n, 1, n, RHP_CS));
       mat->csr->m = 1;
       mat->csr->n = n;
 

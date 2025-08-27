@@ -35,9 +35,9 @@ int chk_gmdl(const Model *mdl, const char *fn)
       return Error_NullPointer;
    }
 
-   if (mdl->backend != RHP_BACKEND_GAMS_GMO) {
+   if (mdl->backend != RhpBackendGamsGmo) {
       error("%s ERROR: %s model '%*s' #%u has wrong backend: expected %s\n",
-            fn, mdl_fmtargs(mdl), backend_name(RHP_BACKEND_GAMS_GMO));
+            fn, mdl_fmtargs(mdl), backend2str(RhpBackendGamsGmo));
       return Error_InvalidValue;
    }
 
@@ -53,8 +53,8 @@ int chk_rmdl(const Model *mdl, const char *fn)
 
    if (!mdl_is_rhp(mdl)) {
       error("%s ERROR: %s model '%*s' #%u has wrong backend: expected %s, %s or %s\n",
-            fn, mdl_fmtargs(mdl), backend_name(RHP_BACKEND_RHP),
-            backend_name(RHP_BACKEND_JULIA), backend_name(RHP_BACKEND_AMPL));
+            fn, mdl_fmtargs(mdl), backend2str(RhpBackendReSHOP),
+            backend2str(RhpBackendJulia), backend2str(RhpBackendAmpl));
       return Error_InvalidValue;
    }
 

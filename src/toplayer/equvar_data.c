@@ -3,7 +3,14 @@
 #include "equvar_data.h"
 #include "rhpidx.h"
 
-const char* aequvar_typestr(enum a_equvar_type type)
+/**
+ * @brief Return the string description of a type
+ *
+ * @param type the type
+ *
+ * @return     the string description
+ */
+const char* aequvar_typestr(AbstractEquVarType type)
 {
    switch (type) {
    case EquVar_Compact:
@@ -23,6 +30,13 @@ const char* aequvar_typestr(enum a_equvar_type type)
    }
 }
 
+/**
+ * @brief Return the string description of an invalid index
+ *
+ * @param idx  the invalid index value
+ *
+ * @return     the string description
+ */
 const char * badidx2str(rhp_idx idx)
 {
    switch (idx) {
@@ -77,9 +91,9 @@ const char* basis_name(BasisStatus basis)
 
 #include "reshop.h"
 
-RESHOP_STATIC_ASSERT((uint32_t)RHP_BASIS_UNSET == (uint32_t)BasisUnset, "")
-RESHOP_STATIC_ASSERT((uint32_t)RHP_BASIS_LOWER == (uint32_t)BasisLower, "")
-RESHOP_STATIC_ASSERT((uint32_t)RHP_BASIS_UPPER == (uint32_t)BasisUpper, "")
-RESHOP_STATIC_ASSERT((uint32_t)RHP_BASIS_BASIC == (uint32_t)BasisBasic, "")
-RESHOP_STATIC_ASSERT((uint32_t)RHP_BASIS_SUPERBASIC == (uint32_t)BasisSuperBasic, "")
-RESHOP_STATIC_ASSERT((uint32_t)RHP_BASIS_FIXED == (uint32_t)BasisFixed, "")
+RESHOP_STATIC_ASSERT((uint32_t)RhpBasisUnset == (uint32_t)BasisUnset, "")
+RESHOP_STATIC_ASSERT((uint32_t)RhpBasisLower == (uint32_t)BasisLower, "")
+RESHOP_STATIC_ASSERT((uint32_t)RhpBasisUpper == (uint32_t)BasisUpper, "")
+RESHOP_STATIC_ASSERT((uint32_t)RhpBasisBasic == (uint32_t)BasisBasic, "")
+RESHOP_STATIC_ASSERT((uint32_t)RhpBasisSuperBasic == (uint32_t)BasisSuperBasic, "")
+RESHOP_STATIC_ASSERT((uint32_t)RhpBasisFixed == (uint32_t)BasisFixed, "")

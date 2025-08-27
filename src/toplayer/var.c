@@ -25,13 +25,8 @@ static const char* const var_type_names[] = {
    "dual POWER cone",
 };
 
-RESHOP_STATIC_ASSERT(sizeof(var_type_names)/sizeof(char*) ==  VAR_TYPE_LEN,
-                     "var_type and var_type_names must be synchronized")
 
-/**
- * @brief Create an abstract variable
- *
- *  @ingroup publicAPI
+/** @brief Create an abstract variable
  *
  * @return the abstract variable, or NULL if the allocation failed
  */
@@ -50,12 +45,10 @@ Avar* avar_new(void)
 /**
  *  @brief create a (vector) variable of continuous indices
  *
- *  @ingroup publicAPI
- *
  *  @param size   size of the variable
  *  @param start  index of the first component of the variable
  *
- *  @return       the error code
+ *  @return       the new abstract variable
  *
  */
 Avar* avar_newcompact(unsigned size, unsigned start)
@@ -77,22 +70,20 @@ Avar* avar_newcompact(unsigned size, unsigned start)
  *  for ensuring that the memory remains valid and for freeing it.
  *  Use avar_newlistcopy() the list should be copied and managed.
  *
- *  @ingroup publicAPI
- *
  *  @param size  size of the variable
- *  @param list  array of indices
+ *  @param vis   array of indices
  *
- *  @return      the error code
+ *  @return      the new abstract variable
  *
  */
-Avar* avar_newlistborrow(unsigned size, rhp_idx *list)
+Avar* avar_newlistborrow(unsigned size, rhp_idx *vis)
 {
    Avar *avar;
    MALLOC_NULL(avar, Avar, 1);
    avar->type = EquVar_List;
    avar->own = false;
    avar->size = size;
-   avar->list = list;
+   avar->list = vis;
 
    return avar;
 }
@@ -103,12 +94,10 @@ Avar* avar_newlistborrow(unsigned size, rhp_idx *list)
  *
  *  This function duplicates the list of indices
  *
- *  @ingroup publicAPI
- *
  *  @param size  size of the variable
  *  @param vis   array of indices
  *
- *  @return      the error code
+ *  @return      the new abstract variable
  *
  */
 Avar* avar_newlistcopy(unsigned size, rhp_idx *vis)
@@ -404,21 +393,18 @@ unsigned avar_findidx(const Avar* v, rhp_idx vi)
 /**
  * @brief Set the abstract as a list
  *
- * @ingroup publicAPI
- *
- * @param v     the abstract variable
- * @param size  the length of the list
- * @param list  the array of indices
+ * @param v      the abstract variable
+ * @param size   the length of the list
+ * @param vis    the array of indices
  *
  * @return      the error code
  */
-int avar_set_list(Avar *v, unsigned size, rhp_idx list[static size])
+int avar_set_list(Avar *v, unsigned size, rhp_idx vis[VMT(static size)])
 {
-
    v->type = EquVar_List;
    v->own = false;
    v->size = size;
-   v->list = list;
+   v->list = vis;
 
    return OK;
 }
@@ -441,8 +427,6 @@ int avar_setblock(Avar *v, unsigned block_size)
 
 /**
  * @brief Free all the memory allocated in the variable
- *
- * @ingroup publicAPI
  *
  * @param v  the variable to free
  */
@@ -483,13 +467,13 @@ int avar_subset(Avar* v, rhp_idx *idx, unsigned len, Avar *v_subset)
    return OK;
 }
 
+/* NOTE: we use vidx and not vi to not trigger a typemap in SWIG.
+ * A VariableRef needs a Model, and Vars can exists without one */
 /**
  * @brief Get the variable stored at an index
  *
- * @ingroup publicAPI
- *
- * @param v          the abstract variable
- * @param i          the index of the abstract variable
+ * @param      v     the abstract variable
+ * @param      i     the index of the abstract variable
  * @param[out] vidx  the variable index
  *
  * @return           the error code
@@ -509,9 +493,7 @@ int avar_get(const Avar *v, unsigned i, rhp_idx *vidx)
 }
 
 /**
- * @brief returns the size of an abstract variable
- *
- * @ingroup publicAPI
+ * @brief Return the size of an abstract variable
  *
  * @param v  the abstract variable
  *
@@ -630,4 +612,5 @@ void var_update_bnd(Var *var, enum var_type type)
   }
 }
 
-
+RESHOP_STATIC_ASSERT(sizeof(var_type_names)/sizeof(char*) ==  VAR_TYPE_LEN,
+                     "var_type and var_type_names must be synchronized")

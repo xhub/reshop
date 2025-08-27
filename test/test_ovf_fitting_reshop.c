@@ -44,7 +44,7 @@ int main (void)
   for (size_t i = 0; i < loss_fns_size; ++i) {
     for (size_t j = 0; j < reformulations_size; ++j) {
        for (size_t l = 0; l < nb_qp_solvers; ++l) {
-         mdl_solver = rhp_mdl_new(RHP_BACKEND_RHP);
+         mdl_solver = rhp_mdl_new(RhpBackendReSHOP);
          if (!mdl_solver) { status = 1; goto _exit; }
 
          rhp_mdl_setsolvername(mdl_solver, qp_solvers[l]);
@@ -60,7 +60,7 @@ int main (void)
     for (size_t j = 0; j < reformulations_size; ++j) {
       for (unsigned k = 1; k <= 5 ; ++k) {
         for (size_t l = 0; l < nb_nlp_solvers; ++l) {
-          mdl_solver = rhp_mdl_new(RHP_BACKEND_RHP);
+          mdl_solver = rhp_mdl_new(RhpBackendReSHOP);
           if (!mdl_solver) { status = 1; goto _exit; }
 
           rhp_mdl_setsolvername(mdl_solver, nlp_solvers[l]);
@@ -76,7 +76,7 @@ int main (void)
   for (size_t i = 0; i < loss_fns_size; ++i) {
     for (size_t j = 0; j < reformulations_size-1; ++j) {
        for (size_t l = 0; l < nb_equil_solvers; ++l) {
-         mdl_solver = rhp_mdl_new(RHP_BACKEND_RHP);
+         mdl_solver = rhp_mdl_new(RhpBackendReSHOP);
          if (!mdl_solver) { status = 1; goto _exit; }
 
          rhp_mdl_setsolvername(mdl_solver, equil_solvers[l]);

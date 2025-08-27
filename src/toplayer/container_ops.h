@@ -50,13 +50,13 @@ typedef struct ctr_ops {
    int (*getspecialfloats)(const Container *ctr, double *minf, double *pinf, double* nan);
    int (*getvarbounds)(const Container *ctr, rhp_idx vi, double *lb, double *ub);
    int (*getvarbyname)(const Container *ctr, const char* name, rhp_idx *vi);
-   int (*getvarbasis)(const Container *ctr, rhp_idx vi, int *bstat);
+   int (*getvarbasis)(const Container *ctr, rhp_idx vi, int *basis_status);
    int (*getvarmult)(const Container *ctr, rhp_idx vi, double *mult);
    int (*getvarperp)(const Container *ctr, rhp_idx vi, rhp_idx *ei);
    int (*getvarname)(const Container *ctr, rhp_idx vi, const char ** name);
    int (*getvarlb)(const Container *ctr, rhp_idx vi, double *lower_bound);
    int (*getvarub)(const Container *ctr, rhp_idx vi, double *upper_bound);
-   int (*getvarval)(const Container *ctr, rhp_idx vi, double *level);
+   int (*getvarval)(const Container *ctr, rhp_idx vi, double *value);
    int (*getvartype)(const Container *ctr, rhp_idx vi, unsigned *type);
    int (*getvarsbasis)(const Container *ctr, Avar *v, int *basis);
    int (*getvarsmult)(const Container *ctr, Avar *v, double *mult);
@@ -70,7 +70,7 @@ typedef struct ctr_ops {
    int (*setequtype)(Container *ctr, rhp_idx ei, unsigned type, unsigned cone);
    int (*setequval)(Container *ctr, rhp_idx ei, double val);
    int (*setequvarperp)(Container *ctr, rhp_idx ei, rhp_idx vi);
-   int (*setvarbasis)(Container *ctr, rhp_idx vi, int bstat);
+   int (*setvarbasis)(Container *ctr, rhp_idx vi, int basis_status);
    int (*setvarbounds)(Container *ctr, rhp_idx vi, double lb, double ub);
    int (*setvarlb)(Container *ctr, rhp_idx vi, double lb);
    int (*setvarname)(Container *ctr, rhp_idx vi, const char *name);

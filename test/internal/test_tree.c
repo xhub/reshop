@@ -291,7 +291,7 @@ int main(int argc, char **argv)
 {
    double *pool2;
    struct rhp_mdl *mdl;
-   A_CHECK(mdl, rhp_mdl_new(RHP_BACKEND_RHP));
+   A_CHECK(mdl, rhp_mdl_new(RhpBackendReSHOP));
    Container *ctr = &mdl->ctr;
 
    int status = EXIT_SUCCESS;
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
          struct gams_opcodes_file* equs = gams_read_opcode(argv[i], &pool2);
          if (!equs) { status = EXIT_FAILURE; goto _exit; };
 
-         struct nltree_pool pool = {equs->pool, equs->pool_len, equs->pool_len, RHP_BACKEND_GAMS_GMO, 1, true };
+         struct nltree_pool pool = {equs->pool, equs->pool_len, equs->pool_len, RhpBackendGamsGmo, 1, true };
          if (ctr->pool) {
             pool_release(ctr->pool);
          }

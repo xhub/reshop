@@ -349,7 +349,7 @@ static int gams_getavarval(const Container *ctr, Avar *v, double *vals)
 
 static int gams_getequval(const Container *ctr, rhp_idx ei, double *value)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -365,7 +365,7 @@ static int gams_getequval(const Container *ctr, rhp_idx ei, double *value)
 
 static int gams_getequmult(const Container *ctr, rhp_idx ei, double *mult)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -384,7 +384,7 @@ static int gams_getequmult(const Container *ctr, rhp_idx ei, double *mult)
 
 static int gams_getequperp(const Container *ctr, rhp_idx ei, int *match)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
    S_CHECK(ei_inbounds(ei, gmoM(gmo), __func__));
@@ -396,7 +396,7 @@ static int gams_getequperp(const Container *ctr, rhp_idx ei, int *match)
 
 static int gams_getequbasis(const Container *ctr, rhp_idx ei, int *basis)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
    S_CHECK(ei_inbounds(ei, gmoM(gmo), __func__));
@@ -407,7 +407,7 @@ static int gams_getequbasis(const Container *ctr, rhp_idx ei, int *basis)
 
 static int gams_getequsmult(const Container *ctr, double *mult)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
 
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
@@ -433,7 +433,7 @@ static int gams_getequsmult(const Container *ctr, double *mult)
 }
 static int gams_getequsval(const Container *ctr, double *vals)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -725,7 +725,7 @@ UNUSED static int gams_getnnz(const Container *ctr, int *nnz)
 
 static int gams_getcst(const Container *ctr, rhp_idx eidx, double *val)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    *val = -gmoGetRhsOne(((const struct ctrdata_gams *) ctr->data)->gmo, eidx);
    return OK;
 }
@@ -733,7 +733,7 @@ static int gams_getcst(const Container *ctr, rhp_idx eidx, double *val)
 
 static int gams_getspecialfloats(const Container *ctr, double *minf, double *pinf, double* na)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((const struct ctrdata_gams *) ctr->data)->gmo;
    (*pinf) = gmoPinf(gmo);
    (*minf) = gmoMinf(gmo);
@@ -744,7 +744,7 @@ static int gams_getspecialfloats(const Container *ctr, double *minf, double *pin
 
 static int gams_getvarbounds(const Container *ctr, rhp_idx vi, double *lb, double *ub)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -763,7 +763,7 @@ static int gams_getvarbounds(const Container *ctr, rhp_idx vi, double *lb, doubl
 
 static int gams_getvarlb(const Container *ctr, rhp_idx vi, double *lb)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -780,7 +780,7 @@ static int gams_getvarlb(const Container *ctr, rhp_idx vi, double *lb)
 
 static int gams_getvarub(const Container *ctr, rhp_idx vi, double *ub)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -797,7 +797,7 @@ static int gams_getvarub(const Container *ctr, rhp_idx vi, double *ub)
 
 static int gams_getvarval(const Container *ctr, rhp_idx vi, double *level)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -814,7 +814,7 @@ static int gams_getvarval(const Container *ctr, rhp_idx vi, double *level)
 
 static int gams_getvarmult(const Container *ctr, rhp_idx vi, double *multiplier)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -833,7 +833,7 @@ static int gams_getvarmult(const Container *ctr, rhp_idx vi, double *multiplier)
 
 static int gams_getvarperp(const Container *ctr, rhp_idx vi, int *match)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
    S_CHECK(vi_inbounds(vi, gmoN(gmo), __func__));
@@ -844,7 +844,7 @@ static int gams_getvarperp(const Container *ctr, rhp_idx vi, int *match)
 
 static int gams_getvarbasis(const Container *ctr, rhp_idx vi, int *basis)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
    S_CHECK(vi_inbounds(vi, gmoN(gmo), __func__));
@@ -855,7 +855,7 @@ static int gams_getvarbasis(const Container *ctr, rhp_idx vi, int *basis)
 
 UNUSED static int gams_getvartype(const Container *ctr, rhp_idx vi, int *type)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
    S_CHECK(vi_inbounds(vi, gmoN(gmo), __func__));
@@ -866,7 +866,7 @@ UNUSED static int gams_getvartype(const Container *ctr, rhp_idx vi, int *type)
 
 static int gams_getvarsmult(const Container *ctr, double *mult)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
 
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
@@ -893,7 +893,7 @@ static int gams_getvarsmult(const Container *ctr, double *mult)
 
 static int gams_getvarsval(const Container *ctr, double *vals)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
 
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
@@ -917,7 +917,7 @@ static int gams_resize(Container *ctr, unsigned n, unsigned m)
 
 static int gams_setequval(Container *ctr, rhp_idx ei, double level)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -980,7 +980,7 @@ static int gams_getequtype(const Container *ctr, rhp_idx eidx, unsigned *type, u
 
 static int gams_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *type)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 
@@ -1052,7 +1052,7 @@ static int gams_setvarmult(Container *ctr, rhp_idx vi, double varm)
 
 static int gams_setvarbasis(Container *ctr, rhp_idx vi, int basis)
 {
-   assert(ctr->backend == RHP_BACKEND_GAMS_GMO);
+   assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
    assert(gmo);
 

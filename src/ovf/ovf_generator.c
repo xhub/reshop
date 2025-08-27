@@ -33,10 +33,10 @@ struct sp_matrix* ovf_speye_mat_x(unsigned n, unsigned m, double value,
 
    if (m == n) {
       if (!ppty[FORCE_ALLOC]) {
-         AA_CHECK(mat, rhp_spalloc(n, m, 1, RHP_CS));
+         AA_CHECK(mat, rhpmat_spalloc(n, m, 1, RHP_CS));
          mat->x[0] = value;
       } else {
-         AA_CHECK(mat, rhp_spalloc(n, m, m, RHP_CS));
+         AA_CHECK(mat, rhpmat_spalloc(n, m, m, RHP_CS));
 
          if (ppty[FILL_DATA]) {
             for (unsigned i = 0; i < n; ++i) {
@@ -56,7 +56,7 @@ struct sp_matrix* ovf_speye_mat_x(unsigned n, unsigned m, double value,
 
       /* \TODO(xhub) use memcpy for mat->x */
       if (m > n) {
-         AA_CHECK(mat, rhp_spalloc(n, m, m, RHP_CS));
+         AA_CHECK(mat, rhpmat_spalloc(n, m, m, RHP_CS));
 
          for (unsigned i = 0; i < m; ++i) {
             mat->i[i] = i%n;
@@ -65,7 +65,7 @@ struct sp_matrix* ovf_speye_mat_x(unsigned n, unsigned m, double value,
          }
          mat->p[m] = m;
       } else {
-         AA_CHECK(mat, rhp_spalloc(n, m, n, RHP_CS));
+         AA_CHECK(mat, rhpmat_spalloc(n, m, n, RHP_CS));
 
          unsigned k = 0;
          for (unsigned i = 0; i < m; ++i) {

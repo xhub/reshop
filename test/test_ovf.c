@@ -161,7 +161,7 @@ const double xsols10[] = {-1.074875e+00, 1.620756e+00, 2.956183e+00};
 int test_linear_quantile_regression_equilibrium(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 {
     /* TODO(xhub) fix PATH */
-   if (rhp_mdl_getbackend(mdl_solver) != RHP_BACKEND_GAMS_GMO) {
+   if (rhp_mdl_getbackend(mdl_solver) != RhpBackendGamsGmo) {
       rhp_mdl_free(mdl);
       return 0;
    }
@@ -172,7 +172,7 @@ int test_linear_quantile_regression_equilibrium(struct rhp_mdl *mdl, struct rhp_
 int test_linear_quantile_regression_fenchel(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 {
    /* TODO(xhub) fix PATH */
-   if (rhp_mdl_getbackend(mdl_solver) != RHP_BACKEND_GAMS_GMO) {
+   if (rhp_mdl_getbackend(mdl_solver) != RhpBackendGamsGmo) {
       rhp_mdl_free(mdl);
       return 0;
    }

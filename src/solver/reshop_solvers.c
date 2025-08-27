@@ -68,7 +68,7 @@ static int solve_mcp(Model *mdl, struct jacdata *jacdata)
    case RMDL_SOLVER_GAMS:
    {
      Model *mdl_gams;
-     A_CHECK(mdl_gams, mdl_new(RHP_BACKEND_GAMS_GMO));
+     A_CHECK(mdl_gams, mdl_new(RhpBackendGamsGmo));
 
      S_CHECK(gmdl_set_gamsdata_from_env(mdl_gams));
 

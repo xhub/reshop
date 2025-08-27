@@ -38,7 +38,7 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
                     mdl_fmtargs(mdl_orig),
                     mdl_orig->ctr.transformations.flipped_equs.size);
 
-      A_CHECK(mdl_reform, rhp_mdl_new(RHP_BACKEND_RHP));
+      A_CHECK(mdl_reform, rhp_mdl_new(RhpBackendReSHOP));
       S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_orig));
 
       empinfo = &mdl_reform->empinfo;
@@ -58,7 +58,7 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
          trace_process("[process] %s model %.*s #%u: Copying model for "
                        "reformulations.\n", mdl_fmtargs(mdl_orig));
 
-         A_CHECK(mdl_reform, rhp_mdl_new(RHP_BACKEND_RHP));
+         A_CHECK(mdl_reform, rhp_mdl_new(RhpBackendReSHOP));
          S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_orig));
 
       }
@@ -79,7 +79,7 @@ int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated)
          trace_process("[process] %s model %.*s #%u: Copying model for "
                        "EMPDAG reformulations.\n", mdl_fmtargs(mdl_orig));
 
-         A_CHECK(mdl_reform, rhp_mdl_new(RHP_BACKEND_RHP));
+         A_CHECK(mdl_reform, rhp_mdl_new(RhpBackendReSHOP));
          S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_orig));
 
       }

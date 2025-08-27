@@ -246,7 +246,7 @@ static int gams_getmodelstat(const Model *mdl, int *modelstat)
 static int gams_dumpmodel(Model *mdl)
 {
    int status = OK;
-   assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+   assert(mdl->backend == RhpBackendGamsGmo);
 
    Container *ctr = &mdl->ctr;
    GmsModelData *mdldat = mdl->data;
@@ -680,10 +680,10 @@ static int gams_copyassolvable_no_transform(Model *mdl, Model *mdl_src)
    S_CHECK(mdl_check(mdl_src));
 
    switch (backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       return gams_export(mdl_src, mdl);
-   case RHP_BACKEND_JULIA:
-   case RHP_BACKEND_RHP:
+   case RhpBackendJulia:
+   case RhpBackendReSHOP:
       return mdl_export(mdl_src, mdl);
    default:
       return backend_throw_notimplemented_error(backend, __func__);
@@ -720,7 +720,7 @@ static int gams_copyassolvable(Model *mdl, Model *mdl_src)
       return OK;
    }
    default:
-      error("%s ERROR: Model type %s is not yet supported\n", __func__, backend_name(probtype));
+      error("%s ERROR: Model type %s is not yet supported\n", __func__, backend2str(probtype));
       return Error_NotImplemented;
    }
 }
@@ -736,7 +736,7 @@ static int gams_copysolveoptions(Model *mdl, const Model *mdl_src)
    }
 
    switch (mdl_src->backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
    {
       /* Copy a few interesting parameters */
       const GmsContainerData *gms_src = (const GmsContainerData *)mdl_src->ctr.data;
@@ -746,8 +746,8 @@ static int gams_copysolveoptions(Model *mdl, const Model *mdl_src)
       gevSetDblOpt(gms_dst->gev, gevOptCA, gevGetDblOpt(gms_src->gev, gevOptCA));
       break;
    }
-   case RHP_BACKEND_RHP:
-   case RHP_BACKEND_JULIA:
+   case RhpBackendReSHOP:
+   case RhpBackendJulia:
    {
       union opt_t val;
       S_CHECK(mdl_getoption(mdl_src, "solver_option_file_number", &val.i));
@@ -774,9 +774,9 @@ static int gams_copysolveoptions(Model *mdl, const Model *mdl_src)
 
 static int gams_copystatsfromsolver(Model *mdl, const Model *mdl_solver)
 {
-   if (mdl_solver->backend != RHP_BACKEND_GAMS_GMO) {
+   if (mdl_solver->backend != RhpBackendGamsGmo) {
       logger(PO_INFO, "[gams] reporting solver stats from backend %s is not yet "
-             "supported\n", backend_name(mdl_solver->backend));
+             "supported\n", backend2str(mdl_solver->backend));
       return OK;
    }
 
@@ -876,7 +876,7 @@ static int gams_export2gmo(Model *mdl, Model *mdl_dst)
 
 static int gams_export2rhp(Model *mdl, Model *mdl_dst)
 {
-   assert(mdl_dst->backend == RHP_BACKEND_RHP);
+   assert(mdl_dst->backend == RhpBackendReSHOP);
 
    if (mdl->ctr.fops) {
       TO_IMPLEMENT("gams_export2rhp() with filtering");
@@ -887,16 +887,16 @@ static int gams_export2rhp(Model *mdl, Model *mdl_dst)
 
 static int gams_export(Model *mdl, Model *mdl_dst)
 {
-   assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+   assert(mdl->backend == RhpBackendGamsGmo);
    BackendType backend = mdl_dst->backend;
 
    mdl_linkmodels(mdl, mdl_dst);
    assert(!(mdl_dst->status & MdlContainerInstantiable));
 
    switch (backend) {
-   case RHP_BACKEND_GAMS_GMO: S_CHECK(gams_export2gmo(mdl, mdl_dst)); break;
-   case RHP_BACKEND_RHP:      S_CHECK(gams_export2rhp(mdl, mdl_dst)); break;
-   default: error("%s ERROR: unsupported backend %s", __func__, backend_name(backend));
+   case RhpBackendGamsGmo: S_CHECK(gams_export2gmo(mdl, mdl_dst)); break;
+   case RhpBackendReSHOP:      S_CHECK(gams_export2rhp(mdl, mdl_dst)); break;
+   default: error("%s ERROR: unsupported backend %s", __func__, backend2str(backend));
    }
 
    return OK;
@@ -1278,13 +1278,13 @@ static int gams_reportvalues_from_rhp(Model *mdl, const Model *mdl_src)
 static int gams_reportvalues(Model *mdl, const Model *mdl_src)
 {
    switch (mdl_src->backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       return gams_reportvalues_from_gams(&mdl->ctr, &mdl_src->ctr);
-   case RHP_BACKEND_RHP:
-   case RHP_BACKEND_JULIA:
+   case RhpBackendReSHOP:
+   case RhpBackendJulia:
       return gams_reportvalues_from_rhp(mdl, mdl_src);
    default:
-      error("%s :: not implement for container of type %s\n", __func__, backend_name(mdl_src->backend));
+      error("%s :: not implement for container of type %s\n", __func__, backend2str(mdl_src->backend));
       return Error_NotImplemented;
    }
 }

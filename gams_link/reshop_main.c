@@ -265,7 +265,7 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
       rc = 1; goto _exit;
    }
 
-   mdl = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+   mdl = rhp_mdl_new(RhpBackendGamsGmo);
 
    if (!mdl) {
       gevLogStat(jh->eh, "\n\n*** ReSHOP ERROR: Could not create a ReSHOP model");

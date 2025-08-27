@@ -19,7 +19,7 @@ endif()
 
 # This is our hackish way to ensure proper tracking of dependencies of
 # included swig ".i" files
-file(GLOB SWIG_I_INCLUDES *.i)
+file(GLOB_RECURSE SWIG_I_INCLUDES *.i)
 
 set_property(SOURCE reshop.i PROPERTY C ON)
 set_property(SOURCE reshop.i PROPERTY SWIG_MODULE_NAME reshop)
@@ -27,17 +27,98 @@ set_property(SOURCE reshop.i PROPERTY OUTPUT_DIR ${CMAKE_BINARY_DIR}/swig)
 set_property(SOURCE reshop.i PROPERTY USE_SWIG_DEPENDENCIES ON)
 set(CMAKE_SWIG_FLAGS -O -Wall -Werror -doxygen -builtin)
 
+# Should not be needed with the above but doesn't hurt
+set(SWIG_USE_SWIG_DEPENDENCIES ON)
+
+
+# swig_add_library could be nice, but it requires a lot of changes ...
+
+# Regenerate all the files:
+# 1. Run clang to parse reshop.h
+# 2. Run utils/sw
+
+find_program(CLANG_EXECUTABLE clang)
+
+if(CLANG_EXECUTABLE)
+    message(STATUS "Python: Clang command found at: ${CLANG_EXECUTABLE}")
+
+   set(AST_JSON_FILE "${CMAKE_BINARY_DIR}/generated/ast.json")
+
+   add_custom_command(
+    OUTPUT  "${AST_JSON_FILE}"
+    COMMAND ${CLANG_EXECUTABLE} -Xclang -ast-dump=json -fsyntax-only "${CMAKE_SOURCE_DIR}/src/api/reshop.h" > ${AST_JSON_FILE}
+    DEPENDS "${CMAKE_SOURCE_DIR}/src/api/reshop.h"
+    COMMENT "Generating JSON AST for reshop.h"
+   )
+
+   list(GET BUILD_PYTHON 0 PY_INTERP)
+
+   add_custom_command(
+      OUTPUT            "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods_docstring.i.in"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods.i"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/generated/rename_named.i"
+      COMMAND           "${PY_INTERP}" "${CMAKE_SOURCE_DIR}/utils/swig_generate_methods_from_api.py" "${AST_JSON_FILE}"
+      DEPENDS           "${AST_JSON_FILE}"
+                        "${CMAKE_SOURCE_DIR}/utils/swig_generate_methods_from_api.py"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      COMMENT           "Generating SWIG methods from API"
+   )
+
+   find_program(NUMPYDOC_EXE numpydoc)
+
+   if (NUMPYDOC_EXE)
+      add_custom_command(
+         OUTPUT             "${CMAKE_BINARY_DIR}/generated/numpydoc.stdout"
+         COMMAND            "${NUMPYDOC_EXE}" lint ${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.py > "${CMAKE_BINARY_DIR}/generated/numpydoc.stdout"
+         WORKING_DIRECTORY  "${CMAKE_CURRENT_SOURCE_DIR}"
+         COMMENT            "Checking docstrings"
+      )
+      set(DOXY2NUMPYDOC_EXTRA MAIN_DEPENDENCY ${CMAKE_BINARY_DIR}/generated/numpydoc.stdout)
+   endif(NUMPYDOC_EXE)
+
+   add_custom_command(
+      OUTPUT            "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods_docstring.i"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.i"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.py"
+      COMMAND           "${PY_INTERP}" "${CMAKE_SOURCE_DIR}/utils/doxy2numpydoc.py" "${CMAKE_BINARY_DIR}/docs/xml/index.xml"
+      DEPENDS           "${AST_JSON_FILE}"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods_docstring.i.in"
+                        "${CMAKE_BINARY_DIR}/docs/xml/index.xml"
+                        "${CMAKE_SOURCE_DIR}/utils/doxy2numpydoc.py"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      ${DOXY2NUMPYDOC_EXTRA}
+      COMMENT           "Generating SWIG docstrings from doxygen"
+   )
+
+   LIST(APPEND GENERATED_I "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods_docstring.i"
+                           "${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.i"
+                           "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods.i"
+                           "${CMAKE_CURRENT_SOURCE_DIR}/generated/rename_named.i")
+
+
+endif()
+
+
+
 # Use internal macros, but that's how it is ...
 swig_module_initialize(swig_py_reshop PYTHON)
+# Add Custom target to keep track of things
+add_custom_target(swig_py_reshop DEPENDS ${LIBRESHOP} ${SWIG_I_INCLUDES} ${GENERATED_I})
+
+## TODO: For some reason, only the last command works. 
+
+#set_property(TARGET ${reshop_py_wrap} PROPERTY SWIG_DEPENDS ${SWIG_I_INCLUDES} ${GENERATED_I})
+#set_property(SOURCE reshop.i PROPERTY DEPENDS ${SWIG_I_INCLUDES} ${GENERATED_I})
+set_property(SOURCE reshop.i PROPERTY DEPENDS swig_py_reshop)
+
+# Use internal macros, but that's how it is ...
 swig_add_source_to_module(swig_py_reshop reshop_py_wrap reshop.i)
 
-# Add Custom target to keep track of things
-add_custom_target(swig_py_reshop DEPENDS ${LIBRESHOP} ${SWIG_I_INCLUDES})
-
 # Configure the two files outside of the loop
-configure_file( ${CMAKE_SOURCE_DIR}/swig/setup.py.in ${CMAKE_BINARY_DIR}/swig/setup.py.gen @ONLY)
+configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in ${CMAKE_BINARY_DIR}/swig/setup.py.gen @ONLY)
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/swig/__init__.py
               CONTENT "__version__ = \"${ReSHOP_VERSION}\"\nfrom .reshop import *")
+
 
 
 macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
@@ -108,7 +189,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
 
    set_property(TARGET ${pytarget} APPEND PROPERTY LINK_OPTIONS "${Python3_LINK_OPTIONS}")
    target_link_libraries(${pytarget} ${RESHOP_LIBNAME})
-   target_include_directories(${pytarget} PRIVATE ${CMAKE_SOURCE_DIR}/swig
+   target_include_directories(${pytarget} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
                                                   ${Python3_INCLUDE_DIRS}
                                                   ${Python3_NumPy_INCLUDE_DIRS})
 
@@ -225,7 +306,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    if (DARLING)
       set(PYTEST_DIR /Users/xhub/LinuxHome/reshop/swig/tests/)
    else(DARLING)
-      set(PYTEST_DIR ${CMAKE_SOURCE_DIR}/swig/tests/)
+      set(PYTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests/)
    endif(DARLING)
 
    if (APPLE OR LINUX)
@@ -234,7 +315,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    add_test(NAME ${pytarget}-tests
             COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest ${PYTEST_OPTS} ${PYTEST_DIR}
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
-   
+
 endmacro()
 
 # Main loops

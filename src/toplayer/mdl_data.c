@@ -28,7 +28,7 @@ DEFSTR(MdlProbType_emp,"emp") \
 DEFSTR(MdlProbType_cns,"cns") \
 
 static const size_t backendnamelen = sizeof(mdl_backendnames)/sizeof(char*);
-RESHOP_STATIC_ASSERT(sizeof(mdl_backendnames)/sizeof(char*) == (RHP_BACKEND_AMPL+1),
+RESHOP_STATIC_ASSERT(sizeof(mdl_backendnames)/sizeof(char*) == (RhpBackendAmpl+1),
       "Inconsistency in model backends")
 
 #define DEFSTR(id, str) char id[sizeof(str)];
@@ -70,7 +70,7 @@ const char* mdltype_name(ModelType type)
 unsigned backend_idx(const char *backendname)
 {
    for (unsigned i = 0; i <= backendnamelen; ++i) {
-      if (!strcasecmp(backendname, backend_name(i))) {
+      if (!strcasecmp(backendname, backend2str(i))) {
          return i;
       }
    }
@@ -91,13 +91,13 @@ bool mdltype_hasmetadata(ModelType type)
    }
 }
 
-const char* backend_name(unsigned backendtype)
+const char* backend2str(unsigned backendtype)
 {
    if (backendtype < backendnamelen) {
       return mdl_backendnames[backendtype];
    } 
 
-   return "INVALID";
+   return "INVALID BACKEND";
   
 }
 
@@ -136,6 +136,6 @@ bool mdltype_isvi(ModelType type)
 int backend_throw_notimplemented_error(unsigned backend, const char *fn)
 {
    error("%s ERROR: support for backend %s not implemented yet\n", fn,
-         backend_name(backend));
+         backend2str(backend));
    return Error_NotImplemented;
 }

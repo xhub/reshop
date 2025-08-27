@@ -119,13 +119,20 @@ typedef rhp_idx rhp_idx_typed;
 
 #include "python_structs.h"
 
-const BasisStatus BasisUnsetObj      = {.status = RHP_BASIS_UNSET};
-const BasisStatus BasisLowerObj      = {.status = RHP_BASIS_LOWER};
-const BasisStatus BasisUpperObj      = {.status = RHP_BASIS_UPPER};
-const BasisStatus BasisBasicObj      = {.status = RHP_BASIS_BASIC};
-const BasisStatus BasisSuperBasicObj = {.status = RHP_BASIS_SUPERBASIC};
-const BasisStatus BasisFixedObj      = {.status = RHP_BASIS_FIXED};
-const BasisStatus BasisInvalidObj    = {.status = RHP_BASIS_LEN};
+const BasisStatus BasisUnsetObj      = {.status = RhpBasisUnset};
+const BasisStatus BasisLowerObj      = {.status = RhpBasisLower};
+const BasisStatus BasisUpperObj      = {.status = RhpBasisUpper};
+const BasisStatus BasisBasicObj      = {.status = RhpBasisBasic};
+const BasisStatus BasisSuperBasicObj = {.status = RhpBasisSuperBasic};
+const BasisStatus BasisFixedObj      = {.status = RhpBasisFixed};
+const BasisStatus BasisInvalidObj    = {.status = INT8_MAX};
+
+const RhpBackendType BackendGamsGmoObj  = {.backend = RhpBackendGamsGmo};
+const RhpBackendType BackendReSHOPObj   = {.backend = RhpBackendReSHOP};
+const RhpBackendType BackendJuliaObj    = {.backend = RhpBackendJulia};
+const RhpBackendType BackendAmplObj     = {.backend = RhpBackendAmpl};
+const RhpBackendType BackendInvalidObj  = {.backend = INT8_MAX};
+
 
 #define CHK_RET(expr) { \
   int status42 = (expr); \
@@ -173,19 +180,45 @@ static PyObject * basisstatus_getobj(int bstat)
    PyObject *o;
 
    switch (bstat) {
-   case  RHP_BASIS_UNSET:       o = PyObject_GetAttrString(reshop_mod, "BasisUnset");
-   case  RHP_BASIS_LOWER:       o = PyObject_GetAttrString(reshop_mod, "BasisLower");
-   case  RHP_BASIS_UPPER:       o = PyObject_GetAttrString(reshop_mod, "BasisUpper");
-   case  RHP_BASIS_BASIC:       o = PyObject_GetAttrString(reshop_mod, "BasisBasic");
-   case  RHP_BASIS_SUPERBASIC:  o = PyObject_GetAttrString(reshop_mod, "BasisSuperBasic");
-   case  RHP_BASIS_FIXED:       o = PyObject_GetAttrString(reshop_mod, "BasisFixed");
-   default:                     o = PyObject_GetAttrString(reshop_mod, "BasisInvalid");
+   case  RhpBasisUnset:       o = PyObject_GetAttrString(reshop_mod, "BasisUnset");
+   case  RhpBasisLower:       o = PyObject_GetAttrString(reshop_mod, "BasisLower");
+   case  RhpBasisUpper:       o = PyObject_GetAttrString(reshop_mod, "BasisUpper");
+   case  RhpBasisBasic:       o = PyObject_GetAttrString(reshop_mod, "BasisBasic");
+   case  RhpBasisSuperBasic:  o = PyObject_GetAttrString(reshop_mod, "BasisSuperBasic");
+   case  RhpBasisFixed:       o = PyObject_GetAttrString(reshop_mod, "BasisFixed");
+   default:                   o = PyObject_GetAttrString(reshop_mod, "BasisInvalid");
    }
 
    return o;
 }
 
 
+static PyObject * backendtype_getobj(int backendtype)
+{
+
+   if (!reshop_mod) {
+      PyObject* sys_mod_dict = PyImport_GetModuleDict();
+      /* get the reshop module object */ 
+      PyObject* reshop_mod = PyMapping_GetItemString(sys_mod_dict, (char *)"reshop");
+ 
+      if (!reshop_mod) { 
+        PyErr_SetString(PyExc_RuntimeError, "Couldn't find module 'reshop'");
+        return NULL;
+      }
+   }
+
+   PyObject *o;
+
+   switch (backendtype) {
+   case  RhpBackendGamsGmo:  o = PyObject_GetAttrString(reshop_mod, "BackendGamsGmo");
+   case  RhpBackendReSHOP:   o = PyObject_GetAttrString(reshop_mod, "BackendReSHOP");
+   case  RhpBackendJulia:    o = PyObject_GetAttrString(reshop_mod, "BackendJulia");
+   case  RhpBackendAmpl:     o = PyObject_GetAttrString(reshop_mod, "BackendAmpl");
+   default:                  o = PyObject_GetAttrString(reshop_mod, "BackendInvalid");
+   }
+
+   return o;
+}
 %}
 
 %include target_datatypes.i

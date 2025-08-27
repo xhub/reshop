@@ -337,10 +337,10 @@ static int chk_nlpool(NlPool *pool, Model *mdl_src)
       return Error_Inconsistency;
    }
 
-   if (pool->type != RHP_BACKEND_GAMS_GMO) {
+   if (pool->type != RhpBackendGamsGmo) {
       error("[GMOexport] ERROR in %s model '%.*s' #%u: nlpool has type %s, but "
             "the expected type is %s\n", mdl_fmtargs(mdl_src),
-            backend_name(pool->type), backend_name(RHP_BACKEND_GAMS_GMO));
+            backend2str(pool->type), backend2str(RhpBackendGamsGmo));
       return Error_Inconsistency;
    }
 
@@ -452,7 +452,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
 {
    double start = get_thrdtime();
 
-   assert(mdl_gms->backend == RHP_BACKEND_GAMS_GMO && mdl_is_rhp(mdl_src));
+   assert(mdl_gms->backend == RhpBackendGamsGmo && mdl_is_rhp(mdl_src));
 
    int status = OK;
    char buffer[2048];

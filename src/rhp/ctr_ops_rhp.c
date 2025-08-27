@@ -778,9 +778,9 @@ static int rctr_setvarname_s(Container* ctr, rhp_idx vidx, const char *name)
       return Error_NullPointer;
    }
 
-   if (ctr->backend != RHP_BACKEND_JULIA) {
+   if (ctr->backend != RhpBackendJulia) {
       error("%s :: the container must be of Julia type, got %s (%d)\n"
-               , __func__, backend_name(ctr->backend), ctr->backend);
+               , __func__, backend2str(ctr->backend), ctr->backend);
       return Error_Inconsistency;
    }
 
@@ -818,34 +818,32 @@ static int rctr_setvarname_s(Container* ctr, rhp_idx vidx, const char *name)
 /**
  * @brief Return the name of a variable
  *
- * @ingroup publicAPI
- *
  * @param      ctr   the container
- * @param      eidx  the equation index
+ * @param      ei    the equation index
  * @param[out] name  on output contains the pointer to name
  *
  * @return           the error code
  */
-static int rctr_getequname_s(const Container *ctr, rhp_idx eidx, const char **name)
+static int rctr_getequname_s(const Container *ctr, rhp_idx ei, const char **name)
 {
    S_CHECK(rhp_chk_ctr(ctr, __func__));
 
-   if (ctr->backend != RHP_BACKEND_JULIA) {
+   if (ctr->backend != RhpBackendJulia) {
       error("%s :: the container must be of Julia type, got %s (%d)\n"
-               , __func__, backend_name(ctr->backend), ctr->backend);
+               , __func__, backend2str(ctr->backend), ctr->backend);
       return Error_WrongModelForFunction;
    }
 
    const struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
 
-   S_CHECK(ei_inbounds(eidx, model->total_m, __func__));
+   S_CHECK(ei_inbounds(ei, model->total_m, __func__));
 
-   if (eidx >= model->equ_names.s.max) {
-      printout(PO_INFO, "%s :: equation index %d has no name\n", __func__, eidx);
+   if (ei >= model->equ_names.s.max) {
+      printout(PO_INFO, "%s :: equation index %d has no name\n", __func__, ei);
       return Error_IndexOutOfRange;
    }
 
-   *name = model->equ_names.s.names[eidx];
+   *name = model->equ_names.s.names[ei];
 
    return OK;
 }
@@ -854,9 +852,9 @@ UNUSED static int rctr_getvarname_s(const Container *ctr, rhp_idx vidx, const ch
 {
    S_CHECK(rhp_chk_ctr(ctr, __func__));
 
-   if (ctr->backend != RHP_BACKEND_JULIA) {
+   if (ctr->backend != RhpBackendJulia) {
       error("%s :: the container must be of Julia type, got %s (%d)\n"
-               , __func__, backend_name(ctr->backend), ctr->backend);
+               , __func__, backend2str(ctr->backend), ctr->backend);
       return Error_WrongModelForFunction ;
    }
 
@@ -1286,9 +1284,9 @@ static int rctr_setequname_s(Container* ctr, rhp_idx ei, const char *name)
 
 
    BackendType backend = ctr->backend;
-   if (backend != RHP_BACKEND_JULIA) {
+   if (backend != RhpBackendJulia) {
       error("%s :: the container must be of Julia type, got %s (%d)\n"
-               , __func__, backend_name(backend), backend);
+               , __func__, backend2str(backend), backend);
       return Error_Inconsistency;
    }
 
@@ -1500,7 +1498,7 @@ const struct ctr_ops ctr_ops_rhp = {
 
 UNUSED static int rctr_copyvarname(const Container *ctr, int i, char *str, unsigned len)
 {
-   if (ctr->backend == RHP_BACKEND_RHP) {
+   if (ctr->backend == RhpBackendReSHOP) {
       return rctr_copyvarname_v(ctr, i, str, len);
    }
    return rctr_copyvarname_s(ctr, i, str, len);
@@ -1508,7 +1506,7 @@ UNUSED static int rctr_copyvarname(const Container *ctr, int i, char *str, unsig
 
 UNUSED static int rctr_copyequname(const Container *ctr, int i, char *str, unsigned len)
 {
-   if (ctr->backend == RHP_BACKEND_RHP) {
+   if (ctr->backend == RhpBackendReSHOP) {
       return rctr_copyequname_v(ctr, i, str, len);
    }
    return rctr_copyequname_s(ctr, i, str, len);

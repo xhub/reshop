@@ -5,6 +5,16 @@
 #include "reshop.h"
 #include "var.h"
 
+/**
+ * @brief Set the model name
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl   the model
+ * @param name  the name
+ *
+ * @return      the error code
+ */
 int rhp_mdl_setname(Model *mdl, const char *name)
 {
    S_CHECK(chk_mdl(mdl, __func__));
@@ -13,6 +23,17 @@ int rhp_mdl_setname(Model *mdl, const char *name)
    return mdl_setname(mdl, name);
 }
 
+/**
+ * @brief Fix a variable to a given value
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ * @param vi  the variable index
+ * @param val the value
+ *
+ * @return    the error code
+ */
 int rhp_mdl_fixvar(Model *mdl, rhp_idx vi, double val)
 {
   S_CHECK(chk_mdl(mdl, __func__));
@@ -27,18 +48,45 @@ int rhp_mdl_fixvar(Model *mdl, rhp_idx vi, double val)
   return OK;
 }
 
+/**
+ * @brief Get the backend of the model
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the backend
+ */
 enum rhp_backendtype rhp_mdl_getbackend(const Model *mdl)
 {
    S_CHECK(chk_mdl(mdl, __func__));
    return mdl->backend;
 }
 
+/**
+ * @brief Get the backend name of the model
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the backend name
+ */
 const char* rhp_mdl_getbackendname(const Model *mdl)
 {
    SN_CHECK(chk_mdl(mdl, __func__));
-   return backend_name(mdl->backend);
+   return backend2str(mdl->backend);
 }
 
+/**
+ * @brief Get the name of the model
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the model name
+ */
 const char* rhp_mdl_getname(const struct rhp_mdl *mdl)
 {
    SN_CHECK(chk_mdl(mdl, __func__));
@@ -47,6 +95,15 @@ const char* rhp_mdl_getname(const struct rhp_mdl *mdl)
    return name ? name : "";
 }
 
+/**
+ * @brief Get the ID of the model
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the model ID
+ */
 unsigned rhp_mdl_getid(const struct rhp_mdl *mdl)
 {
    if (!mdl) { return IdxError; }

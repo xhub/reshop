@@ -177,6 +177,8 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
  * @warning This assumes that the model is a reshop model.
  * It will try to load the empinfo and reshop options
  *
+ * @ingroup publicAPI
+ *
  * @param       cntrfile  the GAMS control file 
  * @param[out]  mdlout    the model
  *
@@ -219,7 +221,7 @@ int rhp_gms_newfromcntr(const char *cntrfile, Model **mdlout)
    trim_newline(buffer, len);
 
    Model *mdl;
-   A_CHECK(mdl, mdl_new(RHP_BACKEND_GAMS_GMO));
+   A_CHECK(mdl, mdl_new(RhpBackendGamsGmo));
 
    S_CHECK_EXIT(rhp_gms_setgamsdir(mdl, buffer));
 
@@ -251,6 +253,172 @@ _exit:
    return status;
 }
 
+/** @brief set the gams control file for a given model
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param mdl    the model
+ *  @param cntrfile  the gams control file
+ *
+ *  @return       the error code
+ */
+int rhp_gms_setgamscntr(Model *mdl, const char *cntrfile)
+{
+   S_CHECK(gams_chk_mdl(mdl, __func__));
+   S_CHECK(gams_chk_str(cntrfile, __func__));
+
+   trace_stack("[GAMS] %s model '%.*s' #%u: set gamscntr to '%s'\n",
+               mdl_fmtargs(mdl), cntrfile);
+
+   GmsModelData *mdldat = (GmsModelData *)mdl->data;
+
+   STRNCPY_FIXED(mdldat->gamscntr, cntrfile);
+
+   return OK;
+}
+
+/** @brief set the gams system directory for a given model
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param mdl     the model
+ *  @param gamsdir the gams system directory
+ *
+ *  @return        the error code
+ */
+int rhp_gms_setgamsdir(Model *mdl, const char *gamsdir)
+{
+   S_CHECK(gams_chk_mdl(mdl, __func__));
+   S_CHECK(gams_chk_str(gamsdir, __func__));
+
+   trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir set to '%s'\n", mdl_fmtargs(mdl),
+               gamsdir);
+
+   GmsModelData *mdldat = (GmsModelData *)mdl->data;
+
+   /* ----------------------------------------------------------------------
+    * Sanitize the path (removing trailing separator)
+    * ---------------------------------------------------------------------- */
+
+   STRNCPY_FIXED(mdldat->gamsdir, gamsdir);
+
+   /* ----------------------------------------------------------------------
+    * Inject this path into the PATH environment variable
+    * ---------------------------------------------------------------------- */
+
+   return adddir2PATH(gamsdir, mdl);
+}
+
+/** @brief globally set the gams control file 
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param  cntrfile  the gams control file
+ *
+ *  @return        the error code
+ */
+int rhp_gams_setglobalgamscntr(const char *cntrfile)
+{
+   S_CHECK(gams_chk_str(cntrfile, __func__));
+
+   trace_stack("[GAMS] global gamscntr set to '%s'\n", cntrfile);
+
+   return gams_setgamscntr(cntrfile);
+}
+
+/** @brief globally set the gams system directory
+ *
+ * @ingroup publicAPI
+ *
+ *  @param gamsdir the gams system directory
+ *
+ *  @return        the error code
+ */
+int rhp_gams_setglobalgamsdir(const char *gamsdir)
+{
+   S_CHECK(gams_chk_str(gamsdir, __func__));
+
+   trace_stack("[GAMS] global gamsdir set to '%s'\n", gamsdir);
+
+   S_CHECK(gams_setgamsdir(gamsdir));
+
+   /* ----------------------------------------------------------------------
+    * TODO: Sanitize the path (removing trailing separator)?
+    * ---------------------------------------------------------------------- */
+
+   /* ----------------------------------------------------------------------
+    * Inject this path into the PATH environment variable
+    * ---------------------------------------------------------------------- */
+
+   return adddir2PATH(gamsdir, NULL);
+}
+
+/**
+ * @brief Write the GMO solution to a GDX file
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl       the GAMS model
+ * @param gdxname   the GDX file name
+ *
+ * @return         the error code
+ */
+int rhp_gms_writesol2gdx(Model *mdl, const char *gdxname) 
+{
+   S_CHECK(gams_chk_mdlfull(mdl, __func__));
+   S_CHECK(gams_chk_str(gdxname, __func__));
+
+   return gmdl_writesol2gdx(mdl, gdxname);
+}
+
+#define LOGMASK         0x1
+#define STATUSMASK      0x2
+#define ALLMASK         (LOGMASK | STATUSMASK)
+
+/** @brief Print out log or status message to the screen.
+ *         It strips off one new line if it exists.
+ *
+ *  @param  env          ReSHOP GAMS record as an opaque object
+ *  @param  reshop_mode  mode indicating log, status, or both.
+ *  @param  str          the actual string
+ */
+static void gamsprint(void* env, UNUSED unsigned reshop_mode, const char *str)
+{
+   gevHandle_t gev = (gevHandle_t)env;
+   if (!gev) { return; }
+
+   /* TODO(Xhub) support status and all ...  */
+   int mode = LOGMASK;
+
+   switch (mode & ALLMASK) {
+   case LOGMASK:
+      gevLogPChar(gev, str);
+      break;
+   case STATUSMASK:
+      gevStatPChar(gev, str);
+      break;
+   case ALLMASK:
+      gevLogStatPChar(gev, str);
+      break;
+   }
+
+}
+
+/**
+ * @brief Flush the output streams
+ *
+ * @param env  ReSHOP GAMS record as an opaque object
+ */
+static void gamsflush(void* env)
+{
+   gevHandle_t gev = (gevHandle_t)env;
+   gevLogStatFlush(gev);
+
+}
+
+/* --------------------------------------------------------------------------
+ * What follows is defined in reshop-gams.h, hence not part of the public API
+ * -------------------------------------------------------------------------- */
 /**
  * @brief Fill the model from a GAMS input
  *
@@ -447,151 +615,6 @@ int rhp_gms_fillmdl(Model *mdl)
    }
 
    return OK;
-}
-
-/** @brief set the gams control file for a given model
- *
- *  @param mdl    the model
- *  @param cntrfile  the gams control file
- *
- *  @return       the error code
- */
-int rhp_gms_setgamscntr(Model *mdl, const char *cntrfile)
-{
-   S_CHECK(gams_chk_mdl(mdl, __func__));
-   S_CHECK(gams_chk_str(cntrfile, __func__));
-
-   trace_stack("[GAMS] %s model '%.*s' #%u: set gamscntr to '%s'\n",
-               mdl_fmtargs(mdl), cntrfile);
-
-   GmsModelData *mdldat = (GmsModelData *)mdl->data;
-
-   STRNCPY_FIXED(mdldat->gamscntr, cntrfile);
-
-   return OK;
-}
-
-/** @brief set the gams system directory for a given model
- *
- *  @param mdl     the model
- *  @param gamsdir the gams system directory
- *
- *  @return        the error code
- */
-int rhp_gms_setgamsdir(Model *mdl, const char *gamsdir)
-{
-   S_CHECK(gams_chk_mdl(mdl, __func__));
-   S_CHECK(gams_chk_str(gamsdir, __func__));
-
-   trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir set to '%s'\n", mdl_fmtargs(mdl),
-               gamsdir);
-
-   GmsModelData *mdldat = (GmsModelData *)mdl->data;
-
-   /* ----------------------------------------------------------------------
-    * Sanitize the path (removing trailing separator)
-    * ---------------------------------------------------------------------- */
-
-   STRNCPY_FIXED(mdldat->gamsdir, gamsdir);
-
-   /* ----------------------------------------------------------------------
-    * Inject this path into the PATH environment variable
-    * ---------------------------------------------------------------------- */
-
-   return adddir2PATH(gamsdir, mdl);
-}
-
-/** @brief globally set the gams control file 
- *
- *  @param  cntrfile  the gams control file
- *
- *  @return        the error code
- */
-int rhp_gams_setglobalgamscntr(const char *cntrfile)
-{
-   S_CHECK(gams_chk_str(cntrfile, __func__));
-
-   trace_stack("[GAMS] global gamscntr set to '%s'\n", cntrfile);
-
-   return gams_setgamscntr(cntrfile);
-}
-
-/** @brief globally set the gams system directory
- *
- *  @param gamsdir the gams system directory
- *
- *  @return        the error code
- */
-int rhp_gams_setglobalgamsdir(const char *gamsdir)
-{
-   S_CHECK(gams_chk_str(gamsdir, __func__));
-
-   trace_stack("[GAMS] global gamsdir set to '%s'\n", gamsdir);
-
-   S_CHECK(gams_setgamsdir(gamsdir));
-
-   /* ----------------------------------------------------------------------
-    * TODO: Sanitize the path (removing trailing separator)?
-    * ---------------------------------------------------------------------- */
-
-   /* ----------------------------------------------------------------------
-    * Inject this path into the PATH environment variable
-    * ---------------------------------------------------------------------- */
-
-   return adddir2PATH(gamsdir, NULL);
-}
-
-int rhp_gms_writesol2gdx(Model *mdl, const char *gdxname) 
-{
-   S_CHECK(gams_chk_mdlfull(mdl, __func__));
-   S_CHECK(gams_chk_str(gdxname, __func__));
-
-   return gmdl_writesol2gdx(mdl, gdxname);
-}
-
-#define LOGMASK         0x1
-#define STATUSMASK      0x2
-#define ALLMASK         (LOGMASK | STATUSMASK)
-
-/** @brief Print out log or status message to the screen.
- *         It strips off one new line if it exists.
- *
- *  @param  env          ReSHOP GAMS record as an opaque object
- *  @param  reshop_mode  mode indicating log, status, or both.
- *  @param  str          the actual string
- */
-static void gamsprint(void* env, UNUSED unsigned reshop_mode, const char *str)
-{
-   gevHandle_t gev = (gevHandle_t)env;
-   if (!gev) { return; }
-
-   /* TODO(Xhub) support status and all ...  */
-   int mode = LOGMASK;
-
-   switch (mode & ALLMASK) {
-   case LOGMASK:
-      gevLogPChar(gev, str);
-      break;
-   case STATUSMASK:
-      gevStatPChar(gev, str);
-      break;
-   case ALLMASK:
-      gevLogStatPChar(gev, str);
-      break;
-   }
-
-}
-
-/**
- * @brief Flush the output streams
- *
- * @param env  ReSHOP GAMS record as an opaque object
- */
-static void gamsflush(void* env)
-{
-   gevHandle_t gev = (gevHandle_t)env;
-   gevLogStatFlush(gev);
-
 }
 
 int rhp_gms_set_gamsprintops(Model *mdl)

@@ -19,6 +19,8 @@
 /**
  * @brief Allocate a ReSHOP model for a given container
  *
+ * @ingroup publicAPI
+ *
  * @param backend     the backend for the model
  *
  * @return         the ReSHOP model
@@ -32,6 +34,8 @@ Model *rhp_mdl_new(unsigned backend)
 /**
  * @brief Free a reshop model and release the container and empinfo structures
  *
+ * @ingroup publicAPI
+ *
  * @param mdl  the reshop model to free
  */
 void rhp_mdl_free(Model *mdl)
@@ -41,12 +45,13 @@ void rhp_mdl_free(Model *mdl)
    }
 }
 
-/**
- *  @brief Postprocessed the models, from the solver model back to the input one
+/** @brief Postprocessed the models, from the solver model back to the input one
  *
  *  Report the values (level, multipliers) of the variables and equations
  *  This function starts from the solver model, and backpropagates the values to
  *  the model, until the original one.
+ *
+ *  @ingroup publicAPI
  *
  *  @param  mdl_solver  the model used by the solver
  *
@@ -97,6 +102,8 @@ int rhp_postprocess(Model *mdl_solver)
 /**
  * @brief Solve the model
  *
+ * @ingroup publicAPI
+ *
  * @param mdl  model to solve
  *
  * @return     the error code
@@ -119,12 +126,13 @@ int rhp_solve(Model *mdl)
    return mdl_solve(mdl);
 }
 
-/**
- *  @brief Process the input model into a model for the solver
+/** @brief Process the input model into a model for the solver
  *
  *  Firstly, if there are some EMP information, the model is transformed
  *
  *  Secondly, the solver model is created
+ *
+ *  @ingroup publicAPI
  *
  *  @param  mdl         the user or input model
  *  @param  mdl_solver  the solver model
@@ -220,7 +228,7 @@ _exit:
       mdl_release(mdl_local);
    }
 
-   if (mdl->backend == RHP_BACKEND_JULIA) {
+   if (mdl->backend == RhpBackendJulia) {
       ctr_unsetneednames(&mdl->ctr);
    }
 

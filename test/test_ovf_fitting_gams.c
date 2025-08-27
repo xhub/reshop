@@ -21,7 +21,7 @@ int main (void)
 
   for (size_t i = 0; i < loss_fns_size; ++i) {
     for (size_t j = 0; j < reformulations_size; ++j) {
-      mdl_solver = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+      mdl_solver = rhp_mdl_new(RhpBackendGamsGmo);
       if (!mdl_solver) { status = 1; goto _exit; }
 
       // TODO: test GAMS with multiple solvers
@@ -36,7 +36,7 @@ int main (void)
     for (size_t j = 0; j < reformulations_size; ++j) {
       for (unsigned k = 1; k <= 5 ; ++k) {
         for (size_t l = 0; l < nb_nlp_solvers; ++l) {
-          mdl_solver = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+          mdl_solver = rhp_mdl_new(RhpBackendGamsGmo);
           if (!mdl_solver) { status = 1; goto _exit; }
 
           //ctr_setsolvername(ctr_solver, qp_solvers[l]);
@@ -54,7 +54,7 @@ int main (void)
   for (size_t i = 0; i < loss_fns_size; ++i) {
     for (size_t j = 0; j < reformulations_size; ++j) {
        for (size_t l = 0; l < nb_equil_solvers; ++l) {
-         mdl_solver = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+         mdl_solver = rhp_mdl_new(RhpBackendGamsGmo);
          if (!mdl_solver) { status = 1; goto _exit; }
 
          RESHOP_CHECK(fitting_equil_test(mdl_solver, loss_fns[i], reformulations[j]));
@@ -65,7 +65,7 @@ int main (void)
     }
   }
 
-   mdl_solver = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+   mdl_solver = rhp_mdl_new(RhpBackendGamsGmo);
   if (!mdl_solver) { status = 1; goto _exit; }
 
   RESHOP_CHECK(fitting_test(mdl_solver, "elastic_net", "fenchel"));

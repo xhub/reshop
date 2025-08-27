@@ -42,7 +42,7 @@ int rmdl_get_editable_mdl(Model *mdl, Model **mdl_dst, const char *name)
       return OK;
    }
 
-   Model *mdl_dst_ = rhp_mdl_new(RHP_BACKEND_RHP);
+   Model *mdl_dst_ = rhp_mdl_new(RhpBackendReSHOP);
    S_CHECK(mdl_setname(mdl_dst_, strdup(name)));
 
    S_CHECK(rmdl_initctrfromfull(mdl_dst_, mdl));

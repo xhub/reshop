@@ -41,8 +41,6 @@ int mdl_copysolveoptions(Model *mdl, const Model *mdl_src)
 /**
  * @brief Set the model type
  *
- * @ingroup publicAPI
- *
  * @param mdl        the model
  * @param mdl_src  the source model
  *
@@ -277,7 +275,7 @@ int mdl_checkmetadata(Model *mdl)
    if (mdl_is_rhp(mdl)) {
       S_CHECK(fops_active_init(&fops_active_dat, ctr));
       fops_active = &fops_active_dat;
-   } else if (mdl->backend == RHP_BACKEND_GAMS_GMO) {
+   } else if (mdl->backend == RhpBackendGamsGmo) {
       fops_active = NULL;
    } else {
       TO_IMPLEMENT("metadata check for new backend model");
@@ -586,6 +584,17 @@ int mdl_checkmetadata(Model *mdl)
    return status;
 }
 
+/**
+ * @brief Finalize a model
+ *
+ * The following steps are executed:
+ * - finalize the EMPDAG
+ * - If needed, infer the model type
+ *
+ * @param mdl  the model
+ *
+ * @return     the error code
+ */
 int mdl_finalize(Model *mdl)
 {
    S_CHECK(empdag_fini(&mdl->empinfo.empdag))
@@ -707,16 +716,40 @@ int mdl_copyassolvable(Model *mdl, Model *mdl_src)
 }
 
 
+/**
+ * @brief Report the values of a model into another one
+ *
+ * @param mdl      the model to take the values from
+ * @param mdl_src  the source model, where the values are injected
+ *
+ * @return         the error code
+ */
 int mdl_reportvalues(Model *mdl, Model *mdl_src)
 {
    return mdl->ops->reportvalues(mdl, mdl_src);
 }
 
+/**
+ * @brief Get the model status
+ *
+ * @param      mdl       the model
+ * @param[out] modelstat the model status
+ *
+ * @return               the error code
+ */
 int mdl_getmodelstat(const Model *mdl, int *modelstat)
 {
    return mdl->ops->getmodelstat(mdl, modelstat);
 }
 
+/**
+ * @brief Get the problem type associated with the model
+ *
+ * @param      mdl  the model
+ * @param[out] type the type
+ *
+ * @return          the error code
+ */
 int mdl_gettype(const Model *mdl, ModelType *type)
 {
    /* TODO: this could just return the type */
@@ -725,19 +758,14 @@ int mdl_gettype(const Model *mdl, ModelType *type)
 }
 
 /**
- * @brief Return the objective row index.
+ * @brief Return the objective equation
  *
- * @ingroup publicAPI
+ * Note that this may not be a valid index
  *
- * Note that in GAMS the objective row is the last row where the objective
- * variable appears. It may not have to do with the objective equation where
- * the objective variable is defined.
+ * @param      mdl     the model
+ * @param[out] objequ  the objective equation
  *
- * @param mdl     the container object
- * @param objequ  the objective row index
- *
- * @return status OK if objective row is found
- *                Error otherwise
+ * @return        the error code
  */
 int mdl_getobjequ(const Model *mdl, rhp_idx *objequ)
 {
@@ -749,11 +777,29 @@ int mdl_getobjjacval(const Model *mdl, double *objjacval)
    return mdl->ops->getobjjacval(mdl, objjacval);
 }
 
+/**
+ * @brief Get the sense
+ *
+ * @param      mdl        the model
+ * @param[out] objsense   the sense
+ * 
+ * @return                the error code
+ */
 int mdl_getsense(const Model *mdl, RhpSense *objsense)
 {
    return mdl->ops->getsense(mdl, objsense);
 }
 
+/**
+ * @brief Get the objective variable
+ *
+ * Note that it is not guaranteed to be a valid index
+ *
+ * @param      mdl     the model
+ * @param[out] objvar  the objective variable
+ *
+ * @return             the error code
+ */
 int mdl_getobjvar(const Model *mdl, rhp_idx *objvar)
 {
    return mdl->ops->getobjvar(mdl, objvar);
@@ -766,7 +812,7 @@ int mdl_getoption(const Model *mdl, const char *option, void *val)
 /**
  * @brief Get the solver name
  *
- * @param      mdl         the container
+ * @param      mdl         the model
  * @param[out] solvername  the pointer to the string
  *
  * @return                 the name of the solver
@@ -776,16 +822,39 @@ int mdl_getsolvername(const Model *mdl, char const ** solvername)
    return mdl->ops->getsolvername(mdl, solvername);
 }
 
+/**
+ * @brief Get the solve status of a model
+ *
+ * @param       mdl        the model
+ * @param[out]  solvestat  the solve status
+ *
+ * @return                 the error code
+ */
 int mdl_getsolvestat(const Model *mdl, int *solvestat)
 {
    return mdl->ops->getsolvestat(mdl, solvestat);
 }
 
+/**
+ * @brief Perform the post-processing step (after the solve)
+ *
+ * @param mdl  the model
+ *
+ * @return     the error code
+ */
 int mdl_postprocess(Model *mdl)
 {
    return mdl->ops->postprocess(mdl);
 }
 
+/**
+ * @brief Set the model status
+ *
+ * @param mdl        the model
+ * @param modelstat  the new model status
+ *
+ * @return           the error code
+ */
 int mdl_setmodelstat(Model *mdl, int modelstat)
 {
    return mdl->ops->setmodelstat(mdl, modelstat);
@@ -794,9 +863,7 @@ int mdl_setmodelstat(Model *mdl, int modelstat)
 /**
  * @brief Set the model type
  *
- * @ingroup publicAPI
- *
- * @param mdl    the container
+ * @param mdl    the model
  * @param type   the model type
  *
  * @return       the error code
@@ -840,9 +907,17 @@ int mdl_setsense(Model *mdl, unsigned objsense)
    return mdl->ops->setsense(mdl, objsense);
 }
 
-int mdl_setobjvar(Model *mdl, rhp_idx vi)
+/**
+ * @brief Set the objective variable
+ *
+ * @param mdl     the model
+ * @param objvar  the objective variable index
+ *
+ * @return    the error code
+ */
+int mdl_setobjvar(Model *mdl, rhp_idx objvar)
 {
-   return mdl->ops->setobjvar(mdl, vi);
+   return mdl->ops->setobjvar(mdl, objvar);
 }
 
 int mdl_setsolvestat(Model *mdl, int solvestat)
@@ -853,7 +928,7 @@ int mdl_setsolvestat(Model *mdl, int solvestat)
 /**
  * @brief Set the solver name
  *
- * @param mdl         the container
+ * @param mdl         the model
  * @param solvername  the name of the solver
  *
  * @return            the error code

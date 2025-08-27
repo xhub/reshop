@@ -92,9 +92,9 @@ static int cmp_equ_val(const struct rhp_mdl *mdl, double refval, double val, rhp
 
 static int _cmp_var_bas(const struct rhp_mdl *mdl, enum rhp_basis_status sol, int val, rhp_idx i)
 {
-  if (sol != RHP_BASIS_UNSET) {
+  if (sol != RhpBasisUnset) {
     /* We do not strongly enforce this, too many superbasic issues */
-    bool err = (val != sol && val != RHP_BASIS_SUPERBASIC);
+    bool err = (val != sol && val != RhpBasisSuperBasic);
     if (err) { printf(ANSI_COLOR_RED); }
     printf("%s.bas: %s vs %s\n", rhp_mdl_printvarname(mdl, i), rhp_basis_str(val), rhp_basis_str(sol));
     if (err) {
@@ -108,8 +108,8 @@ static int _cmp_var_bas(const struct rhp_mdl *mdl, enum rhp_basis_status sol, in
 
 static int _cmp_equ_bas(const struct rhp_mdl *mdl, enum rhp_basis_status sol, int val, rhp_idx i)
 {
-  if (sol != RHP_BASIS_UNSET) {
-    bool err = (val != sol && val != RHP_BASIS_SUPERBASIC);
+  if (sol != RhpBasisUnset) {
+    bool err = (val != sol && val != RhpBasisSuperBasic);
     if (err) printf(ANSI_COLOR_RED);
     printf("%s.bas: %s vs %s\n", rhp_mdl_printequname(mdl, i), rhp_basis_str(val), rhp_basis_str(sol));
     if (err) {
@@ -124,7 +124,7 @@ static int _cmp_equ_bas(const struct rhp_mdl *mdl, enum rhp_basis_status sol, in
 struct rhp_mdl * test_init(void)
 {
 
-  struct rhp_mdl *mdl = rhp_mdl_new(RHP_BACKEND_RHP);
+  struct rhp_mdl *mdl = rhp_mdl_new(RhpBackendReSHOP);
   if (!mdl) { return NULL; }
 
   rhp_mdl_setopt_d(mdl, "rtol", TOL_EPS/10.);

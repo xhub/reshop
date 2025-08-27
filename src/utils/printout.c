@@ -514,6 +514,16 @@ static void print_stdout(UNUSED void *data, unsigned mode, const char *buf)
    }
 }
 
+/**
+ * @brief Set the printing operators
+ *
+ * @ingroup publicAPI
+ *
+ * @param data              user-defined environment
+ * @param print             the print function
+ * @param flush             the flush function
+ * @param use_asciicolors   if false, remove any ASCII color from the messages
+ */
 void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
                       bool use_asciicolors)
 {
@@ -533,6 +543,10 @@ void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
    print_ops.use_asciicolors = use_asciicolors;
 }
 
+/**
+ * @brief Set the printing operators to be the defaults ones
+ * @ingroup publicAPI
+ */
 void rhp_set_printopsdefault(void)
 {
    print_ops.data = printops_default.data;

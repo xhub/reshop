@@ -122,7 +122,7 @@ int view_equ_as_png(Model *mdl, rhp_idx ei)
 
    if (mdl_is_rhp(mdl)) {
       S_CHECK(rctr_getnl(&mdl->ctr, &mdl->ctr.equs[ei]));
-   } if (mdl->backend == RHP_BACKEND_GAMS_GMO && !mdl->ctr.equs[ei].tree) {
+   } if (mdl->backend == RhpBackendGamsGmo && !mdl->ctr.equs[ei].tree) {
       int len, *instrs, *args;
 
       Container *ctr = &mdl->ctr;

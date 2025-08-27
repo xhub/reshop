@@ -17,9 +17,9 @@ UNUSED static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
    unsigned nl_obj = 0;
    unsigned nl_constr = 0;
 
-   if (pmdl->backend != RHP_BACKEND_RHP && pmdl->backend != RHP_BACKEND_JULIA) {
+   if (pmdl->backend != RhpBackendReSHOP && pmdl->backend != RhpBackendJulia) {
       error("%s :: the container type must be either of JULIA or RHP, rather "
-            "than %s\n", __func__, backend_name(pmdl->backend));
+            "than %s\n", __func__, backend2str(pmdl->backend));
       return Error_Inconsistency;
    }
 

@@ -19,8 +19,6 @@
 /**
  * @brief Allocate an abstract equation
  *
- * @ingroup publicAPI
- *
  * @return the abstraction equation, or NULL is the allocation failed
  */
 Aequ *aequ_new(void)
@@ -36,8 +34,6 @@ Aequ *aequ_new(void)
 }
 /**
  *  @brief create a (vector) equation of continuous indices
- *
- *  @ingroup publicAPI
  *
  *  @param size   size of the variable
  *  @param start  index of the first component of the variable
@@ -65,22 +61,19 @@ Aequ* aequ_newcompact(unsigned size, rhp_idx start)
  *  for ensuring that the memory remains valid and for freeing it.
  *  Use aequ_newlistcopy() the list should be copied and managed.
  *
- *  @ingroup publicAPI
- *
- *  @param size  size of the equation
- *  @param list  array of indices
+ *  @param size  size of the equation container
+ *  @param eis   array of equation indices
  *
  *  @return      the error code
- *
  */
-Aequ* aequ_newlistborrow(unsigned size, rhp_idx *list)
+Aequ* aequ_newlistborrow(unsigned size, rhp_idx *eis)
 {
    Aequ *aequ;
    MALLOC_NULL(aequ, Aequ, 1);
    aequ->type = EquVar_List;
    aequ->own = false;
    aequ->size = size;
-   aequ->list = list;
+   aequ->list = eis;
 
    return aequ;
 }
@@ -90,8 +83,6 @@ Aequ* aequ_newlistborrow(unsigned size, rhp_idx *list)
  *  consecutive order
  *
  *  This function duplicates the list of indices
- *
- *  @ingroup publicAPI
  *
  *  @param size  size of the equation
  *  @param eis   array of indices
@@ -237,8 +228,6 @@ void aequ_reset(Aequ *e)
 /**
  * @brief Free the allocated memory in the abstract equation (including the structure itself!)
  *
- * @ingroup publicAPI
- *
  * @param e  the abstract equation
  */
 void aequ_free(Aequ *e)
@@ -358,10 +347,10 @@ int aequ_extendandown(Aequ *e, Aequ *w)
    }
 }
 
+/* NOTE: we use eidx and not ei to not trigger a typemap in SWIG.
+ * An EquationRef needs a Model, and Vars can exists without one */
 /**
  * @brief Get the equation index at position i
- *
- * @ingroup publicAPI
  *
  * @param      e     the abstract equation
  * @param      i     the element to get
@@ -426,8 +415,6 @@ rhp_idx aequ_block_get(const AequBlock *b, unsigned i)
 
 /**
  * @brief Return the size of the abstract equation
- *
- * @ingroup publicAPI
  *
  * @param e  the abstract equation
  *

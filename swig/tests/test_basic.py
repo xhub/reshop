@@ -5,13 +5,13 @@ import pytest
 from pytest import approx
 
 
-def init(backend=rhp.RHP_BACKEND_RHP):
+def init(backend=rhp.RhpBackendReSHOP):
     mdl = rhp.Model(backend)
     rhp.mdl_set_option(mdl, "rtol", 1e-9)
     return mdl
 
 
-def init_solver(backend=rhp.RHP_BACKEND_RHP):
+def init_solver(backend=rhp.RhpBackendReSHOP):
     mdl_solver = rhp.Model(backend)
     rhp.mdl_set_option(mdl_solver, "rtol", 1e-9)
     return mdl_solver

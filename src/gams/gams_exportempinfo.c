@@ -292,10 +292,10 @@ static int _print_mp_vi(struct empinfo_dat *file, MathPrgm *mp,
 static inline int print_mp_(struct empinfo_dat *file, MathPrgm *mp,
                             Model *mdl) {
   switch (mp->type) {
-  case RHP_MP_OPT:
+  case RhpMpOpt:
     S_CHECK(print_mp_opt_(file, mp, mdl));
     break;
-  case RHP_MP_VI:
+  case RhpMpVi:
     S_CHECK(_print_mp_vi(file, mp, mdl));
     break;
   default:
@@ -496,7 +496,7 @@ static int export_equilibrium_(struct empinfo_dat *file,
  *  */
 int gms_exportempinfo(Model *mdl_gms)
 {
-  assert(mdl_gms->backend == RHP_BACKEND_GAMS_GMO);
+  assert(mdl_gms->backend == RhpBackendGamsGmo);
   const Model *mdl_up = mdl_gms->mdl_up;
   const EmpInfo *empinfo = &mdl_up->empinfo;
 

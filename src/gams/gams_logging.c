@@ -526,7 +526,7 @@ static void GEV_CALLCONV reshop_gevlogger(const char *msg, int mode, void *usrme
  */
 int gev_logger_callback_init(Model *mdl_solver, gevStatLogCallbackType cbtype)
 {
-   assert(mdl_solver->backend == RHP_BACKEND_GAMS_GMO);
+   assert(mdl_solver->backend == RhpBackendGamsGmo);
    GevLoggingCallbackData *cbdata = &((GmsModelData*) mdl_solver->data)->gevloggercbdata;
 
   /* ----------------------------------------------------------------------
@@ -548,7 +548,7 @@ int gev_logger_callback_init(Model *mdl_solver, gevStatLogCallbackType cbtype)
 
       Model *mdl_gms_cmex = mdl_solver->mdl_up;
       while (mdl_gms_cmex) {
-         if (mdl_gms_cmex->backend == RHP_BACKEND_GAMS_GMO) {
+         if (mdl_gms_cmex->backend == RhpBackendGamsGmo) {
             break;
          }
          mdl_gms_cmex = mdl_gms_cmex->mdl_up;

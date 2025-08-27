@@ -4,7 +4,7 @@
 
 struct rhp_mdl* bench_init(double tol)
 {
-   struct rhp_mdl *mdl = rhp_mdl_new(RHP_BACKEND_RHP);
+   struct rhp_mdl *mdl = rhp_mdl_new(RhpBackendReSHOP);
    if (!mdl) { return NULL; }
 
    rhp_mdl_setopt_d(mdl, "rtol", tol);
@@ -15,7 +15,7 @@ struct rhp_mdl* bench_init(double tol)
 struct rhp_mdl* bench_getgamssolver(const char *solver_name)
 {
    setup_gams();
-   struct rhp_mdl *mdl_gams = rhp_mdl_new(RHP_BACKEND_GAMS_GMO);
+   struct rhp_mdl *mdl_gams = rhp_mdl_new(RhpBackendGamsGmo);
    if (!mdl_gams) { return NULL; }
 
    rhp_mdl_setsolvername(mdl_gams, solver_name);

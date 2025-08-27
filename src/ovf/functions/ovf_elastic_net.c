@@ -63,7 +63,7 @@ static int elastic_net_gen_A(unsigned n, const void *env, SpMat *mat)
    if (mat->ppty & EMPMAT_CSC) {
       rhpmat_reset(mat);
       rhpmat_set_csr(mat);
-      A_CHECK(mat->csr, rhp_spalloc(SIZE_U(n), SIZE_U(n), SIZE_U(n), RHP_CS));
+      A_CHECK(mat->csr, rhpmat_spalloc(SIZE_U(n), SIZE_U(n), SIZE_U(n), RHP_CS));
       MALLOC_(mat->csr->x, double, SIZE_U(n));
       mat->csr->n = SIZE_U(n);
       mat->csr->m = SIZE_U(n);

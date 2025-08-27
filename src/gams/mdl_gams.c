@@ -112,9 +112,9 @@ int gams_chk_mdl(const Model* mdl, const char *fn)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
-   if (mdl->backend != RHP_BACKEND_GAMS_GMO) {
+   if (mdl->backend != RhpBackendGamsGmo) {
       error("%s :: Model is of type %s, expected %s", fn,
-            backend_name(mdl->backend), backend_name(RHP_BACKEND_GAMS_GMO));
+            backend2str(mdl->backend), backend2str(RhpBackendGamsGmo));
       return Error_WrongModelForFunction;
    }
 
@@ -130,9 +130,9 @@ int gams_chk_mdlfull(const Model* mdl, const char *fn)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
-   if (mdl->backend != RHP_BACKEND_GAMS_GMO) {
+   if (mdl->backend != RhpBackendGamsGmo) {
       error("%s ERROR: Model is of type %s, expected %s", fn,
-            backend_name(mdl->backend), backend_name(RHP_BACKEND_GAMS_GMO));
+            backend2str(mdl->backend), backend2str(RhpBackendGamsGmo));
       return Error_WrongModelForFunction;
    }
 
@@ -153,7 +153,7 @@ int gams_chk_mdlfull(const Model* mdl, const char *fn)
 
 int gmdl_setprobtype(Model *mdl, enum mdl_type probtype)
 {
-   assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+   assert(mdl->backend == RhpBackendGamsGmo);
    Container *ctr = &mdl->ctr;
    const GmsContainerData *gms = ctr->data;
 
@@ -185,7 +185,7 @@ int gmdl_setprobtype(Model *mdl, enum mdl_type probtype)
  */
 int gmdl_writeasgms(const Model *mdl, const char *filename)
 {
-   if (mdl->backend != RHP_BACKEND_GAMS_GMO) {
+   if (mdl->backend != RhpBackendGamsGmo) {
       return OK;
    }
 
@@ -278,7 +278,7 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
    Model *mdl_gms_up = mdl_src;
 
    while (mdl_gms_up) {
-      if (mdl_gms_up->backend == RHP_BACKEND_GAMS_GMO) {
+      if (mdl_gms_up->backend == RhpBackendGamsGmo) {
          has_gmsdata = true;
          break;
       }
@@ -288,7 +288,7 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
 
    /* FIXME: shouldn't this be has_gmsdata ?*/
    if (mdl_gms_up) {
-      assert(mdl_gms_up->backend == RHP_BACKEND_GAMS_GMO);
+      assert(mdl_gms_up->backend == RhpBackendGamsGmo);
       const GmsModelData *mdldat_up = mdl_gms_up->data;
       Container *ctr_up = &mdl_gms_up->ctr;
       const GmsContainerData *gms = ctr_up->data;

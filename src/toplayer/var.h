@@ -117,7 +117,7 @@ struct var_genops {
 void avar_free(Avar* v);
 Avar* avar_new(void) MALLOC_ATTR(avar_free,1);
 Avar* avar_newcompact(unsigned size, unsigned start) MALLOC_ATTR(avar_free,1);
-Avar* avar_newlistborrow(unsigned size, rhp_idx *list) NONNULL MALLOC_ATTR(avar_free,1);
+Avar* avar_newlistborrow(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(avar_free,1);
 Avar* avar_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(avar_free,1);
 Avar* avar_newblock(unsigned block_size) MALLOC_ATTR(avar_free,1);
 

@@ -7,16 +7,22 @@
 #include "mdl.h"
 #include "reshop.h"
 
+/** @copydoc aequ_new
+ *  @ingroup publicAPI */
 Aequ* rhp_aequ_new(void)
 {
    return aequ_new();
 }
 
+/** @copydoc aequ_newcompact
+ *  @ingroup publicAPI */
 Aequ* rhp_aequ_newcompact(unsigned size, rhp_idx start)
 {
    return aequ_newcompact(size, start);
 }
 
+/** @copydoc aequ_newlistborrow
+ *  @ingroup publicAPI */
 Aequ* rhp_aequ_newlist(unsigned size, rhp_idx *eis)
 {
    SN_CHECK(chk_arg_nonnull(eis, 2, __func__));
@@ -24,6 +30,8 @@ Aequ* rhp_aequ_newlist(unsigned size, rhp_idx *eis)
    return aequ_newlistborrow(size, eis);
 }
 
+/** @copydoc aequ_newlistcopy
+ *  @ingroup publicAPI */
 Aequ* rhp_aequ_newlistcopy(unsigned size, rhp_idx *eis)
 {
    SN_CHECK(chk_arg_nonnull(eis, 2, __func__));
@@ -31,20 +39,25 @@ Aequ* rhp_aequ_newlistcopy(unsigned size, rhp_idx *eis)
    return aequ_newlistcopy(size, eis);
 }
 
-/* NOTE: we can't use ei here as it would trigger a typemap in SWIG */
-int rhp_aequ_get(const Aequ *e, unsigned i, rhp_idx *idx)
+/** @copydoc aequ_get
+ *  @ingroup publicAPI */
+int rhp_aequ_get(const Aequ *e, unsigned i, rhp_idx *eidx)
 {
    S_CHECK(chk_arg_nonnull(e, 1, __func__));
-   S_CHECK(chk_arg_nonnull(idx, 3, __func__));
+   S_CHECK(chk_arg_nonnull(eidx, 3, __func__));
 
-   return aequ_get(e, i, idx);
+   return aequ_get(e, i, eidx);
 }
 
+/** @copydoc aequ_free
+ *  @ingroup publicAPI */
 void rhp_aequ_free(Aequ* e)
 {
    aequ_free(e);
 }
 
+/** @copydoc aequ_size
+ *  @ingroup publicAPI */
 unsigned rhp_aequ_size(const Aequ *e)
 {
    if (chk_arg_nonnull(e, 1, __func__) != OK ) { return 0; }
@@ -52,51 +65,89 @@ unsigned rhp_aequ_size(const Aequ *e)
    return aequ_size(e);
 }
 
-const char* rhp_aequ_gettypename(const struct rhp_aequ *e)
+/** @brief Return the string description of the type of an equation container
+ *
+ * @ingroup publicAPI
+ *
+ * @param e  the equation container
+ *
+ * @return   the string description
+ */
+const char* rhp_aequ_gettypename(const Aequ *e)
 {
    SN_CHECK(chk_arg_nonnull(e, 1, __func__));
    return aequvar_typestr(e->type);
 }
 
-int rhp_aequ_get_list(struct rhp_aequ *e, rhp_idx **list)
+/** @brief Get the list associated with an equation container
+ *
+ * @ingroup publicAPI
+ *
+ * @param      e    the equation container
+ * @param[out] eis  the array of indices
+ *
+ * @return          the error code
+ */
+int rhp_aequ_get_list(Aequ *e, rhp_idx **eis)
 {
    S_CHECK(chk_arg_nonnull(e, 1, __func__));
-   S_CHECK(chk_arg_nonnull((void*)list, 2, __func__));
+   S_CHECK(chk_arg_nonnull((void*)eis, 2, __func__));
 
-   if (e->type != EquVar_List && e->type != EquVar_SortedList) {
-      e->list = NULL;
-      return Error_RuntimeError;
+   AbstractEquVarType type = e->type;
+   if (type == EquVar_List || type == EquVar_SortedList) {
+      *eis = e->list;
+      return OK;
    }
 
-   *list = e->list;
+   error("[aequ] ERROR: cannot query the list of an Aequ with type '%s'. It must be '%s' "
+         "or '%s'\n", aequvar_typestr(type), aequvar_typestr(EquVar_List),
+         aequvar_typestr(EquVar_SortedList));
 
-   return OK;
-
+   return Error_RuntimeError;
 }
 
-unsigned rhp_aequ_gettype(const struct rhp_aequ *e)
+/** @brief Access the type of a equation container
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param e the equation container
+ *
+ *  @return  the type of the equation container
+ */
+unsigned rhp_aequ_gettype(const Aequ *e)
 {
    if (chk_arg_nonnull(e, 1, __func__) != OK) { return EquVar_Invalid; }
 
    return e->type;
 }
 
-bool rhp_aequ_ownmem(const struct rhp_aequ *v)
+/**
+ * @brief Return true if the equation container owns its memory
+ *
+ * @ingroup publicAPI
+ *
+ * @param e  the equation container
+ *
+ * @return   true if the equation container owns its memory
+ */
+bool rhp_aequ_ownmem(const Aequ *e)
 {
-   if(chk_arg_nonnull(v, 1, __func__) != OK) { return false; }
+   if(chk_arg_nonnull(e, 1, __func__) != OK) { return false; }
 
-   return v->own;
+   return e->own;
 }
 
 /**
  * @brief Check if an abstract equation contains a given index
+ *
+ * @ingroup publicAPI
  *
  * @param  e   the equation container
  * @param  ei  the equation index
  *
  * @return     0 if it is not contained, positive number if it is, a negative number for an error
  */
-char rhp_aequ_contains(const Aequ *e, rhp_idx ei)
+short rhp_aequ_contains(const Aequ *e, rhp_idx ei)
 {
   if (chk_aequ(e, __func__) != OK) { return -1; }
   if (!valid_ei(ei)) { return -2; }
@@ -104,28 +155,31 @@ char rhp_aequ_contains(const Aequ *e, rhp_idx ei)
   return aequ_contains(e, ei) ? 1 : 0;
 }
 
-/** @brief add \f$\alpha <c,x>\f$ to the nonlinear part of the equation
+/** @brief add \f$\alpha <c,x> \f$ to the nonlinear part of the equation
+ *
+ *  @ingroup publicAPI 
  *
  *  @param mdl    the model
  *  @param ei     the equation to modify
- *  @param vals   the values of c
+ *  @param c      the values of c
  *  @param v      the variable x
  *  @param coeff  the coefficient \f$alpha\f$
  *
  *  @return       the error code
  */
-int rhp_nltree_addlin(Model *mdl, rhp_idx ei, double* vals,
-      Avar *v, double coeff)
+int rhp_nltree_addlin(Model *mdl, rhp_idx ei, double* c, Avar *v, double coeff)
 {
    S_CHECK(rhp_chk_ctr(&mdl->ctr, __func__));
    S_CHECK(ei_inbounds(ei, rctr_totalm(&mdl->ctr), __func__));
-   S_CHECK(chk_arg_nonnull(vals, 3, __func__));
+   S_CHECK(chk_arg_nonnull(c, 3, __func__));
    S_CHECK(chk_arg_nonnull(v, 4, __func__));
 
-   return nltree_addlvars(&mdl->ctr, ei, vals, v, coeff);
+   return nltree_addlvars(&mdl->ctr, ei, c, v, coeff);
 }
 
 /** @brief Add a quadratic term \f$ .5 x^TMx\f$ to an equation.
+ *
+ *  @ingroup publicAPI 
  *
  *  @warning This function does not check if some of the variables were already
  *  present in the linear part of the equation. This has to be fixed --xhub

@@ -19,19 +19,18 @@ struct rhp_empdag_arcVF;
 
 /** @brief backend type */
 enum rhp_backendtype {
-   RHP_BACKEND_GAMS_GMO   = 0,                 /**< GAMS (GMO) container     */
-   RHP_BACKEND_RHP        = 1,                 /**< internal container       */
-   RHP_BACKEND_JULIA      = 2,                 /**< Julia container          */
-   RHP_BACKEND_AMPL       = 3,                 /**< AMPL container           */
+   RhpBackendGamsGmo    = 0,                 /**< GAMS (GMO) container     */
+   RhpBackendReSHOP     = 1,                 /**< internal container       */
+   RhpBackendJulia      = 2,                 /**< Julia container          */
+   RhpBackendAmpl       = 3,                 /**< AMPL container           */
 };
 
-/** Type of mathematical programm */
+/** @brief Type of mathematical programm */
 enum rhp_mp_type {
-   RHP_MP_UNDEF = 0,   /**< not defined/set */
-   RHP_MP_OPT,         /**< optimisation problem */
-   RHP_MP_VI,          /**< Variational Inequality */
-   RHP_MP_CCFLIB,      /**< Mathematical Programm in compact form            */
-   RHP_MP_TYPE_LEN,
+   RhpMpUndefType = 0, /**< not defined/set */
+   RhpMpOpt,           /**< optimisation problem */
+   RhpMpVi,            /**< Variational Inequality */
+   RhpMpCcflib,        /**< Mathematical Programm in compact form            */
 };
 
 /** @brief Type of optimization problem */
@@ -57,21 +56,20 @@ enum rhp_cons_types {
    RHP_CON_DPOWER = 11,     /**< Inclusion in the Dual Power cone */
 };
 
-/**  basis information */
+/** @brief basis information */
 enum rhp_basis_status {
-   RHP_BASIS_UNSET = 0,         /**< unset value        */
-   RHP_BASIS_LOWER = 1,         /**< at lower bound     */
-   RHP_BASIS_UPPER = 2,         /**< at upper bound     */
-   RHP_BASIS_BASIC = 3,         /**< is basic           */
-   RHP_BASIS_SUPERBASIC = 4,    /**< is superbasic      */
-   RHP_BASIS_FIXED = 5,         /**< is fixed           */
-   RHP_BASIS_LEN   = 6,
+   RhpBasisUnset = 0,         /**< unset value        */
+   RhpBasisLower = 1,         /**< at lower bound     */
+   RhpBasisUpper = 2,         /**< at upper bound     */
+   RhpBasisBasic = 3,         /**< is basic           */
+   RhpBasisSuperBasic = 4,    /**< is superbasic      */
+   RhpBasisFixed = 5,         /**< is fixed           */
 };
 
 enum { RHP_OK = 0 };
 #define RHP_INVALID_IDX  (SIZE_MAX-1)
 
-/** Abstract equation or variable type */
+/** @brief Abstract equation or variable type */
 enum rhp_equvar_type {
    RHP_EQUVAR_COMPACT     = 0,  /**< Compact: continuous indices */
    RHP_EQUVAR_LIST        = 1,  /**< List: given as a list of indices */
@@ -80,7 +78,7 @@ enum rhp_equvar_type {
    RHP_EQUVAR_UNSET       = 4,   /**< Unset */
 };
 
-/** Option type */
+/** @brief Option type */
 enum rhp_option_type {
    RhpOptBoolean = 0,            /**< Boolean option  */
    RhpOptChoice,                 /**< Choice option   */
@@ -91,6 +89,7 @@ enum rhp_option_type {
 
 /** @brief Custom print function */
 typedef void (*rhp_print_fn)(void *data, unsigned mode, const char *buf);
+/** @brief Custom flush function */
 typedef void (*rhp_flush_fn)(void* env);
 
 /** @brief option values */
@@ -177,11 +176,11 @@ RHP_PUBLIB RHP_MALLOC(rhp_avar_free)
 struct rhp_avar* rhp_avar_newlistcopy(unsigned size, rhp_idx *vis);
 
 RHP_PUBLIB
-int rhp_avar_get(const struct rhp_avar *v, unsigned i, rhp_idx *idx);
+int rhp_avar_get(const struct rhp_avar *v, unsigned i, rhp_idx *vidx);
 RHP_PUBLIB
-int rhp_avar_set_list(struct rhp_avar *v, unsigned size, rhp_idx *list);
+int rhp_avar_set_list(struct rhp_avar *v, unsigned size, rhp_idx *vis);
 RHP_PUBLIB
-int rhp_avar_get_list(struct rhp_avar *v, rhp_idx **list);
+int rhp_avar_get_list(struct rhp_avar *v, rhp_idx **vis);
 RHP_PUBLIB
 unsigned rhp_avar_size(const struct rhp_avar *v);
 RHP_PUBLIB
@@ -191,7 +190,7 @@ const char* rhp_avar_gettypename(const struct rhp_avar *v);
 RHP_PUBLIB
 bool rhp_avar_ownmem(const struct rhp_avar *v);
 RHP_PUBLIB
-char rhp_avar_contains(const struct rhp_avar *v, rhp_idx vi);
+short rhp_avar_contains(const struct rhp_avar *v, rhp_idx vi);
 
 /* -------------------------------------------------------------------------
  * Equation functions
@@ -209,11 +208,11 @@ RHP_PUBLIB RHP_MALLOC(rhp_aequ_free)
 struct rhp_aequ* rhp_aequ_newlistcopy(unsigned size, rhp_idx *eis);
 
 RHP_PUBLIB
-int rhp_aequ_get(const struct rhp_aequ *e, unsigned i, rhp_idx *idx);
+int rhp_aequ_get(const struct rhp_aequ *e, unsigned i, rhp_idx *eidx);
 RHP_PUBLIB
 unsigned rhp_aequ_size(const struct rhp_aequ *e);
 RHP_PUBLIB
-int rhp_aequ_get_list(struct rhp_aequ *e, rhp_idx **list);
+int rhp_aequ_get_list(struct rhp_aequ *e, rhp_idx **eis);
 RHP_PUBLIB
 unsigned rhp_aequ_gettype(const struct rhp_aequ *e);
 RHP_PUBLIB
@@ -222,7 +221,7 @@ RHP_PUBLIB
 bool rhp_aequ_ownmem(const struct rhp_aequ *e);
 
 RHP_PUBLIB
-char rhp_aequ_contains(const struct rhp_aequ *e, rhp_idx ei);
+short rhp_aequ_contains(const struct rhp_aequ *e, rhp_idx ei);
 
 /* -------------------------------------------------------------------------
  * Model creation/destruction functions
@@ -289,7 +288,7 @@ int rhp_mdl_getobjequ(const struct rhp_mdl *mdl, rhp_idx *objequ);
 RHP_PUBLIB
 int rhp_mdl_getobjequs(const struct rhp_mdl *mdl, struct rhp_aequ *objs);
 RHP_PUBLIB
-int rhp_mdl_getsense(const struct rhp_mdl *mdl, unsigned *objsense);
+int rhp_mdl_getsense(const struct rhp_mdl *mdl, unsigned *sense);
 RHP_PUBLIB
 int rhp_mdl_getobjvar(const struct rhp_mdl *mdl, rhp_idx *objvar);
 RHP_PUBLIB
@@ -349,7 +348,7 @@ int rhp_mdl_settype(struct rhp_mdl *mdl, unsigned type);
 RHP_PUBLIB
 int rhp_mdl_setobjsense(struct rhp_mdl *mdl, unsigned objsense);
 RHP_PUBLIB
-int rhp_mdl_setobjvar(struct rhp_mdl *mdl, rhp_idx vi);
+int rhp_mdl_setobjvar(struct rhp_mdl *mdl, rhp_idx objvar);
 RHP_PUBLIB
 int rhp_mdl_setequrhs(struct rhp_mdl *mdl, rhp_idx ei, double val);
 RHP_PUBLIB
@@ -361,7 +360,7 @@ int rhp_mdl_setvarbounds(struct rhp_mdl *mdl, rhp_idx vi, double lb, double ub);
 RHP_PUBLIB
 int rhp_mdl_setvarlb(struct rhp_mdl *mdl, rhp_idx vi, double lb);
 RHP_PUBLIB
-int rhp_mdl_setvarmult(struct rhp_mdl *mdl, rhp_idx vi, double varm);
+int rhp_mdl_setvarmult(struct rhp_mdl *mdl, rhp_idx vi, double mult);
 RHP_PUBLIB
 int rhp_mdl_setvarname(struct rhp_mdl *mdl, rhp_idx vi, const char *name);
 RHP_PUBLIB
@@ -451,9 +450,9 @@ int rhp_mp_print(struct rhp_mathprgm *mp);
 RHP_PUBLIB
 int rhp_mp_setname(struct rhp_mathprgm *mp, const char* name);
 RHP_PUBLIB
-int rhp_mp_setobjequ(struct rhp_mathprgm *mp, rhp_idx ei);
+int rhp_mp_setobjequ(struct rhp_mathprgm *mp, rhp_idx objequ);
 RHP_PUBLIB
-int rhp_mp_setobjvar(struct rhp_mathprgm *mp, rhp_idx vi);
+int rhp_mp_setobjvar(struct rhp_mathprgm *mp, rhp_idx objvar);
 
 /* -------------------------------------------------------------------------
  * EMPDAG MPE (MP Equilibrium) API
@@ -465,7 +464,7 @@ const char* rhp_mpe_getname(const struct rhp_nash_equilibrium *mpe);
 RHP_PUBLIB
 unsigned rhp_mpe_getnumchildren(const struct rhp_nash_equilibrium *mpe);
 RHP_PUBLIB
-int rhp_mpe_print(struct rhp_nash_equilibrium *mpe);
+void rhp_mpe_print(struct rhp_nash_equilibrium *mpe);
 
 /* -------------------------------------------------------------------------
  * EMPDAG MP (Mathematical Programming) API
@@ -475,7 +474,7 @@ RHP_PUBLIB
 struct rhp_mathprgm *rhp_empdag_newmp(struct rhp_mdl *mdl, unsigned sense);
 RHP_PUBLIB
 int rhp_empdag_mpaddmpVF(struct rhp_mdl *mdl, struct rhp_mathprgm *mp,
-                         struct rhp_mathprgm *mp_child, struct rhp_empdag_arcVF *edgeVF);
+                         struct rhp_mathprgm *mp_child, struct rhp_empdag_arcVF *arcVF);
 RHP_PUBLIB
 int rhp_empdag_mpaddmpCTRL(struct rhp_mdl *mdl,  struct rhp_mathprgm *mp,
                            struct rhp_mathprgm *mp_child);
@@ -494,7 +493,7 @@ int rhp_empdag_mpeaddmp(struct rhp_mdl *mdl, struct rhp_nash_equilibrium* mpe, s
  * ------------------------------------------------------------------------- */
 
 RHP_PUBLIB
-int rhp_arcVF_free(struct rhp_empdag_arcVF *arcVF);
+void rhp_arcVF_free(struct rhp_empdag_arcVF *arcVF);
 RHP_PUBLIB RHP_MALLOC(rhp_arcVF_free)
 struct rhp_empdag_arcVF * rhp_arcVF_new(void);
 RHP_PUBLIB
@@ -614,7 +613,7 @@ int rhp_equ_addlin(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v, const do
 RHP_PUBLIB
 int rhp_equ_addlinchk(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v, const double *coeffs);
 RHP_PUBLIB
-int rhp_equ_addlincoeff(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v, const double *vals, double coeff);
+int rhp_equ_addlincoeff(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v, const double *coeffs, double coeff);
 
 RHP_PUBLIB
 int rhp_equ_addquadrelative(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_avar *v_row,
@@ -670,14 +669,14 @@ int rhp_nltree_cst(struct rhp_mdl *mdl, struct rhp_nltree* tree, struct rhp_nlno
 RHP_PUBLIB
 int rhp_nltree_umin(struct rhp_nltree *tree, struct rhp_nlnode ** restrict *node);
 RHP_PUBLIB
-int rhp_nltree_var(struct rhp_mdl *mdl, struct rhp_nltree* tree,
-                struct rhp_nlnode ***node, rhp_idx vi, double coeff);
+int rhp_nltree_var(struct rhp_mdl *mdl, struct rhp_nltree* tree, struct rhp_nlnode ***node,
+                   rhp_idx vi, double coeff);
 RHP_PUBLIB
-int rhp_nltree_addquad(struct rhp_mdl *mdl, rhp_idx ei,
-      struct rhp_spmat* mat, struct rhp_avar *v, double coeff);
+int rhp_nltree_addquad(struct rhp_mdl *mdl, rhp_idx ei, struct rhp_spmat* mat,
+                       struct rhp_avar *v, double coeff);
 RHP_PUBLIB
-int rhp_nltree_addlin(struct rhp_mdl *mdl, rhp_idx ei, double* vals,
-      struct rhp_avar *v, double coeff);
+int rhp_nltree_addlin(struct rhp_mdl *mdl, rhp_idx ei, double* c, struct rhp_avar *v,
+                      double coeff);
 
 /* -------------------------------------------------------------------------
  * ReSHOP internal model change
@@ -712,7 +711,7 @@ int rhp_ovf_param_add_scalar(struct rhp_ovfdef* ovf_def, const char *param_name,
                              double val);
 RHP_PUBLIB
 int rhp_ovf_param_add_vector(struct rhp_ovfdef *ovf_def, const char *param_name,
-                             unsigned n_vals, double *vals);
+                             unsigned size, double *vec);
 RHP_PUBLIB
 int rhp_ovf_setreformulation(struct rhp_ovfdef *ovf_def, const char *reformulation);
 
@@ -813,7 +812,7 @@ RHP_PUBLIB
 int rhp_mdl_getopttype(const struct rhp_mdl *mdl, const char *optname, unsigned *type);
 
 RHP_PUBLIB
-int rhp_opt_setb(const char *name, unsigned char bval);
+int rhp_opt_setb(const char *name, unsigned char boolval);
 RHP_PUBLIB
 int rhp_opt_setc(const char *name, const char *str);
 RHP_PUBLIB
@@ -826,7 +825,7 @@ RHP_PUBLIB
 int rhp_opt_setfromstr(char *optstring);
 
 RHP_PUBLIB
-int rhp_opt_getb(const char *name, int *bval);
+int rhp_opt_getb(const char *name, int *boolval);
 RHP_PUBLIB
 int rhp_opt_getd(const char *name, double *dval);
 RHP_PUBLIB
@@ -843,7 +842,7 @@ RHP_PUBLIB
 void rhp_mat_free(struct rhp_spmat* m);
 RHP_PUBLIB
 struct rhp_spmat* rhp_mat_triplet(unsigned n, unsigned m, unsigned nnz,
-                                  int *rowidx, int *colidx, double *val);
+                                  int *rowidx, int *colidx, double *data);
 
 
 /* -------------------------------------------------------------------------
@@ -851,6 +850,8 @@ struct rhp_spmat* rhp_mat_triplet(unsigned n, unsigned m, unsigned nnz,
  * ------------------------------------------------------------------------- */
 RHP_PUBLIB
 const char* rhp_basis_str(enum rhp_basis_status basis);
+RHP_PUBLIB
+const char* rhp_backend_str(enum rhp_backendtype backend);
 
 /* -------------------------------------------------------------------------
  * Solver specific info
@@ -866,25 +867,29 @@ void rhp_print_banner(void);
 RHP_PUBLIB
 const char* rhp_version(void);
 RHP_PUBLIB
-void rhp_show_ccftrace(unsigned char val);
+void rhp_show_ccftrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_containertrace(unsigned char val);
+void rhp_show_containertrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_empdagtrace(unsigned char val);
+void rhp_show_empdagtrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_empinterptrace(unsigned char val);
+void rhp_show_empinterptrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_empparsertrace(unsigned char val);
+void rhp_show_empparsertrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_fooctrace(unsigned char val);
+void rhp_show_fooctrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_processtrace(unsigned char val);
+void rhp_show_processtrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_refcnttrace(unsigned char val);
+void rhp_show_refcnttrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_solreporttrace(unsigned char val);
+void rhp_show_solreporttrace(unsigned char boolval);
 RHP_PUBLIB
-void rhp_show_backendinfo(unsigned char val);
+void rhp_show_backendinfo(unsigned char boolval);
+RHP_PUBLIB
+void rhp_show_timings(unsigned char boolval);
+RHP_PUBLIB
+void rhp_show_solver_log(unsigned char boolval);
 RHP_PUBLIB
 int rhp_syncenv(void);
 

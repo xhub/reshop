@@ -208,7 +208,7 @@ int fitting_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const char *re
   struct rhp_avar *v_ovf = rhp_avar_new();
   struct rhp_avar *v_arg_ovf = rhp_avar_new();
 
-  struct rhp_mdl *mdl = rhp_mdl_new(RHP_BACKEND_RHP);
+  struct rhp_mdl *mdl = rhp_mdl_new(RhpBackendReSHOP);
 
   if (!mdl_solver) { status = 1; goto _exit; }
 
@@ -700,7 +700,7 @@ int fitting_v_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const char *
 {
   int status = RHP_OK;
 
-  struct rhp_mdl *mdl = rhp_mdl_new(RHP_BACKEND_RHP);
+  struct rhp_mdl *mdl = rhp_mdl_new(RhpBackendReSHOP);
   if (!mdl_solver) { status = 1; goto _exit; }
 
 
@@ -762,7 +762,7 @@ int fitting_equil_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const ch
 {
   int status = RHP_OK;
 
-  struct rhp_mdl *mdl = rhp_mdl_new(RHP_BACKEND_RHP);
+  struct rhp_mdl *mdl = rhp_mdl_new(RhpBackendReSHOP);
   if (!mdl_solver) { status = 1; goto _exit; }
 
   size_t loss_idx = loss_fn_idx(loss_fn);

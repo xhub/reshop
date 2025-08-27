@@ -169,11 +169,11 @@ static int rmdl_copysolveoptions(Model *mdl, const Model *mdl_src)
 {
    BackendType backend = mdl->backend;
    switch (backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
      S_CHECK(rmdl_copysolveoptions_gams(mdl, mdl_src));
      break;
-   case RHP_BACKEND_RHP:
-   case RHP_BACKEND_JULIA:
+   case RhpBackendReSHOP:
+   case RhpBackendJulia:
    {
       union opt_t val;
       S_CHECK(mdl_getoption(mdl_src, "solver_option_file_number", &val.i));
@@ -189,7 +189,7 @@ static int rmdl_copysolveoptions(Model *mdl, const Model *mdl_src)
       break;
    }
    default:
-      error("%s :: unsupported container '%s' (%d)", __func__, backend_name(backend),
+      error("%s :: unsupported container '%s' (%d)", __func__, backend2str(backend),
             backend);
       return Error_InvalidValue;
    }
@@ -590,14 +590,14 @@ static int rmdl_reportvalues(Model *mdl, const Model *mdl_src)
 {
    BackendType backend = mdl_src->backend;
    switch (backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       return rctr_reporvalues_from_gams(&mdl->ctr, &mdl_src->ctr);
-   case RHP_BACKEND_RHP:
-   case RHP_BACKEND_JULIA:
+   case RhpBackendReSHOP:
+   case RhpBackendJulia:
       return rmdl_reportvalues_from_rhp(&mdl->ctr, &mdl_src->ctr);
    default:
       error("%s :: not implement for container of type %s\n",
-                         __func__, backend_name(backend));
+                         __func__, backend2str(backend));
       return Error_NotImplemented;
    }
 }
@@ -1150,10 +1150,10 @@ int rmdl_prepare_export(Model * restrict mdl_src, Model * restrict mdl_dst)
     * ---------------------------------------------------------------------- */
 
    switch (ctr_dst->backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       S_CHECK(rmdl_prepare_ctrexport_gams(mdl_src, mdl_dst));
       break;
-   case RHP_BACKEND_RHP:
+   case RhpBackendReSHOP:
       S_CHECK(rmdl_prepare_ctrexport_rhp(mdl_src, mdl_dst));
       break;
    default:
@@ -1211,10 +1211,10 @@ static int rmdl_export(Model *mdl, Model *mdl_dst)
    S_CHECK(rmdl_export_setmodeltype(mdl, mdl_dst));
 
    switch(mdl_dst->backend) {
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       S_CHECK(rmdl_exportasgmo(mdl, mdl_dst));
       break;
-   case RHP_BACKEND_RHP: {
+   case RhpBackendReSHOP: {
       /*  Do nothing here */
    /* TODO: this is part of GITLAB #67 */
 //      S_CHECK(rmdl_exportmodel_rmdl(ctr, ctr_dst));
@@ -1228,7 +1228,7 @@ static int rmdl_export(Model *mdl, Model *mdl_dst)
       break;
    default:
       error("[model] ERROR: Only GAMS and RHP are supported as a destination "
-            "container, not %s\n", backend_name(mdl_dst->backend));
+            "container, not %s\n", backend2str(mdl_dst->backend));
       return Error_NotImplemented;
    }
 

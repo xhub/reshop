@@ -1384,8 +1384,7 @@ _chain_node:
  *
  *  @return       the error code
  */
-int rctr_nltree_var(Container *ctr, NlTree* tree, NlNode ***node, rhp_idx vi,
-               double coeff)
+int rctr_nltree_var(Container *ctr, NlTree* tree, NlNode ***node, rhp_idx vi, double coeff)
 {
    NlNode *lnode;
    assert(valid_vi(vi));

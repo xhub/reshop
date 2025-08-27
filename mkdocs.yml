@@ -1,0 +1,98 @@
+site_name: ReSHOP
+site_description: "Reformulation Solver for Hierarchical Optimization Problem"
+repo_url: "https://github.com/xhub/reshop"
+repo_name: "xhub/reshop"
+site_dir: "site"
+copyright: Copyright &copy; 2025 Olivier Huber
+
+nav:
+- Home:
+  - Overview: index.md
+#  - Changelog: changelog.md
+#  - Credits: credits.md
+  - License: license.md
+- Usage:
+  - usage/index.md
+#  - Guides:
+#    - Recipes: recipes.md
+#    - Troubleshooting: troubleshooting.md
+- API references:
+  - api.md
+  - C: api/C.md
+  - Python / C-like: api/python-C-like.md
+  - Python / Object-oriented: api/python-object.md
+- Author's website: https://nullptr.fr
+
+
+
+markdown_extensions:
+- attr_list
+- admonition
+#- callouts
+- footnotes
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- pymdownx.magiclink
+- pymdownx.superfences
+- pymdownx.snippets:
+    base_path: [!relative $config_dir]
+    check_paths: true
+
+plugins:
+  - search
+  - markdown-exec
+  - section-index
+  - autorefs:
+      resolve_closest: true
+  # The mkdocstrings plugin
+  - mkdocstrings:
+      handlers:
+        python:
+          inventories:
+          - https://docs.python.org/3/objects.inv
+          # The Python handler uses dynamic introspection by default
+          # This is the most crucial part of the setup
+          options:
+            backlinks: tree
+            docstring_options:
+              ignore_init_summary: true
+            docstring_section_style: list
+            filters: ["!^_", "!^this$", "!^thisown$"]
+            force_inspection: true
+            show_source: true
+            show_bases: false
+            show_if_no_docstring: true
+            inherited_members: false
+            members_order: source
+            docstring_style: numpy
+
+
+theme:
+  name: material
+  features:
+  - announce.dismiss
+  - content.action.edit
+  - content.action.view
+  - content.code.annotate
+  - content.code.copy
+  - content.tooltips
+  - navigation.footer
+  - navigation.instant.preview
+  - navigation.path
+  - navigation.sections
+  - navigation.tabs
+  - navigation.tabs.sticky
+  - navigation.top
+  - search.highlight
+  - search.suggest
+  - toc.follow
+
+
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css

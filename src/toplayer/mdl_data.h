@@ -73,7 +73,7 @@ struct mp_descr {
 
 extern const unsigned mdltypeslen;
 
-const char* backend_name(unsigned backendtype);
+const char* backend2str(unsigned backendtype);
 unsigned backend_idx(const char *backendname);
 
 int backend_throw_notimplemented_error(unsigned backend, const char *fn);

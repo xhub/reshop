@@ -185,10 +185,10 @@ static int mdl_prepare_fooc(Model *mdl, Model *mdl_mcp)
 {
    BackendType backend_src = mdl->backend;
    switch (backend_src) {
-   case RHP_BACKEND_RHP:
+   case RhpBackendReSHOP:
       S_CHECK(rmdl_prepare_export(mdl, mdl_mcp));
       break;
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
       TO_IMPLEMENT("Fooc with GAMS/GMO");
    default:
       return backend_throw_notimplemented_error(backend_src, __func__);
@@ -257,8 +257,8 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
    /* TODO: this should not be necessary */
    Model *mdl_rhp_for_fooc;
    bool release_mdl_rhp_for_fooc = false;
-   if (mdl->backend == RHP_BACKEND_GAMS_GMO) {
-      A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RHP_BACKEND_RHP));
+   if (mdl->backend == RhpBackendGamsGmo) {
+      A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RhpBackendReSHOP));
       S_CHECK(mdl_setname(mdl_rhp_for_fooc, "RHP mdl for FOOC"));
 
       S_CHECK(rmdl_initfromfullmdl(mdl_rhp_for_fooc, mdl));
@@ -271,7 +271,7 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
    }
 
    Model *mdl_mcp;
-   A_CHECK(mdl_mcp, rhp_mdl_new(RHP_BACKEND_RHP));
+   A_CHECK(mdl_mcp, rhp_mdl_new(RhpBackendReSHOP));
    S_CHECK(mdl_setname(mdl_mcp, "MCP"));
 
    S_CHECK(mdl_create_fooc(mdl_rhp_for_fooc, mdl_mcp))
@@ -323,8 +323,8 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
 
    /* TODO: this should not be necessary */
    Model *mdl_rhp_for_fooc;
-   if (mdl->backend == RHP_BACKEND_GAMS_GMO) {
-      A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RHP_BACKEND_RHP));
+   if (mdl->backend == RhpBackendGamsGmo) {
+      A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RhpBackendReSHOP));
       S_CHECK(mdl_setname(mdl_rhp_for_fooc, "RHP mdl for FOOC"));
 
       S_CHECK(rmdl_initfromfullmdl(mdl_rhp_for_fooc, mdl));
@@ -339,7 +339,7 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
    }
 
    Model *mdl_mpec;
-   A_CHECK(mdl_mpec, rhp_mdl_new(RHP_BACKEND_RHP));
+   A_CHECK(mdl_mpec, rhp_mdl_new(RhpBackendReSHOP));
    S_CHECK(mdl_setname(mdl_mpec, "MPEC"));
 
   /* ----------------------------------------------------------------------

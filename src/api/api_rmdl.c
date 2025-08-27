@@ -47,7 +47,7 @@ static int chk_ei_ptr(const rhp_idx *ei, const char* fn)
  *
  * @ingroup publicAPI
  *
- * @param mdl    the container
+ * @param mdl    the model
  * @param ei     the equation index
  * @param nnz    the number of quadratic terms
  * @param i      the row indices
@@ -105,7 +105,7 @@ int rhp_equ_addquadabsolute(Model *mdl, rhp_idx ei, size_t nnz, unsigned *i,
  *
  * @ingroup publicAPI
  *
- * @param mdl    the container
+ * @param mdl    the model
  * @param ei     the equation index
  * @param v_row  the abstract variable for the row indices
  * @param v_col  the abstract variable for the col indices
@@ -165,7 +165,7 @@ int rhp_equ_addquadrelative(Model *mdl, rhp_idx ei, Avar *v_row,
  *
  * @ingroup publicAPI
  *
- * @param mdl    the container
+ * @param mdl    the model
  * @param ei   the equation index
  * @param v1     the first variable
  * @param v2     the second variable
@@ -228,7 +228,7 @@ int rhp_equ_addbilin(Model *mdl, rhp_idx ei, Avar *v1, Avar *v2, double coeff)
  *
  * @ingroup publicAPI
  *
- * @param       mdl   the container
+ * @param       mdl   the model
  * @param[out]  vi    the resulting variable index
  *
  * @return     the error code
@@ -251,10 +251,11 @@ int rhp_add_var(Model *mdl, rhp_idx *vi)
  *
  * @ingroup publicAPI
  *
- * @param       mdl   the container
+ * @param       mdl   the model
  * @param[out]  vi    the resulting variable index
+ * @param       name  the name of the variable
  *
- * @return     the error code
+ * @return            the error code
  */
 int rhp_add_varnamed(Model *mdl, rhp_idx *vi, const char *name)
 {
@@ -280,7 +281,7 @@ int rhp_add_varnamed(Model *mdl, rhp_idx *vi, const char *name)
  *
  * @ingroup publicAPI
  *
- * @param       mdl   the container
+ * @param       mdl   the model
  * @param       size  the size of the variable 
  * @param[out]  vout  the resulting variables
  *
@@ -303,7 +304,7 @@ int rhp_add_vars(Model *mdl, unsigned size, Avar *vout)
  *
  * @ingroup publicAPI
  *
- * @param       mdl   the container
+ * @param       mdl   the model
  * @param       size  the size of the variable 
  * @param[out]  vout  the resulting variables
  *
@@ -326,7 +327,7 @@ int rhp_add_posvars(Model *mdl, unsigned size, Avar *vout)
  *
  * @ingroup publicAPI
  *
- * @param       mdl   the container
+ * @param       mdl   the model
  * @param       size  the size of the variable 
  * @param[out]  vout  the resulting variables
  *
@@ -348,6 +349,8 @@ int rhp_add_negvars(Model *mdl, unsigned size, Avar *vout)
  * @brief Add a variable with a given name
  *
  * A copy of the string parameter is performed
+ *
+ * @ingroup publicAPI
  *
  * @param       mdl   the model 
  * @param       size  the size of the variable 
@@ -377,6 +380,8 @@ int rhp_add_varsnamed(Model *mdl, unsigned size, Avar *vout, const char* name)
  *
  * A copy of the string parameter is performed
  *
+ * @ingroup publicAPI
+ *
  * @param       mdl   the model 
  * @param       size  the size of the variable 
  * @param[out]  vout  the variable container
@@ -405,6 +410,8 @@ int rhp_add_posvarsnamed(Model *mdl, unsigned size, Avar *vout, const char* name
  *
  * A copy of the string parameter is performed
  *
+ * @ingroup publicAPI
+ *
  * @param       mdl   the model 
  * @param       size  the size of the variable 
  * @param[out]  vout  the variable container
@@ -430,6 +437,8 @@ int rhp_add_negvarsnamed(Model *mdl, unsigned size, Avar *vout, const char* name
 
 /**
  * @brief Add box-constrainted variables 
+ *
+ * @ingroup publicAPI
  *
  * @param       mdl    the model
  * @param       size   the number of variables
@@ -484,7 +493,7 @@ int rhp_add_varsinboxnamed(Model *mdl, unsigned size, Avar *vout, const char *na
  *
  * @param       mdl    the model
  * @param       size   the number of variables
- * @param[out]  vout   the 
+ * @param[out]  vout   the variable container
  * @param       lbs    the optional lower bound; if not set, then -infinity
  * @param       ubs    the optional upper bound; if not set, then +infinity
  *
@@ -505,7 +514,7 @@ int rhp_add_varsinboxes(Model *mdl, unsigned size, Avar *vout, double *lbs, doub
  *
  * @param       mdl    the model
  * @param       size   the number of variables
- * @param[out]  vout   the variable
+ * @param[out]  vout   the variable container
  * @param       name   the variable name
  * @param       lbs    the common lower bound (optional: if not set, then -infinity)
  * @param       ubs    the common upper bound (optional: if not set, then +infinity)
@@ -539,11 +548,11 @@ int rhp_add_varsinboxesnamed(Model *mdl, unsigned size, Avar *vout, const char *
  * @param mdl   the model
  * @param ei    the equation index
  * @param v     the abstract variable
- * @param vals  the coefficients of the variables
+ * @param coeffs  the coefficients of the variables
  *
  * @return      the error code
  */
-int rhp_equ_addlin(Model *mdl, rhp_idx ei, Avar *v, const double *vals)
+int rhp_equ_addlin(Model *mdl, rhp_idx ei, Avar *v, const double *coeffs)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
@@ -554,12 +563,12 @@ int rhp_equ_addlin(Model *mdl, rhp_idx ei, Avar *v, const double *vals)
       return Error_NullPointer;
    }
 
-   if (!vals) {
+   if (!coeffs) {
       error("%s ERROR: the 4th argument is NULL!\n", __func__);
       return Error_NullPointer;
    }
 
-   return rctr_equ_addnewlvars(&mdl->ctr, &mdl->ctr.equs[ei], v, vals);
+   return rctr_equ_addnewlvars(&mdl->ctr, &mdl->ctr.equs[ei], v, coeffs);
 }
 
 /**
@@ -570,15 +579,15 @@ int rhp_equ_addlin(Model *mdl, rhp_idx ei, Avar *v, const double *vals)
  *
  * @ingroup publicAPI
  *
- * @param mdl   the model
- * @param ei    the equation index
- * @param v     the abstract variable
- * @param vals  the coefficients of the variables
- * @param coeff  the coefficient for the expression
+ * @param mdl     the model
+ * @param ei      the equation index
+ * @param v       the abstract variable
+ * @param coeffs  the coefficients of the variables
+ * @param coeff   the coefficient for the expression
  *
  * @return      the error code
  */
-int rhp_equ_addlincoeff(Model *mdl, rhp_idx ei, Avar *v, const double *vals, double coeff)
+int rhp_equ_addlincoeff(Model *mdl, rhp_idx ei, Avar *v, const double *coeffs, double coeff)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
@@ -589,12 +598,12 @@ int rhp_equ_addlincoeff(Model *mdl, rhp_idx ei, Avar *v, const double *vals, dou
       return Error_NullPointer;
    }
 
-   if (!vals) {
+   if (!coeffs) {
       error("%s ERROR: the 4th argument is NULL!\n", __func__);
       return Error_NullPointer;
    }
 
-   return rctr_equ_addnewlin_coeff(&mdl->ctr, &mdl->ctr.equs[ei], v, vals, coeff);
+   return rctr_equ_addnewlin_coeff(&mdl->ctr, &mdl->ctr.equs[ei], v, coeffs, coeff);
 }
 
 /**
@@ -605,12 +614,11 @@ int rhp_equ_addlincoeff(Model *mdl, rhp_idx ei, Avar *v, const double *vals, dou
  * @param mdl   the model
  * @param ei    the equation index
  * @param v     the abstract variable
- * @param vals  the coefficients of the variables
+ * @param coeffs  the coefficients of the variables
  *
  * @return      the error code
  */
-int rhp_equ_addlinchk(Model *mdl, rhp_idx ei, Avar *v,
-                      const double *vals)
+int rhp_equ_addlinchk(Model *mdl, rhp_idx ei, Avar *v, const double *coeffs)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
@@ -621,12 +629,12 @@ int rhp_equ_addlinchk(Model *mdl, rhp_idx ei, Avar *v,
       return Error_NullPointer;
    }
 
-   if (!vals) {
+   if (!coeffs) {
       error("%s ERROR: the 4th argument is NULL!\n", __func__);
       return Error_NullPointer;
    }
 
-   return rctr_equ_addlinvars(&mdl->ctr, &mdl->ctr.equs[ei], v, vals);
+   return rctr_equ_addlinvars(&mdl->ctr, &mdl->ctr.equs[ei], v, coeffs);
 }
 
 /**
@@ -634,21 +642,21 @@ int rhp_equ_addlinchk(Model *mdl, rhp_idx ei, Avar *v,
  *
  *  @ingroup publicAPI
  *
- *  @param  mdl   the container
- *  @param  eidx  the equation index
- *  @param  vidx  the variable index
+ *  @param  mdl   the model
+ *  @param  ei    the equation index
+ *  @param  vi    the variable index
  *  @param  val   the coefficient for the variable
  *
  *  @return       the error code
  */
-int rhp_equ_addlvar(Model *mdl, rhp_idx eidx, rhp_idx vidx, double val)
+int rhp_equ_addlvar(Model *mdl, rhp_idx ei, rhp_idx vi, double val)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
 
-   S_CHECK(ei_inbounds(eidx,((RhpContainerData*)mdl->ctr.data)->total_m, __func__));
-   S_CHECK(vi_inbounds(vidx, ((RhpContainerData*)mdl->ctr.data)->total_n, __func__));
+   S_CHECK(ei_inbounds(ei,((RhpContainerData*)mdl->ctr.data)->total_m, __func__));
+   S_CHECK(vi_inbounds(vi, ((RhpContainerData*)mdl->ctr.data)->total_n, __func__));
 
-   return rctr_equ_addlvar(&mdl->ctr, &mdl->ctr.equs[eidx], vidx, val);
+   return rctr_equ_addlvar(&mdl->ctr, &mdl->ctr.equs[ei], vi, val);
 }
 
 /**
@@ -656,7 +664,7 @@ int rhp_equ_addlvar(Model *mdl, rhp_idx eidx, rhp_idx vidx, double val)
  *
  *  @ingroup publicAPI
  *
- *  @param  mdl   the container
+ *  @param  mdl   the model
  *  @param  ei    the equation
  *  @param  vi    the variable index
  *  @param  val   the coefficient for the variable
@@ -705,9 +713,9 @@ int rhp_equ_setcst(Model *mdl, rhp_idx ei, double val)
  *
  * @ingroup publicAPI
  *
- * @param mdl  the model
- * @param ei   the equation index
- * @param val  the value
+ * @param      mdl  the model
+ * @param      ei   the equation index
+ * @param[out] val  the value
  *
  * @return     the error code
  */
@@ -730,8 +738,10 @@ int rhp_equ_getcst(Model *mdl, rhp_idx ei, double *val)
 /**
  * @brief Get the linear part of an equation, if any
  *
- * @param mdl        the container
- * @param ei         the equation index
+ * @ingroup publicAPI
+ *
+ * @param      mdl   the model
+ * @param      ei    the equation index
  * @param[out] len   the length of the arrays
  * @param[out] idxs  the array of variable indices (NULL if no linear part)
  * @param[out] vals  the array of coefficients (NULL if no linear part)
@@ -766,12 +776,15 @@ int rhp_equ_getlin(Model *mdl, rhp_idx ei, unsigned *len, rhp_idx **idxs, double
 
    return OK;
 }
+
 /**
- * @brief Get the number of "less-than" (or "<=' ) linear equations
+ * @brief Get the number of 'less-than' (or '<=' ) linear equations
+ *
+ * @ingroup publicAPI
  *
  * @param mdl the model
  *
- * @return    the error code
+ * @return    the number of 'less-than' linear equations
  */
 size_t rhp_get_nb_lequ_le(Model *mdl)
 {
@@ -789,6 +802,15 @@ size_t rhp_get_nb_lequ_le(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of 'greater-than' (or '>=' ) linear equations
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of 'greater-than' linear equations
+ */
 size_t rhp_get_nb_lequ_ge(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -805,6 +827,15 @@ size_t rhp_get_nb_lequ_ge(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of 'equal-to' (or '==', '=' ) linear equations
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of equality linear equations
+ */
 size_t rhp_get_nb_lequ_eq(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -821,6 +852,15 @@ size_t rhp_get_nb_lequ_eq(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of binary variables
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of binary variables
+ */
 size_t rhp_get_nb_var_bin(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -834,6 +874,15 @@ size_t rhp_get_nb_var_bin(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of integer variables
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of integer variables
+ */
 size_t rhp_get_nb_var_int(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -847,6 +896,15 @@ size_t rhp_get_nb_var_int(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of variables with a finite lower bound
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of variable with a finite lower bound
+ */
 size_t rhp_get_nb_var_lb(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -861,6 +919,15 @@ size_t rhp_get_nb_var_lb(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of variables with a finite upper bound
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of variable with a finite upper bound
+ */
 size_t rhp_get_nb_var_ub(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -875,6 +942,15 @@ size_t rhp_get_nb_var_ub(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of variables with both a finite lower and upper bound
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of variable with both a finite lower and upper bound
+ */
 size_t rhp_get_nb_var_interval(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -889,6 +965,15 @@ size_t rhp_get_nb_var_interval(Model *mdl)
    return cnt;
 }
 
+/**
+ * @brief Get the number of variables of fixed variables
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl the model
+ *
+ * @return    the number of fixed variables 
+ */
 size_t rhp_get_nb_var_fx(Model *mdl)
 {
    if (chk_rmdl(mdl, __func__) != OK) {
@@ -966,18 +1051,29 @@ int rhp_get_var_sos1(Model *mdl, rhp_idx vi, unsigned **grps)
  *
  * @ingroup publicAPI
  *
- * @param mdl   the model
- * @param vidx  the variable index
- * @param grps  the group
+ * @param      mdl   the model
+ * @param      vi    the variable index
+ * @param[out] grps  the group
  *
  * @return      the error code
  */
-int rhp_get_var_sos2(Model *mdl, int vidx, unsigned **grps)
+int rhp_get_var_sos2(Model *mdl, rhp_idx vi, unsigned **grps)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
-   return rctr_get_var_sos2(&mdl->ctr, vidx, grps);
+   return rctr_get_var_sos2(&mdl->ctr, vi, grps);
 }
 
+/**
+ * @brief Set variables as part of a (weighted) SOS1 group
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl     the model
+ * @param v       the variables 
+ * @param weights if non-NULL, gives the weight in the SOS1 group
+ *
+ * @return        the error code
+ */
 int rhp_set_var_sos1(Model *mdl, Avar *v, double *weights)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
@@ -1006,6 +1102,17 @@ int rhp_set_var_sos1(Model *mdl, Avar *v, double *weights)
    return OK;
 }
 
+/**
+ * @brief Set variables as part of a (weighted) SOS2 group
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl     the model
+ * @param v       the variables 
+ * @param weights if non-NULL, gives the weight in the SOS1 group
+ *
+ * @return        the error code
+ */
 int rhp_set_var_sos2(Model *mdl, Avar *v, double *weights)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
@@ -1036,6 +1143,8 @@ int rhp_set_var_sos2(Model *mdl, Avar *v, double *weights)
 
 /**
  * @brief Get the type of an option
+ *
+ * @ingroup publicAPI
  *
  * @param       mdl      the model
  * @param       optname  the name of the option
@@ -1227,21 +1336,21 @@ int rhp_add_equation(Model *mdl, rhp_idx *ei)
  *
  * @param      mdl   the model
  * @param      size    number of equations to add
- * @param[out] e     the equation
+ * @param[out] eout  the equation
  *
  * @return           the error code
  */
-int rhp_add_equations(Model *mdl, unsigned size, Aequ *e)
+int rhp_add_equations(Model *mdl, unsigned size, Aequ *eout)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
-   S_CHECK(chk_aequ_nonnull(e, __func__));
+   S_CHECK(chk_aequ_nonnull(eout, __func__));
 
-   aequ_setcompact(e, size, rctr_totalm(&mdl->ctr));
+   aequ_setcompact(eout, size, rctr_totalm(&mdl->ctr));
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;
       S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, EquTypeUnset, CONE_NONE));
-      assert(ei == e->start + i);
+      assert(ei == eout->start + i);
    }
 
    return OK;
@@ -1335,12 +1444,12 @@ int rhp_add_cons(Model *mdl, unsigned size, unsigned type, Aequ *eout)
  * @param      mdl   the model
  * @param      size  the size of the constraint 
  * @param      type  the type of constraint
- * @param[out] e     the constraint container
+ * @param[out] eout  the constraint container
  * @param      name  the name of the constraint
  * @return           the error code
  */
 int rhp_add_consnamed(Model *mdl, unsigned size, unsigned type,
-                      Aequ *e, const char *name)
+                      Aequ *eout, const char *name)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
@@ -1349,7 +1458,7 @@ int rhp_add_consnamed(Model *mdl, unsigned size, unsigned type,
    A_CHECK(ename, strdup(name));
 
    S_CHECK(cdat_equname_start(cdat, ename));
-   S_CHECK(rhp_add_cons(mdl, size, type, e));
+   S_CHECK(rhp_add_cons(mdl, size, type, eout));
    S_CHECK(cdat_equname_end(cdat));
 
    return OK;
@@ -1412,21 +1521,21 @@ int rhp_add_funcnamed(Model *mdl, rhp_idx *ei, const char *name)
  *
  * @param      mdl  the model
  * @param      size   the number of mapping to create
- * @param[out] e    the equation index
+ * @param[out] eout the equation index
  *
  * @return           the error code
  */
-int rhp_add_funcs(Model *mdl, unsigned size, Aequ *e)
+int rhp_add_funcs(Model *mdl, unsigned size, Aequ *eout)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
-   S_CHECK(chk_aequ_nonnull(e, __func__));
+   S_CHECK(chk_aequ_nonnull(eout, __func__));
 
-   aequ_setcompact(e, size, rctr_totalm(&mdl->ctr));
+   aequ_setcompact(eout, size, rctr_totalm(&mdl->ctr));
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;
       S_CHECK(rctr_add_equ_empty(&mdl->ctr, &ei, NULL, Mapping, CONE_NONE));
-      assert(ei == e->start + i);
+      assert(ei == eout->start + i);
    }
 
    return OK;
@@ -1441,11 +1550,11 @@ int rhp_add_funcs(Model *mdl, unsigned size, Aequ *e)
  *
  * @param       mdl   the model
  * @param       size  the size of mapping
- * @param[out]  e     the container for indices
+ * @param[out]  eout  the container for indices
  * @param       name  the name of the function 
  * @return            the error code 
  */
-int rhp_add_funcsnamed(Model *mdl, unsigned size, Aequ *e, const char *name)
+int rhp_add_funcsnamed(Model *mdl, unsigned size, Aequ *eout, const char *name)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
@@ -1454,7 +1563,7 @@ int rhp_add_funcsnamed(Model *mdl, unsigned size, Aequ *e, const char *name)
    A_CHECK(ename, strdup(name));
 
    S_CHECK(cdat_equname_start(cdat, ename));
-   S_CHECK(rhp_add_funcs(mdl, size, e));
+   S_CHECK(rhp_add_funcs(mdl, size, eout));
    S_CHECK(cdat_equname_end(cdat));
 
    return OK;
@@ -1845,6 +1954,8 @@ NlTree* rhp_mdl_getnltree(const Model *mdl, rhp_idx ei)
 
 /**
  * @brief Set a given equation as the objective equation
+ *
+ * @ingroup publicAPI
  *
  * @warning this function should not be used when there also
  *          is an objective variable

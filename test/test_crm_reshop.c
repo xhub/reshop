@@ -15,7 +15,7 @@ int main(void)
 #undef SOLVE
 #define SOLVE(TEST_FN) \
   for (size_t i = 0; i < sizeof(reshop_lp_solvers)/sizeof(reshop_lp_solvers[0]); ++i) { \
-    struct rhp_mdl *mdl_reshop = rhp_mdl_new(RHP_BACKEND_RHP); \
+    struct rhp_mdl *mdl_reshop = rhp_mdl_new(RhpBackendReSHOP); \
     if (!mdl_reshop) { status = 1; goto _exit; } \
     struct rhp_mdl *mdl = test_init(); \
     /* ctr_setsolvername(ctr_reshop, reshop_lp_solvers[i]); */\

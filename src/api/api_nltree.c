@@ -122,15 +122,15 @@ static int _chk_node2(NlNode ***node, const char* fn)
  *  @ingroup publicAPI
  *
  *  @param       tree  the expression tree
- *  @param[out]  node  on output, contains the address of the root node
+ *  @param[out]  root  on output, holds the address of the root node
  *
  *  @return            the error code
  */
-int rhp_nltree_getroot(NlTree *tree, NlNode ***node)
+int rhp_nltree_getroot(NlTree *tree, NlNode ***root)
 {
-   S_CHECK(_chk_tree_node_v1(tree, node, __func__));
+   S_CHECK(_chk_tree_node_v1(tree, root, __func__));
 
-   *node = &tree->root;
+   *root = &tree->root;
    return OK;
 }
 
@@ -140,7 +140,7 @@ int rhp_nltree_getroot(NlTree *tree, NlNode ***node)
  *  @ingroup publicAPI
  *
  *  @param       node   the node
- *  @param[out]  child  on output, contains the address of the root node
+ *  @param[out]  child  on output, holds the address of the i-th child
  *  @param       i      the index of the child
  *
  *  @return             the error code
@@ -154,6 +154,7 @@ int rhp_nltree_getchild(NlNode **node, NlNode ***child, unsigned i)
    if (i >= lnode->children_max) {
       error("%s :: index %d >= %d the number of children\n",
                __func__, i, (lnode)->children_max);
+      *child = NULL;
       return Error_IndexOutOfRange;
    }
 
@@ -168,7 +169,7 @@ int rhp_nltree_getchild(NlNode **node, NlNode ***child, unsigned i)
  *  @ingroup publicAPI
  *
  *  @param       node   the node
- *  @param[out]  child  on output, contains the address of the root node
+ *  @param[out]  child  on output, holds the address of the i-th child
  *  @param       i      the index of the child
  *
  *  @return             the error code
@@ -182,6 +183,7 @@ int rhp_nltree_getchild2(NlNode ***node, NlNode ***child, unsigned i)
    if (i >= lnode->children_max) {
       error("%s :: index %d >= %d the number of children\n",
                __func__, i, (lnode)->children_max);
+      *child = NULL;
       return Error_IndexOutOfRange;
    }
 
@@ -201,8 +203,7 @@ int rhp_nltree_getchild2(NlNode ***node, NlNode ***child, unsigned i)
  *
  *  @return        the error code
  */
-int rhp_nltree_arithm(NlTree *tree, NlNode ***node,
-                      unsigned opcode, unsigned nb)
+int rhp_nltree_arithm(NlTree *tree, NlNode ***node, unsigned opcode, unsigned nb)
 {
    S_CHECK(_chk_tree_node_v2(tree, node, __func__));
 
@@ -235,7 +236,7 @@ int rhp_nltree_arithm(NlTree *tree, NlNode ***node,
  *
  *  @ingroup publicAPI
  *
- *  @param mdl     the container
+ *  @param mdl     the model
  *  @param tree    the expression tree
  *  @param node    the current node
  *  @param opcode  the opcode corresponding to the function
@@ -294,7 +295,7 @@ int rhp_nltree_call(Model *mdl, NlTree *tree,
  *
  *  @ingroup publicAPI
  *
- *  @param          mdl   the container
+ *  @param          mdl   the model
  *  @param          tree  the expression tree
  *  @param[in,out]  node  the current node
  *  @param          cst   the constant
@@ -338,8 +339,9 @@ int rhp_nltree_umin(NlTree *tree, NlNode ** restrict *node)
    return nltree_umin(tree, node);
 }
 
-int rhp_nltree_var(Model *mdl, NlTree* tree,
-                NlNode ***node, rhp_idx vi, double coeff)
+/** @copydoc rctr_nltree_var
+*   @ingroup publicAPI */
+int rhp_nltree_var(Model *mdl, NlTree* tree, NlNode ***node, rhp_idx vi, double coeff)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(_chk_tree_node_v2(tree, node, __func__));

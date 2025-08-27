@@ -25,7 +25,7 @@
 /** 
  *  @brief prepare the replacement an OVF variable
  *
- *  @param      mdl         the container (must be RHP)
+ *  @param      mdl         the model (must be RHP)
  *  @param      ovf_vidx    OVF variable index
  *  @param[out] jacptr      pointer to the next equation where the OVF variable
  *                          appears. Must be set to NULL on the first call for a

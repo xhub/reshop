@@ -91,13 +91,13 @@ int rhp_ovf_param_add_scalar(OvfDef* ovf_def, const char *param_name,
  *
  *  @param ovf_def     the definition of the OVF
  *  @param param_name  the parameter name
- *  @param n_vals      the number of values
- *  @param vals        the values of the parameter
+ *  @param size        the number of values
+ *  @param vec         the values of the parameter
  *
  *  @return            the error code
  */
-int rhp_ovf_param_add_vector(OvfDef *ovf_def, const char *param_name,
-                             unsigned n_vals, double *vals)
+int rhp_ovf_param_add_vector(OvfDef *ovf_def, const char *param_name, unsigned size,
+                             double *vec)
 {
    /* ---------------------------------------------------------------------
     * 1. Find the parameter definition corresponding to ``param_name''
@@ -106,7 +106,7 @@ int rhp_ovf_param_add_vector(OvfDef *ovf_def, const char *param_name,
 
   S_CHECK(chk_arg_nonnull(ovf_def, 1, __func__));
   S_CHECK(chk_arg_nonnull(param_name, 2, __func__));
-  S_CHECK(chk_arg_nonnull(vals, 4, __func__));
+  S_CHECK(chk_arg_nonnull(vec, 4, __func__));
 
    struct ovf_param *p = NULL;
    S_CHECK(_get_param(ovf_def, param_name, &p));
@@ -119,8 +119,8 @@ int rhp_ovf_param_add_vector(OvfDef *ovf_def, const char *param_name,
    }
 
    p->type = ARG_TYPE_VEC;
-   MALLOC_(p->vec, double, n_vals);
-   memcpy(p->vec, vals, n_vals*sizeof(double));
+   MALLOC_(p->vec, double, size);
+   memcpy(p->vec, vec, size*sizeof(double));
 
    return OK;
 }

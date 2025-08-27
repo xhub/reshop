@@ -104,7 +104,7 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
 
    while (mdl) {
       switch (mdl->backend) {
-      case RHP_BACKEND_RHP: {
+      case RhpBackendReSHOP: {
          rhp_idx ei_up = cdat_ei_upstream(mdl->ctr.data, ei);
 
          if (valid_ei(ei_up)) {
@@ -121,7 +121,7 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
          break;
       }
 
-      case RHP_BACKEND_GAMS_GMO: {
+      case RhpBackendGamsGmo: {
          int len, *instrs, *args;
 
          S_CHECK(gctr_getopcode(&mdl->ctr, ei, &len, &instrs, &args));
@@ -136,13 +136,13 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
          /* No need to free instrs or args, it comes from a container workspace */
          goto end;
       }
-      case RHP_BACKEND_JULIA:
-      case RHP_BACKEND_AMPL:
+      case RhpBackendJulia:
+      case RhpBackendAmpl:
          goto end;
          break;
       default:
          error("%s :: ERROR: unsupported backend %s", __func__,
-               backend_name(mdl->backend));
+               backend2str(mdl->backend));
       }
    }
 
@@ -1001,14 +1001,14 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
  *
  * Add the equations \f$ ∇ₓf(x)  - (∇ₓg^NL)ᵀ μ  - (Aₓ)ᵀ λ \f$ into the MCP
  *
- * @param mdl_mcp      the destination container
+ * @param mdl_mcp      the destination model
  * @param mp           the mathematical programm (optional)
  * @param cons_nl      the nonlinear constraints (only those belonging to the
  * MP, if any)
  * @param cons_lin     the linear constraints (only those belonging to the MP,
  * if any)
- * @param mdl_src      the source container
- * @param objequ       the objective equation, to be found in ctr_src
+ * @param mdl_src      the source model
+ * @param objequ       the objective equation, to be found in the source model
  *
  * @return         the error code
  */
@@ -1263,16 +1263,16 @@ _exit:
  * @brief Build first-order optimality conditions w.r.t primal variables for an
  * MCP
  *
- * Add the equations \f$ F \f$ into the container
+ * Add the equations \f$ F \f$ into the model
  *
- * @param ctr_mcp      the destination container
+ * @param mdl_mcp      the destination model
  * @param mp           the mathematical programm (optional)
- * @param ctr_src      the source container
+ * @param mdl_src      the source model
  *
  * @return         the error code
  */
-static int fooc_mcp_primal_mcp(Model *ctr_mcp, MathPrgm *mp,
-                               Model *ctr_src) {
+static int fooc_mcp_primal_mcp(Model *mdl_mcp, MathPrgm *mp, Model *mdl_src)
+{
   /* ----------------------------------------------------------------------
    * A few assumptions:
    * - the multiplier are all in the model and their indices matches the once
@@ -1290,13 +1290,13 @@ static int fooc_mcp_primal_mcp(Model *ctr_mcp, MathPrgm *mp,
  *
  * Add the equations \f$ 0\in F(x) + N_C(x) \f$ into the MCP
  *
- * @param mdl_mcp      the destination container
+ * @param mdl_mcp      the destination model
  * @param mp           the mathematical programm (optional)
  * @param cequ_nl      the nonlinear constraints (only those belonging to the
  * MP, if any)
  * @param cequ_lin     the linear constraints (only those belonging to the MP,
  * if any)
- * @param mdl_src      the source container
+ * @param mdl_src      the source model
  *
  * @return             the error code
  */
@@ -1421,7 +1421,7 @@ int fooc_mcp(Model *mdl_mcp)
   /* ----------------------------------------------------------------------
    * TODO: how much is this still true?
    * A few assumptions on the input data:
-   * - the container must be RHP (could be fixed by making the Var and
+   * - the model must be RHP (could be fixed by making the Var and
    *   Equ really modeling language independent
    *
    * On output:

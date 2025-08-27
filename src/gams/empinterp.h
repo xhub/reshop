@@ -464,6 +464,8 @@ typedef enum {
    InterpreterOpsEmb,
 } InterpreterOpsType;
 
+/** @cond */ /* there are name clashes with other function, so doxygen needs to ignore this */
+
 typedef struct interp_ops {
    InterpreterOpsType type;
    int (*ccflib_new)           (Interpreter *restrict interp, unsigned ccf_idx, MathPrgm **mp);
@@ -512,6 +514,8 @@ typedef struct interp_ops {
                       unsigned *param_gidx);
    int (*resolve_tokasident)(Interpreter *interp, IdentData *ident);
 } InterpreterOps;
+
+/** @endcond */
 
 extern const struct interp_ops interp_ops_imm;
 extern const struct interp_ops interp_ops_compiler;

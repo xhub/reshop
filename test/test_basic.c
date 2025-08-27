@@ -26,7 +26,7 @@ int test_oneobjvar1(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {0.};
   double xduals[] = {1.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status xbas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -58,7 +58,7 @@ int test_oneobjvar2(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {0.};
   double xduals[] = {-1.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_UPPER};
+  enum rhp_basis_status xbas[] = {RhpBasisUpper};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -96,7 +96,7 @@ int test_oneobjvarcons1(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {0., NAN};
   double xduals[] = {1., NAN};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_LOWER, RHP_BASIS_UNSET};
+  enum rhp_basis_status xbas[] = {RhpBasisLower, RhpBasisUnset};
   double evals[] = {NAN}; /* Any value greater than 1 is ok...*/
   double eduals[] = {0.};
   // Can't rely on test, constraint is degenerate
@@ -344,10 +344,10 @@ int test_qp1(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {2.};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -395,10 +395,10 @@ int test_qp1bis(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {2.};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -446,9 +446,9 @@ int test_qp2(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   double eduals[] = {1.};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
@@ -498,10 +498,10 @@ int test_qp2bis(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {1.};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -550,10 +550,10 @@ int test_qp3(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {1.};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -601,10 +601,10 @@ int test_qp3bis(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {1.};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -652,10 +652,10 @@ int test_qp4(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {3.};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -703,10 +703,10 @@ int test_qp4bis(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.5, .5};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {3.};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -757,10 +757,10 @@ int test_qp5(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.25, .75};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {3.5};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -811,10 +811,10 @@ int test_qp5bis(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   double xvals[] = {.25, .75};
   double xduals[] = {0., 0.};
-  enum rhp_basis_status xbas[] = {RHP_BASIS_BASIC, RHP_BASIS_BASIC};
+  enum rhp_basis_status xbas[] = {RhpBasisBasic, RhpBasisBasic};
   double eduals[] = {3.5};
   double evals[] = {1.};
-  enum rhp_basis_status ebas[] = {RHP_BASIS_LOWER};
+  enum rhp_basis_status ebas[] = {RhpBasisLower};
   struct sol_vals solvals;
   sol_vals_init(&solvals);
   solvals.xvals = xvals;
@@ -878,9 +878,9 @@ int gnep_tragedy_common(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
     rhp_avar_get(v, i, (rhp_idx*)&col[i]);
     ones[i] = 1.;
     xvals[i] = 1./(N_PLAYERS+1.);
-    xbas[i] = RHP_BASIS_BASIC;
+    xbas[i] = RhpBasisBasic;
     evals[i] = N_PLAYERS/(N_PLAYERS+ 1.);
-    ebas[i] = RHP_BASIS_BASIC;
+    ebas[i] = RhpBasisBasic;
     objvals[i] = xvals[i] * (1. - N_PLAYERS/(N_PLAYERS+1.));
   }
 
@@ -939,7 +939,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
 
    /* TODO(xhub) */
-   if (rhp_mdl_getbackend(mdl_solver) != RHP_BACKEND_GAMS_GMO) {
+   if (rhp_mdl_getbackend(mdl_solver) != RhpBackendGamsGmo) {
       rhp_mdl_free(mdl);
       return status;
    }
@@ -1078,32 +1078,32 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
 
   xvals[yi] = 3;
   xduals[yi] = 0.;
-  xbas[yi] = RHP_BASIS_BASIC;
+  xbas[yi] = RhpBasisBasic;
 
   evals[yidx] = 0.;
   eduals[yidx] = xvals[yi];
-  ebas[yidx] = RHP_BASIS_BASIC;
+  ebas[yidx] = RhpBasisBasic;
 
   evals[cons] = 0;
   eduals[cons] = -5e-2;
-  ebas[cons] = RHP_BASIS_BASIC;
+  ebas[cons] = RhpBasisBasic;
 
   for (size_t i = 0; i < 3; ++i) {
     rhp_idx xi, pi, p_fni;
     RESHOP_CHECK(rhp_avar_get(x, i, &xi));
     xvals[xi] = x_sol[i];
     xduals[xi] = i == 2 ? .25 : 0;
-    xbas[xi] = RHP_BASIS_BASIC;
+    xbas[xi] = RhpBasisBasic;
 
     RESHOP_CHECK(rhp_avar_get(p, i, &pi));
     xvals[pi] = p_sol[i];
     xduals[pi] = 0.;
-    xbas[pi] = i == 1 ? RHP_BASIS_UNSET : RHP_BASIS_BASIC; /* Fixed variable has weird basis status */
+    xbas[pi] = i == 1 ? RhpBasisUnset : RhpBasisBasic; /* Fixed variable has weird basis status */
 
     RHP_CHK(rhp_aequ_get(p_fn, i, &p_fni));
     evals[p_fni] = 0.; //-b[i]; /*i == 1 ? 0. : 100+i;*/
     eduals[p_fni] = p_sol[i];
-    ebas[p_fni] = RHP_BASIS_BASIC;
+    ebas[p_fni] = RhpBasisBasic;
 
   }
 

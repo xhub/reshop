@@ -1099,7 +1099,7 @@ bool valid_foreign_equ_ctrlchildren(const Model *mdl, rhp_idx ei, mpid_t mp_id,
       if (mdl_is_rhp_) {
          S_CHECK(rctr_walkequ(&mdl->ctr, ei, &iterator, &jacval, &vi, &nlflags));
       } else {
-         assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+         assert(mdl->backend == RhpBackendGamsGmo);
          S_CHECK(ctr_equ_itervars(&mdl->ctr, ei, &iterator, &jacval, &vi, &nlflags));
       }
    
@@ -1154,7 +1154,7 @@ int report_error_foreign_equ(const Model *mdl, rhp_idx ei, mpid_t mp_id)
       if (mdl_is_rhp_) {
          S_CHECK(rctr_walkequ(&mdl->ctr, ei, &iterator, &jacval, &vi, &nlflags));
       } else {
-         assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+         assert(mdl->backend == RhpBackendGamsGmo);
          S_CHECK(ctr_equ_itervars(&mdl->ctr, ei, &iterator, &jacval, &vi, &nlflags));
       }
    
@@ -1287,7 +1287,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mpid, AnalysisData *data)
          if (mdl_is_rhp_) {
             S_CHECK(rctr_walkequ(&mdl->ctr, ei, &iterator, &jacval, &vi, &nlflags));
          } else {
-            assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
+            assert(mdl->backend == RhpBackendGamsGmo);
             S_CHECK(ctr_equ_itervars(&mdl->ctr, ei, &iterator, &jacval, &vi, &nlflags));
          }
 

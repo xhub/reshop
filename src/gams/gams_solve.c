@@ -33,7 +33,7 @@ UNUSED static int err_mdlbackend_gmo(Model *mdl)
 //   }
 static int gmdl_gmo2gmo_fops(Model *mdl, Model *mdl_dst, Fops* fops)
 {
-   assert(mdl->backend == RHP_BACKEND_GAMS_GMO && mdl_dst->backend == RHP_BACKEND_GAMS_GMO);
+   assert(mdl->backend == RhpBackendGamsGmo && mdl_dst->backend == RhpBackendGamsGmo);
    UNUSED char buffer[GMS_SSSIZE];
 
    GmsContainerData *gmsdst = mdl_dst->ctr.data;
@@ -55,7 +55,7 @@ static int gmdl_gmo2gmo_fops(Model *mdl, Model *mdl_dst, Fops* fops)
 
 static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
 {
-   assert(mdl->backend == RHP_BACKEND_GAMS_GMO && mdl_dst->backend == RHP_BACKEND_GAMS_GMO);
+   assert(mdl->backend == RhpBackendGamsGmo && mdl_dst->backend == RhpBackendGamsGmo);
    char buffer[GMS_SSSIZE];
 
    S_CHECK(gmdl_cdat_create(mdl_dst, mdl));
@@ -233,8 +233,8 @@ static int gmdl_gmo2gmo(Model *mdl, Model *mdl_dst)
 
 int gmdl_creategmo(Model *mdl, Model *mdl_solver)
 {
-   assert(mdl->backend == RHP_BACKEND_GAMS_GMO);
-   assert(mdl_solver->backend == RHP_BACKEND_GAMS_GMO);
+   assert(mdl->backend == RhpBackendGamsGmo);
+   assert(mdl_solver->backend == RhpBackendGamsGmo);
 
    if (!(mdl_solver->status & MdlInstantiable)) {
       error("[GMOexport] ERROR: %s model '%.*s' #%u is not instantiable\n",

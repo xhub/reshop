@@ -101,10 +101,12 @@ int rhp_empdag_rootsetmpe(Model *mdl, Nash *mpe)
 /**
  * @brief Allocate an mathprgm object
  *
+ * @ingroup publicAPI 
+ *
  * @param  mdl    the overall model
  * @param  sense  the sense of the MP
  *
- * @return the equilibrium object
+ * @return         the MathPrgm object
  */
 MathPrgm *rhp_empdag_newmp(Model *mdl, unsigned sense)
 {
@@ -124,9 +126,11 @@ MathPrgm *rhp_empdag_newmp(Model *mdl, unsigned sense)
 /**
  * @brief Allocate an equilibrium object
  *
+ * @ingroup publicAPI 
+ *
  * @param mdl  the overall model
-
- * @return the equilibrium object
+ *
+ * @return     the equilibrium object
  */
 Nash* rhp_empdag_newmpe(Model *mdl)
 {
@@ -142,6 +146,8 @@ Nash* rhp_empdag_newmpe(Model *mdl)
 
 /** 
  *  @brief add a mathematical programm into the equilibrium
+ *
+ *  @ingroup publicAPI 
  *
  *  @param mpe  the equilibrium structure
  *  @param mp   the mathematical programm
@@ -171,6 +177,8 @@ int rhp_empdag_mpeaddmp(Model *mdl, Nash* mpe, MathPrgm *mp)
  *
  *  This is the first function to call if there are such EMP structure
  *
+ *  @ingroup publicAPI 
+ *
  *  @param  mdl       the reshop model
  *  @param  reserve   the number of MP that should have space
  *
@@ -185,6 +193,13 @@ int rhp_ensure_mp(Model *mdl, unsigned reserve)
    return OK;
 }
 
+/**
+ * @brief Create a new value function EMPDAG arc
+ *
+ * @ingroup publicAPI
+ *
+ * @return a value function EMPDAG arc
+ */
 ArcVFData * rhp_arcVF_new(void)
 {
    ArcVFData *arcVF;
@@ -192,6 +207,16 @@ ArcVFData * rhp_arcVF_new(void)
    return arcVF;
 }
 
+/**
+ * @brief Initialize a value function arc in a given equation
+ *
+ * @ingroup publicAPI
+ *
+ * @param arcVF  the value function arc
+ * @param ei     the equation index
+ *
+ * @return       the error code
+ */
 int rhp_arcVF_init(ArcVFData *arcVF, rhp_idx ei)
 {
    S_CHECK(chk_arg_nonnull(arcVF, 1, __func__));
@@ -200,13 +225,28 @@ int rhp_arcVF_init(ArcVFData *arcVF, rhp_idx ei)
    return OK;
 }
 
-int rhp_arcVF_free(ArcVFData *arcVF)
+/**
+ * @brief Free a given value function arc
+ *
+ * @ingroup publicAPI
+ *
+ * @param arcVF the arc to free
+ */
+void rhp_arcVF_free(ArcVFData *arcVF)
 {
    free(arcVF);
-
-   return OK;
 }
 
+/**
+ * @brief Set the variable index in a (simple) value function arc 
+ *
+ * @ingroup publicAPI
+ *
+ * @param arcVF  the value function arc
+ * @param vi     the variable index
+ *
+ * @return       the error code
+ */
 int rhp_arcVF_setvar(ArcVFData *arcVF, rhp_idx vi)
 {
    S_CHECK(chk_arg_nonnull(arcVF, 1, __func__));
@@ -214,6 +254,16 @@ int rhp_arcVF_setvar(ArcVFData *arcVF, rhp_idx vi)
    return OK;
 }
 
+/**
+ * @brief Set the constant coefficient in a (simple) value function arc 
+ *
+ * @ingroup publicAPI
+ *
+ * @param arcVF  the value function arc
+ * @param cst    the coefficient
+ *
+ * @return       the error code
+ */
 int rhp_arcVF_setcst(ArcVFData *arcVF, double cst)
 {
    S_CHECK(chk_arg_nonnull(arcVF, 1, __func__));
@@ -221,8 +271,19 @@ int rhp_arcVF_setcst(ArcVFData *arcVF, double cst)
    return OK;
 }
 
-int rhp_empdag_mpaddmpVF(Model *mdl, MathPrgm *mp,
-                         MathPrgm *mp_child, ArcVFData *arcVF)
+/**
+ * @brief Add a value function arc between two MathPrgm
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl       the model
+ * @param mp        the parent MathPrgm
+ * @param mp_child  the child MathPrgm
+ * @param arcVF     the value function arc
+ *
+ * @return          the error code
+ */
+int rhp_empdag_mpaddmpVF(Model *mdl, MathPrgm *mp, MathPrgm *mp_child, ArcVFData *arcVF)
 {
    S_CHECK(chk_rmdldag(mdl, __func__));
    S_CHECK(chk_arg_nonnull(mp, 2, __func__));
@@ -236,6 +297,18 @@ int rhp_empdag_mpaddmpVF(Model *mdl, MathPrgm *mp,
    return empdag_mpVFmpbyid(&mdl->empinfo.empdag, id_parent, arcVF);
 }
 
+/**
+ * @brief Add a control arc between two MathPrgm
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl       the model
+ * @param mp        the parent MathPrgm
+ * @param mp_child  the child MathPrgm
+
+ *
+ * @return          the error code
+ */
 int rhp_empdag_mpaddmpCTRL(Model *mdl, MathPrgm *mp, MathPrgm *mp_child)
 {
    S_CHECK(chk_rmdldag(mdl, __func__));

@@ -109,7 +109,9 @@ bool empinfo_is_opt(const EmpInfo *empinfo)
 /**
  * @brief Print the EMP information
  *
- * @param mdl  the reshop model
+ * @ingroup publicAPI
+ *
+ * @param mdl  the model
  */
 void rhp_print_emp(const Model *mdl)
 {

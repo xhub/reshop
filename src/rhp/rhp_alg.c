@@ -34,11 +34,11 @@ int ctr_compress_equs_check_x(const Container *ctr_src, Container *ctr_dst,
       RhpContainerData *cdat_src = (RhpContainerData *)ctr_src->data;
       total_m = cdat_src->total_m;
       deleted_equs = cdat_src->deleted_equs;
-   } else if (ctr_src->backend == RHP_BACKEND_GAMS_GMO) {
+   } else if (ctr_src->backend == RhpBackendGamsGmo) {
       total_m = ctr_src->m;
       deleted_equs = NULL;
    } else {
-      error("Unsupported model type %s", backend_name(ctr_src->backend));
+      error("Unsupported model type %s", backend2str(ctr_src->backend));
       return Error_NotImplemented;
    }
 

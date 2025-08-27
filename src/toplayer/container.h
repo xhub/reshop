@@ -137,10 +137,10 @@ int ctr_copyvarname(const Container *ctr, rhp_idx vi, char *name, unsigned len) 
 int ctr_fixvar(Container *ctr, rhp_idx vi, double val);
 int ctr_equvarcounts(Container *ctr) NONNULL;
 int ctr_getvarsmult(const Container *ctr, Avar *v, double *mult);
-int ctr_getvarsbasis(const Container *ctr, Avar *v, int *basis);
+int ctr_getvarsbasis(const Container *ctr, Avar *v, int *basis_status);
 int ctr_getvarsval(const Container *ctr, Avar *v, double *vals);
 int ctr_getequsmult(const Container *ctr, Aequ *e, double *mult);
-int ctr_getequsbasis(const Container *ctr, Aequ *e, int *basis);
+int ctr_getequsbasis(const Container *ctr, Aequ *e, int *basis_status);
 int ctr_getequsval(const Container *ctr, Aequ *e, double *vals);
 int ctr_getequbyname(const Container *ctr, const char* name, rhp_idx *ei);
 int ctr_getallequsmult(const Container *ctr, double *mult);
@@ -151,32 +151,35 @@ int ctr_getequperp(const Container *ctr, rhp_idx ei, rhp_idx *vi);
 int ctr_getequmult(const Container *ctr, rhp_idx ei, double *multiplier);
 int ctr_getequtype(const Container *ctr, rhp_idx ei, unsigned *type, unsigned *cone);
 int ctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *type);
-int ctr_getcst(const Container *ctr, rhp_idx ei, double *val);
+int ctr_getequcst(const Container *ctr, rhp_idx ei, double *val);
 int ctr_getspecialfloats(const Container *ctr, double *minf, double *pinf, double* nan);
 int ctr_getvarperp(const Container *ctr, rhp_idx vi, rhp_idx *ei);
 int ctr_getallvarsmult(const Container *ctr, double *mult);
-int ctr_getvarbasis(const Container *ctr, rhp_idx vi, rhp_idx *basis);
+int ctr_getvarbasis(const Container *ctr, rhp_idx vi, rhp_idx *basis_status);
 int ctr_getallvarsval(const Container *ctr, double *vals);
 int ctr_getvarbounds(const Container *ctr, rhp_idx vi, double* lb, double *ub);
 int ctr_getvarbyname(const Container *ctr, const char* name, rhp_idx *vi);
-int ctr_getvarval(const Container *ctr, rhp_idx vi, double *value);
-int ctr_getvarmult(const Container *ctr, rhp_idx vi, double *multiplier);
+int ctr_getvarval(const Container *ctr, rhp_idx vi, double *val);
+int ctr_getvarmult(const Container *ctr, rhp_idx vi, double *mult);
 int ctr_getvartype(const Container *ctr, rhp_idx vi, unsigned *type);
-int ctr_setcst(Container *ctr, rhp_idx ei, double val);
-int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis);
-int ctr_setequvalue(Container *ctr, rhp_idx ei, double value);
+int ctr_getvarlb(const Container *ctr, rhp_idx vi, double *lb);
+int ctr_getvarub(const Container *ctr, rhp_idx vi, double *ub);
+int ctr_setequcst(Container *ctr, rhp_idx ei, double val);
+int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis_status);
+int ctr_setequval(Container *ctr, rhp_idx ei, double val);
 int ctr_setequname(Container *ctr, rhp_idx ei, const char *name);
-int ctr_setequmult(Container *ctr, rhp_idx ei, double multiplier);
+int ctr_setequmult(Container *ctr, rhp_idx ei, double mult);
 int ctr_setequtype(Container *ctr, rhp_idx ei, unsigned type, unsigned cone);
 int ctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi);
 int ctr_setequrhs(Container *ctr, rhp_idx ei, double val);
 int ctr_setvarlb(Container *ctr, rhp_idx vi, double lb);
-int ctr_setvarbasis(Container *ctr, rhp_idx vi, int basis);
-int ctr_setvarvalue(Container *ctr, rhp_idx vi, double varl);
-int ctr_setvarmult(Container *ctr, rhp_idx vi, double varm);
+int ctr_setvarbasis(Container *ctr, rhp_idx vi, int basis_status);
+int ctr_setvarval(Container *ctr, rhp_idx vi, double val);
+int ctr_setvarmult(Container *ctr, rhp_idx vi, double mult);
 int ctr_setvarname(Container *ctr, rhp_idx vi, const char *name);
 int ctr_setvartype(Container *ctr, rhp_idx vi, unsigned type);
 int ctr_setvarub(Container *ctr, rhp_idx vi, double ub);
+int ctr_setvarbounds(Container *ctr, rhp_idx vi, double lb, double ub);
 
 
 /* ----------------------------------------------------------------------
@@ -230,11 +233,11 @@ static inline rhp_idx ctr_getcurrent_vi(const Container *ctr, size_t vi)
 static inline bool ctr_is_rhp(const Container *ctr)
 {
    switch (ctr->backend) {
-   case RHP_BACKEND_RHP:
-   case RHP_BACKEND_JULIA:
-   case RHP_BACKEND_AMPL:
+   case RhpBackendReSHOP:
+   case RhpBackendJulia:
+   case RhpBackendAmpl:
       return true;
-   case RHP_BACKEND_GAMS_GMO:
+   case RhpBackendGamsGmo:
    default:
       return false;
    }

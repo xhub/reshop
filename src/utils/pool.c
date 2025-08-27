@@ -127,7 +127,7 @@ NlPool* pool_new_gams(void)
    p->len = 16;
    p->max = 20;
    p->own = true;
-   p->type = RHP_BACKEND_GAMS_GMO;
+   p->type = RhpBackendGamsGmo;
 
    return p;
 

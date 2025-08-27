@@ -24,8 +24,7 @@
  *
  * @return                     the error code
  */
-static int add_multiplier_common_(Container *ctr, enum cone mcone,
-                                  void* mcone_data, rhp_idx *vi)
+static int add_multiplier_common_(Container *ctr, Cone mcone, void* mcone_data, rhp_idx *vi)
 {
    rhp_idx lvi = *vi;
    /* For now we don't want to add zero multipliers */
@@ -89,8 +88,6 @@ static int add_multiplier_common_(Container *ctr, enum cone mcone,
 /**
  * @brief Add positive variables
  *
- * @ingroup publicAPI
- *
  * @param       ctr  the model
  * @param       nb   the number of variables to add
  * @param[out]  v    the abstract variable
@@ -129,8 +126,6 @@ int rctr_add_pos_vars(Container * restrict ctr, unsigned nb, Avar *v)
 /**
  * @brief Add negative variables
  *
- * @ingroup publicAPI
- *
  * @param       ctr  the model
  * @param       nb   the number of variables to add
  * @param[out]  v    the abstract variable
@@ -168,8 +163,6 @@ int rctr_add_neg_vars(Container *ctr, unsigned nb, Avar *v)
 
 /**
  * @brief Add free (or unconstrainted) variables
- *
- * @ingroup publicAPI
  *
  * @param       ctr  the model
  * @param       nb   the number of variables to add
@@ -258,8 +251,6 @@ int rctr_add_box_vars(Container * restrict ctr, unsigned nb,
 
 /**
  * @brief Add box constraint variables with identical bounds 
- *
- * @ingroup publicAPI
  *
  * @param       ctr  the container
  * @param       nb   the number of constraints to add
@@ -351,18 +342,17 @@ int rctr_add_box_vars_ops(Container* ctr, unsigned nb_vars, const void* env,
  *  @warning if vidx is a valid index on input, the total_n number is not changed
  *  It is the caller responsibility to increase that number
  *
- *  @param ctr         the container object
- *  @param cone        the type of cone
- *  @param cone_data   the necessary data to define the cone
- *  @param[in,out] vi  on input, the desired index, on output the index of the
- *                     multiplier variable
+ *  @param         ctr         the container object
+ *  @param         cone        the type of cone
+ *  @param         cone_data   the necessary data to define the cone
+ *  @param[in,out] vi          on input, the desired index,
+ *                             on output the index of the multiplier variable
  *
- *  @return            the error code
+ *  @return                    the error code
  */
-int rctr_add_multiplier_polar(Container *ctr, enum cone cone, void* cone_data,
-                               rhp_idx *vi)
+int rctr_add_multiplier_polar(Container *ctr, Cone cone, void* cone_data, rhp_idx *vi)
 {
-   enum cone mcone;
+   Cone mcone;
    void *mcone_data;
 
    /* TODO(xhub) make 2 fns model_add_multiplier_polar and model_add_multiplier_dual
@@ -381,18 +371,17 @@ int rctr_add_multiplier_polar(Container *ctr, enum cone cone, void* cone_data,
  *  @warning if vidx is a valid index on input, the total_n number is not changed
  *  It is the caller responsibility to increase that number
  *
- *  @param ctr         the container object
- *  @param cone        the type of cone
- *  @param cone_data   the necessary data to define the cone
- *  @param[in,out] vi  on input, the desired index, on output the index of the
- *                     multiplier variable
+ *  @param          ctr         the container object
+ *  @param          cone        the type of cone
+ *  @param          cone_data   the necessary data to define the cone
+ *  @param[in,out]  vi          on input, the desired index,
+ *                              on output the index of the multiplier variable
  *
- *  @return            the error code
+ *  @return                     the error code
  */
-int rctr_add_multiplier_dual(Container *ctr, enum cone cone, void* cone_data,
-                              rhp_idx *vi)
+int rctr_add_multiplier_dual(Container *ctr, Cone cone, void* cone_data, rhp_idx *vi)
 {
-   enum cone mcone;
+   Cone mcone;
    void *mcone_data;
 
    S_CHECK(cone_dual(cone, cone_data, &mcone, &mcone_data));
