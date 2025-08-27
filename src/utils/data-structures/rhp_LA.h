@@ -134,7 +134,7 @@ static inline RHP_INT rhpmat_nnz(const SpMat* m) {
 }
 
 void rhpmat_spfree(struct sp_matrix *m);
-struct sp_matrix* rhpmat_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type) MALLOC_ATTR(rhp_spfree,1) CHECK_RESULT;
+struct sp_matrix* rhpmat_spalloc(RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type) MALLOC_ATTR(rhpmat_spfree,1) CHECK_RESULT;
 SparseMatrix* rhpmat_allocA(M_ArenaLink *arena, RHP_INT m, RHP_INT n, RHP_INT nnzmax, unsigned char type);
 SpMat* rhpmat_triplet(unsigned n, unsigned m, unsigned nnz, int *rowidx, int *colidx, double *data);
 void rhpmat_free(SpMat *m);
