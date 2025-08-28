@@ -1,5 +1,10 @@
-# WE use add_compile_definitions
-cmake_minimum_required (VERSION 3.25)
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+   # Have FetchContent not try sub-build
+   cmake_minimum_required (VERSION 3.30)
+else()
+   # We use add_compile_definitions
+   cmake_minimum_required (VERSION 3.25)
+endif()
 
 # This needs to be set at the top
 # We need that for TLS
