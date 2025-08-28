@@ -193,6 +193,11 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
                                                   ${Python3_INCLUDE_DIRS}
                                                   ${Python3_NumPy_INCLUDE_DIRS})
 
+   # Undefined python symbols are okay
+   if (APPLE)
+      target_link_options(${pytarget} PRIVATE "LINKER:-undefined,dynamic_lookup")
+   endif()
+
    # This is necessary for windows ...
    if (Python3_LIBRARY_DIRS)
       target_link_directories(${pytarget} PRIVATE ${Python3_LIBRARY_DIRS})
