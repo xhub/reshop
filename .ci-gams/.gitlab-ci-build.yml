@@ -191,7 +191,8 @@ build-dac:
               # Parse the line to get the file path and blob hash.
               $parts = $line.Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
               $blobHash = $parts[1]
-              $filePath = $parts[3]
+              $parts = $line.Split("`t", [System.StringSplitOptions]::RemoveEmptyEntries)
+              $filePath = $parts[1]
 
               Write-Host "Processing symbolic link: $filePath" -ForegroundColor Cyan
 
