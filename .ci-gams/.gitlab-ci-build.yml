@@ -7,7 +7,7 @@ build-leg:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
-    - python3 -m venv pyenv
+    - /opt/miniconda3/bin/python3 -m venv pyenv
     - . pyenv/bin/activate
     - pip install swig numpy scipy pytest
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
@@ -38,7 +38,7 @@ build-debug-leg:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
-    - python3 -m venv pyenv
+    - /opt/miniconda3/bin/python3 -m venv pyenv
     - . pyenv/bin/activate
     - pip install swig numpy scipy pytest
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
