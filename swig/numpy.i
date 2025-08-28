@@ -41,7 +41,14 @@
 #endif
 #include "stdio.h"
 #define NPY_NO_DEPRECATED_API NPY_2_0_API_VERSION
+/* numpy handling of complex have not been updated for INTEL_LLVM_COMPILER */
+#ifdef __INTEL_LLVM_COMPILER
+#define __INTEL_COMPILER
+#endif
 #include <numpy/arrayobject.h>
+#ifdef __INTEL_LLVM_COMPILER
+#undef __INTEL_COMPILER
+#endif
 %}
 
 /**********************************************************************/
