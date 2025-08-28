@@ -596,6 +596,10 @@ endif()
 
 if(BUILD_GAMS_DRIVER)
    add_subdirectory(gams_link)
+
+   # optreshopdef
+   set(OPTRESHOP_DEF_OUTPUTDIR ${OUTPUT_DIR})
+   add_subdirectory(utils/gams)
 endif()
 
 #################################################
@@ -604,9 +608,9 @@ endif()
 
 add_subdirectory (swig)
 
-#################
-# Add linker flags #
-#################
+####################
+# Add linker flags 
+####################
 
 
 foreach(_LIBNAME ${LIBNAMES})

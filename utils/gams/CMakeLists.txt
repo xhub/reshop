@@ -58,8 +58,16 @@ endif(APPLE)
 
 # include directories
 if (NOT GamsOptionsSpecWriter_DIR)
-   message(FATAL_ERROR "The option -DGamsOptionsSpecWriter_DIR=xxx, where xxx
-   contains the files GamsOptionsSpecWriter.{cpp,hpp} is mandatory")
+   include(FetchContent)
+
+   FetchContent_Declare(
+      coinor_gamslinks
+      GIT_REPOSITORY https://github.com/coin-or/GAMSlinks.git
+      GIT_TAG        514173ea35eb56894183b7dcc12c90d9c3a20288
+   )
+   FetchContent_MakeAvailable(coinor_gamslinks)
+
+   set(GamsOptionsSpecWriter_DIR "${coinor_gamslinks_SOURCE_DIR}/src/utils")
 endif()
 
 
@@ -96,3 +104,15 @@ include_directories ("${RESHOP_TOPLEVEL}/src/toplayer")
 include_directories ("${RESHOP_TOPLEVEL}/src/utils")
 
 add_executable(reshopopt "${OPTGEN_FILES}")
+
+add_custom_command(TARGET reshopopt POST_BUILD
+                   COMMAND reshopopt
+                   COMMENT "Generating optreshop.def"
+)
+
+if(OPTRESHOP_DEF_OUTPUTDIR)
+   add_custom_command(TARGET reshopopt POST_BUILD
+                      COMMAND ${CMAKE_COMMAND} -E copy optreshop.def "${OPTRESHOP_DEF_OUTPUTDIR}"
+                      COMMENT "Copying optreshop.def"
+   )
+endif(OPTRESHOP_DEF_OUTPUTDIR)
