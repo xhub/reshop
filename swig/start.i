@@ -42,6 +42,7 @@ _Pragma("clang diagnostic ignored \"-Wunused-function\"")
 #endif
 
 
+
 /* Includes the header in the wrapper code */
 #include "reshop.h"
 #include "rhpidx.h"
