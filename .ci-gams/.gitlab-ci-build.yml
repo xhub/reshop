@@ -169,7 +169,7 @@ build-wei:
     - '& $vcvarsallPath x86_amd64'
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
 
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake --trace --debug-output -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
