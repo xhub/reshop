@@ -39,7 +39,7 @@ set(SWIG_USE_SWIG_DEPENDENCIES ON)
 
 find_program(CLANG_EXECUTABLE clang)
 
-if(CLANG_EXECUTABLE)
+if(CLANG_EXECUTABLE AND BUILD_DOCUMENTATION)
     message(STATUS "Python: Clang command found at: ${CLANG_EXECUTABLE}")
 
    set(AST_JSON_FILE "${CMAKE_BINARY_DIR}/generated/ast.json")
