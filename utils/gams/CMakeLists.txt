@@ -67,8 +67,7 @@ if (NOT GamsOptionsSpecWriter_DIR)
 
    FetchContent_Declare(
       coinor_gamslinks
-      GIT_REPOSITORY https://github.com/coin-or/GAMSlinks.git
-      GIT_TAG        514173ea35eb56894183b7dcc12c90d9c3a20288
+      URL https://github.com/coin-or/GAMSlinks/archive/refs/heads/master.zip
    )
    FetchContent_MakeAvailable(coinor_gamslinks)
 
