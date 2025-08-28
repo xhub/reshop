@@ -170,7 +170,7 @@ build-wei:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
     - *pw-run-test
-    - python3 -m venv pyenv
+    - python -m venv pyenv
     - .\pyenv\Scripts\Activate.ps1
     - pip install swig numpy scipy pytest
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
@@ -183,7 +183,7 @@ build-wei:
     - '& $vcvarsallPath x86_amd64'
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
 
-    - cmake --trace --debug-output -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
+    - cmake --trace --debug-output -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python -S .
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
