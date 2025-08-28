@@ -97,6 +97,8 @@ LIST(APPEND OPTGEN_FILES "${RESHOP_TOPLEVEL}/src/ovf/ovf_options.c")
 LIST(APPEND OPTGEN_FILES "${RESHOP_TOPLEVEL}/src/toplayer/rhp_options.c")
 LIST(APPEND OPTGEN_FILES "${RESHOP_TOPLEVEL}/src/toplayer/rhp_options_data.c")
 LIST(APPEND OPTGEN_FILES "${RESHOP_TOPLEVEL}/src/utils/option.c")
+LIST(APPEND OPTGEN_FILES "${RESHOP_TOPLEVEL}/src/utils/os/asprintf.c")
+LIST(APPEND OPTGEN_FILES "${RESHOP_TOPLEVEL}/src/utils/system/compat.c")"
 LIST(APPEND OPTGEN_FILES "${RESHOP_TOPLEVEL}/src/utils/env_utils.c")
 LIST(APPEND OPTGEN_FILES "${GamsOptionsSpecWriter_DIR}/GamsOptionsSpecWriter.cpp")
 
