@@ -226,12 +226,6 @@ build-dac:
 
               Copy-Item -Path $resolvedTargetPath -Destination $filePath -Force
 
-              # Retrieve the content of the target file from the Git index using the resolved path.
-              $fileContent = git show "HEAD:$resolvedTargetPath"
- 
-              # Remove the symbolic link from the working directory and the git index.
-              Remove-Item -Path $filePath -Force
- 
               # Create a new file with the retrieved content at the same path.
               Write-Host "  -> Creating new file at $filePath..."
               Set-Content -Path $filePath -Value $fileContent
