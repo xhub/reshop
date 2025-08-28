@@ -224,13 +224,8 @@ build-dac:
               $symlinkDir = Split-Path -Path $filePath -Parent
               $resolvedTargetPath = Join-Path -Path $symlinkDir -ChildPath $targetPath
 
+              Write-Host "  -> Copying $resolvedTargetPath to $filePath..."
               Copy-Item -Path $resolvedTargetPath -Destination $filePath -Force
-
-              # Create a new file with the retrieved content at the same path.
-              Write-Host "  -> Creating new file at $filePath..."
-              Set-Content -Path $filePath -Value $fileContent
-
-              Write-Host "  -> Successfully replaced symlink $filePath" -ForegroundColor Green
           }
  
           Write-Host ""
