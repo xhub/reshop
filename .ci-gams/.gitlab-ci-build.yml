@@ -7,8 +7,11 @@ build-leg:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
+    - python3 -m venv pyenv
+    - . pyenv/bin/activate
+    - pip install swig numpy scipy pytest
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
@@ -35,8 +38,11 @@ build-debug-leg:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
+    - python3 -m venv pyenv
+    - . pyenv/bin/activate
+    - pip install swig numpy scipy pytest
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
@@ -77,8 +83,11 @@ build-deg:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-deg]
+    - python3 -m venv pyenv
+    - . pyenv/bin/activate
+    - pip install swig numpy scipy pytest
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
@@ -101,8 +110,11 @@ build-dac:
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-dac]
+    - python3 -m venv pyenv
+    - . pyenv/bin/activate
+    - pip install swig numpy scipy pytest
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
@@ -158,7 +170,9 @@ build-wei:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
     - *pw-run-test
-
+    - python3 -m venv pyenv
+    - .\pyenv\Scripts\Activate.ps1
+    - pip install swig numpy scipy pytest
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = Join-Path -Path (Get-Location) -ChildPath "gamsdir"
     - if (Test-Path "gamsdir") { Remove-Item -Path "gamsdir" -Recurse -Force }
@@ -169,7 +183,7 @@ build-wei:
     - '& $vcvarsallPath x86_amd64'
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
 
-    - cmake --trace --debug-output -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake --trace --debug-output -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
