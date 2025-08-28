@@ -8,7 +8,7 @@ build-leg:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
@@ -36,7 +36,7 @@ build-debug-leg:
     - !reference [.get-gams]
     - !reference [.gams-folder-leg]
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Debug -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
@@ -78,13 +78,13 @@ build-deg:
     - !reference [.get-gams]
     - !reference [.gams-folder-deg]
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_deg.txt):$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
 
     # Asan
-    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
   needs: [fetch-ci-scripts,deg-cleanup]
@@ -102,13 +102,13 @@ build-dac:
     - !reference [.get-gams]
     - !reference [.gams-folder-dac]
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -S .
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
 
     # Asan
-    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DBUILD_GAMS_DRIVER=1 -S .
+    - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
   needs: [fetch-ci-scripts,dac-cleanup]
@@ -168,12 +168,13 @@ build-wei:
     - $vcvarsallPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat"
     - '& $vcvarsallPath x86_amd64'
     - $env:Path = "$GAMS_PATH;$GAMS_PATH\gbin;" + $env:Path
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -S .
+
+    - cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icx-cl -DCMAKE_CXX_COMPILER=icx-cl -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build -v | Tee-Object -FilePath 'build_log.txt'
     - cmake --install build -v
     - python ciscripts/report_for_log.py icl build_log.txt warnings.xml
 
-    - cmake -B build-icl -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icl -DCMAKE_CXX_COMPILER=icl -S .
+    - cmake -B build-icl -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER=icl -DCMAKE_CXX_COMPILER=icl -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-icl -v | Tee-Object -FilePath 'build_log-icl.txt'
     - cmake --install build-icl -v
 
@@ -184,12 +185,13 @@ build-wei:
     - Copy-Item -Path "build/output/*.dll" -Destination "$GAMS_PATH"
     - Copy-Item -Path "build/output/optreshop.def" -Destination "$GAMS_PATH"
 
-    - $env:EMPSLV = "reshop"
-    # - bash test/gams/test.sh
-
       # Run tests with regular reshop
     - Run-Test -Command "emplib.exe"  -TestSuite "goempgo" -FailureFile "failures_emp.gms"
     - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
+
+    # Do this last because of the Path injection
+    - $env:Path = "C:\tools\msys64\usr\bin;" + $env:Path
+    - bash -c 'EMPSLV=reshop test/gams/test.sh'
 
     # This currently fails only in CI, not on kermit. Quite hard to investigate
     # - ctest --test-dir build-icl/test; if (-not $?) { ctest --test-dir build-icl/test --rerun-failed --output-on-failure }
