@@ -593,18 +593,17 @@ static int gams_copyvarname(const Container *ctr, rhp_idx vi, char *name,
    return OK;
 }
 
-static int gams_copyequname(const Container *ctr, rhp_idx ei, char *name,
-                            unsigned len)
+static int gams_copyequname(const Container *ctr, rhp_idx ei, char *name, unsigned len)
 {
    const struct ctrdata_gams *gms;
    char quote, sname[GMS_SSSIZE];
+   unsigned j = 0;
 
    gms = ctr->data;
    if (!gms->dct) {
       error("%s :: no dictionary in the gms object!\n", __func__);
       return Error_NullPointer;
    }
-   unsigned j = 0;
 
    if (ei >= ctr->m) {
       error("%s :: the requested equation index %u is larger than the total "
@@ -634,7 +633,7 @@ static int gams_copyequname(const Container *ctr, rhp_idx ei, char *name,
       return Error_GamsCallFailed;
    }
 
-   STRNCPY(name, sname, len);
+   //TODO: STRNCPY(name, sname, len);
    while (j < (len - 1) && sname[j] != '\0') {
       name[j] = sname[j];
       j++;
@@ -642,6 +641,7 @@ static int gams_copyequname(const Container *ctr, rhp_idx ei, char *name,
 
    if (j >= (len - 1) && sname[j] != '\0') {
       name[j] = '\0';
+      error("[GAMS] ERROR: destination string is too small for '%s'\n", sname);
       return Error_SizeTooSmall;
    }
 

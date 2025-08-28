@@ -9,26 +9,46 @@
 #include "gmomcc.h"
 #include "gevmcc.h"
 
+/* As of 0.4.4, icl produces broken code for the function below
+ * Adding printf statement in the while loop makes the problem go away
+ * No bandwidth to investigate this as ICL has been unsupported by intel
+ * as of 2022
+ */
+#ifdef __ICL
+#pragma optimize("", off)
+#endif
+
 static void sub_brackets(char *str, size_t len, char c_open, char c_close)
 {
+   char *end = str+len-1;
+   while (*end == c_close && end > str) {
+      len--;
+      *end-- = '\0';
+   }
+
    char *parenthesis = strchr(str, c_open);
    while (parenthesis) {
-      parenthesis[0] = '_';
-      while (*parenthesis != c_close) {
+      // Adding this printf also unbreaks icl ...
+      //printf("DEBUG: str is '%s'\n", str);
+      *parenthesis++ = '_';
+      while (*parenthesis != c_close && *parenthesis != '\0') {
          if (*parenthesis == ',') {
             *parenthesis = '_';
          }
          parenthesis++;
       }
-      if (parenthesis - str < (ptrdiff_t)(len - 2)) {
+      if (*parenthesis != '\0') {
          parenthesis[0] = '_';
-      } else {
-         parenthesis[0] = '\0';
       }
+
       parenthesis = strchr(str, c_open);
    }
 
 }
+
+#ifdef __ICL
+#pragma optimize("", on)
+#endif
 
 /* Per https://www.gams.com/latest/docs/UG_GAMSPrograms.html#UG_GAMSPrograms_Identifiers */
 UNUSED static bool valid_gams_identifier(const char * restrict name)
@@ -60,9 +80,10 @@ UNUSED static bool valid_gams_identifier(const char * restrict name)
 
 void gams_fix_equvar_names(char * restrict name)
 {
+   assert(name && name[0] != '\0');
    size_t len = strlen(name);
 
-   /* TODO: document why we do that complicated thing rather than jsut subsituting
+   /* TODO: document why we do that complicated thing rather than just substituting
     * '[' with _ and so forth */
    sub_brackets(name, len, '(', ')');
    sub_brackets(name, len, '[', ']');

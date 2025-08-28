@@ -294,6 +294,7 @@ int vnames_lookup_copyname(VecNamesFoocLookup *dat, unsigned idx, char *name,
                   ctr_printvarname(ctr_up, vi_up));
          return OK;
       }
+
       snprintf(name, len, "dLd(%s)", ctr_printvarname(ctr_up, vi_up));
       return OK;
    }

@@ -654,6 +654,7 @@ static int rctr_copyequname_v(const Container *ctr, int ei, char *str, unsigned 
    const RhpContainerData *cdat = (RhpContainerData *) ctr->data;
 
    rhp_idx ei_up = cdat_ei_upstream(cdat, ei);
+
    if (!valid_ei(ei_up)) {
       ei_up = cdat_equname_inherited(cdat, ei);
    }
@@ -671,7 +672,7 @@ static int rctr_copyequname_v(const Container *ctr, int ei, char *str, unsigned 
 
    const struct vnames *vnames = &cdat->equ_names.v;
 
-   if (ei < vnames->start) {
+   if (vnames->type == VNAMES_UNSET || ei < vnames->start) {
       goto _notfound;
    }
 
@@ -680,6 +681,7 @@ static int rctr_copyequname_v(const Container *ctr, int ei, char *str, unsigned 
       if (ei <= vnames->end) { /* end is an index */
 
          switch (vnames->type) {
+
             case VNAMES_REGULAR:
                {
                   int rc = _vector_name_get(vnames->list, ei, str, len);
@@ -707,7 +709,7 @@ static int rctr_copyequname_v(const Container *ctr, int ei, char *str, unsigned 
                   assert(len > cur_len);
                   
                   if (!ctr->equmeta) {
-                    errormsg("%s :: while querying Lagrangian name, equmeta is NULL");
+                    error("%s :: while querying Lagrangian name, equmeta is NULL", __func__);
                     return Error_NullPointer;
                   }
                   rhp_idx vi = ctr->equmeta[ei].dual; assert(valid_vi(vi));
