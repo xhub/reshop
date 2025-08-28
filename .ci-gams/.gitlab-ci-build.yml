@@ -16,10 +16,16 @@ build-leg:
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
 
+    - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
     # Asan
     - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan
     - cmake --install build-asan
+
+    - export LD_LIBRARY_PATH="$GAMSDIR"
+    - ctest --test-dir build-asan/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
 
   needs: [fetch-ci-scripts]
   artifacts:
@@ -46,6 +52,8 @@ build-debug-leg:
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
+    - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
   needs: [fetch-ci-scripts]
   artifacts:
     name: reshop-debug-leg
@@ -92,10 +100,16 @@ build-deg:
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py gcc build_log.txt warnings.xml
 
+    - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
     # Asan
     - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
+
+    - export DYLD_LIBRARY_PATH="$GAMSDIR"
+    - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
+
   needs: [fetch-ci-scripts,deg-cleanup]
   artifacts:
     name: reshop-deg
@@ -119,10 +133,16 @@ build-dac:
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
 
+    - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
+
     # Asan
     - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
+
+    - export DYLD_LIBRARY_PATH="$GAMSDIR"
+    - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
+
   needs: [fetch-ci-scripts,dac-cleanup]
   artifacts:
     name: reshop-dac

@@ -38,8 +38,6 @@ test-leg:
     - !reference [ .gams-folder-leg ]
     - *sh-run-test
 
-    - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
-
     - cp -ra "/cache/gams-installs/$(cat gams_folder_leg.txt)" gamsdir
     - export GAMSDIR="$(pwd)/gamsdir"
     #    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
@@ -59,9 +57,6 @@ test-leg:
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
 
-
-    - export LD_LIBRARY_PATH="$GAMSDIR"
-    - ctest --test-dir build-asan/test -E gams --output-junit doctest_results_linux.xml || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
 
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
@@ -90,8 +85,6 @@ test-debug-leg:
     - !reference [ .get-gams ]
     - !reference [ .gams-folder-leg ]
     - *sh-run-test
-
-    - ctest --test-dir build/test --output-junit doctest_results_linux.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
 
     - cp -ra "/cache/gams-installs/$(cat gams_folder_leg.txt)" gamsdir
     - export GAMSDIR="$(pwd)/gamsdir"
@@ -123,8 +116,6 @@ test-deg:
     - !reference [.gams-folder-deg]
     - *sh-run-test
 
-    - ctest --test-dir build/test --output-junit doctest_results_deg.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
-
     - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)" gamsdir
     - chmod -R +w gamsdir
     - export GAMSDIR="$(pwd)/gamsdir"
@@ -141,9 +132,6 @@ test-deg:
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
-
-    - export DYLD_LIBRARY_PATH="$GAMSDIR"
-    - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
 
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
@@ -172,8 +160,6 @@ test-dac:
     - !reference [.gams-folder-dac]
     - *sh-run-test
 
-    - ctest --test-dir build/test --output-junit doctest_results_dac.xml || ctest --test-dir build/test --rerun-failed --output-on-failure
-
     - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_dac.txt)" gamsdir
     - chmod -R +w gamsdir
     - export GAMSDIR="$(pwd)/gamsdir"
@@ -190,10 +176,6 @@ test-dac:
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
-
-
-    - export DYLD_LIBRARY_PATH="$GAMSDIR"
-    - ctest --test-dir build-asan/test -E gams || ctest --test-dir build-asan/test -E gams --rerun-failed --output-on-failure
 
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
