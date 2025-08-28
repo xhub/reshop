@@ -57,6 +57,8 @@ test-leg:
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
 
+    # Needed for ASAN
+    - export LD_LIBRARY_PATH="$GAMSDIR"
 
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
