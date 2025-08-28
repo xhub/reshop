@@ -161,6 +161,69 @@ build-dac:
        Set-Location ..
    }
 
+# PowerShell script to find all symbolic links in a Git repository
+# and replace them with the content of the files they point to.
+
+.pw-replace-symlinks: &pw-replace-symlinks |
+  function Replace-SymlinksWithFiles {
+      param()
+
+      # Check if we are in a Git repository
+      if (-not (Test-Path .git -PathType Container)) {
+          Write-Error "Current directory is not a Git repository."
+          return
+      }
+
+      Write-Host "Searching for symbolic links in the Git repository..." -ForegroundColor Yellow
+
+      try {
+          # Use git ls-files -s to find all symbolic links.
+          # The mode for a symbolic link is 120000.
+          # The output format is: <mode> <object> <stage> <path>
+          $symlinks = git ls-files -s | Where-Object { $_.StartsWith("120000") }
+
+          if (-not $symlinks) {
+              Write-Host "No symbolic links found. Exiting." -ForegroundColor Green
+              return
+          }
+
+          foreach ($line in $symlinks) {
+              # Parse the line to get the file path and blob hash.
+              $parts = $line.Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+              $blobHash = $parts[1]
+              $filePath = $parts[3]
+
+              Write-Host "Processing symbolic link: $filePath" -ForegroundColor Cyan
+
+              # Get the content of the file the symlink points to.
+              # The content of the symlink itself is the path to the target file.
+              $targetPath = git cat-file -p $blobHash
+              Write-Host "  -> Symlink points to: $targetPath" -ForegroundColor DarkCyan
+
+              $symlinkDir = Split-Path -Path $filePath -Parent
+              $resolvedTargetPath = Join-Path -Path $symlinkDir -ChildPath $targetPath
+
+              # Retrieve the content of the target file from the Git index using the resolved path.
+              $fileContent = git show "HEAD:$resolvedTargetPath"
+ 
+              # Remove the symbolic link from the working directory and the git index.
+              Remove-Item -Path $filePath -Force
+ 
+              # Create a new file with the retrieved content at the same path.
+              Write-Host "  -> Creating new file at $filePath..."
+              Set-Content -Path $filePath -Value $fileContent
+
+              Write-Host "  -> Successfully replaced symlink $filePath" -ForegroundColor Green
+          }
+ 
+          Write-Host ""
+          Write-Host "Finished replacing all symbolic links with their content." -ForegroundColor Green
+      }
+      catch {
+          Write-Error "An error occurred: $_"
+      }
+  }
+
 build-wei:
   stage: build
   tags: [pond]
@@ -170,6 +233,7 @@ build-wei:
     - !reference [.get-gams-wei]
     - !reference [.gams-folder-wei]
     - *pw-run-test
+    - *pw-replace-symlinks
     - python -m venv pyenv
     - .\pyenv\Scripts\Activate.ps1
     - pip install swig numpy scipy pytest setuptools
@@ -204,6 +268,7 @@ build-wei:
     - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
 
     # Do this last because of the Path injection
+    - Replace-SymlinksWithFiles
     - $env:Path = "C:\tools\msys64\usr\bin;" + $env:Path
     - bash -c 'EMPSLV=reshop test/gams/test.sh'
 
