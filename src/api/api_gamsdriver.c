@@ -2,13 +2,6 @@
 #include "reshop_config.h"
 
 #include <stdio.h>
-#ifdef _WIN32
-#include <io.h>
-#define access _access
-#define R_OK 4
-#else
-#include <unistd.h>
-#endif
 
 #include "checks.h"
 #include "ctrdat_gams.h"
@@ -22,6 +15,14 @@
 #include "reshop-gams.h"
 #include "rhp_fwd.h"
 #include "rhp_options.h"
+
+#ifdef _WIN32
+#include <io.h>
+#define access _access
+#define R_OK 4
+#else
+#include <unistd.h>
+#endif
 
 /**
  * @brief Load the GAMS libraries (GMO, GEC, DCT, OPT, CFG)

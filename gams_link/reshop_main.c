@@ -49,15 +49,19 @@ static void rhpFini(void)
 }
 
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <windows.h>
-BOOL WINAPI DllMain(
-   HINSTANCE hInst,
-   DWORD     reason,
-   LPVOID    reserved
-)
+#include <process.h>
+#if !defined(_MSC_VER)
+BOOL WINAPI DllMain( HINSTANCE hInst, DWORD reason, LPVOID reserved);
+#endif
+
+BOOL WINAPI DllMain( HINSTANCE hInst, DWORD reason, LPVOID reserved)
 {
-   switch( reason )
-   {
+   switch (reason) {
       case DLL_PROCESS_ATTACH:
          rhpInit();
          break;
@@ -65,8 +69,6 @@ BOOL WINAPI DllMain(
          rhpFini();
          break;
       case DLL_THREAD_ATTACH:
-         /* ignored */
-         break;
       case DLL_THREAD_DETACH:
          /* ignored */
          break;

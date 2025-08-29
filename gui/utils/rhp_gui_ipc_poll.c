@@ -5,6 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "rhp_socket_server.h"
+#include "rhpgui_error.h"
+#include "rhpgui_ipc.h"
+#include "rhp_gui_data.h"
+#include "rhpgui_ipc_poll.h"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -12,24 +18,17 @@
 #define poll WSAPoll
 #define close closesocket
 
+#ifdef _MSC_VER
 #pragma comment(lib, "ws2_32.lib")  // Link against Winsock library
+#endif
 
 #else
 #include <sys/socket.h>
 #include <poll.h>
-#endif
-
-#ifdef HAS_UNISTD
 #include <unistd.h>
 #endif
 
 #define MAX_CLIENTS 10
-
-#include "rhp_socket_server.h"
-#include "rhpgui_error.h"
-#include "rhpgui_ipc.h"
-#include "rhp_gui_data.h"
-#include "rhpgui_ipc_poll.h"
 
 typedef struct {
    u8 max;

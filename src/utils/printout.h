@@ -1,6 +1,8 @@
 #ifndef PRINTOUT_H
 #define PRINTOUT_H
 
+#include <stdlib.h>
+
 #include "compat.h"
 #include "printout_data.h"
 #include "rhp_options.h"

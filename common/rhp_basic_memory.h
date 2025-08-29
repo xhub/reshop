@@ -11,6 +11,7 @@ ALLOC_SIZE(2) MALLOC_ATTR_SIMPLE
 static inline void* myrealloc(void *ptr, size_t size)
 {
 #if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ > 11)
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuse-after-free"
 #pragma GCC diagnostic ignored "-Wfree-nonheap-object"
 #endif

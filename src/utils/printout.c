@@ -6,7 +6,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(__linux__) || defined (__APPLE__)
+#ifdef _WIN32
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <winsock2.h>
+#ifndef INVALID_SOCKET
+#error "INVALID_SOCKET must be defined for valid()"
+#endif
+
+#define valid_fd(x) ((x) != INVALID_SOCKET)
+
+#else
+
+#define valid_fd(x) ((x) >= 0)
+
+#endif
+
+#if defined(HAS_UNISTD) && !defined(_WIN32)
 #include <unistd.h>
 #endif
 
@@ -298,7 +317,7 @@ static tlsvar int log_fd = -1;
 
 static NONNULL void print_fd(rhpfd_t fd, unsigned mode, const char *buf)
 {
-   assert (fd >= 0);
+   assert (valid_fd(fd));
 
    u8 lvl;
    unsigned mode_verbosity = (mode & 0xFc);

@@ -60,9 +60,11 @@
 
 #define CHECK_RESULT __attribute__ ((warn_unused_result))
 
-
+#ifdef __MINGW64__
+#define FORMAT_CHK(S,A) __attribute__ ((format (gnu_printf, S, A)))
+#else
 #define FORMAT_CHK(S,A) __attribute__ ((format (printf, S, A)))
-
+#endif
 
 #define UNUSED __attribute__((unused))
 
@@ -79,7 +81,7 @@
 #  define FALLTHRU __attribute__((fallthrough));
 #endif
 
-#if !defined(__clang__) && (__GNUC__ >= 11) && !defined(_WIN32)
+#if !defined(__clang__) && (__GNUC__ >= 11)
    #define MALLOC_ATTR(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
    #define IGNORE_DEALLOC_MISMATCH(EXPR) \
        _Pragma("GCC diagnostic push"); _Pragma("GCC diagnostic ignored \"-Wmismatched-dealloc\""); \
@@ -97,7 +99,7 @@
 
 #define MALLOC_ATTR_SIMPLE __attribute__ ((malloc))
 
-#if !defined(__clang__) && (__GNUC__ >= 10) && !defined(_WIN32)
+#if !defined(__clang__) && (__GNUC__ >= 10)
 #   define ACCESS_ATTR(TYPE, ...) __attribute__ ((access (TYPE, __VA_ARGS__)))
 #else
 #   define ACCESS_ATTR(TYPE, ...)

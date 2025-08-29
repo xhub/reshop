@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#ifdef HAS_UNISTD
+#if defined(HAS_UNISTD) && !defined(_WIN32)
 #include <unistd.h>
 #endif
 

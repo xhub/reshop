@@ -100,6 +100,8 @@ add_executable(reshop_imgui ${GUI_C_FILES} ${GUI_CPP_FILES} ${IMGUI_FILES})
 
 find_package(glfw3)
 
+set (IMGUI_LIBRARIES ${EXTRA_LIBS})
+
 if (glfw3_FOUND)
 
    target_include_directories(reshop_imgui PRIVATE glfw)
@@ -128,6 +130,7 @@ else (glfw3_FOUND)
                -DGLFW_BUILD_TESTS=0
                -DGLFW_BUILD_DOCS=0
                -DGLFW_LIBRARY_TYPE=STATIC
+               -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${CMAKE_TOOLCHAIN_FILE}
                -DCMAKE_INSTALL_LIBDIR=${glfw3_DESTDIR}
 					-DCMAKE_INSTALL_BINDIR=${glfw3_DESTDIR}
 					-DCMAKE_INSTALL_INCLUDEDIR=${glfw3_DESTDIR}

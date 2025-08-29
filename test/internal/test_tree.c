@@ -291,7 +291,7 @@ int main(int argc, char **argv)
 {
    double *pool2;
    struct rhp_mdl *mdl;
-   A_CHECK(mdl, rhp_mdl_new(RhpBackendReSHOP));
+   A_CHECK(mdl, mdl_new(RhpBackendReSHOP));
    Container *ctr = &mdl->ctr;
 
    int status = EXIT_SUCCESS;
@@ -324,7 +324,9 @@ int main(int argc, char **argv)
    }
 
 _exit:
-   rhp_mdl_free(mdl);
+   if (mdl) {
+      mdl_release(mdl);
+   }
 
    return status;
 }

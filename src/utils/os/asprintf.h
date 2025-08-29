@@ -13,11 +13,12 @@
 #include "compat.h"
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
-#define vscprintf _vscprintf
-int vasprintf(char **strp, const char *format, va_list ap);
-int asprintf(char **strp, const char *format, ...);
-#else
-int vscprintf(const char *format, va_list ap) FORMAT_CHK(1,0);
+int asprintf(char **strp, const char *format, ...)
+#ifdef __GNUC__
+__attribute__ ((format (gnu_printf, 2, 3)))
+__attribute__ ((format (ms_printf, 2, 3)))
+#endif
+;
 #endif
 
 #endif // ASPRINTF_H

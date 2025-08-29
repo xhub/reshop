@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef HAS_UNISTD
+#if defined(HAS_UNISTD) && !defined(_WIN32)
 #include <unistd.h>
 #endif
 
@@ -38,16 +38,37 @@ typedef SSIZE_T ssize_t;
 
 static int gen_uuid(void)
 {
-    UUID uuid;
-    if (CoCreateGuid(&uuid) == S_OK) {
-        unsigned long long *final_digits = &uuid.Data4;
-        snprintf(uuidstr, sizeof(uuidstr), "%08lX-%04X-%04X-%04X-%012llX",
-                 uuid.Data1, uuid.Data2, uuid.Data3,
-                 (uuid.Data4[0] << 8) | uuid.Data4[1],
-                  (*final_digits) >> 2*sizeof(unsigned char) );
-      return 0;
-    }
+   unsigned i = 0;
+   UUID uuid;
+   switch (UuidCreate(&uuid)) {
+   case RPC_S_OK:
+   case RPC_S_UUID_LOCAL_ONLY:
+      break;
+   default:
+      goto _err;
+   }
 
+   RPC_CSTR str;
+
+   if (UuidToStringA(&uuid, &str) != RPC_S_OK) { goto _err; }
+
+   for (; i < sizeof(uuidstr) && str[i] != '\0'; ++i) {
+      uuidstr[i] = (char)str[i];
+   }
+
+   if (i >= sizeof(uuidstr)) {
+      error("[OS] ERROR: UUID '%s' is too long, max length is %zu. Please file bug report\n",
+            str, sizeof(uuidstr));
+      RpcStringFree(&str);
+      return -1;
+   }
+
+   uuidstr[i] = '\0';
+
+   RpcStringFree(&str);
+
+_err:
+   errormsg("[OS] ERROR: failed to generate a UUID\n");
    return -1;
 }
 

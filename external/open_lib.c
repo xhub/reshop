@@ -93,13 +93,23 @@ void* get_function_address(void* handle, const char* func)
   void* ptr;
 #ifdef _WIN32
   HMODULE handleW = (HMODULE) handle;
-  uintptr_t addr = (uintptr_t)GetProcAddress(handleW, func);
-  if (!addr)
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
+  ptr = (void*)GetProcAddress(handleW, func);
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
+  if (!ptr)
   {
     DWORD err = GetLastError();
     error("[open_library] Error %lu while trying to find procedure %s\n", err, func);
   }
-   ptr = (void*)addr;
 #else
   ptr = dlsym(handle, func);
   if (!ptr) {

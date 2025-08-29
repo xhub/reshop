@@ -5,7 +5,9 @@
 #include <windows.h>
 #include <rpc.h>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "rpcrt4.lib")
+#endif
 
 // for malloc
 #include <stdlib.h>
@@ -28,7 +30,9 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
    case DLL_PROCESS_ATTACH:
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */
+#ifndef __MSVCRT__
        _set_printf_count_output(1);
+#endif
       rhp_syncenv();
       logging_syncenv();
       option_init();
@@ -61,7 +65,7 @@ char *strndup(const char *str, size_t chars)
 char *win_gettmpdir(void)
 {
    unsigned path_len = 260;
-   char *tempDir;
+   char *tempDir, *tmpdir;
    MALLOC_NULL(tempDir, char, path_len);
 
    DWORD result = GetTempPath(path_len, tempDir), dw;
@@ -78,14 +82,27 @@ char *win_gettmpdir(void)
    }
 
    UUID uuid;
-   UuidCreate(&uuid);
-   RPC_CSTR  str;
+   switch (UuidCreate(&uuid)) {
+   case RPC_S_OK:
+   case RPC_S_UUID_LOCAL_ONLY:
+      break;
+   default:
+      dw = GetLastError();
+      error("[OS] ERROR: UuidCreate() triggered error %lu\n", dw);
+      return NULL;
+   }
 
-   if (UuidToString(&uuid, &str) != RPC_S_OK) { goto _err; }
+   RPC_CSTR str;
 
-   char *tmpdir;
+   if (UuidToStringA(&uuid, &str) != RPC_S_OK) {
+      dw = GetLastError();
+      error("[OS] ERROR: UuidToStringA() triggered error %lu\n", dw);
+      return NULL;
+   }
+
    if (asprintf(&tmpdir, "%s" DIRSEP "reshop_%s", tempDir, str) < 0) {
       errormsg("%s ERROR: asprintf() failed!\n");
+      RpcStringFree(&str);
       return NULL;
    }
 
@@ -95,7 +112,7 @@ char *win_gettmpdir(void)
 
 _err:
    dw = GetLastError();
-   error("%s ERROR: GetTempPath() triggered error %lu\n", __func__, dw);
+   error("[OS] ERROR: GetTempPath() triggered error %lu\n", dw);
    return NULL;
 }
 

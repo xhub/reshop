@@ -6,7 +6,6 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <winsock2.h>
 #include <io.h>
 #include <afunix.h>
@@ -15,7 +14,9 @@
 #undef errno
 #define errno WSAGetLastError()
 
+#ifdef _MSC_VER
 #pragma comment(lib, "Ws2_32.lib")
+#endif
 #else
 
 #include <sys/poll.h>

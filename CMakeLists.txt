@@ -32,10 +32,15 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
    set(WINDOWS 1)
    # Poor man's detection of not using MSVC libc
    # Can't use MSVC as the compiler may try not to emulate cl.exe
-   if (NOT CYGWIN AND NOT MINGW)
+   if (NOT CYGWIN)
       add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
       add_compile_definitions(_CRT_NONSTDC_NO_WARNINGS)
    endif()
+endif()
+
+# We want to get MINGW64_VERSION_MAJOR
+if (MINGW)
+   include(mingw_info)
 endif()
 
 # FIXME: remove intel classical compiler asap
@@ -298,6 +303,10 @@ if (APPLE OR UNIX)
    LIST(APPEND EXTRA_LIBS "m")
 endif (APPLE OR UNIX)
 
+# In that case, #pragma comment(lib, ...) does not work
+if (MINGW)
+   set (EXTRA_LIBS ws2_32 rpcrt4)
+endif()
 
 # TODO: move this to a separate file?
 function(cpy4test libname)
@@ -422,16 +431,18 @@ if(NOT GAMSSYSDIR AND GAMS_EXE_HOST)
 
    # Now we get GAMSDIR_TARGET for the tests
    # This is different from the GAMSDIR_HOST if we are crosscompiling
-   if (NEED_WINE)
-      set(GAMS_EXE_TARGET "wine;gams.exe")
-   else(NEED_WINE)
+   if (CMAKE_CROSSCOMPILING_EMULATOR)
+      set(GAMS_EXE_TARGET ${CMAKE_CROSSCOMPILING_EMULATOR})
+      list(APPEND GAMS_EXE_TARGET "gams.exe")
+   else()
       set(GAMS_EXE_TARGET "${GAMS_EXE_HOST}")
-   endif(NEED_WINE)
+   endif()
+
 
    execute_process (COMMAND ${GAMS_EXE_TARGET} "${CMAKE_SOURCE_DIR}/cmake/gams_sysdir.gms" "lo=3" "scrdir=${SCRDIR}"
-                    RESULT_VARIABLE GAMS_RC
-                    OUTPUT_VARIABLE GAMS_STDOUT
-                    ERROR_VARIABLE GAMS_STDERR)
+                RESULT_VARIABLE GAMS_RC
+                OUTPUT_VARIABLE GAMS_STDOUT
+                ERROR_VARIABLE GAMS_STDERR)
 
    if (GAMS_RC GREATER 0)
       message(WARNING "Could not execute target GAMS executable ${GAMS_EXE_TARGET}.\n"

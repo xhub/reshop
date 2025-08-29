@@ -18,7 +18,7 @@
 
 tlsvar u64 pagesize = M_ARENA_COMMIT_SIZE;
 
-#ifdef HAS_UNISTD
+#if defined(HAS_UNISTD) && !defined(_WIN32)
 #include <unistd.h>
 #endif
 
