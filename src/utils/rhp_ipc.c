@@ -40,10 +40,11 @@ static int gen_uuid(void)
 {
     UUID uuid;
     if (CoCreateGuid(&uuid) == S_OK) {
+        unsigned long long *final_digits = &uuid.Data4;
         snprintf(uuidstr, sizeof(uuidstr), "%08lX-%04X-%04X-%04X-%012llX",
                  uuid.Data1, uuid.Data2, uuid.Data3,
                  (uuid.Data4[0] << 8) | uuid.Data4[1],
-                 *((unsigned long long*)&uuid.Data4[2]));
+                  (*final_digits) >> 2*sizeof(unsigned char) );
       return 0;
     }
 
