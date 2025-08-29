@@ -333,3 +333,8 @@ endmacro()
 foreach (P IN LISTS BUILD_PYTHON)
    SETUP_SWIG_PYTHON_MODULE(${P})
 endforeach()
+
+# If not GAMS install has been detected, rely on the "julia" binaries to get PATH
+if (NOT GAMS_IS_INSTALLED)
+   download_path_libs()
+endif(NOT GAMS_IS_INSTALLED)

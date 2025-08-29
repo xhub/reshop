@@ -20,6 +20,7 @@ project (ReSHOP VERSION          "0.4.4"
 #custom stuff
 include(compiler_flags)
 include(linker_options)
+include(download_path_libs)
 
 # Keep that on top
 set (CMAKE_C_STANDARD 17)
