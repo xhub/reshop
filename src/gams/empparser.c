@@ -705,7 +705,7 @@ static inline unsigned _toklen(const char *str)
    return len;
 }
 
-static inline int _eof(Token *tok)
+static inline int tok_eof(Token *tok)
 {
    tok->type = TOK_EOF;
    tok->len  = 0;
@@ -1750,7 +1750,7 @@ static int lexer(Interpreter *interp, enum ParseMode mode, unsigned *p)
    tok->linenr = interp->linenr;
 
    if (eof) {
-      status = _eof(tok);
+      status = tok_eof(tok);
       goto _exit;
    }
 
