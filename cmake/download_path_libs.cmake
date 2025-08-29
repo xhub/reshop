@@ -23,8 +23,8 @@ function(download_path_libs)
    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
    foreach(_F ${PATH_LIBS})
-      MESSAGE(STATUS "Downloading file ${_F} to ${CMAKE_BINARY_DIR}/test/${_F}")
-      file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_BINARY_DIR}/test/${_F}
+      MESSAGE(STATUS "Downloading file ${_F} to ${CMAKE_CURRENT_BINARY_DIR}/${_F}")
+      file(DOWNLOAD ${PATH_BASEURL}${URL_SUBDIR}/${_F} ${CMAKE_CURRENT_BINARY_DIR}/${_F}
            TIMEOUT 10
            STATUS DL_STATUS)
 
