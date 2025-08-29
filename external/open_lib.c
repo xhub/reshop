@@ -94,7 +94,7 @@ void* get_function_address(void* handle, const char* func)
 #ifdef _WIN32
   HMODULE handleW = (HMODULE) handle;
   uintptr_t addr = (uintptr_t)GetProcAddress(handleW, func);
-  if (!ptr)
+  if (!addr)
   {
     DWORD err = GetLastError();
     error("[open_library] Error %lu while trying to find procedure %s\n", err, func);
