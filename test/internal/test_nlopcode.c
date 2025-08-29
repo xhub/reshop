@@ -103,7 +103,7 @@ static int test_nlopcode2dot(const int *instrs, const int *args, const char *tes
 
    if (rc) {
       (void)fprintf(stderr, "ERROR while create DOT representation of %s\n", testname);
-      goto exit_;
+      return rc;
    }
 
    const char *do_display = mygetenv("RHP_TEST_NLOPCODE_DISPLAY");
