@@ -561,7 +561,8 @@ if (_LIBRESHOP_TYPE STREQUAL "STATIC_LIBRARY" AND CMAKE_AR MATCHES "llvm-ar")
 endif()
 
 
-set_target_properties(${RESHOP_LIBNAME} PROPERTIES VERSION ${ReSHOP_VERSION})
+# TODO: this create trouble for now
+#set_target_properties(${RESHOP_LIBNAME} PROPERTIES VERSION ${ReSHOP_VERSION})
 
 set (LIBNAMES "${RESHOP_LIBNAME}")
 

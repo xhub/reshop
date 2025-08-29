@@ -79,21 +79,25 @@
 #  define FALLTHRU __attribute__((fallthrough));
 #endif
 
-#if !defined(__clang__) && (__GNUC__ >= 11)
+#if !defined(__clang__) && (__GNUC__ >= 11) && !defined(_WIN32)
    #define MALLOC_ATTR(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
    #define IGNORE_DEALLOC_MISMATCH(EXPR) \
        _Pragma("GCC diagnostic push"); _Pragma("GCC diagnostic ignored \"-Wmismatched-dealloc\""); \
        EXPR; \
        _Pragma("GCC diagnostic pop");
 
-#else
+#elif defined(__clang__)
    #define MALLOC_ATTR(...) __attribute__ ((malloc))
    #define IGNORE_DEALLOC_MISMATCH(EXPR) EXPR
+
+#else
+   #define MALLOC_ATTR(...)
+   #define IGNORE_DEALLOC_MISMATCH(EXPR)
 #endif
 
 #define MALLOC_ATTR_SIMPLE __attribute__ ((malloc))
 
-#if !defined(__clang__) && (__GNUC__ >= 10)
+#if !defined(__clang__) && (__GNUC__ >= 10) && !defined(_WIN32)
 #   define ACCESS_ATTR(TYPE, ...) __attribute__ ((access (TYPE, __VA_ARGS__)))
 #else
 #   define ACCESS_ATTR(TYPE, ...)
