@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -92,12 +93,13 @@ void* get_function_address(void* handle, const char* func)
   void* ptr;
 #ifdef _WIN32
   HMODULE handleW = (HMODULE) handle;
-  ptr = (void*) GetProcAddress(handleW, func);
+  uintptr_t addr = (uintptr_t)GetProcAddress(handleW, func);
   if (!ptr)
   {
     DWORD err = GetLastError();
     error("[open_library] Error %lu while trying to find procedure %s\n", err, func);
   }
+   ptr = (void*)addr;
 #else
   ptr = dlsym(handle, func);
   if (!ptr) {
