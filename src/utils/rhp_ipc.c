@@ -102,19 +102,13 @@ static int gen_uuid(void)
 #error "Unsupported platform"
 #endif
 
-static const char *get_uuid(void)
+const char* ipc_unix_domain_init(void)
 {
    if (gen_uuid()) {
       errormsg("Error generating UUID\n");
       return NULL;
    }
 
-   return uuidstr;
-}
-
-const char* ipc_unix_domain_init(void)
-{
-   const char *uuid = get_uuid();
    int rc = OK;
 
    /* We try to use abstract namespaces in Linux.
@@ -134,15 +128,15 @@ const char* ipc_unix_domain_init(void)
 #if defined (__linux__)
    /* FIXME: we don't test for  writting the sockpath
    sockpath[0] = '\0';
-   assert(strlen(uuid) < sizeof(sockpath) - 2);
-   memcpy(&sockpath[1], uuid, strlen(uuid)+1);
+   assert(strlen(uuidstr) < sizeof(sockpath) - 2);
+   memcpy(&sockpath[1], uuidstr, strlen(uuidstr)+1);
    */
 
-   strcpy(sockpath, uuid);
+   strcpy(sockpath, uuidstr);
 
 #elif defined (__APPLE__)
    strcpy(sockpath, "/tmp/reshop_ipc-");
-   memcpy(&sockpath[strlen(sockpath)], uuid, strlen(uuid)+1);
+   memcpy(&sockpath[strlen(sockpath)], uuidstr, strlen(uuidstr)+1);
 
 #elif defined (_WIN32)
    int method = 0, nmethods = 2; //FIXME implement other fallbacks
@@ -164,8 +158,8 @@ const char* ipc_unix_domain_init(void)
       }
 
       size_t expected_sz = sizeof(sockpath) - ret - 1;
-      size_t n = snprintf(&sockpath[ret], expected_sz, "%s%s",
-                          "reshop_ipc-", uuid);
+      size_t n = snprintf(&sockpath[ret], expected_sz, "%s%s", "reshop_ipc-", uuidstr);
+
       if (n >= expected_sz) {
          error("\n[IPC] Truncation of socket path: '%s'\n", sockpath);
          errormsg("[IPC] As a result, the communication with the GUI may not work\n");
