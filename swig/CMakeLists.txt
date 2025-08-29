@@ -323,7 +323,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       set (PYTEST_OPTS "--rootdir=/tmp")
    endif()
 
-   add_test(NAME ${pytarget}-tests
+   add_test(NAME python-${pytarget}-tests
             COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest ${PYTEST_OPTS} ${PYTEST_DIR}
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
 
