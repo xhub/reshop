@@ -583,6 +583,7 @@ if (GAMS_IS_INSTALLED AND BUILD_TESTING)
       foreach (_F ${PATHFILES})
          add_custom_command(TARGET ${RESHOP_LIBNAME} POST_BUILD
              COMMAND ${CMAKE_COMMAND} -E copy ${_F} ${CMAKE_BINARY_DIR}/test
+             COMMAND ${CMAKE_COMMAND} -E copy ${_F} ${CMAKE_BINARY_DIR}/swig
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
              COMMENT "Copy ${_F} for running tests"
              VERBATIM)

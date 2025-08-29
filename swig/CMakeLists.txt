@@ -240,13 +240,12 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
      WORKING_DIRECTORY 
        ${PYTHON_PROJECT_DIR}
      COMMAND_EXPAND_LISTS)
-   
+
    # Main Target
    add_custom_target(${pytarget}_package ALL
-     DEPENDS
-       ${PYTHON_PROJECT_DIR}/dist/timestamp
-     WORKING_DIRECTORY ${PYTHON_PROJECT_DIR})
-   
+                     DEPENDS ${PYTHON_PROJECT_DIR}/dist/timestamp
+                     WORKING_DIRECTORY ${PYTHON_PROJECT_DIR})
+
    ###################
    ##  Python Test  ##
    ###################
@@ -264,7 +263,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
          COMMENT "Properly tag wheel"
          VERBATIM)
    endif() #Linux
-      
+  
    if(VENV_TESTING)
      # Testing using a vitual environment
      set(VENV_EXECUTABLE ${Python3_EXECUTABLE} -m venv)
@@ -317,14 +316,14 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    if (APPLE OR LINUX)
       set (PYTEST_OPTS "--rootdir=/tmp")
    endif()
+
    add_test(NAME ${pytarget}-tests
             COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest ${PYTEST_OPTS} ${PYTEST_DIR}
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
 
 endmacro()
 
-# Main loops
+# Main loop
 foreach (P IN LISTS BUILD_PYTHON)
    SETUP_SWIG_PYTHON_MODULE(${P})
-
 endforeach()
