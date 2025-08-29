@@ -3,7 +3,7 @@
 
 // IWYU pragma: always_keep
 
-#if defined(_WIN32) && defined(_MSC_VER)
+#if defined(_WIN32) && !defined(__CYGWIN__)
 
 #define CLEANUP_FNS_HAVE_DECL
 
