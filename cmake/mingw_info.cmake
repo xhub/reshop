@@ -24,6 +24,15 @@ if(MINGW)
     endif()
 
     # Search the output for the MSVCRT version macro
+    string(REGEX MATCH "__USE_MINGW_ANSI_STDIO ([0-9]+)" MINGW_ANSI_STDIO_MATCH "${COMPILER_DEFINES}")
+    if(MINGW_ANSI_STDIO_MATCH)
+      set(MINGW_ANSI_STDIO_VALUE "${CMAKE_MATCH_1}")
+      message(STATUS "[MINGW] MINGW __USE_MINGW_ANSI_STDIO is set to ${MINGW_ANSI_STDIO_VALUE}")
+    else()
+        message(STATUS "Could not find __USE_MINGW_ANSI_STDIO macro.")
+    endif()
+
+    # Search the output for the MSVCRT version macro
     string(REGEX MATCH "__MSVCRT_VERSION__ 0x([0-9]+)" MSVCRT_MATCH "${COMPILER_DEFINES}")
     if(MSVCRT_MATCH)
         set(MINGW_CRT_VERSION_HEX "0x${CMAKE_MATCH_1}")
