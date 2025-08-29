@@ -214,7 +214,7 @@ build-dac:
               $parts = $line.Split("`t", [System.StringSplitOptions]::RemoveEmptyEntries)
 
               $resolved_path = Resolve-Path $parts[1]
-              $filePath = ".\" + $resolved_path.Path
+              $filePath = $resolved_path.Path
 
               Write-Host "Processing symbolic link: $filePath" -ForegroundColor Cyan
 
@@ -225,7 +225,7 @@ build-dac:
 
               $symlinkDir = Split-Path -Path $filePath -Parent
               $resolvedTargetPath = Join-Path -Path $symlinkDir -ChildPath $targetPath
-              $srcFile = ".\" + $resolvedTargetPath
+              $srcFile = $resolvedTargetPath
 
               Write-Host "  -> Copying $srcFile to $filePath..."
               Copy-Item -Path $srcFile -Destination $filePath -Force
