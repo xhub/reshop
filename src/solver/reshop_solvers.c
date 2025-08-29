@@ -21,7 +21,7 @@
 tlsvar int (*solver_pathvi)(void *, void *, void *) = NULL;
 tlsvar void* plugin_pathvi_handle = NULL;
 
-#if defined(_WIN32) && defined(_MSC_VER)
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 #include <windows.h>

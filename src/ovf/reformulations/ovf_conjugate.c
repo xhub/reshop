@@ -40,7 +40,7 @@
 tlsvar int (*compute_v_repr)(void *, double *, enum cone *, void*) = NULL;
 tlsvar void* libvrepr_handle = NULL;
 
-#if defined(_WIN32) && defined(_MSC_VER)
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 #include <windows.h>
@@ -54,7 +54,7 @@ tlsvar void* libvrepr_handle = NULL;
       }
   }
 
-#elif defined(__GNUC__) & !defined(__APPLE__)
+#elif defined(__GNUC__) && !defined(__APPLE__)
 #include <dlfcn.h>
 
  __attribute__ ((destructor)) static void cleanup_vrepr(void)

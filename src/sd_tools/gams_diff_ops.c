@@ -22,7 +22,7 @@ struct gams_diff_data {
 tlsvar int (*compute_opcode_diff)(int **, int **, int *, const int *, const int *, int, char *) = NULL;
 tlsvar void* libopcodediff_handle = NULL;
 
-#if defined(_WIN32) && defined(_MSC_VER)
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 #include <windows.h>

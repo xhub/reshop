@@ -135,6 +135,12 @@ macro(SET_C_WARNINGS _TARGETS)
           endif (WITH_FORTIFY_SOURCE)
        endif()
     endif()
+
+   if (MINGW)
+      add_c_options("-Wno-format-extra-args" ${_TARGETS})
+      add_c_options("-Wno-format" ${_TARGETS})
+   endif(MINGW)
+
   endif(NOT C_COMPILER_GNU_LIKE)
 endmacro()
 
