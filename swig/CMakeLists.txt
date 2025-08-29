@@ -246,6 +246,12 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
                      DEPENDS ${PYTHON_PROJECT_DIR}/dist/timestamp
                      WORKING_DIRECTORY ${PYTHON_PROJECT_DIR})
 
+   add_custom_command(TARGET ${pytarget}_package POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_directory dist ${OUTPUT_DIR}
+         WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
+         COMMENT "Copy wheel to output"
+         VERBATIM)
+
    ###################
    ##  Python Test  ##
    ###################
