@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LLVM_MVER=20
+LLVM_MVER=21
 
 scan-build-$LLVM_MVER --use-cc=clang-$LLVM_MVER --use-c++=clang++-$LLVM_MVER -o scan-build \
    cmake -DBUILD_GAMS_DRIVER=0 -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DGIT_HASH=$CI_COMMIT_SHORT_SHA -DBUILD_IMGUI=0 "$@"
