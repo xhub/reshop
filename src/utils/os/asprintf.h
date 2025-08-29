@@ -12,7 +12,7 @@
 
 #include "compat.h"
 
-#ifdef _MSC_VER
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #define vscprintf _vscprintf
 int vasprintf(char **strp, const char *format, va_list ap);
 int asprintf(char **strp, const char *format, ...);

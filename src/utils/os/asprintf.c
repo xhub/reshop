@@ -12,7 +12,7 @@ int vscprintf(const char *format, va_list ap)
 }
 #endif
 
-#ifdef _MSC_VER
+#if defined(_WIN32) && !defined(__CYGWIN__)
 int vasprintf(char **strp, const char *format, va_list ap)
 {
     int len = vscprintf(format, ap);
