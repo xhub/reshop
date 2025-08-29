@@ -27,9 +27,15 @@ jobs:
         build_type: [Release, Debug]
         c_compiler: [gcc, clang, clang-cl]
         include:
-          - os: windows-latest
+          - os: windows-2025
             c_compiler: clang-cl
             cpp_compiler: clang-cl
+          - os: windows-2025
+            c_compiler: clang
+            cpp_compiler: clang++
+          - os: windows-2025
+            c_compiler: gcc
+            cpp_compiler: g++
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
@@ -40,10 +46,10 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
         exclude:
-          - os: windows-latest
-            c_compiler: gcc
-          - os: windows-latest
-            c_compiler: clang
+#          - os: windows-2025
+#            c_compiler: gcc
+#          - os: windows-2025
+#            c_compiler: clang
           - os: ubuntu-latest
             c_compiler: clang-cl
           - os: macos-latest
