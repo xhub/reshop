@@ -198,6 +198,10 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       target_link_options(${pytarget} PRIVATE "LINKER:-undefined,dynamic_lookup")
    endif()
 
+   if (MINGW)
+      target_link_options(${pytarget} PRIVATE "LINKER:--allow-shlib-undefined")
+   endif()
+
    # This is necessary for windows ...
    if (Python3_LIBRARY_DIRS)
       target_link_directories(${pytarget} PRIVATE ${Python3_LIBRARY_DIRS})
