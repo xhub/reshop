@@ -1,31 +1,83 @@
 #include "reshop_config.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "test_gams_utils.h"
 #include "reshop.h"
 
-#ifdef _WIN32
+#define ARRAY_SIZE(arr) sizeof(arr)/sizeof(arr[0])
+
+#ifdef _MSC_VER
 #   define strcasecmp _stricmp
 #   include <string.h>
 #else
 #   include <strings.h>
 #endif
 
-#define ARRAY_SIZE(arr) sizeof(arr)/sizeof(arr[0])
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <processenv.h>
+
+#define MALLOC_NULL(ptr,type,n)  (ptr) = malloc(sizeof(type)*(n)); \
+   if (!(ptr)) { return NULL; }
+#define REALLOC_NULL(ptr,type,n)  (ptr) = (type*)realloc((void*)(ptr), (n)*sizeof(type)); \
+   if (!(ptr)) { return NULL; }
+
+static const char * mygetenv(const char *envvar)
+{
+   DWORD bufsize = 4096;
+   char *envval;
+   MALLOC_NULL(envval, char, bufsize);
+
+   DWORD ret = GetEnvironmentVariableA(envvar, envval, bufsize);
+
+   if (ret == 0) {
+      free(envval);
+      return NULL;
+   }
+
+   if (ret > bufsize) {
+      bufsize = ret;
+      REALLOC_NULL(envval, char, bufsize);
+      ret = GetEnvironmentVariableA(envvar, envval, bufsize);
+
+      if (!ret) { free(envval); return NULL; }
+   }
+
+   return envval;
+}
+
+static void myfreeenvval(const char *envval)
+{
+   if (envval) { free((char*)envval); }
+}
+
+#else
+
+#include <stdlib.h>
+#define mygetenv getenv
+#define myfreeenvval(X) 
+
+
+#endif
+
 
 void setup_gams(void)
 {
-   char *gamsdir = getenv("RHP_GAMSDIR");
-   gamsdir = gamsdir ? gamsdir : GAMSDIR;
+   const char *gamsdir_env = mygetenv("RHP_GAMSDIR");
+   const char *gamsdir = gamsdir_env ? gamsdir_env : GAMSDIR;
 
    rhp_gams_setglobalgamsdir(gamsdir);
+   myfreeenvval(gamsdir_env);
 
 
-   char *gamscntr = getenv("RHP_GAMSCNTR");
-   gamscntr = gamscntr ? gamscntr : GAMSCNTR_DAT_FILE;
+   const char *gamscntr_env = mygetenv("RHP_GAMSCNTR");
+   const char *gamscntr = gamscntr_env ? gamscntr_env : GAMSCNTR_DAT_FILE;
 
    rhp_gams_setglobalgamscntr(gamscntr);
+   myfreeenvval(gamscntr_env);
 }
 
 

@@ -39,14 +39,16 @@
 #define GMS_CONFIG_FILE "gmscmpun.txt"
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  #include <direct.h>
+  #define mkdir(X,Y) _mkdir(X)
+#endif
+
+#if defined(_MSC_VER)
   #include <string.h>
   #define strcasecmp _stricmp
   #define strncasecmp _strnicmp
   #define strdup _strdup
-
-  #include <direct.h>
-  #define mkdir(X,Y) _mkdir(X)
 
   #define getpid _getpid
 

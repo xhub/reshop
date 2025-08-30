@@ -18,12 +18,12 @@
 #include "tlsdef.h"
 
 
-tlsvar int (*solver_pathvi)(void *, void *, void *) = NULL;
-tlsvar void* plugin_pathvi_handle = NULL;
+#if 0
+static tlsvar int (*solver_pathvi)(void *, void *, void *) = NULL;
+static tlsvar void* plugin_pathvi_handle = NULL;
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include "win-compat.h"
 
@@ -48,7 +48,7 @@ tlsvar void* plugin_pathvi_handle = NULL;
     }
   }
 #endif
-
+#endif
 
 /**
  * @brief  Solve a generalized equation

@@ -28,6 +28,8 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
    switch (fdwReason) {
    case DLL_PROCESS_ATTACH:
+      debug("[OS] DllMain called with DLL_PROCESS_ATTACH\n");
+
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */
 #ifndef __MSVCRT__
@@ -36,15 +38,18 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
       rhp_syncenv();
       logging_syncenv();
       option_init();
+      debug("[OS] Call to DllMain with DLL_PROCESS_ATTACH successful\n");
       break;
    case DLL_THREAD_ATTACH:
    case DLL_THREAD_DETACH: break;
+
    case DLL_PROCESS_DETACH: 
          //fprintf(stderr, "[WIN] Detaching thread, calling all destructors!\n");
       cleanup_vrepr();
       cleanup_opcode_diff();
       cleanup_path();
       cleanup_gams();
+      debug("[OS] Call to DllMain with DLL_PROCESS_DETACH successful\n");
 //      cleanup_snan_funcs();
    }
    return TRUE;

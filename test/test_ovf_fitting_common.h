@@ -21,7 +21,7 @@ static const char *reformulations[] = {
   "fenchel",
 };
 
-static const size_t loss_fns_size = sizeof(loss_fns)/sizeof(loss_fns[0]);
+#define loss_fns_size (sizeof(loss_fns)/sizeof(loss_fns[0]))
 UNUSED static const size_t reformulations_size = sizeof(reformulations)/sizeof(reformulations[0]);
 
 int fitting_test(struct rhp_mdl *mdl_solver, const char *loss_fn,

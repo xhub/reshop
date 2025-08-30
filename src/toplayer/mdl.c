@@ -191,6 +191,7 @@ static void mdl_commondata_init(Model *mdl)
 
 Model* mdl_new(BackendType backend)
 {
+   printf("DEBUG: in mdl_new\n");
    static tlsvar unsigned g_mdl_id = 0;
    Model *mdl;
    CALLOC_NULL(mdl, Model, 1);
@@ -222,6 +223,7 @@ Model* mdl_new(BackendType backend)
 
    SN_CHECK_EXIT(mdl_timings_alloc(mdl));
 
+   printf("DEBUG: END mdl_new\n");
    return mdl;
 _exit:
    mdl_free(mdl);

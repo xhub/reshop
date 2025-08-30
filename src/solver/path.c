@@ -40,11 +40,10 @@ static const char * const path_libnames[] = {
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include "win-compat.h"
 
-  void cleanup_path(void)
+void cleanup_path(void)
   {
       if (libpath_handle)
       {

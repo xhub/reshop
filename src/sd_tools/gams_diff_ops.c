@@ -19,12 +19,11 @@ struct gams_diff_data {
    int d_maxlen;
 };
 
-tlsvar int (*compute_opcode_diff)(int **, int **, int *, const int *, const int *, int, char *) = NULL;
-tlsvar void* libopcodediff_handle = NULL;
+static tlsvar int (*compute_opcode_diff)(int **, int **, int *, const int *, const int *, int, char *) = NULL;
+static tlsvar void* libopcodediff_handle = NULL;
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include "win-compat.h"
 

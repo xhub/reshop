@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#if defined(_WIN32)
+#if defined(_MSC_VER)
   #define strcasecmp _stricmp
   #define strncasecmp _strnicmp
   #define strdup _strdup

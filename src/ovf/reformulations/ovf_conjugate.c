@@ -37,13 +37,13 @@
 //#define DEBUG_OVF_CONJUGATE
 
 /* TODO(xhub) no enum CONES, but char  */
-tlsvar int (*compute_v_repr)(void *, double *, enum cone *, void*) = NULL;
-tlsvar void* libvrepr_handle = NULL;
+static tlsvar int (*compute_v_repr)(void *, double *, enum cone *, void*) = NULL;
+static tlsvar void* libvrepr_handle = NULL;
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
+#include "win-compat.h"
 
   void cleanup_vrepr(void)
   {

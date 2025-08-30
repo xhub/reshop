@@ -18,31 +18,24 @@ struct bck {
    char **symbols;
 };
 
-tlsvar struct bck *snan_funcs = NULL;
-tlsvar size_t snan_funcs_len = 0;
+static tlsvar struct bck *snan_funcs = NULL;
+static tlsvar size_t snan_funcs_len = 0;
 
-tlsvar char snan_str[16];
+static tlsvar char snan_str[16];
 
 #if (defined(__linux__) || defined(__APPLE__))
 #define _has_backtrace
 #include <execinfo.h>
 #endif
 
-#if defined(_WIN32) && defined(_MSC_VER)
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #include "win-compat.h"
-
-void cleanup_snans_funcs(void)
-
-#elif defined(__GNUC__)
-
-static DESTRUCTOR_ATTR void cleanup_snans_funcs(void)
-
-#else 
-
-void cleanup_snans_funcs(void)
-
 #endif
 
+#ifndef CLEANUP_FNS_HAVE_DECL
+static
+#endif
+DESTRUCTOR_ATTR void cleanup_snans_funcs(void)
 {
    size_t i = 0;
    while (i < snan_funcs_len && snan_funcs[i].func) {

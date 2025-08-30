@@ -6,10 +6,7 @@
  *  @brief definition of thread local variable
  */
 
-#if !defined(__GNUC__)
-#   if !defined(_WIN32)
-#      error "Need constructor/destructor support, like .(init|fini)_array (ELF) or __mod_(init|term)_func (Mach-O)"
-#   endif
+#if defined(_WIN32)
 
 #   define DESTRUCTOR_ATTR 
 #   define CONSTRUCTOR_ATTR
@@ -26,12 +23,17 @@
 #   define DESTRUCTOR_ATTR_PRIO(N) __attribute__ ((destructor))
 #   define CONSTRUCTOR_ATTR_PRIO(N) __attribute__ ((constructor))
 
-#else
+#elif defined(__GNUC__)
 
 #   define DESTRUCTOR_ATTR __attribute__ ((destructor))
 #   define CONSTRUCTOR_ATTR __attribute__ ((constructor))
 #   define DESTRUCTOR_ATTR_PRIO(N) __attribute__ ((destructor(N)))
 #   define CONSTRUCTOR_ATTR_PRIO(N) __attribute__ ((constructor(N)))
+
+#else
+
+#      error "Need constructor/destructor support, like .(init|fini)_array (ELF) or __mod_(init|term)_func (Mach-O)"
+
 #endif
 
 /* crashes now. Investigate __declspec(thread) and LoadLibrary  */
