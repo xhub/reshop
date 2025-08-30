@@ -35,9 +35,9 @@
 #endif
 
 /* crashes now. Investigate __declspec(thread) and LoadLibrary  */
-#if defined(_WIN32) && !defined(__INTEL_LLVM_COMPILER)
-#define tlsvar
-#endif
+//#if defined(_WIN32) && !defined(__INTEL_LLVM_COMPILER)
+//#define tlsvar
+//#endif
 
 #ifndef tlsvar
 
