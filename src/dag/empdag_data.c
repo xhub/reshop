@@ -7,7 +7,7 @@
 #include "status.h"
 #include "printout.h"
 
-tlsvar char buf[128];
+static tlsvar char buf[128];
 
 const char *mpid_specialvalue(mpid_t mpid)
 {

@@ -57,7 +57,7 @@
 #   elif defined(__GNUC__) || (defined(__ICC) && defined(__linux)) || defined(__INTEL_LLVM_COMPILER)
 #      define tlsvar __thread
 
-#   elif defined(_WIN32) && (defined(__ICC) || defined(__clang__))
+#   elif defined(_WIN32) // && (defined(__INTEL_COMPILER) || defined(__clang__))
 #      define tlsvar __declspec(thread)
 
 #   elif defined(__APPLE__)  // Apple seems to support this
@@ -79,7 +79,7 @@
 #      define tlsvar thread_local
 #   elif defined(__GNUC__) || (defined(__ICC) && defined(__linux))
 #      define tlsvar __thread
-#   elif defined(_MSC_VER) || (defined(__ICC) && defined(_WIN32))
+#   elif defined(_MSC_VER) || (defined(__INTEL_COMPILER) && defined(_WIN32))
 #      define tlsvar __declspec(thread)
 #   elif defined(RESHOP_ALLOW_GLOBAL)
 #      define tlsvar

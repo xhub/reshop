@@ -159,10 +159,10 @@ const RhpBackendType BackendInvalidObj  = {.backend = INT8_MAX};
 
 #include "tlsdef.h"
 
-tlsvar static PyObject* reshop_mod = NULL;
+static tlsvar PyObject* reshop_mod = NULL;
 // For Exception-stylen handling
-tlsvar const char *exception_msg = NULL;
-tlsvar int exception_code = RHP_OK;
+static tlsvar const char *exception_msg = NULL;
+static tlsvar int exception_code = RHP_OK;
 
 static PyObject * basisstatus_getobj(int bstat)
 {

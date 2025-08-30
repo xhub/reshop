@@ -378,7 +378,7 @@ static char const* logger_actions[] = {
    };
 
 #include "tlsdef.h"
-tlsvar static ImGuiAl::Log *logObj = nullptr;
+static tlsvar ImGuiAl::Log *logObj = nullptr;
 
 //void loggermsg(u8 level, const char* msg)
 //{
