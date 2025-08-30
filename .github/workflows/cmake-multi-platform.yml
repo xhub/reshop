@@ -46,10 +46,6 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
         exclude:
-#          - os: windows-2025
-#            c_compiler: gcc
-#          - os: windows-2025
-#            c_compiler: clang
           - os: ubuntu-latest
             c_compiler: clang-cl
           - os: macos-latest
@@ -103,14 +99,10 @@ jobs:
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
-      # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
 
     # Python and windows is a difficult marriage
     - name: Test (no python)
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
-      # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      if: matrix.c_compiler == 'gcc' && contains(matrix.os, 'windows')
       run: ctest --build-config ${{ matrix.build_type }} -E python --output-on-failure
