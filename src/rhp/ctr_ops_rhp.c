@@ -517,6 +517,7 @@ static int rctr_getcoljacinfo(const Container *ctr, int colidx,
    assert(!e || (valid_vi(e->vi) && e->vi == colidx &&
          "In rmdl_getcoljacinfo :: unconsistency between jacptr and colidx"));
    if (!valid_vi(colidx) || cdat->total_n < (unsigned)colidx) {
+      error("%s :: index %d >= %zu\n", __func__, colidx, colidx);
       return Error_IndexOutOfRange;
    }
 
@@ -565,6 +566,7 @@ static int _vector_name_get(const struct vnames_list *l, rhp_idx idx, char *str,
     }
   }
 
+   error("%s :: index %d >= %zu\n", __func__, idx, l->len);
   return Error_IndexOutOfRange;
 }
 

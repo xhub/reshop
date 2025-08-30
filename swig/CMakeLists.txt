@@ -189,7 +189,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
 
    set_property(TARGET ${pytarget} APPEND PROPERTY LINK_OPTIONS "${Python3_LINK_OPTIONS}")
 
-   # Windows needs the python library
+   # Windows needs the python library and MINGW/CYGWIN does not support #pragma
    if(WINDOWS)
       target_link_libraries(${pytarget} PRIVATE Python3::Module ${RESHOP_LIBNAME})
    else()

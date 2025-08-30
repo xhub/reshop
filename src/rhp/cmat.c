@@ -575,6 +575,7 @@ int cmat_equ_add_vars_excpt(Container *ctr, rhp_idx ei, Avar *v, rhp_idx vi_no,
       if (vi == vi_no) continue;
 
        if (!valid_vi(vi) || (unsigned)vi >= cdat->total_n) {
+         error("%s :: index %d >= %zu\n", __func__, vi, cdat->total_n);
          return Error_IndexOutOfRange;
       }
 
