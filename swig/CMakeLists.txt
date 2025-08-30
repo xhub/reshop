@@ -188,7 +188,14 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    endif()
 
    set_property(TARGET ${pytarget} APPEND PROPERTY LINK_OPTIONS "${Python3_LINK_OPTIONS}")
-   target_link_libraries(${pytarget} ${RESHOP_LIBNAME})
+
+   # Windows needs the python library
+   if(WINDOWS)
+      target_link_libraries(${pytarget} PRIVATE Python3::Module ${RESHOP_LIBNAME})
+   else()
+      target_link_libraries(${pytarget} PRIVATE ${RESHOP_LIBNAME})
+   endif()
+
    target_include_directories(${pytarget} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
                                                   ${Python3_INCLUDE_DIRS}
                                                   ${Python3_NumPy_INCLUDE_DIRS})
@@ -196,10 +203,6 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    # Undefined python symbols are okay
    if (APPLE)
       target_link_options(${pytarget} PRIVATE "LINKER:-undefined,dynamic_lookup")
-   endif()
-
-   if (MINGW)
-      target_link_options(${pytarget} PRIVATE "LINKER:--allow-shlib-undefined")
    endif()
 
    # This is necessary for windows ...
