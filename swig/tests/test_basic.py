@@ -1,8 +1,12 @@
 import reshop as rhp
 import numpy as np
 import scipy.sparse as sp
-import pytest
 from pytest import approx
+import os
+
+# Need to find PATH
+if 'RHP_PATH_FILENAME' in os.environ:
+    rhp.PATH_setfname(os.environ['RHP_PATH_FILENAME'])
 
 
 def init(backend=rhp.RhpBackendReSHOP):

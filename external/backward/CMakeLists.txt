@@ -32,4 +32,10 @@ if (BUILD_INSTALLER)
    INSTALL(TARGETS backward DESTINATION ${CMAKE_BINARY_DIR}/makeself)
 endif()
 
+#Set output directory
+set (OUTPUT_DIR ${CMAKE_BINARY_DIR}/output)
+file(MAKE_DIRECTORY ${OUTPUT_DIR})
+
+INSTALL(TARGETS backward DESTINATION ${OUTPUT_DIR})
+
 cpy4test("backward")

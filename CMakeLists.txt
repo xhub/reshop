@@ -598,6 +598,7 @@ if (GAMS_IS_INSTALLED AND BUILD_TESTING)
 
    # Copy all files
    foreach (_G in ${PATHLIBS_GLOB})
+
       file (GLOB PATHFILES ${GAMSDIR}/${_G})
       foreach (_F ${PATHFILES})
          add_custom_command(TARGET ${RESHOP_LIBNAME} POST_BUILD
@@ -606,6 +607,11 @@ if (GAMS_IS_INSTALLED AND BUILD_TESTING)
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
              COMMENT "Copy ${_F} for running tests"
              VERBATIM)
+
+         # This is needed for the python tests
+         if (_G MATCHES "path")
+            set(PATH_FNAME ${_F})
+         endif()
       endforeach()
    endforeach()
 endif()

@@ -3,15 +3,17 @@ function(download_path_libs)
 
    if (WINDOWS AND CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
       set (PATH_LIBS "path50.dll;lusol.dll")
+      set (PATH_FNAME "path50.dll")
    elseif(APPLE)
       set (PATH_LIBS "libpath50.dylib;liblusol.dylib")
+      set (PATH_FNAME "libpath50.dylib")
       if (CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
          set (URL_SUBDIR "/path_libraries")
       endif()
-   elseif (LINUX)
-      if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-         set (PATH_LIBS "libpath50.so;liblusol.so")
-      endif()
+
+   elseif (LINUX AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+       set (PATH_LIBS "libpath50.so;liblusol.so")
+       set (PATH_FNAME "libpath50.so")
 
    else()
       message(STATUS "No PATH binaries are available for OS ${CMAKE_SYSTEM_NAME} and arch ${CMAKE_SYSTEM_PROCESSOR}")
@@ -34,5 +36,8 @@ function(download_path_libs)
       endif()
 
    endforeach()
+
+   #This is necessary for the testing
+   set(RHP_PATH_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/${PATH_FNAME} PARENT_SCOPE)
 
 endfunction()
