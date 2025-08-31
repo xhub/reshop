@@ -271,7 +271,7 @@ build-wei:
     - cmake --build build-icl -v | Tee-Object -FilePath 'build_log-icl.txt'
     - cmake --install build-icl -v
 
-    - ctest --test-dir build -E python --output-junit doctest_results_windows.xml; if (-not $?) { ctest --test-dir build --rerun-failed --output-on-failure }
+    - ctest --test-dir build --output-junit doctest_results_windows.xml; if (-not $?) { ctest --test-dir build --rerun-failed --output-on-failure }
 
     - if (Test-Path "$GAMS_PATH/gamsconfig.yaml") { Remove-Item -Path "$GAMS_PATH/gamsconfig.yaml" -Force }
 

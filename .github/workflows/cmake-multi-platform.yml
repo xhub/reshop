@@ -98,11 +98,11 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
+#      if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
       run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
 
     # Python and windows is a difficult marriage
-    - name: Test (no python)
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      if: matrix.c_compiler == 'gcc' && contains(matrix.os, 'windows')
-      run: ctest --build-config ${{ matrix.build_type }} -E python --output-on-failure
+#    - name: Test (no python)
+#      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+#      if: matrix.c_compiler == 'gcc' && contains(matrix.os, 'windows')
+#      run: ctest --build-config ${{ matrix.build_type }} -E python --output-on-failure
