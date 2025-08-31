@@ -99,10 +99,11 @@ option(DISTRIB
 option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" OFF)
 
 option(BUILD_PYTHON "Build a python bindings (argument is a list of python interpreter)" "")
+option(VENV_TESTING "Test the python package in a VENV (recommended)" ON)
 
 option(BUILD_IMGUI "Build the ReSHOP GUI (currently using Dear Imgui)" ON)
 
-option(DEV_MODE "Developper mode (enables extras)" OFF)
+option(DEV_MODE "Developer mode (enables extras)" OFF)
 
 option(EXPERIMENTAL "Enable experimental features" OFF)
 
@@ -571,6 +572,10 @@ if (_LIBRESHOP_TYPE STREQUAL "STATIC_LIBRARY" AND CMAKE_AR MATCHES "llvm-ar")
    list(APPEND LINKER_FLAGS "-fuse-ld=lld")
 endif()
 
+# Prevent issues with subsystem being native with mingw
+if (MINGW)
+   list(APPEND LINKER_FLAGS "-mwindows")
+endif()
 
 # TODO: this create trouble for now
 #set_target_properties(${RESHOP_LIBNAME} PROPERTIES VERSION ${ReSHOP_VERSION})
@@ -626,6 +631,7 @@ add_subdirectory (swig)
 ####################
 # Add linker flags 
 ####################
+
 
 
 foreach(_LIBNAME ${LIBNAMES})

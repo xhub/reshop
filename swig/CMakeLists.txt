@@ -126,15 +126,16 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    # With GMSPython, we expect the configuration to be stored as a cmake file
    if (${Py3_EXECUTABLE} MATCHES "GMSPython") 
       if (NOT GMSPythonCfg)
-         MESSAGE(ERROR "When GMSPython is in BUILD_PYTHON, then GMSPythonCfg must be specified" )
-      endif()
-
-      if (NOT Python3_EXECUTABLE)
-         MESSAGE(ERROR "When GMSPython is in BUILD_PYTHON, then Python3_EXECUTABLE must be set to a compatible python
-         interpreter" )
+         MESSAGE(FATAL_ERROR "When GMSPython is in BUILD_PYTHON, then GMSPythonCfg must be specified" )
       endif()
 
       include(${GMSPythonCfg})
+
+      if (NOT Python3_EXECUTABLE)
+         MESSAGE(FATAL_ERROR "When GMSPython is in BUILD_PYTHON, then Python3_EXECUTABLE must be set to a compatible python
+         interpreter" )
+      endif()
+
    else ()
 
       # Regular python discovery. We need to force the version to the one
@@ -187,11 +188,18 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       set_property (TARGET ${pytarget} PROPERTY SUFFIX "${CMAKE_SHARED_MODULE_SUFFIX}")
    endif()
 
-   set_property(TARGET ${pytarget} APPEND PROPERTY LINK_OPTIONS "${Python3_LINK_OPTIONS}")
+   set_property(TARGET ${pytarget} APPEND PROPERTY LINK_OPTIONS ${LINKER_FLAGS})
+   set_property(TARGET ${pytarget} APPEND PROPERTY LINK_OPTIONS ${Python3_LINK_OPTIONS})
 
    # Windows needs the python library and MINGW/CYGWIN does not support #pragma
    if(WINDOWS)
-      target_link_libraries(${pytarget} PRIVATE Python3::Module ${RESHOP_LIBNAME})
+      if (${Py3_EXECUTABLE} MATCHES "GMSPython") 
+         set(_LIB ${Python3_LIBRARIES})
+      else()
+         set(_LIB Python3::Module)
+      endif()
+
+      target_link_libraries(${pytarget} PRIVATE ${_LIB} ${RESHOP_LIBNAME})
    else()
       target_link_libraries(${pytarget} PRIVATE ${RESHOP_LIBNAME})
    endif()
@@ -220,33 +228,111 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    configure_file(${CMAKE_SOURCE_DIR}/README.md ${PYTHON_PROJECT_DIR}/README.md COPYONLY)
 
 
+   if(VENV_TESTING)
+      # Testing using a vitual environment
+      set(VENV_EXECUTABLE ${Python3_EXECUTABLE} -m venv)
+      set(VENV_DIR ${CMAKE_CURRENT_BINARY_DIR}/${pytarget}/venv)
+
+      if(WINDOWS)
+         if (CMAKE_CROSSCOMPILING_EMULATOR)
+            set(VENV_Python3_EXECUTABLE "${CMAKE_CROSSCOMPILING_EMULATOR};${VENV_DIR}/Scripts/python.exe")
+         else()
+            set(VENV_Python3_EXECUTABLE "${VENV_DIR}/Scripts/python.exe")
+         endif()
+      else()
+         set(VENV_Python3_EXECUTABLE ${VENV_DIR}/bin/python)
+      endif()
+
+      set(TEST_PYTHON_EXECUTABLE ${VENV_Python3_EXECUTABLE})
+      # Set working directory to top-level. Avoid loading wrong module
+      set(TEST_PYTHON_WRKDIR ${CMAKE_BINARY_DIR})
+
+      if (NOT EXISTS ${VENV_DIR})
+     # make a virtualenv to install our python package in it
+     execute_process (COMMAND ${VENV_EXECUTABLE} ${VENV_DIR})
+
+      # Make sure pip is installed
+      execute_process (COMMAND ${VENV_Python3_EXECUTABLE} -m ensurepip
+                    RESULT_VARIABLE ENSUREPIP)
+
+      if (ENSUREPIP GREATER 0)
+         file(DOWNLOAD "https://bootstrap.pypa.io/get-pip.py" ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py
+           TIMEOUT 10
+           STATUS DL_STATUS)
+
+         if(NOT DL_STATUS MATCHES "0;")
+            MESSAGE(FATAL_ERROR "ERROR: Couldn't download get-pip.py from URL https://bootstrap.pypa.io/get-pip.py; got status ${DL_STATUS}")
+         endif()
+
+         execute_process(COMMAND ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py
+                         RESULT_VARIABLE GET_PIP
+                         OUTPUT_VARIABLE GETPIP_STDOUT
+                         ERROR_VARIABLE  GETPIP_STDERR)
+
+         if (GET_PIP GREATER 0)
+            message(FATAL_ERROR "Could not execute ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py. Stderr content is \n${GETPIP_STDERR}\n\n"
+                          "Stdout content is \n${GETPIP_STDOUT}\n")
+         endif()
+      endif()
+
+      execute_process (COMMAND ${VENV_Python3_EXECUTABLE} -m pip install setuptools numpy scipy pytest
+                       OUTPUT_VARIABLE PIP_INSTALL_STDOUT
+                       ERROR_VARIABLE  PIP_INSTALL_STDERR
+                       RESULT_VARIABLE PIP_INSTALL)
+
+         if (PIP_INSTALL GREATER 0)
+            message(FATAL_ERROR "Could not execute ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py. Stderr content is \n${PIP_INSTALL_STDERR}\n\n"
+                          "Stdout content is \n${PIP_INSTALL_STDOUT}\n")
+         endif()
+
+      endif (NOT EXISTS ${VENV_DIR})
+
+   else(VENV_TESTING)
+      if (DARLING)
+         set(TEST_PYTHON_EXECUTABLE ${DARLING} shell /Library/Frameworks/Python.framework/Versions/3.12/bin/python3)
+      else()
+         set(TEST_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+      endif()
+
+      set(TEST_PYTHON_WRKDIR ${CMAKE_BINARY_DIR}/swig)
+
+   endif(VENV_TESTING)
+
    # Look for python module wheel
 
+   set(PY_BIN_FILES "$<TARGET_FILE:${pytarget}>" "$<TARGET_FILE:${RESHOP_LIBNAME}>")
+
+   # libmmd.dll seems to be necessary ...
+   if (WINDOWS AND CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
+      get_filename_component(ICX_CL_DIR DIRECTORY ${CMAKE_C_COMPILER} ABSOLUTE CACHE)
+
+      list(APPEND PY_BIN_FILES ${ICX_CL_DIR}/libmmd.dll)
+   endif()
+
    add_custom_command(
-     OUTPUT ${PYTHON_PROJECT_DIR}/dist/timestamp
-     COMMAND ${CMAKE_COMMAND} -E remove_directory dist reshop
-     COMMAND ${CMAKE_COMMAND} -E make_directory reshop
-     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/swig/reshop.py reshop
-     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/swig/__init__.py reshop
-     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${pytarget}> reshop
-     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${RESHOP_LIBNAME}> reshop
-     # bdist_egg
-     COMMAND ${Python3_EXECUTABLE} setup.py egg_info --tag-date --tag-build=dev bdist_wheel -p ${Python3_platform}
-     COMMAND ${CMAKE_COMMAND} -E touch dist/timestamp
-     MAIN_DEPENDENCY
-       ${CMAKE_BINARY_DIR}/swig/setup.py.gen
-     DEPENDS
-       $<TARGET_FILE:${pytarget}>
-       $<TARGET_FILE:${RESHOP_LIBNAME}>
-       ${PYTHON_PROJECT_DIR}/setup.py
-     BYPRODUCTS
-       ${PYTHON_PROJECT_DIR}/ReSHOP.egg-info
-       ${PYTHON_PROJECT_DIR}/build
-       ${PYTHON_PROJECT_DIR}/dist
-       ${PYTHON_PROJECT_DIR}/reshop
-     WORKING_DIRECTORY 
-       ${PYTHON_PROJECT_DIR}
-     COMMAND_EXPAND_LISTS)
+      OUTPUT ${PYTHON_PROJECT_DIR}/dist/timestamp
+      COMMAND ${CMAKE_COMMAND} -E remove_directory dist reshop
+      COMMAND ${CMAKE_COMMAND} -E make_directory reshop
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/swig/reshop.py reshop
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/swig/__init__.py reshop
+      COMMAND ${CMAKE_COMMAND} -E copy ${PY_BIN_FILES} reshop
+      # bdist_egg
+      COMMAND ${VENV_Python3_EXECUTABLE} setup.py egg_info --tag-date --tag-build=dev bdist_wheel -p ${Python3_platform}
+      COMMAND ${CMAKE_COMMAND} -E touch dist/timestamp
+      MAIN_DEPENDENCY
+        ${CMAKE_BINARY_DIR}/swig/setup.py.gen
+      DEPENDS
+        $<TARGET_FILE:${pytarget}>
+        $<TARGET_FILE:${RESHOP_LIBNAME}>
+        ${PYTHON_PROJECT_DIR}/setup.py
+      BYPRODUCTS
+        ${PYTHON_PROJECT_DIR}/ReSHOP.egg-info
+        ${PYTHON_PROJECT_DIR}/build
+        ${PYTHON_PROJECT_DIR}/dist
+        ${PYTHON_PROJECT_DIR}/reshop
+      WORKING_DIRECTORY 
+        ${PYTHON_PROJECT_DIR}
+      COMMAND_EXPAND_LISTS)
 
    # Main Target
    add_custom_target(${pytarget}_package ALL
@@ -278,46 +364,11 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    endif() #Linux
   
    if(VENV_TESTING)
-     # Testing using a vitual environment
-     set(VENV_EXECUTABLE ${Python3_EXECUTABLE} -m venv)
-     #set(VENV_EXECUTABLE ${Python3_EXECUTABLE} -m venv)
-     set(VENV_DIR ${CMAKE_CURRENT_BINARY_DIR}/${pytarget}/venv)
-
-     if(WIN32)
-       if (NEED_WINE)
-         set(VENV_Python3_EXECUTABLE "wine;${VENV_DIR}/Scripts/python.exe")
-       else(NEED_WINE)
-         set(VENV_Python3_EXECUTABLE "${VENV_DIR}/Scripts/python.exe")
-         endif(NEED_WINE)
-     else()
-       set(VENV_Python3_EXECUTABLE ${VENV_DIR}/bin/python)
-     endif()
-
-      
-     # make a virtualenv to install our python package in it
      add_custom_command(TARGET ${pytarget}_package POST_BUILD
-       # Clean previous install otherwise pip install may do nothing
-       COMMAND ${CMAKE_COMMAND} -E remove_directory ${VENV_DIR}
-       COMMAND ${VENV_EXECUTABLE} ${VENV_DIR}
-       # Must NOT call it in a folder containing the setup.py otherwise pip call it
-       # (i.e. "python setup.py bdist") while we want to consume the wheel package
-       COMMAND ${VENV_Python3_EXECUTABLE} -m pip install --find-links=${PYTHON_PROJECT_DIR}/dist reshop pytest
-       BYPRODUCTS ${VENV_DIR}
-       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-       COMMENT "Create venv and install reshop"
-       VERBATIM)
-
-      set(TEST_PYTHON_EXECUTABLE ${VENV_Python3_EXECUTABLE})
-      # Set working directory to top-level. Avoid loading wrong module
-      set(TEST_PYTHON_WRKDIR ${CMAKE_BINARY_DIR})
-   else(VENV_TESTING)
-      if (DARLING)
-         set(TEST_PYTHON_EXECUTABLE ${DARLING} shell /Library/Frameworks/Python.framework/Versions/3.12/bin/python3)
-      else()
-         set(TEST_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-      endif()
-
-      set(TEST_PYTHON_WRKDIR ${CMAKE_BINARY_DIR}/swig)
+                        COMMAND ${VENV_Python3_EXECUTABLE} -m pip install --force-reinstall --find-links=${PYTHON_PROJECT_DIR}/dist reshop
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                        COMMENT "Installing reshop in venv"
+                        VERBATIM)
    endif()
 
    if (DARLING)
