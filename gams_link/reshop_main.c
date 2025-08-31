@@ -79,7 +79,7 @@ BOOL WINAPI DllMain( HINSTANCE hInst, DWORD reason, LPVOID reserved)
 
 /** @brief Create a RESHOP object.
  *
- *  @param jh        RESHOP object is stored to jh
+ *  @param Cptr        RESHOP object is stored to jh
  *  @param msgbuf    message buffer to which error string is printed
  *  @param msgbuflen length of the message buffer
  */
@@ -90,7 +90,7 @@ DllExport int STDCALL EPNAME(Create)(void **Cptr, char *msgBuf, int msgBufLen)
    assert(jh && NULL == (*jh));
    (*jh) = (rhpRec_t *) calloc(1, sizeof(rhpRec_t));
    if (!*jh) {
-      strncat(msgBuf, "Could not allocate ReSHOP object\n", msgBufLen);
+      strncpy(msgBuf, "Could not allocate ReSHOP object\n", msgBufLen-1);
       return 1;
    }
 
@@ -99,7 +99,7 @@ DllExport int STDCALL EPNAME(Create)(void **Cptr, char *msgBuf, int msgBufLen)
 
 /** @brief Destroy the given ReSHOP object.
  *
- *  @param jhptr    the ReSHOP object we are to destroy
+ *  @param Cptr    the ReSHOP object we are to destroy
  */
 DllExport void STDCALL EPNAME(Free)( void** Cptr)
 {
@@ -131,9 +131,9 @@ DllExport void STDCALL EPNAME(Free)( void** Cptr)
 
 /** @brief Perform initialization steps before calling the solver.
  *
- *  @param jh RESHOP object
- *  @param gh GMO object RESHOP is to use
- *  @param oh option object RESHOP is to use
+ *  @param Cptr ReSHOP object
+ *  @param gh   GMO object RESHOP is to use
+ *  @param oh   option object RESHOP is to use
  *
  *  @return status 0 if successful
  *                 1 otherwise
