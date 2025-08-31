@@ -1,7 +1,6 @@
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include <rpc.h>
 
@@ -32,7 +31,8 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */
-#ifndef __MSVCRT__
+      /* mingw with msvcrt does not define this function */
+#if !defined(__USE_MINGW_ANSI_STDIO) || (__USE_MINGW_ANSI_STDIO == 0)
        _set_printf_count_output(1);
 #endif
       rhp_syncenv();
