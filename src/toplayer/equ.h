@@ -63,8 +63,8 @@ typedef struct equ {
 void aequ_free(Aequ* e);
 Aequ* aequ_new(void)  MALLOC_ATTR(aequ_free,1);
 Aequ* aequ_newcompact(unsigned size, rhp_idx start) MALLOC_ATTR(aequ_free,1);
-Aequ* aequ_newlistborrow(unsigned size, rhp_idx *list) NONNULL MALLOC_ATTR(aequ_free,1);
-Aequ* aequ_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(aequ_free,1);
+Aequ* aequ_newlistborrow(unsigned size, rhp_idx *eis) NONNULL MALLOC_ATTR(aequ_free,1);
+Aequ* aequ_newlistcopy(unsigned size, rhp_idx *eis) NONNULL MALLOC_ATTR(aequ_free,1);
 Aequ* aequ_newblock(unsigned num_blocks) MALLOC_ATTR(aequ_free,1);
 
 Aequ* aequ_newblockA_(M_ArenaLink *arena, unsigned nblocks, ...);

@@ -1028,7 +1028,7 @@ static int gams_setvarval(Container *ctr, rhp_idx vi, double varl)
       return OK;
    }
 
-   error("%s :: index %d >= %zu\n", __func__, vi, ctr->n);
+   error("%s :: index %d >= %u\n", __func__, vi, ctr->n);
    return Error_IndexOutOfRange;
 }
 
@@ -1048,7 +1048,7 @@ static int gams_setvarmult(Container *ctr, rhp_idx vi, double varm)
       return OK;
    }
 
-   error("%s :: index %d >= %zu\n", __func__, vi, ctr->n);
+   error("%s :: index %d >= %u\n", __func__, vi, ctr->n);
    return Error_IndexOutOfRange;
 }
 

@@ -361,7 +361,7 @@ int aequ_extendandown(Aequ *e, Aequ *w)
 int aequ_get(const Aequ *e, unsigned i, rhp_idx *eidx)
 {
    if (i >= e->size) {
-      error("%s :: index %d >= %zu\n", __func__, i, e->size);
+      error("%s :: index %d >= %u\n", __func__, i, e->size);
       return Error_IndexOutOfRange;
    }
 
