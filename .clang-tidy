@@ -20,6 +20,7 @@ Checks: "
       -readability-isolate-declaration,
       -readability-magic-numbers,
       -readability-static-accessed-through-instance,
+      -readability-math-missing-parentheses,
       -zircon-*,
 "
 
