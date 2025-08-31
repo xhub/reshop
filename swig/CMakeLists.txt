@@ -119,6 +119,10 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in ${CMAKE_BINARY_DIR}/swig
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/swig/__init__.py
               CONTENT "__version__ = \"${ReSHOP_VERSION}\"\nfrom .reshop import *")
 
+# If not GAMS install has been detected, rely on the "julia" binaries to get PATH
+if (NOT GAMS_IS_INSTALLED)
+   download_path_libs()
+endif(NOT GAMS_IS_INSTALLED)
 
 
 macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
@@ -212,6 +216,9 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    if (APPLE)
       target_link_options(${pytarget} PRIVATE "LINKER:-undefined,dynamic_lookup")
    endif()
+   if (LINUX)
+      target_link_options(${pytarget} PRIVATE "LINKER:-z,undefs" "LINKER:--allow-shlib-undefined")
+   endif()
 
    # This is necessary for windows ...
    if (Python3_LIBRARY_DIRS)
@@ -304,7 +311,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
 
    # libmmd.dll seems to be necessary ...
    if (WINDOWS AND CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
-      get_filename_component(ICX_CL_DIR DIRECTORY ${CMAKE_C_COMPILER} ABSOLUTE CACHE)
+      cmake_path(GET "${CMAKE_C_COMPILER}" PARENT_PATH ICX_CL_DIR)
 
       list(APPEND PY_BIN_FILES ${ICX_CL_DIR}/libmmd.dll)
    endif()
@@ -385,6 +392,15 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
             COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest ${PYTEST_OPTS} ${PYTEST_DIR}
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
 
+   if (VENV_TESTING)
+      set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
+      if (WITH_BACKWARD)
+         # We rely on libbackward being copied
+         set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/test")
+      endif()
+   endif()
+
+
 endmacro()
 
 # Main loop
@@ -392,7 +408,3 @@ foreach (P IN LISTS BUILD_PYTHON)
    SETUP_SWIG_PYTHON_MODULE(${P})
 endforeach()
 
-# If not GAMS install has been detected, rely on the "julia" binaries to get PATH
-if (NOT GAMS_IS_INSTALLED)
-   download_path_libs()
-endif(NOT GAMS_IS_INSTALLED)
