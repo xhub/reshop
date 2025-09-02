@@ -311,7 +311,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
 
    # libmmd.dll seems to be necessary ...
    if (WINDOWS AND CMAKE_C_COMPILER_ID MATCHES "IntelLLVM")
-      cmake_path(GET "${CMAKE_C_COMPILER}" PARENT_PATH ICX_CL_DIR)
+      cmake_path(GET CMAKE_C_COMPILER PARENT_PATH ICX_CL_DIR)
 
       list(APPEND PY_BIN_FILES ${ICX_CL_DIR}/libmmd.dll)
    endif()
