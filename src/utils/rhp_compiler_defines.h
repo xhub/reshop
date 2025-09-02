@@ -60,7 +60,7 @@
 
 #define CHECK_RESULT __attribute__ ((warn_unused_result))
 
-#ifdef __MINGW64__
+#if defined(__MINGW64__) && !defined(__clang__)
 #define FORMAT_CHK(S,A) __attribute__ ((format (gnu_printf, S, A)))
 #else
 #define FORMAT_CHK(S,A) __attribute__ ((format (printf, S, A)))

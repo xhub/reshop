@@ -14,7 +14,7 @@
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 int asprintf(char **strp, const char *format, ...)
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 __attribute__ ((format (gnu_printf, 2, 3)))
 __attribute__ ((format (ms_printf, 2, 3)))
 #endif
