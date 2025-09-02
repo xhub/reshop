@@ -170,3 +170,4 @@ target_include_directories(reshop_imgui PRIVATE "${CMAKE_BINARY_DIR}/generated/"
                                                 "${IMGUI_INCLUDE_DIRS}"
 )
 
+install(TARGETS ${_T} DESTINATION ${OUTPUT_DIR})
