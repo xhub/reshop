@@ -109,8 +109,8 @@ jobs:
 #
     - name: Upload output
       uses: actions/upload-artifact@v4
-        with:
-          name: artifacts-${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}
-          path: output
-          overwrite: true
+      with:
+        name: artifacts-${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}
+        path: output
+        overwrite: true
 
