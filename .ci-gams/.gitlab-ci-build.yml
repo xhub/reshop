@@ -109,14 +109,14 @@ build-deg:
     - ctest --test-dir build --output-junit doctest_results_deg.xml || ctest --test-dir build --rerun-failed --output-on-failure
 
     # Asan
+    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_deg.txt)"
+    - export DYLD_LIBRARY_PATH="$GAMSDIR"
     - export ASAN_OPTIONS="strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1"
     - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
 
-    - ASAN_OPTIONS="$ASAN_OPTIONS:detect_leaks=1" ctest --test-dir build-asan -E gams --output-on-failure
-    - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_deg.txt)"
-    - export DYLD_LIBRARY_PATH="$GAMSDIR"
+    - ctest --test-dir build-asan -E gams --output-on-failure
 
     - ctest --test-dir build-asan -R gams || ctest --test-dir build-asan -R gams --rerun-failed --output-on-failure
 
@@ -153,7 +153,7 @@ build-dac:
 
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_dac.txt)"
     - export DYLD_LIBRARY_PATH="$GAMSDIR"
-    - ASAN_OPTIONS="$ASAN_OPTIONS:detect_leaks=1" ctest --test-dir build-asan -E gams --output-on-failure 
+    - ctest --test-dir build-asan -E gams --output-on-failure 
 
     - ctest --test-dir build-asan -R gams || ctest --test-dir build-asan -R gams --rerun-failed --output-on-failure
 
