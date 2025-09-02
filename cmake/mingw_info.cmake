@@ -33,7 +33,7 @@ if(MINGW)
     endif()
 
     # Search the output for the MSVCRT version macro
-    string(REGEX MATCH "__MSVCRT_VERSION__ 0x([0-9]+)" MSVCRT_MATCH "${COMPILER_DEFINES}")
+    string(REGEX MATCH "__MSVCRT_VERSION__ 0x([0-9A-Fa-f]+)" MSVCRT_MATCH "${COMPILER_DEFINES}")
     if(MSVCRT_MATCH)
         set(MINGW_CRT_VERSION_HEX "0x${CMAKE_MATCH_1}")
       message(STATUS "[MINGW] MSVCRT version (hex): ${MINGW_CRT_VERSION_HEX}")
