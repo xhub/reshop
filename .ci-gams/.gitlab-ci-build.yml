@@ -25,7 +25,12 @@ build-leg:
 
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_leg.txt)"
     - export LD_LIBRARY_PATH="$GAMSDIR":$(pwd)/build-asan/test
-    - ctest --test-dir build-asan --output-junit doctest_results_linux.xml || ctest --test-dir build-asan --rerun-failed --output-on-failure
+    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1
+    - ctest --test-dir build-asan -E gams --output-junit doctest_results_linux.xml || ctest --test-dir build-asan -E gams --rerun-failed --output-on-failure
+
+    # GAMS is leaky
+    - export ASAN_OPTIONS=ASAN_OPTIONS:detect_leaks=0
+    - ctest --test-dir build-asan -R gams || ctest --test-dir build-asan -R gams --rerun-failed --output-on-failure
 
 
   needs: [fetch-ci-scripts]
@@ -66,7 +71,7 @@ build-debug-leg:
 # The next two jobs are just there to do some cleanup, if needed
 deg-cleanup:
   stage: build
-  tags: [corinna]
+  tags: [corina]
   variables:
     GIT_STRATEGY: none
   before_script:
@@ -88,7 +93,7 @@ dac-cleanup:
 
 build-deg:
   stage: build
-  tags: [corinna]
+  tags: [corina]
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-deg]
@@ -104,13 +109,16 @@ build-deg:
     - ctest --test-dir build --output-junit doctest_results_deg.xml || ctest --test-dir build --rerun-failed --output-on-failure
 
     # Asan
+    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1
     - cmake -B build-asan -DCMAKE_BUILD_TYPE=Asan -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -S .
     - cmake --build build-asan 
     - cmake --install build-asan
 
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_deg.txt)"
     - export DYLD_LIBRARY_PATH="$GAMSDIR"
-    - ctest --test-dir build-asan -E gams || ctest --test-dir build-asan -E gams --rerun-failed --output-on-failure
+    - ASAN_OPTIONS="$ASAN_OPTIONS:detect_leaks=1" ctest --test-dir build-asan -E gams || ctest --test-dir build-asan -E gams --rerun-failed --output-on-failure
+
+    - ctest --test-dir build-asan -R gams || ctest --test-dir build-asan -R gams --rerun-failed --output-on-failure
 
   needs: [fetch-ci-scripts,deg-cleanup]
   artifacts:
@@ -144,7 +152,9 @@ build-dac:
 
     - export GAMSDIR="/cache/gams-installs/$(cat gams_folder_dac.txt)"
     - export DYLD_LIBRARY_PATH="$GAMSDIR"
-    - ctest --test-dir build-asan -E gams || ctest --test-dir build-asan -E gams --rerun-failed --output-on-failure
+    - ASAN_OPTIONS="$ASAN_OPTIONS:detect_leaks=1" ctest --test-dir build-asan -E gams || ctest --test-dir build-asan -E gams --rerun-failed --output-on-failure
+
+    - ctest --test-dir build-asan -R gams || ctest --test-dir build-asan -R gams --rerun-failed --output-on-failure
 
   needs: [fetch-ci-scripts,dac-cleanup]
   artifacts:

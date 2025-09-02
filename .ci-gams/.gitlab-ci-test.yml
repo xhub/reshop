@@ -51,20 +51,21 @@ test-leg:
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
-    # Install GAMS driver with asan
+    # Install GAMS driver with asan in the GAMS directory
     - cp build-asan/output/gmsrhp_ux.out "$GAMSDIR"/
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
 
     # Needed for ASAN
+    # Remember that GAMS is leaky
     - export LD_LIBRARY_PATH="$GAMSDIR"
-    - export EMPSLV=reshopasan
+    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
 
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
 
-    - bash test/gams/test.sh
+    - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
@@ -112,7 +113,7 @@ test-debug-leg:
 
 test-deg:
   stage: test
-  tags: [carla]
+  tags: [corina]
   needs: [fetch-ci-scripts,build-deg]
   script:
     - !reference [.get-gams]
@@ -136,10 +137,12 @@ test-deg:
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
 
+    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
+
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
 
-    # Run tests with regular reshop
+    # Run tests with regular reshop name
     - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
@@ -179,6 +182,8 @@ test-dac:
     - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
+
+    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
 
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
