@@ -629,8 +629,10 @@ if (GAMS_IS_INSTALLED AND BUILD_TESTING)
    if (PATH_FNAME)
       # This is needed for testing the python bindings
       set(RHP_PATH_FILENAME ${PATH_FNAME} CACHE FILEPATH "PATH solver file")
-      message(STATUS "PATH solver found: ${RHP_PATH_FILENAME}")
+      message(STATUS "PATH solver found in GAMS install: ${RHP_PATH_FILENAME}")
+      set(PATH_SOLVER_COPIED 1 CACHE BOOL "PATH solver has been copied in all required directory ")
    endif()
+
 
 endif()
 

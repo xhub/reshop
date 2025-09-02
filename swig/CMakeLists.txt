@@ -120,7 +120,7 @@ file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/swig/__init__.py
               CONTENT "__version__ = \"${ReSHOP_VERSION}\"\nfrom .reshop import *")
 
 # If not GAMS install has been detected, rely on the "julia" binaries to get PATH
-if (NOT RHP_PATH_FILENAME)
+if (NOT PATH_SOLVER_COPIED)
    download_path_libs()
 endif()
 

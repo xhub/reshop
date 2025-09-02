@@ -38,6 +38,5 @@ function(download_path_libs)
    endforeach()
 
    #This is necessary for the testing
-   set(RHP_PATH_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/${PATH_FNAME} CACHE FILEPATH "PATH solver file")
-
+   set(RHP_PATH_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/${PATH_FNAME} CACHE FILEPATH "PATH solver file" FORCE)
 endfunction()
