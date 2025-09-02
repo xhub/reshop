@@ -107,13 +107,7 @@ option(DEV_MODE "Developer mode (enables extras)" OFF)
 
 option(EXPERIMENTAL "Enable experimental features" OFF)
 
-if (WINDOWS)
-  set(WITH_BACKTRACE_DEFAULT OFF)
-else()
-  set(WITH_BACKTRACE_DEFAULT ON)
-endif()
-
-option(WITH_BACKTRACE "Build with backtracing facilities" ${WITH_BACKTRACE_DEFAULT})
+option(WITH_BACKTRACE "Build with backtracing facilities" OFF)
 
 CMAKE_DEPENDENT_OPTION (WITH_BACKWARD
   "Build with the backward backtracing library" ON
@@ -164,6 +158,10 @@ option(WITH_FMEM
 
 if (FORCE_BACKWARD)
    set(WITH_BACKWARD ON)
+   set(WITH_BACKTRACE ON)
+endif()
+
+if (DEV_MODE)
    set(WITH_BACKTRACE ON)
 endif()
 
