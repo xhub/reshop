@@ -287,6 +287,14 @@ build-wei:
     - $env:Path = "C:\tools\msys64\usr\bin;" + $env:Path
     - bash -c 'EMPSLV=reshop test/gams/test.sh'
 
+    - Copy-Item -Path "build-icl/output/*.dll" -Destination "$GAMS_PATH"
+    - Copy-Item -Path "build-icl/output/optreshop.def" -Destination "$GAMS_PATH"
+
+      # Run tests with regular reshop
+    - Run-Test -Command "emplib.exe"  -TestSuite "goempgo" -FailureFile "failures_emp.gms"
+    - Run-Test -Command "testlib.exe" -TestSuite "quality" -FailureFile "failures_qa.gms"
+    - bash -c 'EMPSLV=reshop test/gams/test.sh'
+
     # This currently fails only in CI, not on kermit. Quite hard to investigate
     # - ctest --test-dir build-icl/test; if (-not $?) { ctest --test-dir build-icl/test --rerun-failed --output-on-failure }
 
