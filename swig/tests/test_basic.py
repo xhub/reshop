@@ -6,6 +6,7 @@ import os
 
 # Need to find PATH
 if 'RHP_PATH_FILENAME' in os.environ:
+    print(f"PATH solver provided at {os.environ['RHP_PATH_FILENAME']}")
     rhp.PATH_setfname(os.environ['RHP_PATH_FILENAME'])
 
 
