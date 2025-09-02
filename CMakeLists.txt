@@ -477,7 +477,7 @@ if(NOT GAMSDIR AND (NOT GAMSSYSDIR AND GAMS_EXE_HOST))
    endif()
 
    if (GAMSDIR_TARGET)
-      set(GAMS_IS_INSTALLED 1 CACHE BOOL)
+      set(GAMS_IS_INSTALLED 1 CACHE BOOL "TARGET GAMS installation detected")
    endif()
 
    if (NEED_WINE)
