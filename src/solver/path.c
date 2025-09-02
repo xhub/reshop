@@ -85,10 +85,13 @@ static int load_pathlib(Model *mdl)
          libpath_handle = open_library_nofail(libpath_fname, 0);
          if (libpath_handle) {
            libname = copy_libpath_fname ? strdup(libpath_fname) : libpath_fname;
+         } else {
+            error("\n[PATH] ERROR: Could not find the PATH solver at the "
+                  "user-provided location '%s'", libpath_fname);
          }
       }
 
-      FREE(opt_libpath_fname);
+      free((char*)opt_libpath_fname);
 
       unsigned ii = ARRAY_SIZE(path_libnames);
       while (!libpath_handle && ii <= ARRAY_SIZE(path_libnames) && ii > 0) {
