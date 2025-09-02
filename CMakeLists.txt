@@ -625,7 +625,7 @@ if (GAMS_IS_INSTALLED AND BUILD_TESTING)
    endforeach()
 
    # This is needed for testing the python bindings
-   set(RHP_PATH_FILENAME ${GAMSDIR}/${PATH_FNAME} CACHE FILEPATH "PATH solver file")
+   set(RHP_PATH_FILENAME ${PATH_FNAME} CACHE FILEPATH "PATH solver file")
    message(STATUS "PATH solver found: ${PATH_FNAME}")
 
 endif()

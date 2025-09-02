@@ -87,7 +87,7 @@ static int load_pathlib(Model *mdl)
            libname = copy_libpath_fname ? strdup(libpath_fname) : libpath_fname;
          } else {
             error("\n[PATH] ERROR: Could not find the PATH solver at the "
-                  "user-provided location '%s'", libpath_fname);
+                  "user-provided location '%s'\n", libpath_fname);
          }
       }
 
