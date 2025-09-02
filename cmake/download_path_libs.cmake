@@ -1,7 +1,7 @@
 function(download_path_libs)
    set(PATH_BASEURL "https://pages.cs.wisc.edu/~ferris/path/julia")
 
-   if (WINDOWS AND CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
+   if (WINDOWS AND (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"))
       set (PATH_LIBS "path50.dll;lusol.dll")
       set (PATH_FNAME "path50.dll")
    elseif(APPLE)
@@ -38,6 +38,6 @@ function(download_path_libs)
    endforeach()
 
    #This is necessary for the testing
-   set(RHP_PATH_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/${PATH_FNAME} PARENT_SCOPE)
+   set(RHP_PATH_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/${PATH_FNAME} CACHE FILEPATH "PATH solver file")
 
 endfunction()

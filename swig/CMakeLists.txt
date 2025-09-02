@@ -120,9 +120,9 @@ file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/swig/__init__.py
               CONTENT "__version__ = \"${ReSHOP_VERSION}\"\nfrom .reshop import *")
 
 # If not GAMS install has been detected, rely on the "julia" binaries to get PATH
-if (NOT GAMS_IS_INSTALLED)
+if (NOT RHP_PATH_FILENAME)
    download_path_libs()
-endif(NOT GAMS_IS_INSTALLED)
+endif()
 
 
 macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)

@@ -119,9 +119,9 @@ endif()
 endif()
 
 # If not GAMS install has been detected, rely on the "julia" binaries to get PATH
-if (NOT GAMS_IS_INSTALLED)
+if (NOT RHP_PATH_FILENAME)
    download_path_libs()
-endif(NOT GAMS_IS_INSTALLED)
+endif()
 
 # We have ensured that the PATH libraries are available
 

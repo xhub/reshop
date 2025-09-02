@@ -467,24 +467,26 @@ if(NOT GAMSDIR AND (NOT GAMSSYSDIR AND GAMS_EXE_HOST))
    if (GAMS_OUTPUT)
       string(REGEX MATCH "SYSDIR=([^\n]*)\n" _DUMMY ${GAMS_OUTPUT})
       if (CMAKE_MATCH_1)
-         set(GAMSDIR_TARGET "${CMAKE_MATCH_1}" CACHE PATH "TARGET GAMS system directory")
+         set(GAMSDIR_TARGET_ "${CMAKE_MATCH_1}" CACHE PATH "TARGET GAMS system directory")
       else ()
          string(REGEX MATCH "SysDir=([^\n]*)\n" _DUMMY ${GAMS_OUTPUT})
          if (CMAKE_MATCH_1)
-            set(GAMSDIR_TARGET "${CMAKE_MATCH_1}" CACHE PATH "TARGET GAMS system directory")
+            set(GAMSDIR_TARGET_ "${CMAKE_MATCH_1}" CACHE PATH "TARGET GAMS system directory")
          endif()
       endif()
    endif()
 
-   if (GAMSDIR_TARGET)
+   if (GAMSDIR_TARGET_)
       set(GAMS_IS_INSTALLED 1 CACHE BOOL "TARGET GAMS installation detected")
    endif()
 
    if (NEED_WINE)
-      string(REGEX REPLACE "\\\\" "\\\\\\\\" GAMSDIR_TARGET ${GAMSDIR_TARGET})
+      string(REGEX REPLACE "\\\\" "\\\\\\\\" GAMSDIR_TARGET_ ${GAMSDIR_TARGET_})
    else()
-      string(REGEX REPLACE "\\\\" "/" GAMSDIR_TARGET ${GAMSDIR_TARGET})
+      string(REGEX REPLACE "\\\\" "/" GAMSDIR_TARGET_ ${GAMSDIR_TARGET_})
    endif(NEED_WINE)
+
+   set(GAMSDIR_TARGET "${GAMSDIR_TARGET_}" CACHE PATH "TARGET GAMS system directory")
 
    # Generate a GAMS control file for the TARGET
    execute_process (COMMAND ${GAMS_EXE_TARGET} "${CMAKE_SOURCE_DIR}/cmake/gams_gen_gamscntr.gms" "lo=3" "scrdir=${SCRDIR}"
@@ -502,7 +504,7 @@ if(NOT GAMSDIR AND (NOT GAMSSYSDIR AND GAMS_EXE_HOST))
    endif()
    
    if (GAMSDIR)
-     SET(GAMSCNTR_DAT_FILE "${SCRDIR}/gamscntr.dat")
+      SET(GAMSCNTR_DAT_FILE "${SCRDIR}/gamscntr.dat" CACHE FILEPATH "GAMS control file")
 
      MESSAGE(STATUS "GAMS SYSDIR (target): ${GAMSDIR_TARGET}")
      MESSAGE(STATUS "GAMS CNTR file (target): ${GAMSCNTR_DAT_FILE}")
@@ -602,13 +604,13 @@ if (GAMS_IS_INSTALLED AND BUILD_TESTING)
    elseif(WINDOWS)
       set(PATHLIBS_GLOB "path*.dll;lusol*.dll;conoptlu*.dll")
    else()
-      message(ERROR "Unsupported case")
+      message(FATAL_ERROR "Unsupported case")
    endif()
 
    # Copy all files
-   foreach (_G in ${PATHLIBS_GLOB})
+   foreach (_G ${PATHLIBS_GLOB})
 
-      file (GLOB PATHFILES ${GAMSDIR}/${_G})
+      file (GLOB PATHFILES ${GAMSDIR_TARGET}/${_G})
       foreach (_F ${PATHFILES})
          add_custom_command(TARGET ${RESHOP_LIBNAME} POST_BUILD
              COMMAND ${CMAKE_COMMAND} -E copy ${_F} ${CMAKE_BINARY_DIR}/test
@@ -619,14 +621,16 @@ if (GAMS_IS_INSTALLED AND BUILD_TESTING)
 
          # This is needed for the python tests
          if (_G MATCHES "path")
-            set(PATH_FNAME ${_F})
+            set(PATH_FNAME "${_F}")
          endif()
       endforeach()
    endforeach()
 
-   # This is needed for testing the python bindings
-   set(RHP_PATH_FILENAME ${PATH_FNAME} CACHE FILEPATH "PATH solver file")
-   message(STATUS "PATH solver found: ${PATH_FNAME}")
+   if (PATH_FNAME)
+      # This is needed for testing the python bindings
+      set(RHP_PATH_FILENAME ${PATH_FNAME} CACHE FILEPATH "PATH solver file")
+      message(STATUS "PATH solver found: ${RHP_PATH_FILENAME}")
+   endif()
 
 endif()
 
