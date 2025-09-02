@@ -307,10 +307,8 @@ static int gams_dumpmodel(Model *mdl)
       name++;
    }
 
-   IO_CALL_EXIT(fprintf(opt, "gams %s" DIRSEP "%s-%u.gms\n", optname,
-                   mdlname, mdl->id));
-   IO_CALL_EXIT(fprintf(opt, "Dict=%s" DIRSEP "dict-%s-%u.txt", optname,
-                   mdlname, mdl->id));
+   IO_CALL_EXIT(fprintf(opt, "gams %s" DIRSEP "%s-%u.gms\n", optname, mdlname, mdl->id));
+   IO_CALL_EXIT(fprintf(opt, "Dict=%s" DIRSEP "dict-%s-%u.txt", optname, mdlname, mdl->id));
    IO_CALL_EXIT(fsync(fileno(opt)));
    IO_CALL(fclose(opt));
 
@@ -353,6 +351,7 @@ static int gams_dumpmodel(Model *mdl)
 
    printout(PO_INFO, "%*sA version with approximate names was created at %s" DIRSEP "%s-%u-named.gms\n",
             offset, "", optname, mdlname, mdl->id);
+
 #if defined(__GNUC__)
    #pragma GCC diagnostic pop
 #endif
@@ -401,12 +400,13 @@ static int gams_solve(Model *mdl)
    GmsContainerData *gms = ctr->data;
 
    if (!gms->gmo) {
-      error("%s ERROR in %s model '%.*s' #%u: GMO object is NULL \n", __func__,
+      error("[GAMS] ERROR while solving %s model '%.*s' #%u: GMO object is NULL \n",
             mdl_fmtargs(mdl));
       return Error_NullPointer;
    }
+
    if (!gms->gev) {
-      error("%s ERROR in %s model '%.*s' #%u: GEV object is NULL \n", __func__,
+      error("[GAMS] ERROR while solving in %s model '%.*s' #%u: GEV object is NULL \n",
             mdl_fmtargs(mdl));
       return Error_NullPointer;
    }
@@ -467,8 +467,7 @@ static int gams_solve(Model *mdl)
    solverid = cfgAlgNumber(gms->cfg, mdldat->solvername);
 
    if (solverid <= 0) {
-      error("%s :: ERROR: could not find solver named '%s'\n", __func__,
-              mdldat->solvername);
+      error("[GAMS] ERROR: could not find solver named '%s'\n", mdldat->solvername);
       return Error_SolverInvalidName;
    }
 
