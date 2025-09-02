@@ -188,7 +188,9 @@ static void backtrace(void) {};
 #include <winbase.h>
 #include <dbghelp.h>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "dbghelp.lib")
+#endif
 
 static void backtrace(void)
 {
@@ -211,7 +213,7 @@ static void backtrace(void)
      {
          SymFromAddr( process, ( DWORD64 )( stack[ i ] ), 0, symbol );
 
-         fprintf(stderr, "%u %s - 0x%0X\n", frames - i - 1, symbol->Name, symbol->Address );
+         fprintf(stderr, "%u %s - 0x%0llX\n", frames - i - 1, symbol->Name, symbol->Address );
      }
 
      free( symbol );
