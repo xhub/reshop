@@ -209,7 +209,7 @@ static void backtrace(void)
      {
          SymFromAddr( process, ( DWORD64 )( stack[ i ] ), 0, symbol );
 
-         printf( "%u %s - 0x%0X\n", frames - i - 1, symbol->Name, symbol->Address );
+         fprintf(stderr, "%u %s - 0x%0X\n", frames - i - 1, symbol->Name, symbol->Address );
      }
 
      free( symbol );
