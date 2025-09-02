@@ -94,19 +94,23 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} -v
+      run: |
+        cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} -v
+        cmake --install ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} -v
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
 #      if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
       run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
 
-# Python and windows is a difficult marriage
-#    - name: Test (no python)
-#      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-#      if: matrix.c_compiler == 'gcc' && contains(matrix.os, 'windows')
-#      run: ctest --build-config ${{ matrix.build_type }} -E python --output-on-failure
-#
+    # As of 2025.09.02, the gcc-mingw toolchain produces a DLL with a dependency to libgcc for TLS.
+    # This may or not be the reason the python module can't be loaded. However, tests using newer
+    # Mingw releases don't suffer form this. Both clang-cl and clang produces 
+    - name: Test (no python)
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      if: matrix.c_compiler == 'gcc' && contains(matrix.os, 'windows')
+      run: ctest --build-config ${{ matrix.build_type }} -E python --output-on-failure
+
     - name: Upload output
       if: always()
       uses: actions/upload-artifact@v4
