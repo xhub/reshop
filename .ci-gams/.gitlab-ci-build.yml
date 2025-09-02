@@ -24,7 +24,7 @@ build-leg:
     - cmake --install build-asan
 
     - export LD_LIBRARY_PATH="$GAMSDIR"
-    - ctest --test-dir build-asan --output-junit doctest_results_linux.xml || ctest --test-dir build --rerun-failed --output-on-failure
+    - ctest --test-dir build-asan --output-junit doctest_results_linux.xml || ctest --test-dir build-asan --rerun-failed --output-on-failure
 
 
   needs: [fetch-ci-scripts]
@@ -296,7 +296,7 @@ build-wei:
     - bash -c 'EMPSLV=reshop test/gams/test.sh'
 
     # This currently fails only in CI, not on kermit. Quite hard to investigate
-    # - ctest --test-dir build-icl/test; if (-not $?) { ctest --test-dir build-icl/test --rerun-failed --output-on-failure }
+    - ctest --test-dir build-icl/test; if (-not $?) { ctest --test-dir build-icl/test --rerun-failed --output-on-failure }
 
     # If we can asan to work, then this can be enabled
     #    - Copy-Item -Path "build-asan/output/gmsrhp_ux.out.exe" -Destination "$GAMS_PATH"
