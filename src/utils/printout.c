@@ -182,11 +182,13 @@ static void backtrace(void) {};
 
 
 
-#else /* __linux__  */
+#elif defined(_WIN32) /* __linux__  */
 
 #include <windows.h>
 #include <winbase.h>
 #include <DbgHelp.h>
+
+#pragma comment(lib, "dbghelp.lib")
 
 static void backtrace(void)
 {

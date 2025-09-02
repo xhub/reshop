@@ -107,9 +107,13 @@ option(DEV_MODE "Developer mode (enables extras)" OFF)
 
 option(EXPERIMENTAL "Enable experimental features" OFF)
 
-CMAKE_DEPENDENT_OPTION (WITH_BACKTRACE 
-  "Build with backtracing facilities" ON
-  "NOT WINDOWS;NOT DISTRIB;DEV_MODE" OFF)
+if (WINDOWS)
+  set(WITH_BACKTRACE_DEFAULT OFF)
+else()
+  set(WITH_BACKTRACE_DEFAULT ON)
+endif()
+
+option(WITH_BACKTRACE "Build with backtracing facilities" ${WITH_BACKTRACE_DEFAULT})
 
 CMAKE_DEPENDENT_OPTION (WITH_BACKWARD
   "Build with the backward backtracing library" ON
@@ -307,6 +311,9 @@ endif (APPLE OR UNIX)
 # In that case, #pragma comment(lib, ...) does not work
 if (MINGW)
    set (EXTRA_LIBS ws2_32 rpcrt4)
+   if (WITH_BACKTRACE)
+      list(APPEND EXTRA_LIBS dbghelp)
+   endif()
 endif()
 
 # TODO: move this to a separate file?
@@ -334,6 +341,10 @@ if (WITH_BACKTRACE)
    if (C_COMPILER_GNU_LIKE)
       add_compile_options("-fno-omit-frame-pointer")
       add_compile_options("-ggdb")
+   elseif(CMAKE_C_COMPILER_ID MATCHES "Intel")
+      if (NOT WINDOWS)
+         add_compile_options(-fno-omit-frame-pointer)
+      endif()
    endif()
 
    if (WITH_BACKWARD)
@@ -341,7 +352,7 @@ if (WITH_BACKTRACE)
       add_subdirectory (external/backward)
       include_directories (external/backward)
       add_compile_definitions(WITH_BACKWARD)
-   else (WITH_BACKWARD)
+   elseif (LINUX)
       find_package (Unwind REQUIRED)
       include_directories("${LIBUNWIND_INCLUDE_DIR}")
       LIST(APPEND EXTRA_LIBS "${LIBUNWIND_LIBRARIES}")
