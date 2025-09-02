@@ -249,6 +249,10 @@ int rhpmat_get_size(const SpMat* mat, unsigned *n, unsigned *m)
    return OK;
 }
 
+#ifdef __ICL
+#pragma optimize("", off)
+#endif
+
 /**
  * @brief General interface to get the row of a matrix 
  *
@@ -344,6 +348,10 @@ int rhpmat_row(const SpMat* m, unsigned i, SpMatColRowWorkingMem *wrkmem,
 #pragma GCC diagnostic pop
 #endif
 }
+#ifdef __ICL
+#pragma optimize("", on)
+#endif
+
 
 int rhpmat_ensure_cscA(M_ArenaLink *arena, SpMat *m)
 {
