@@ -186,7 +186,7 @@ static void backtrace(void) {};
 
 #include <windows.h>
 #include <winbase.h>
-#include <DbgHelp.h>
+#include <dbghelp.h>
 
 #pragma comment(lib, "dbghelp.lib")
 
