@@ -550,23 +550,24 @@ static int rctr_getcoljacinfo(const Container *ctr, int colidx,
  */
 static int _vector_name_get(const struct vnames_list *l, rhp_idx idx, char *str, unsigned len)
 {
-  for (size_t j = 0; j < l->len; ++j) {
+  for (u32 j = 0, len_ = l->len; j < len_; ++j) {
     rhp_idx s = l->start[j];
     rhp_idx e = l->end[j];
 
     if ((idx >= s) && (idx <= e)) {
 
       if (s == e) {
-        strncpy(str, l->names[j], len);
+        COPYSTR(str, l->names[j], len);
       } else {
-        snprintf(str, len, "%s(%u)", l->names[j], idx - l->start[j] + 1);
+        snprintf(str, len, "%s(%u)", l->names[j], idx - s + 1);
       }
 
       return OK;
     }
   }
 
-   error("%s :: index %d >= %u\n", __func__, idx, l->len);
+   // This may fail so do not report error here
+  //error("%s :: index %d >= %u\n", __func__, idx, l->len);
   return Error_IndexOutOfRange;
 }
 
