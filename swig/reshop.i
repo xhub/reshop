@@ -937,22 +937,25 @@ typedef struct rhp_mdl {
       fail: free(variables); return NULL;
      }
 
-
      void solve(const char *gdxname) {
         struct rhp_mdl *solver = rhp_mdl_new(RhpBackendGamsGmo);
-        RHP_FAIL(rhp_process($self, solver), "Couldn't process the model");   
-        RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");   
-        RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");   
+        RHP_FAIL(solver ? RHP_OK : Error_NullPointer, "Couldn't create the solver model object");
+        RHP_FAIL(rhp_process($self, solver), "Couldn't process the model");
+        RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");
+        RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");
         RHP_FAIL(rhp_gms_writesol2gdx($self, gdxname), "Couldn't write the solution as gdx");
+        return;
       fail: exception_code = -1;
      }
 
      void solve() {
         struct rhp_mdl *solver = rhp_mdl_new(RhpBackendGamsGmo);
-        RHP_FAIL(rhp_process($self, solver), "Couldn't process the model");   
-        RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");   
-        RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");   
-      fail: ;
+        RHP_FAIL(solver ? RHP_OK : Error_NullPointer, "Couldn't create the solver model object");
+        RHP_FAIL(rhp_process($self, solver), "Couldn't process the model"); 
+        RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");
+        RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");
+        return;
+      fail: exception_code = -1;
      }
 
   }
