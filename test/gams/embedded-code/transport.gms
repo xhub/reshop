@@ -72,7 +72,7 @@ Model transport / all /;
 transport.justScrDir = 1;
 solve transport using lp minimizing z;
 
-* 2024.02.08: need to implement GMO2GMO
+* The rest requires the reshop module being installed
 $exit
 
 * Q: gamscntr could be changed via solverCntr cmdline option?
