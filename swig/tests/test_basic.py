@@ -2,13 +2,18 @@ import reshop as rhp
 import numpy as np
 import scipy.sparse as sp
 from pytest import approx
+import pytest
 import os
 import sys
 
-# Need to find PATH
-if 'RHP_PATH_FILENAME' in os.environ:
-    print(f"PATH solver provided at {os.environ['RHP_PATH_FILENAME']}", file=sys.stderr)
-    rhp.PATH_setfname(os.environ['RHP_PATH_FILENAME'])
+@pytest.fixture(scope="session", autouse=True)
+def setup_once():
+    # Need to find PATH
+    if 'RHP_PATH_FILENAME' in os.environ:
+        print(f"PATH solver provided at {os.environ['RHP_PATH_FILENAME']}", file=sys.stderr)
+        rhp.PATH_setfname(os.environ['RHP_PATH_FILENAME'])
+
+    yield
 
 
 def init(backend=rhp.RhpBackendReSHOP):
