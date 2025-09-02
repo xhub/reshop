@@ -40,7 +40,11 @@ else()
 endif()
 
 # This adds gmsrhp_ux.out
-set(RESHOP_GAMSLINK_EXE "gmsrhp_ux.out")
+if (WINDOWS)
+   set(RESHOP_GAMSLINK_EXE "gmsrhp_ux")
+else()
+   set(RESHOP_GAMSLINK_EXE "gmsrhp_ux.out")
+endif()
 
 if (_LIBRESHOP_TYPE STREQUAL "STATIC_LIBRARY")
    add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c")
@@ -55,10 +59,21 @@ list(APPEND RESHOP_GAMSLINK_TARGETS ${RESHOP_GAMSLINK_EXE})
 # Setup few variables
 set(DESTDIR_MAKESELF ${CMAKE_BINARY_DIR}/makeself)
 
+#Set output directory
+set (OUTPUT_DIR ${CMAKE_BINARY_DIR}/output)
+file(MAKE_DIRECTORY ${OUTPUT_DIR})
+
 # The install dir depends on what we build
 # This way, we don't hardcode the targets
 if (BUILD_INSTALLER OR INSTALL_COMMON_MAKESELF)
   set(GAMSLINK_INSTALL_DIR ${DESTDIR_MAKESELF})
+
+  foreach(_T ${RESHOP_GAMSLINK_TARGETS})
+     add_custom_command(TARGET ${_T} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${_T}> ${OUTPUT_DIR}
+         COMMENT "Copy ${_T} to output dir"
+         VERBATIM)
+   endforeach()
 else()
   set(GAMSLINK_INSTALL_DIR ${OUTPUT_DIR})
 endif()
