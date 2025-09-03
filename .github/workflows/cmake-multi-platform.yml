@@ -102,7 +102,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-#      if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
+      if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
       run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
 
     # As of 2025.09.02, the gcc-mingw toolchain produces a DLL with a dependency to libgcc for TLS.
