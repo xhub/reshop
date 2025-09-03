@@ -16,7 +16,6 @@ void cleanup_gams(void);
 
 char *strndup(const char *str, size_t chars);
 char *win_gettmpdir(void);
-unsigned win_strerror(unsigned sz, char buf[VMT(static sz)], const char **msg);
 
 #endif
 

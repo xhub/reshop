@@ -4,15 +4,7 @@
 #include <stdio.h>
 
 #if defined(_WIN32)
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <fileapi.h>
-#include <io.h>
-
-#define fileno(X) _fileno(X)
-#define fsync(X) !FlushFileBuffers((HANDLE)(_get_osfhandle(X)))
-
+#include "win-fsync.h"
 #else
 
 #include <unistd.h>
