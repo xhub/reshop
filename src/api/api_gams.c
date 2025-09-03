@@ -203,12 +203,12 @@ int rhp_gms_newfromcntr(const char *cntrfile, Model **mdlout)
       if (!fgets(buffer, sizeof buffer, fptr)) {
          error("[GAMS] ERROR: failed to get %u-th line of control file '%s'\n",
                i, cntrfile);
-         SYS_CALL(fclose(fptr));
+         IO_CALL(fclose(fptr));
          return Error_RuntimeError;
       }
    }
 
-   SYS_CALL(fclose(fptr));
+   IO_CALL(fclose(fptr));
 
    size_t len = strlen(buffer);
    if (len <= 1) {

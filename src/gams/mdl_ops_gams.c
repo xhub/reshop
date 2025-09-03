@@ -8,12 +8,12 @@
 #if defined(_WIN32)
 
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include <fileapi.h>
+#include <io.h>
 
-#define fileno(X) (X)
-#define fsync(X) !FlushFileBuffers((HANDLE)(X))
+#define fileno(X) _fileno(X)
+#define fsync(X) !FlushFileBuffers((HANDLE)(_get_osfhandle(X)))
 
 #else
 
@@ -307,9 +307,9 @@ static int gams_dumpmodel(Model *mdl)
       name++;
    }
 
-   IO_CALL_EXIT(fprintf(opt, "gams %s" DIRSEP "%s-%u.gms\n", optname, mdlname, mdl->id));
-   IO_CALL_EXIT(fprintf(opt, "Dict=%s" DIRSEP "dict-%s-%u.txt", optname, mdlname, mdl->id));
-   IO_CALL_EXIT(fsync(fileno(opt)));
+   IO_PRINT_EXIT(fprintf(opt, "gams %s" DIRSEP "%s-%u.gms\n", optname, mdlname, mdl->id));
+   IO_PRINT_EXIT(fprintf(opt, "Dict=%s" DIRSEP "dict-%s-%u.txt", optname, mdlname, mdl->id));
+   SYS_CALL_(fsync(fileno(opt)), goto _exit; );
    IO_CALL(fclose(opt));
 
    int old_O_Subsolveropt = O_Subsolveropt;
@@ -378,7 +378,7 @@ skip: ; /* Skipping the generation */
 
 _exit: /* This is only when */
 
-   SYS_CALL(fclose(opt));
+   IO_CALL(fclose(opt));
    return status;
 }
 

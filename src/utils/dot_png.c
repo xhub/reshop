@@ -8,7 +8,7 @@
 int dot2png(const char *fname)
 {
    char *cmd;
-   IO_CALL(asprintf(&cmd, "dot -Tpng -O \"%s\"", fname));
+   IO_PRINT(asprintf(&cmd, "dot -Tpng -O \"%s\"", fname));
    int rc = system(cmd); /* YOLO */
    if (rc) {
       error("[dot2png] executing '%s' yielded return code %d\n", cmd, rc);
@@ -37,7 +37,7 @@ int view_png(const char *fname, const char *png_viewer)
 
    if (png_viewer) {
       char *cmd;
-      IO_CALL(asprintf(&cmd, "cat \"%s.png\" | %s", fname, png_viewer));
+      IO_PRINT(asprintf(&cmd, "cat \"%s.png\" | %s", fname, png_viewer));
       int rc = system(cmd); /* YOLO */
       if (rc) {
          error("[empdag] ERROR: executing '%s' yielded return code %d\n", cmd, rc);

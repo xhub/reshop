@@ -712,14 +712,14 @@ void nltree_print_dot(const NlTree* tree, FILE* f, const Model *mdl)
    UNUSED int status = OK;
    if (!tree->root) return;
 
-   IO_CALL_EXIT(fputs(" subgraph cluster_nltree { \n label = \"NL tree\"", f));
-//   IO_CALL_EXIT(fputs(" style=filled; bgcolor=lightgreen;\n", f));
+   IO_PRINT_EXIT(fputs(" subgraph cluster_nltree { \n label = \"NL tree\"", f));
+//   IO_PRINT_EXIT(fputs(" style=filled; bgcolor=lightgreen;\n", f));
 
    print_node_graph(tree->root, f, mdl ? &mdl->ctr : NULL);
 
    print_edges(tree->root, f);
 
-   IO_CALL_EXIT(fputs("}", f));
+   IO_PRINT_EXIT(fputs("}", f));
 
 _exit:
    return;

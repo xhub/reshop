@@ -31,8 +31,8 @@ const char *find_rhpenvvar(const char* optname, char **env_varname, size_t *env_
    strncat(_env_varname, optname, _env_varname_max);
 
    /* ---------------------------------------------------------------------
-       * We look for uppercase env variables
-       * --------------------------------------------------------------------- */
+    * We look for uppercase env variables
+    * --------------------------------------------------------------------- */
 
    char * restrict s = _env_varname;
    while (*s != '\0') {

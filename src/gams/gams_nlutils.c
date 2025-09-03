@@ -204,7 +204,7 @@ _end:
       }
    }
 
-   SYS_CALL(fclose(f));
+   IO_CALL(fclose(f));
 
    equs->nb_equs = equ_indx;
    equs->len_opcode = cur_indx;
@@ -212,7 +212,7 @@ _end:
    return equs;
 
 _exit:
-   SYS_CALL(fclose(f));
+   IO_CALL(fclose(f));
 
    if (equs) {
       if (equs->pool) {

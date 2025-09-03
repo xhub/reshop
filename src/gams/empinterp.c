@@ -219,7 +219,7 @@ int interp_read_empinfo(Interpreter *interp)
       return Error_FileOpenFailed;
    }
 
-   SYS_CALL(fseek(fptr, 0L, SEEK_END));
+   IO_CALL(fseek(fptr, 0L, SEEK_END));
    long size = ftell(fptr);
    if (size < 0) {
       perror("ftell");
@@ -227,7 +227,7 @@ int interp_read_empinfo(Interpreter *interp)
       goto _exit;
    }
 
-   SYS_CALL(fseek(fptr, 0L, SEEK_SET)); // rewind to start
+   IO_CALL(fseek(fptr, 0L, SEEK_SET)); // rewind to start
  
    MALLOC_EXIT(interp->buf, char, (size_t)size+1);
 
@@ -247,7 +247,7 @@ int interp_read_empinfo(Interpreter *interp)
    interp->linestart = interp->buf;
 
 _exit:
-   SYS_CALL(fclose(fptr));
+   IO_CALL(fclose(fptr));
 
    return status;
 }
@@ -477,7 +477,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
 
       const char *scrdir = gmdldat->scrdir;
       const char *gdxname = "dctgdx.dat"; 
-      IO_CALL_EXIT(asprintf(&gdxfullname, "%s%s", scrdir, gdxname));
+      IO_PRINT_EXIT(asprintf(&gdxfullname, "%s%s", scrdir, gdxname));
 
       // this returns void ...
       dctWriteGDX(dct, gdxfullname, msg);

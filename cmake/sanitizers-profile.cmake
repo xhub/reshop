@@ -24,10 +24,10 @@ else()
   endif()
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+if("x${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
   set(LIBSAN_SHARED_FLAGS "/Qoption,link,/force -v")
 
-ELSEIF(CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT APPLE)
+ELSEIF(CMAKE_C_COMPILER_ID MATCHES "Clang" AND LINUX)
    execute_process (COMMAND ${CMAKE_C_COMPILER} --print-file-name libclang_rt.asan-x86_64.so
       OUTPUT_VARIABLE LIBCLANG_RT OUTPUT_STRIP_TRAILING_WHITESPACE)
    get_filename_component(LIBSAN_RPATH ${LIBCLANG_RT} DIRECTORY)
@@ -35,7 +35,7 @@ ELSEIF(CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT APPLE)
 
 ENDIF()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+if("x${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
   set(ASAN_COMPILE_FLAGS "/fsanitize=address")
   set(ASAN_LINKER_FLAGS "/fsanitize=address")
 else()

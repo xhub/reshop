@@ -282,24 +282,25 @@ int opt_setfromstr(struct option *opt, const char *str)
 int optset_syncenv(struct option_set *optset)
 {
    int status = OK;
-   char *env_varname = NULL;
    size_t optname_maxlen = 512;
+   char *env_varname;
    MALLOC_(env_varname, char, optname_maxlen + 5);
 
+   assert(optset->opts);
    for (size_t j = 0; j < optset->numopts; j++) {
-      const char* optname = optset->opts[j].name;
+      const char* optname = optset->opts[j].name; assert(optname);
       const char *env_varval = find_rhpenvvar(optname, &env_varname, &optname_maxlen);
 
       if (env_varval) {
          struct option *opt = &optset->opts[j];
          S_CHECK_EXIT(opt_setfromstr(opt, env_varval));
+         myfreeenvval(env_varval);
       }
 
-      myfreeenvval(env_varval);
    }
 
 _exit:
-   FREE(env_varname);
+   free(env_varname);
 
    return status;
 }

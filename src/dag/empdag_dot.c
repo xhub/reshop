@@ -6,12 +6,12 @@
 #if defined(_WIN32)
 
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include <fileapi.h>
+#include <io.h>
 
-#define fileno(X) (X)
-#define fsync(X) !FlushFileBuffers((HANDLE)(X))
+#define fileno(X) _fileno(X)
+#define fsync(X) !FlushFileBuffers((HANDLE)(_get_osfhandle(X)))
 
 #else
 
@@ -85,13 +85,13 @@ static int arcVF_basic_arcdat(const ArcVFData *arcVF, const MathPrgm *mp,
    strs->do_free_weight = true;
    if (cst != 1.) {
       if (valid_vi(vi)) {
-         IO_CALL(asprintf(&strs->weight, "%e %s", cst, ctr_printvarname(&mdl->ctr, vi)));
+         IO_PRINT(asprintf(&strs->weight, "%e %s", cst, ctr_printvarname(&mdl->ctr, vi)));
       } else {
-         IO_CALL(asprintf(&strs->weight, "%e", cst));
+         IO_PRINT(asprintf(&strs->weight, "%e", cst));
       }
    } else {
       if (valid_vi(vi)) {
-         IO_CALL(asprintf(&strs->weight, "%s", ctr_printvarname(&mdl->ctr, vi)));
+         IO_PRINT(asprintf(&strs->weight, "%s", ctr_printvarname(&mdl->ctr, vi)));
       } else {
          strs->weight = "";
          strs->do_free_weight = false;
@@ -125,7 +125,7 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
          unsigned id = uid2id(uid);
  
 
-         IO_CALL(fprintf(f, " MP%u -> %s%u [%s];\n", mp_id,
+         IO_PRINT(fprintf(f, " MP%u -> %s%u [%s];\n", mp_id,
                          isMP ? "MP" : "Nash", id, arcstyle_CTRL));
       }
 
@@ -151,14 +151,14 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
             VFstrings.equname = "unsupported arcVF type";
          }
 
-         IO_CALL(fprintf(f, " MP%u -> MP%u [label=<%s",
+         IO_PRINT(fprintf(f, " MP%u -> MP%u [label=<%s",
                          mp_id, mpchild_id, VFstrings.equname)); //VFstrings.weight,
  
          if (VFstrings.weight) {
-            IO_CALL(fprintf(f, "<BR/>%s", VFstrings.weight));
+            IO_PRINT(fprintf(f, "<BR/>%s", VFstrings.weight));
          }
 
-         IO_CALL(fprintf(f, ">, fontcolor=%s, %s];\n",
+         IO_PRINT(fprintf(f, ">, fontcolor=%s, %s];\n",
                          VFstrings.labelcolor, arcstyle_VF));
 
          if (VFstrings.do_free_weight) { FREE(VFstrings.weight); }
@@ -188,7 +188,7 @@ static int print_nash_arcs(const struct nash_namedarray* mpes, FILE* f)
        
          const char *arcstyle = arcstyle_NASH;
 
-         IO_CALL(fprintf(f, " Nash%u -> %s%u [%s];\n", mpe_id, isMP ? "MP" : "Nash", id, arcstyle));
+         IO_PRINT(fprintf(f, " Nash%u -> %s%u [%s];\n", mpe_id, isMP ? "MP" : "Nash", id, arcstyle));
       }
 
    }
@@ -243,23 +243,23 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
          switch(mp->type) {
          case MpTypeCcflib: {
             const OvfDef *ccf = mp->ccflib.ccf;
-            IO_CALL(asprintf(&lname, "CCF '%s'", ovf_getname(ccf)));
+            IO_PRINT(asprintf(&lname, "CCF '%s'", ovf_getname(ccf)));
             break;
          }
          case MpTypeOpt:
             if (valid_vi(mp->opt.objvar)) {
                mp_ident = ctr_printvarname(ctr, mp->opt.objvar);
-               IO_CALL(asprintf(&lname, "%s %s", prefix, mp_ident));
+               IO_PRINT(asprintf(&lname, "%s %s", prefix, mp_ident));
                break;
             } else if (valid_ei(mp->opt.objequ)) {
                mp_ident = ctr_printequname(ctr, mp->opt.objequ);
-               IO_CALL(asprintf(&lname, "%s %s", prefix, mp_ident));
+               IO_PRINT(asprintf(&lname, "%s %s", prefix, mp_ident));
                break;
             }
 
          FALLTHRU
          default:
-            IO_CALL(asprintf(&lname, "%s (%u)", prefix, mp->id));
+            IO_PRINT(asprintf(&lname, "%s (%u)", prefix, mp->id));
          }
 
          name = lname;
@@ -268,18 +268,18 @@ static int print_mp_nodes(const struct mp_namedarray* mps, FILE* f, const Contai
 
       if (mp_ishidden(mp)) { 
          char *tmp = hidden_mps;
-         IO_CALL(asprintf(&hidden_mps, "%s MP%u [label=\"%s\", %s];\n", tmp ? tmp : "",
+         IO_PRINT(asprintf(&hidden_mps, "%s MP%u [label=\"%s\", %s];\n", tmp ? tmp : "",
                  mp->id, name, nodestyle_mp));
          free(tmp);
       } else {
-         IO_CALL(fprintf(f, " MP%u [label=\"%s\", %s];\n", mp->id, name, nodestyle_mp));
+         IO_PRINT(fprintf(f, " MP%u [label=\"%s\", %s];\n", mp->id, name, nodestyle_mp));
       }
 
       free(lname);
    }
 
    if (hidden_mps) {
-      IO_CALL(fprintf(f, " subgraph cluster_mps_hidden { \n "
+      IO_PRINT(fprintf(f, " subgraph cluster_mps_hidden { \n "
                       "label = \"Defining MPs\"; bgcolor=\"#ececec\";\n%s}\n",
                       hidden_mps));
       free(hidden_mps);
@@ -297,11 +297,11 @@ static int print_nash_nodes(const struct nash_namedarray* nashs, FILE* f, const 
       const char *name = nashs->names[i];
       char *lname = NULL;
       if (!name) {
-         IO_CALL(asprintf(&lname, "Nash(%u)", nash->id));
+         IO_PRINT(asprintf(&lname, "Nash(%u)", nash->id));
          name = lname;
       }
 
-      IO_CALL(fprintf(f, " Nash%u [label=\"%s\", %s];\n", nash->id, name, nodestyle_nash));
+      IO_PRINT(fprintf(f, " Nash%u [label=\"%s\", %s];\n", nash->id, name, nodestyle_nash));
 
       free(lname);
    }
@@ -311,9 +311,9 @@ static int print_nash_nodes(const struct nash_namedarray* nashs, FILE* f, const 
 
 static int empdag2dot(const EmpDag *empdag, FILE *f)
 {
-   IO_CALL(fputs("digraph structs {\n node [shape=\"box\", style=\"filled, rounded\", margin=0.2];\n", f));
-//   IO_CALL(fputs(" edge [headclip=false, tailclip=false];\n", f));
-   IO_CALL(fprintf(f, " label=\"EMPDAG for %s model '%.*s' #%u\"; rankdir=LR;\n", mdl_fmtargs(empdag->mdl)));
+   IO_PRINT(fputs("digraph structs {\n node [shape=\"box\", style=\"filled, rounded\", margin=0.2];\n", f));
+//   IO_PRINT(fputs(" edge [headclip=false, tailclip=false];\n", f));
+   IO_PRINT(fprintf(f, " label=\"EMPDAG for %s model '%.*s' #%u\"; rankdir=LR;\n", mdl_fmtargs(empdag->mdl)));
 
    S_CHECK(print_mp_nodes(&empdag->mps, f, &empdag->mdl->ctr));
    S_CHECK(print_nash_nodes(&empdag->nashs, f, &empdag->mdl->ctr));
@@ -321,8 +321,8 @@ static int empdag2dot(const EmpDag *empdag, FILE *f)
    S_CHECK(print_mp_arcs(empdag, f));
    S_CHECK(print_nash_arcs(&empdag->nashs, f));
 
-   IO_CALL(fputs("\n}\n", f));
-   SYS_CALL(fflush(f));
+   IO_PRINT(fputs("\n}\n", f));
+   IO_CALL(fflush(f));
    SYS_CALL(fsync(fileno(f)));
 
    return OK;
@@ -342,7 +342,7 @@ int empdag2dotfile(const EmpDag * empdag, const char* fname)
 
    S_CHECK_EXIT(empdag2dot(empdag, f));
 
-   SYS_CALL(fclose(f));
+   IO_CALL(fclose(f));
 
    S_CHECK(dot2png(fname));
 
@@ -351,7 +351,7 @@ int empdag2dotfile(const EmpDag * empdag, const char* fname)
    return view_png_mdl(fname, empdag->mdl);
 
 _exit: /* this is reached only when we error */
-   SYS_CALL(fclose(f));
+   IO_CALL(fclose(f));
    return status;
 }
 

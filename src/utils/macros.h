@@ -204,37 +204,59 @@ void backtrace_(const char *expr, int status);
 
 /* Glibc provides a handy strerror_r */
 #if !defined(__clang_analyzer__) && defined(__GLIBC__) && (!(defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) || (defined(_GNU_SOURCE)))
-#define STRERROR(errcode, buf, size, msg) msg = strerror_r(errcode, buf, size)
+#define STRERROR(buf, size, msg) { int errno43 = errno; (msg) = strerror_r(errno43, buf, size); }
 #else
-#define STRERROR(errcode, buf, size, msg) const char* tmp = strerror(errcode); \
-  strncpy(buf, tmp, (size)-1); msg = buf;
+#define STRERROR(buf, size, msg) { int errno43 = errno; const char* tmp = strerror(errno43); \
+  strncpy(buf, tmp, (size)-1); (msg) = buf; }
 #endif
 
+#ifdef _WIN32
+#define rhp_errno_t unsigned
+rhp_errno_t win_strerror(unsigned sz, char buf[VMT(static sz)], const char **msg);
+#define SYS_ERRMSG win_strerror
+#define RHP_ERRNO_FMT "%u"
+#else
+#define rhp_errno_t int
+int posix_strerror(size_t sz, char buf[VMT(static sz)], const char **msg);
+#define SYS_ERRMSG posix_strerror
+#define RHP_ERRNO_FMT "%d"
+#endif
 
 #define SYS_CALL_(EXPR, ACTION) { \
    int status42 = EXPR; \
    if (RHP_UNLIKELY(status42)) { \
-      int errsv42 = errno; \
-      error("System call '%s' failed!\n", #EXPR); \
-      char *msg42, buf42[256]; \
-      STRERROR(errsv42, buf42, sizeof(buf42)-1, msg42); \
+      const char *msg42; char buf42[256]; \
+      rhp_errno_t errno42 = SYS_ERRMSG(sizeof(buf42)-1, buf42, &msg42); \
+      error("System call '%s' failed in %s with code " RHP_ERRNO_FMT "!\n", #EXPR, __func__, errno42); \
       error("Error msg is: %s\n", msg42); \
       ACTION; \
    } \
 }
 
-#define SYS_CALL(EXPR) SYS_CALL_(EXPR, /* nop */)
+#define IO_CALL_(EXPR, ACTION) { \
+   int status42 = EXPR; \
+   if (RHP_UNLIKELY(status42)) { \
+      int errno42 = errno; \
+      const char *msg42; char buf42[256]; \
+      STRERROR(buf42, sizeof(buf42)-1, msg42); \
+      error("System call '%s' failed in %s with code %d!\n", #EXPR, __func__, errno42); \
+      error("Error msg is: %s\n", msg42); \
+      ACTION; \
+   } \
+}
+#define IO_CALL(EXPR)      IO_CALL_(EXPR, /* */)
+#define SYS_CALL(EXPR)     SYS_CALL_(EXPR, /* */)
 #define SYS_CALL_RET(EXPR) SYS_CALL_(EXPR, return Error_SystemError;)
 
-#define IO_CALL(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42 < 0)) { \
+#define IO_PRINT(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42 < 0)) { \
   error("%s :: write error %d\n", __func__, status42); \
   return Error_SystemError; } }
 
-#define IO_CALL_NULL(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42 < 0)) { \
+#define IO_PRINT_NULL(EXPR) { int status42 = EXPR; if (RHP_UNLIKELY(status42 < 0)) { \
   error("%s :: write error %d\n", __func__, status42); \
   return NULL; } }
 
-#define IO_CALL_EXIT(EXPR) { int res42 = EXPR; if (RHP_UNLIKELY(res42 < 0)) { \
+#define IO_PRINT_EXIT(EXPR) { int res42 = EXPR; if (RHP_UNLIKELY(res42 < 0)) { \
   error("%s :: write error %d\n", __func__, res42); \
   status = Error_SystemError; goto _exit;} }
 

@@ -343,8 +343,8 @@ static NONNULL void print_fd(rhpfd_t fd, unsigned mode, const char *buf)
 
 log_ipc_error:
    {
-   char *errnostr, errnomsg[256];
-   STRERROR(errno, errnomsg, sizeof(errnomsg), errnostr);
+   const char *errnostr; char errnomsg[256];
+   STRERROR(errnomsg, sizeof(errnomsg), errnostr);
    print_ops.print(print_ops.data, PO_ERROR, "[IPC] ERROR: could not send log message: ");
    print_ops.print(print_ops.data, PO_ERROR, errnostr);
    print_ops.print(print_ops.data, PO_ERROR, "\n");

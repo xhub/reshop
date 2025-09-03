@@ -353,7 +353,7 @@ NONNULL static int write_empinfo(Interpreter *interp, const char *fname)
    }
 
 _exit:
-   SYS_CALL(fclose(f));
+   IO_CALL(fclose(f));
 
    return status;
 }

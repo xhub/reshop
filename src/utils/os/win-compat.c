@@ -27,7 +27,6 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
    switch (fdwReason) {
    case DLL_PROCESS_ATTACH:
-      debug("[OS] DllMain called with DLL_PROCESS_ATTACH\n");
 
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */
@@ -35,9 +34,10 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 #if !defined(__USE_MINGW_ANSI_STDIO) || (__USE_MINGW_ANSI_STDIO == 0)
        _set_printf_count_output(1);
 #endif
-      rhp_syncenv();
-      logging_syncenv();
       option_init();
+      rhp_syncenv();
+      debug("[OS] DllMain called with DLL_PROCESS_ATTACH\n");
+      logging_syncenv();
       debug("[OS] Call to DllMain with DLL_PROCESS_ATTACH successful\n");
       break;
    case DLL_THREAD_ATTACH:
@@ -121,6 +121,19 @@ _err:
    return NULL;
 }
 
+static const char unknown_err[] = "unknown error";
+
+unsigned win_strerror(unsigned sz, char buf[VMT(static sz)], const char **msg)
+{
+   DWORD err = GetLastError();
+   unsigned length42 = FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, err, 0, buf, sz, NULL);
+
+   if (length42 > 0) { *msg = buf; } else { *msg = unknown_err; }
+
+   return err;
+}
 
 
 #else

@@ -123,3 +123,14 @@ void myfreeenvval(const char *envval)
    if (envval) { free((char*)envval); }
 }
 #endif
+
+#ifndef _WIN32
+#include <errno.h>
+#include "macros.h"
+int posix_strerror(size_t sz, char buf[VMT(static sz)], const char **msg)
+{
+   int errno_ = errno;
+   STRERROR(buf, sz, *msg);
+   return errno_;
+}
+#endif

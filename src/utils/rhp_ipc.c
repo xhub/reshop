@@ -195,9 +195,8 @@ static inline bool guiackreq(rhpfd_t fd, MessageType mtyp, MessageType req)
 
 ipc_error_read: 
    {
-   int errno_ = errno;
-   char *errnostr, errnomsg[256];
-   STRERROR(errno_, errnomsg, sizeof(errnomsg), errnostr);
+   const char *errnostr; char errnomsg[256];
+   STRERROR(errnomsg, sizeof(errnomsg), errnostr);
    error("\n[IPC] ERROR while sending model: 'read' failed with %s'\n", errnostr);
 
    return false;
@@ -235,9 +234,8 @@ static inline bool guiack(rhpfd_t fd, MessageType mtyp)
 
 ipc_error_read: 
    {
-   int errno_ = errno;
-   char *errnostr, errnomsg[256];
-   STRERROR(errno_, errnomsg, sizeof(errnomsg), errnostr);
+   const char *errnostr; char errnomsg[256];
+   STRERROR(errnomsg, sizeof(errnomsg), errnostr);
    error("\n[IPC] ERROR while sending model: 'read' failed with %s'\n", errnostr);
 
    return false;

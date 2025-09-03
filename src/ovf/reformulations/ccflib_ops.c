@@ -117,7 +117,7 @@ static int ccflib_get_mp_and_sense(UNUSED OvfOpsData dat, Model *mdl,
       }
 
       const char *name_primal = mp_getname(mp_primal);
-      IO_CALL(asprintf(&name_dual, "%s_dual", name_primal));
+      IO_PRINT(asprintf(&name_dual, "%s_dual", name_primal));
 
       OvfDef * ovfdef = mp_primal->ccflib.ccf;
       RhpSense sense_ = ovfdef->sense == RhpMax ? RhpMin : RhpMax;

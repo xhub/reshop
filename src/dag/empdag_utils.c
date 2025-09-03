@@ -87,7 +87,7 @@ const char* empdag_getmpname(const EmpDag *empdag, mpid_t mpid)
    }
 
    if (mpid >= empdag->mps.len) {
-      IO_CALL_EXIT(snprintf(msg, sizeof msg, "ERROR: MP index %u is out of bound",
+      IO_PRINT_EXIT(snprintf(msg, sizeof msg, "ERROR: MP index %u is out of bound",
                             mpid));
       return msg;
    }
@@ -95,7 +95,7 @@ const char* empdag_getmpname(const EmpDag *empdag, mpid_t mpid)
    const char *mp_name = empdag->mps.names[mpid];
    if (mp_name) { return mp_name; }
 
-   IO_CALL_EXIT(snprintf(bufMP, sizeof bufMP, "ID %u", mpid));
+   IO_PRINT_EXIT(snprintf(bufMP, sizeof bufMP, "ID %u", mpid));
 
    return bufMP;
 
@@ -112,7 +112,7 @@ const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid)
    }
 
    if (mpid >= empdag->mps.len) {
-      IO_CALL_EXIT(snprintf(msg, sizeof msg, "ERROR: MP index %u is out of bound",
+      IO_PRINT_EXIT(snprintf(msg, sizeof msg, "ERROR: MP index %u is out of bound",
                             mpid));
       return msg;
    }
@@ -120,7 +120,7 @@ const char* empdag_getmpname2(const EmpDag *empdag, mpid_t mpid)
    const char *mp_name = empdag->mps.names[mpid];
    if (mp_name) { return mp_name; }
 
-   IO_CALL_EXIT(snprintf(bufMP2, sizeof bufMP2, "ID %u", mpid));
+   IO_PRINT_EXIT(snprintf(bufMP2, sizeof bufMP2, "ID %u", mpid));
 
    return bufMP2;
 
@@ -133,14 +133,14 @@ const char* empdag_getnashname(const EmpDag *empdag, unsigned id)
    UNUSED int status;
 
    if (id >= empdag->nashs.len) {
-      IO_CALL_EXIT(snprintf(msg, sizeof msg, "ERROR: Nash index %u is out of bound",
+      IO_PRINT_EXIT(snprintf(msg, sizeof msg, "ERROR: Nash index %u is out of bound",
                             id));
       return msg;
    }
 
    const char *nash_name = empdag->nashs.names[id];
    if (nash_name) { return nash_name; }
-   IO_CALL_EXIT(snprintf(bufNash, sizeof bufNash, "ID %u", id));
+   IO_PRINT_EXIT(snprintf(bufNash, sizeof bufNash, "ID %u", id));
 
    return bufNash;
 
@@ -153,14 +153,14 @@ const char* empdag_getnashname2(const EmpDag *empdag, unsigned id)
    UNUSED int status;
 
    if (id >= empdag->nashs.len) {
-      IO_CALL_EXIT(snprintf(msg2, sizeof msg2, "ERROR: Nash index %u is out of bound",
+      IO_PRINT_EXIT(snprintf(msg2, sizeof msg2, "ERROR: Nash index %u is out of bound",
                             id));
       return msg;
    }
 
    const char *nash_name = empdag->nashs.names[id];
    if (nash_name) { return nash_name; }
-   IO_CALL_EXIT(snprintf(bufNash2, sizeof bufNash2, "ID %u", id));
+   IO_PRINT_EXIT(snprintf(bufNash2, sizeof bufNash2, "ID %u", id));
 
    return bufNash2;
 
@@ -244,7 +244,7 @@ int empdag_export(Model *mdl)
 
    const char *latex_dir = mygetenv("RHP_EXPORT_LATEX");
    if (latex_dir) {
-      IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", latex_dir, cnt));
+      IO_PRINT(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", latex_dir, cnt));
       S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
       free(fname); fname = NULL;
    }
@@ -253,7 +253,7 @@ int empdag_export(Model *mdl)
    const char *empdag_dotdir = mygetenv("RHP_EMPDAG_DOTDIR");
 
    if (empdag_dotdir) {
-      IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", empdag_dotdir, cnt));
+      IO_PRINT(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", empdag_dotdir, cnt));
       S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
       free(fname); fname = NULL;
    }
@@ -264,7 +264,7 @@ int empdag_export(Model *mdl)
          error("%s ERROR: could not create an export dir", __func__);
       } else {
          const char *export_dir = mdl->commondata.exports_dir;
-         IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", export_dir, cnt));
+         IO_PRINT(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", export_dir, cnt));
          S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
          free(fname); fname = NULL;
       }

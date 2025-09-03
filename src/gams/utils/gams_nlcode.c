@@ -14,12 +14,12 @@
 #if defined(_WIN32)
 
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include <fileapi.h>
+#include <io.h>
 
-#define fileno(X) (X)
-#define fsync(X) !FlushFileBuffers((HANDLE)(X))
+#define fileno(X) _fileno(X)
+#define fsync(X) !FlushFileBuffers((HANDLE)(_get_osfhandle(X)))
 
 #else
 
@@ -36,7 +36,7 @@
    (void)putchar('\n'); \
 }
 
-#define NLCODE_DEBUG(...) printf(__VA_ARGS__);
+#define NLCODE_DEBUG(...) /* printf(__VA_ARGS__); */
 
 
 tlsvar char varName[3*sizeof(unsigned)*CHAR_BIT/8+5];
@@ -376,7 +376,7 @@ static int create_dotfile(Model *mdl, int idx, char **fname_dot)
 
    }
 
-   IO_CALL_EXIT(asprintf(fname_dot, "%s" DIRSEP "nlcode%d.dot", export_dir, idx));
+   IO_PRINT_EXIT(asprintf(fname_dot, "%s" DIRSEP "nlcode%d.dot", export_dir, idx));
 
    if (free_export_dir) { free(export_dir); }
 
@@ -570,10 +570,10 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
       goto _exit;
    }
 
-   IO_CALL_EXIT(fputs("digraph structs {\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
+   IO_PRINT_EXIT(fputs("digraph structs {\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
 
    if (mdl) {
-      IO_CALL_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'\";", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
+      IO_PRINT_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'\";", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
    }
 
    OpCodeTreeSizes tree_sizes = compute_nlcode_tree_sizes(len, instr, args);
@@ -735,7 +735,7 @@ int gams_nlcode2dot(Model *mdl, const int * restrict instr,
 
    }
 
-   IO_CALL_EXIT(fputs("\n}\n", f));
+   IO_PRINT_EXIT(fputs("\n}\n", f));
 
 _exit:
 
@@ -752,9 +752,9 @@ _exit:
    } 
 
    if (f) {
-      SYS_CALL(fflush(f));
+      IO_CALL(fflush(f));
       SYS_CALL(fsync(fileno(f)));
-      SYS_CALL(fclose(f));
+      IO_CALL(fclose(f));
    }
 
    return status;
@@ -778,10 +778,10 @@ int gams_opcodetree2dot(Model *mdl, GamsOpCodeTree *otree, char **fname_dot)
       goto _exit;
    }
 
-   IO_CALL_EXIT(fputs("digraph structs { ordering=out;\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
+   IO_PRINT_EXIT(fputs("digraph structs { ordering=out;\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
 
    if (mdl) {
-      IO_CALL_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'\";", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
+      IO_PRINT_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'\";", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
    }
 
    double *pool = NULL;
@@ -872,14 +872,14 @@ int gams_opcodetree2dot(Model *mdl, GamsOpCodeTree *otree, char **fname_dot)
 
    }
 
-   IO_CALL_EXIT(fputs("\n}\n", f));
+   IO_PRINT_EXIT(fputs("\n}\n", f));
 
 _exit:
 
    if (f) {
-      SYS_CALL(fflush(f));
+      IO_CALL(fflush(f));
       SYS_CALL(fsync(fileno(f)));
-      SYS_CALL(fclose(f));
+      IO_CALL(fclose(f));
    }
 
    return status;

@@ -97,7 +97,7 @@ static int add_dualize_operation(EmpDag *empdag, mpid_t mpid_primal, mpid_t mpid
    mp_hidable_asdual(mp_primal);
 
    const char *name_primal = empdag_getmpname(empdag, mpid_primal);
-   IO_CALL(asprintf(&name_dual, "%s_dual", name_primal));
+   IO_PRINT(asprintf(&name_dual, "%s_dual", name_primal));
    S_CHECK(empdag_setmpname(empdag, mpid_dual, name_dual));
    free(name_dual);
 

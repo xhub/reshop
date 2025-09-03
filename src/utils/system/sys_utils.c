@@ -29,7 +29,7 @@ const char* exe_getfullpath(const char *executable)
 #if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
    char *cmd;
 
-   IO_CALL_NULL(asprintf(&cmd, "which %s", executable));
+   IO_PRINT_NULL(asprintf(&cmd, "which %s", executable));
 
    // Execute the command using popen and read the output
    FILE *pipe = popen(cmd, "r");

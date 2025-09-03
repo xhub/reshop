@@ -221,7 +221,7 @@ int ovf_transform(Model *mdl)
    const char *ovfgraph_dir = mygetenv("RHP_EXPORT_OVFGRAPH");
    if (ovfgraph_dir) {
       char *fname;
-      IO_CALL_EXIT(asprintf(&fname, "%s" DIRSEP "ovf_%p.dot", ovfgraph_dir,
+      IO_PRINT_EXIT(asprintf(&fname, "%s" DIRSEP "ovf_%p.dot", ovfgraph_dir,
                        (void*)ovfinfo));
       status = ovfgraph_dot(ovfinfo, ovf_nodes, n_ovfs, mdl, fname);
       FREE(fname);

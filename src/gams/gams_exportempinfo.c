@@ -161,7 +161,7 @@ static int print_mp_opt_(struct empinfo_dat *file, MathPrgm *mp,
   RhpSense sense = mp_getsense(mp);
   assert(sense == RhpMin || sense == RhpMax);
 
-  IO_CALL(fputs(sense == RhpMin ? "\nmin" : "\nmax", file->empinfo_file));
+  IO_PRINT(fputs(sense == RhpMin ? "\nmin" : "\nmax", file->empinfo_file));
 
   rhp_idx mp_objvar = mp_getobjvar(mp);
 
@@ -185,7 +185,7 @@ static int print_mp_opt_(struct empinfo_dat *file, MathPrgm *mp,
 
   GET_PROPER_COLNAME(&mdl->ctr, objvaridx, buf, bufout);
 
-  IO_CALL(fprintf(file->empinfo_file, " %s", bufout));
+  IO_PRINT(fprintf(file->empinfo_file, " %s", bufout));
   file->line_len = strlen(buf) + 5;
 
   if (mdl->mdl_up) {
@@ -216,7 +216,7 @@ static int _print_mp_vi(struct empinfo_dat *file, MathPrgm *mp,
   char buf[GMS_SSSIZE];
   char bufout[2 * GMS_SSSIZE];
 
-  IO_CALL(fputs("\nvi", file->empinfo_file));
+  IO_PRINT(fputs("\nvi", file->empinfo_file));
   file->line_len = 2;
 
   IntArray *equs = &mp->equs;
@@ -380,7 +380,7 @@ UNUSED static int _export_bilevel(struct empinfo_dat *file, MathPrgm *mp,
    * see https://www.gams.com/latest/docs/UG_EMP_Bilevel.html
    * ------------------------------------------------------------ */
 
-  IO_CALL(fprintf(file->empinfo_file, "\nbilevel "));
+  IO_PRINT(fprintf(file->empinfo_file, "\nbilevel "));
   file->line_len = strlen("bilevel ") + 1;
 
   rhp_idx mp_objvar = mp_getobjvar(mp);
@@ -436,7 +436,7 @@ static int export_dualvars_(struct empinfo_dat *file, Model *mdl,
    * The format is: dualvar {var eqn}
    * ---------------------------------------------------------------------- */
 
-  IO_CALL(fputs("\ndualvar", file->empinfo_file));
+  IO_PRINT(fputs("\ndualvar", file->empinfo_file));
   file->line_len = 7;
 
   size_t dualvars_seen = 0;
@@ -465,7 +465,7 @@ static int export_dualvars_(struct empinfo_dat *file, Model *mdl,
 static int export_equilibrium_(struct empinfo_dat *file,
                                const EmpDag *empdag, Nash *mpe,
                                Model *mdl) {
-  IO_CALL(fprintf(file->empinfo_file, "equilibrium"));
+  IO_PRINT(fprintf(file->empinfo_file, "equilibrium"));
 
   MpIdArray *mps;
   S_CHECK(empdag_nash_getchildren(empdag, mpe->id, &mps));
@@ -608,7 +608,7 @@ _check_emp_probtype: ;
 
     if (file.empinfo_file) {
 
-      SYS_CALL(fclose(file.empinfo_file));
+      IO_CALL(fclose(file.empinfo_file));
     }
 
   return OK;

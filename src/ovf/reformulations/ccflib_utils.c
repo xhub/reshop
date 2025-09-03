@@ -17,7 +17,7 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    char *y_name;
    mpid_t mpid = mp_instance->id;
    /* TODO GAMS NAMING: do better and use MP name */
-   IO_CALL(asprintf(&y_name, "ccflib_y_%u", mpid));
+   IO_PRINT(asprintf(&y_name, "ccflib_y_%u", mpid));
 
    const OvfOps *ops = instancedat->ops; assert(ops);
    OvfOpsData ovfd =  instancedat->ovfd;
@@ -33,7 +33,7 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    /* TODO(xhub) improve naming */
    char *ovf_objequ;
    Equ *eobj;
-   IO_CALL(asprintf(&ovf_objequ, "ccfObj(%u)", mpid));
+   IO_PRINT(asprintf(&ovf_objequ, "ccfObj(%u)", mpid));
    RhpContainerData *cdat = (RhpContainerData*)mdl->ctr.data;
    S_CHECK(cdat_equname_start(cdat, ovf_objequ));
    S_CHECK(rctr_add_equ_empty(&mdl->ctr, &objequ, &eobj, Mapping, CONE_NONE));

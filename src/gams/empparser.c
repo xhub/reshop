@@ -3264,7 +3264,7 @@ static int mp_opt_add_name(MathPrgm * restrict mp)
    }
 
    char *mpname;
-   IO_CALL(asprintf(&mpname, "%s %s", sense2str(mp->sense),
+   IO_PRINT(asprintf(&mpname, "%s %s", sense2str(mp->sense),
                     mdl_printvarname(mp->mdl, objvar)));
 
 
@@ -4333,7 +4333,7 @@ int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
          S_CHECK_EXIT(_parse_gmsopt(interp, &p2, &gmsopt));
 
          char *gdxfile2;
-         IO_CALL_EXIT(asprintf(&gdxfile2, "%s%s", gdxfile, gmsopt));
+         IO_PRINT_EXIT(asprintf(&gdxfile2, "%s%s", gdxfile, gmsopt));
 
          free(gdxfile);
          free(gmsopt);
@@ -4346,7 +4346,7 @@ int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
          }
 
          char *gdxfile2;
-         IO_CALL_EXIT(asprintf(&gdxfile2, "%s%.*s", gdxfile,
+         IO_PRINT_EXIT(asprintf(&gdxfile2, "%s%.*s", gdxfile,
                                emptok_getstrlen(&interp->cur),
                                emptok_getstrstart(&interp->cur)));
 

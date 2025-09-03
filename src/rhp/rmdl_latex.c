@@ -184,18 +184,18 @@ static const char * const func_name[fndummy+1][2] = {
 
 static inline NONNULL int _printvarname(const Container *ctr, rhp_idx i, FILE *f)
 {
-   IO_CALL(fputs("\\text{\\textbf{\\detokenize{", f));
-   IO_CALL(fputs(ctr_printvarname(ctr, i), f));
-   IO_CALL(fputs("}}}", f));
+   IO_PRINT(fputs("\\text{\\textbf{\\detokenize{", f));
+   IO_PRINT(fputs(ctr_printvarname(ctr, i), f));
+   IO_PRINT(fputs("}}}", f));
 
    return OK;
 }
 
 static inline NONNULL int _printequname(const Container *ctr, rhp_idx i, FILE *f)
 {
-   IO_CALL(fputs("\n \\textbf{\\detokenize{", f));
-   IO_CALL(fputs(ctr_printequname(ctr, i), f));
-   IO_CALL(fputs("}}: \\begin{dmath}", f));
+   IO_PRINT(fputs("\n \\textbf{\\detokenize{", f));
+   IO_PRINT(fputs(ctr_printequname(ctr, i), f));
+   IO_PRINT(fputs("}}: \\begin{dmath}", f));
 
    return OK;
 }
@@ -211,33 +211,33 @@ static inline NONNULL int _printequname(const Container *ctr, rhp_idx i, FILE *f
 #define CST_IN(node, ctr, f) 
 #define CST_POST(node, ctr, f) 
 
-#define ADD_PRE(node, ctr, f) IO_CALL(fputs(" \\left( ", f));
-#define ADD_IN(node, ctr, f) IO_CALL(fputs(" + ", f));
-#define ADD_POST(node, ctr, f) IO_CALL(fputs(" \\right) ", f));
+#define ADD_PRE(node, ctr, f) IO_PRINT(fputs(" \\left( ", f));
+#define ADD_IN(node, ctr, f) IO_PRINT(fputs(" + ", f));
+#define ADD_POST(node, ctr, f) IO_PRINT(fputs(" \\right) ", f));
 
-#define SUB_PRE(node, ctr, f) IO_CALL(fputs(" \\left( ", f));
-#define SUB_IN(node, ctr, f) IO_CALL(fputs(" - ", f));
-#define SUB_POST(node, ctr, f) IO_CALL(fputs(" \\right) ", f));
+#define SUB_PRE(node, ctr, f) IO_PRINT(fputs(" \\left( ", f));
+#define SUB_IN(node, ctr, f) IO_PRINT(fputs(" - ", f));
+#define SUB_POST(node, ctr, f) IO_PRINT(fputs(" \\right) ", f));
 
-#define MUL_PRE(node, ctr, f) IO_CALL(fputs(" ", f));
-#define MUL_IN(node, ctr, f) IO_CALL(fputs(" \\cdot", f));
-#define MUL_POST(node, ctr, f) IO_CALL(fputs(" ", f));
+#define MUL_PRE(node, ctr, f) IO_PRINT(fputs(" ", f));
+#define MUL_IN(node, ctr, f) IO_PRINT(fputs(" \\cdot", f));
+#define MUL_POST(node, ctr, f) IO_PRINT(fputs(" ", f));
 
-#define DIV_PRE(node, ctr, f) IO_CALL(fputs(" \\revfrac{ ", f));
-#define DIV_IN(node, ctr, f) IO_CALL(fputs(" }{ ", f));
-#define DIV_POST(node, ctr, f) IO_CALL(fputs(" } ", f));
+#define DIV_PRE(node, ctr, f) IO_PRINT(fputs(" \\revfrac{ ", f));
+#define DIV_IN(node, ctr, f) IO_PRINT(fputs(" }{ ", f));
+#define DIV_POST(node, ctr, f) IO_PRINT(fputs(" } ", f));
 
-#define UMIN_PRE(node, ctr, f) IO_CALL(fputs(" - (", f));
+#define UMIN_PRE(node, ctr, f) IO_PRINT(fputs(" - (", f));
 #define UMIN_IN(node, ctr, f) 
-#define UMIN_POST(node, ctr, f) IO_CALL(fputs(" )", f));
+#define UMIN_POST(node, ctr, f) IO_PRINT(fputs(" )", f));
 
-#define CALL1_PRE(node, ctr, f) IO_CALL(fputs(func_name[node->value][0], f));
+#define CALL1_PRE(node, ctr, f) IO_PRINT(fputs(func_name[node->value][0], f));
 #define CALL1_IN(node, ctr, f)
-#define CALL1_POST(node, ctr, f) IO_CALL(fputs(func_name[node->value][1], f));
+#define CALL1_POST(node, ctr, f) IO_PRINT(fputs(func_name[node->value][1], f));
 
-#define CALL2_PRE(node, ctr, f) IO_CALL(fputs(func_name[node->value][0], f));
-#define CALL2_IN(node, ctr, f) IO_CALL(fputs(" , ", f));
-#define CALL2_POST(node, ctr, f) IO_CALL(fputs(func_name[node->value][1], f));
+#define CALL2_PRE(node, ctr, f) IO_PRINT(fputs(func_name[node->value][0], f));
+#define CALL2_IN(node, ctr, f) IO_PRINT(fputs(" , ", f));
+#define CALL2_POST(node, ctr, f) IO_PRINT(fputs(func_name[node->value][1], f));
 
 #define VISIT_NODE _node_latex
 #define ENV_TYPE FILE*
@@ -268,33 +268,33 @@ static NONNULL int _print_equconesymbol(Equ *e, FILE *f)
    case CONE_R_PLUS:
    case CONE_R_MINUS:
    case CONE_0:
-      IO_CALL_EXIT(pprint_f(-equ_get_cst(e), f, false));
+      IO_PRINT_EXIT(pprint_f(-equ_get_cst(e), f, false));
       break;
    case CONE_R:
       break;
    case CONE_POLYHEDRAL:
-      IO_CALL_EXIT(fputs("K_{\\mathrm{poly}} ", f));
+      IO_PRINT_EXIT(fputs("K_{\\mathrm{poly}} ", f));
       break;
    case CONE_SOC:
-      IO_CALL_EXIT(fputs("K_{\\mathrm{SOC}} ", f));
+      IO_PRINT_EXIT(fputs("K_{\\mathrm{SOC}} ", f));
       break;
    case CONE_RSOC:
-      IO_CALL_EXIT(fputs("K_{\\mathrm{RSOC}} ", f));
+      IO_PRINT_EXIT(fputs("K_{\\mathrm{RSOC}} ", f));
       break;
    case CONE_EXP:
-      IO_CALL_EXIT(fputs("K_{\\mathrm{EXP}} ", f));
+      IO_PRINT_EXIT(fputs("K_{\\mathrm{EXP}} ", f));
       break;
    case CONE_DEXP:
-      IO_CALL_EXIT(fputs("K^*_{\\mathrm{EXP}} ", f));
+      IO_PRINT_EXIT(fputs("K^*_{\\mathrm{EXP}} ", f));
       break;
    case CONE_POWER:
-      IO_CALL_EXIT(fputs("K_{\\mathrm{POWER}} ", f));
+      IO_PRINT_EXIT(fputs("K_{\\mathrm{POWER}} ", f));
       break;
    case CONE_DPOWER:
-      IO_CALL_EXIT(fputs("K^*_{\\mathrm{POWER}} ", f));
+      IO_PRINT_EXIT(fputs("K^*_{\\mathrm{POWER}} ", f));
       break;
    default:
-      IO_CALL_EXIT(fprintf(f, "Unsupported cone %d ", e->cone));
+      IO_PRINT_EXIT(fprintf(f, "Unsupported cone %d ", e->cone));
    }
 
 _exit:
@@ -306,63 +306,63 @@ static NONNULL int _print_varconesymbol(Var *v, FILE *f)
    int status = OK;
 
    if (v->type == VAR_SI) {
-      IO_CALL_EXIT(fputs("semi-integer", f));
+      IO_PRINT_EXIT(fputs("semi-integer", f));
    }
    else if (!v->is_conic) {
       if (isfinite(v->bnd.lb) && isfinite(v->bnd.ub)) {
-         IO_CALL_EXIT(fputs("\\in [ ", f));
-         IO_CALL_EXIT(pprint_f(v->bnd.lb, f, false));
-         IO_CALL_EXIT(fputs(", ", f));
-         IO_CALL_EXIT(pprint_f(v->bnd.ub, f, false));
-         IO_CALL_EXIT(fputs("] ", f));
+         IO_PRINT_EXIT(fputs("\\in [ ", f));
+         IO_PRINT_EXIT(pprint_f(v->bnd.lb, f, false));
+         IO_PRINT_EXIT(fputs(", ", f));
+         IO_PRINT_EXIT(pprint_f(v->bnd.ub, f, false));
+         IO_PRINT_EXIT(fputs("] ", f));
       } else if (isfinite(v->bnd.ub)) {
-         IO_CALL_EXIT(fputs("\\leq ", f));
-         IO_CALL_EXIT(pprint_f(v->bnd.ub, f, false));
+         IO_PRINT_EXIT(fputs("\\leq ", f));
+         IO_PRINT_EXIT(pprint_f(v->bnd.ub, f, false));
       } else if (isfinite(v->bnd.lb)) {
-         IO_CALL_EXIT(fputs("\\geq ", f));
-         IO_CALL_EXIT(pprint_f(v->bnd.lb, f, false));
+         IO_PRINT_EXIT(fputs("\\geq ", f));
+         IO_PRINT_EXIT(pprint_f(v->bnd.lb, f, false));
       } else {
-         IO_CALL_EXIT(fputs("\\text{ free} ", f));
+         IO_PRINT_EXIT(fputs("\\text{ free} ", f));
       }
    } else {
 
-      IO_CALL_EXIT(fputs(" \\in ", f));
+      IO_PRINT_EXIT(fputs(" \\in ", f));
 
       switch (v->cone.type) {
       case CONE_R_PLUS:
-         IO_CALL_EXIT(fputs("\\mathbb{R}_+ ", f));
+         IO_PRINT_EXIT(fputs("\\mathbb{R}_+ ", f));
          break;
       case CONE_R_MINUS:
-         IO_CALL_EXIT(fputs("\\mathbb{R}_- ", f));
+         IO_PRINT_EXIT(fputs("\\mathbb{R}_- ", f));
          break;
       case CONE_0:
-         IO_CALL_EXIT(fputs(" \\{0\\} ", f));
+         IO_PRINT_EXIT(fputs(" \\{0\\} ", f));
          break;
       case CONE_R:
          break;
       case CONE_POLYHEDRAL:
-         IO_CALL_EXIT(fputs("K_{\\mathrm{poly}} ", f));
+         IO_PRINT_EXIT(fputs("K_{\\mathrm{poly}} ", f));
          break;
       case CONE_SOC:
-         IO_CALL_EXIT(fputs("K_{\\mathrm{SOC}} ", f));
+         IO_PRINT_EXIT(fputs("K_{\\mathrm{SOC}} ", f));
          break;
       case CONE_RSOC:
-         IO_CALL_EXIT(fputs("K_{\\mathrm{RSOC}} ", f));
+         IO_PRINT_EXIT(fputs("K_{\\mathrm{RSOC}} ", f));
          break;
       case CONE_EXP:
-         IO_CALL_EXIT(fputs("K_{\\mathrm{EXP}} ", f));
+         IO_PRINT_EXIT(fputs("K_{\\mathrm{EXP}} ", f));
          break;
       case CONE_DEXP:
-         IO_CALL_EXIT(fputs("K^*_{\\mathrm{EXP}} ", f));
+         IO_PRINT_EXIT(fputs("K^*_{\\mathrm{EXP}} ", f));
          break;
       case CONE_POWER:
-         IO_CALL_EXIT(fputs("K_{\\mathrm{POWER}} ", f));
+         IO_PRINT_EXIT(fputs("K_{\\mathrm{POWER}} ", f));
          break;
       case CONE_DPOWER:
-         IO_CALL_EXIT(fputs("K^*_{\\mathrm{POWER}} ", f));
+         IO_PRINT_EXIT(fputs("K^*_{\\mathrm{POWER}} ", f));
          break;
       default:
-         IO_CALL_EXIT(fprintf(f, "\\text{Unsupported cone %d} ", v->cone.type));
+         IO_PRINT_EXIT(fprintf(f, "\\text{Unsupported cone %d} ", v->cone.type));
       }
    }
 
@@ -376,15 +376,15 @@ UNUSED static NONNULL int _print_cone_relation(enum cone cone, FILE *f)
 
    switch (cone) {
    case CONE_R_PLUS:
-      IO_CALL_EXIT(fputs(" \\geq ", f));
+      IO_PRINT_EXIT(fputs(" \\geq ", f));
       break;
    case CONE_R_MINUS:
-      IO_CALL_EXIT(fputs(" \\leq ", f));
+      IO_PRINT_EXIT(fputs(" \\leq ", f));
       break;
    case CONE_R:
       break;
    case CONE_0:
-      IO_CALL_EXIT(fputs(" = ", f));
+      IO_PRINT_EXIT(fputs(" = ", f));
       break;
    case CONE_POLYHEDRAL:
    case CONE_SOC:
@@ -393,12 +393,12 @@ UNUSED static NONNULL int _print_cone_relation(enum cone cone, FILE *f)
    case CONE_DEXP:
    case CONE_POWER:
    case CONE_DPOWER:
-      IO_CALL_EXIT(fputs(" \\in ", f));
+      IO_PRINT_EXIT(fputs(" \\in ", f));
       break;
    case CONE_NONE:
       break;
    default:
-      IO_CALL_EXIT(fprintf(f, "\\text{Unsupported cone %d} ", cone));
+      IO_PRINT_EXIT(fprintf(f, "\\text{Unsupported cone %d} ", cone));
    }
 
 _exit:
@@ -411,15 +411,15 @@ static NONNULL int _print_cone_relation_rev(enum cone cone, FILE *f)
 
    switch (cone) {
    case CONE_R_PLUS:
-      IO_CALL_EXIT(fputs(" \\geq ", f));
+      IO_PRINT_EXIT(fputs(" \\geq ", f));
       break;
    case CONE_R_MINUS:
-      IO_CALL_EXIT(fputs(" \\leq ", f));
+      IO_PRINT_EXIT(fputs(" \\leq ", f));
       break;
    case CONE_R:
       break;
    case CONE_0:
-      IO_CALL_EXIT(fputs(" = ", f));
+      IO_PRINT_EXIT(fputs(" = ", f));
       break;
    case CONE_POLYHEDRAL:
    case CONE_SOC:
@@ -428,10 +428,10 @@ static NONNULL int _print_cone_relation_rev(enum cone cone, FILE *f)
    case CONE_DEXP:
    case CONE_POWER:
    case CONE_DPOWER:
-      IO_CALL_EXIT(fputs(" \\ni ", f));
+      IO_PRINT_EXIT(fputs(" \\ni ", f));
       break;
    default:
-      IO_CALL_EXIT(fprintf(f, "\\text{Unsupported cone %d} ", cone));
+      IO_PRINT_EXIT(fprintf(f, "\\text{Unsupported cone %d} ", cone));
    }
 
 _exit:
@@ -483,26 +483,26 @@ static int rmdl_latex(Model *mdl, const char *fname)
    }
 
    if (mdl->empinfo.empdag.type == EmpDag_Empty) {
-      IO_CALL_EXIT(fputs("Classical optimization Problem\n", f));
+      IO_PRINT_EXIT(fputs("Classical optimization Problem\n", f));
 
       RhpSense sense;
       S_CHECK_EXIT(rmdl_getsense(mdl, &sense));
 
       switch (sense) {
       case RhpMin:
-         IO_CALL_EXIT(fputs("minimize ", f));
+         IO_PRINT_EXIT(fputs("minimize ", f));
          break;
       case RhpMax:
-         IO_CALL_EXIT(fputs("maximize ", f));
+         IO_PRINT_EXIT(fputs("maximize ", f));
          break;
       case RhpFeasibility:
-         IO_CALL_EXIT(fputs("feasibility ", f));
+         IO_PRINT_EXIT(fputs("feasibility ", f));
          break;
       case RhpNoSense:
-         IO_CALL_EXIT(fputs("sense not set ", f));
+         IO_PRINT_EXIT(fputs("sense not set ", f));
          break;
       default:
-         IO_CALL_EXIT(fputs("unexpected sense ", f));
+         IO_PRINT_EXIT(fputs("unexpected sense ", f));
       }
 
       rhp_idx objvar, objequ;
@@ -517,44 +517,44 @@ static int rmdl_latex(Model *mdl, const char *fname)
       }
    } else {
 
-      IO_CALL_EXIT(fputs("EMP DAG structure\n", f));
+      IO_PRINT_EXIT(fputs("EMP DAG structure\n", f));
       /* TODO: implementent tikz */
 
-//      IO_CALL_EXIT(fputs("\\begin{tikzpicture}\\node(0,0){", f));
+//      IO_PRINT_EXIT(fputs("\\begin{tikzpicture}\\node(0,0){", f));
 //      if (root->type == MP_TREE_MP) {
-//         IO_CALL_EXIT(fprintf(f, "MP %u ", root->p.mp->id));
+//         IO_PRINT_EXIT(fprintf(f, "MP %u ", root->p.mp->id));
 //      } else {
-//         IO_CALL_EXIT(fputs("Equil", f));
+//         IO_PRINT_EXIT(fputs("Equil", f));
 //      }
-//      IO_CALL_EXIT(fputs("};\n", f));
-//      IO_CALL_EXIT(fputs("\\end{tikzpicture}\n", f));
+//      IO_PRINT_EXIT(fputs("};\n", f));
+//      IO_PRINT_EXIT(fputs("\\end{tikzpicture}\n", f));
    }
    /*  We cannot execute this check since some reformulation need to introduce more variable
     *  than effectively needed*/
-   IO_CALL_EXIT(fputs("\\newline\\textbf{Variables}\n\n$", f));
+   IO_PRINT_EXIT(fputs("\\newline\\textbf{Variables}\n\n$", f));
     for (size_t i = 0; i < total_n; ++i) {
       if (model->vars[i]) {
          Var *v = &ctr->vars[i];
          S_CHECK_EXIT(_printvarname(ctr, i, f));
-         IO_CALL_EXIT(fputs(var_type_latex(v->type), f));
+         IO_PRINT_EXIT(fputs(var_type_latex(v->type), f));
          switch (v->type) {
          case VAR_X:
          case VAR_I:
-            IO_CALL_EXIT(fprintf(f, " \\in [%e, %e]", v->bnd.lb, v->bnd.ub));
+            IO_PRINT_EXIT(fprintf(f, " \\in [%e, %e]", v->bnd.lb, v->bnd.ub));
             break;
          case VAR_SC:
-            IO_CALL_EXIT(fprintf(f, " \\in \\{0\\} \\cup [%e, %e]", v->bnd.lb, v->bnd.ub));
+            IO_PRINT_EXIT(fprintf(f, " \\in \\{0\\} \\cup [%e, %e]", v->bnd.lb, v->bnd.ub));
             break;
          case VAR_SI:
-            IO_CALL_EXIT(fprintf(f, " \\in \\{0\\} \\cup [%u, %u]", v->si.lb, v->si.ub));
+            IO_PRINT_EXIT(fprintf(f, " \\in \\{0\\} \\cup [%u, %u]", v->si.lb, v->si.ub));
             break;
          default:
             ;
          }
-         IO_CALL_EXIT(fputs("\\newline\n", f));
+         IO_PRINT_EXIT(fputs("\\newline\n", f));
       }
    }
-    IO_CALL_EXIT(fputs("$\n \\textbf{Equations}:\n\n", f));
+    IO_PRINT_EXIT(fputs("$\n \\textbf{Equations}:\n\n", f));
 
    for (size_t i = 0; i < total_m; ++i) {
       if (model->equs[i]) {
@@ -565,7 +565,7 @@ static int rmdl_latex(Model *mdl, const char *fname)
          S_CHECK_EXIT(_printequname(ctr, i, f));
 
          if (le && le->len > 0) {
-            IO_CALL_EXIT(fputs("\\left[ ", f));
+            IO_PRINT_EXIT(fputs("\\left[ ", f));
             rhp_idx * restrict vidx = le->vis;
             double * restrict vals = le->coeffs;
             S_CHECK_EXIT(pprint_f(vals[0], f, false));
@@ -574,27 +574,27 @@ static int rmdl_latex(Model *mdl, const char *fname)
                S_CHECK_EXIT(pprint_f(vals[j], f, true));
             S_CHECK_EXIT(_printvarname(ctr, vidx[j], f));
             }
-            IO_CALL_EXIT(fputs(" \\right]_{\\mathrm{lin}} ", f));
+            IO_PRINT_EXIT(fputs(" \\right]_{\\mathrm{lin}} ", f));
             need_plus = true;
          }
 
          if (e->tree && e->tree->root) {
             if (need_plus) {
-               IO_CALL_EXIT(fputs(" + ", f));
+               IO_PRINT_EXIT(fputs(" + ", f));
             }
 
-            IO_CALL_EXIT(fputs("\\left[ ", f));
+            IO_PRINT_EXIT(fputs("\\left[ ", f));
             S_CHECK(nltree_latex(ctr, e->tree, f));
-            IO_CALL_EXIT(fputs(" \\right]_{\\mathrm{nl}} ", f));
+            IO_PRINT_EXIT(fputs(" \\right]_{\\mathrm{nl}} ", f));
          }
 
          if (emd && emd[i].role == EquViFunction) {
             double cst = e->p.cst;
             if (cst != 0.) {
-              IO_CALL_EXIT(fprintf(f, "+ %e ", e->p.cst));
+              IO_PRINT_EXIT(fprintf(f, "+ %e ", e->p.cst));
             }
 
-            IO_CALL_EXIT(fputs(" \\perp ", f));
+            IO_PRINT_EXIT(fputs(" \\perp ", f));
             if (!valid_vi(emd[i].dual)) {
                error("%s :: ill-defined dual variable %d for equation %s\n",
                         __func__, emd[i].dual, ctr_printequname(ctr, i));
@@ -608,7 +608,7 @@ static int rmdl_latex(Model *mdl, const char *fname)
             S_CHECK_EXIT(_print_equcone(e, f));
          }
 
-         IO_CALL_EXIT(fputs("\\end{dmath}\n", f));
+         IO_PRINT_EXIT(fputs("\\end{dmath}\n", f));
       }
    }
  
@@ -624,13 +624,13 @@ int rmdl_export_latex(Model *mdl, const char *phase_name)
    const char *latex_dir = mygetenv("RHP_EXPORT_LATEX");
    if (latex_dir) {
       char *fname;
-      IO_CALL(asprintf(&fname, "%s" DIRSEP "mdl_%s_%p.tex", latex_dir,
+      IO_PRINT(asprintf(&fname, "%s" DIRSEP "mdl_%s_%p.tex", latex_dir,
                        phase_name, (void*)mdl));
       S_CHECK(rmdl_latex(mdl, fname));
       FREE(fname);
 
       if (empdag_exists(&mdl->empinfo.empdag)) {
-         IO_CALL(asprintf(&fname, "%s" DIRSEP "empdag__%p.dot",
+         IO_PRINT(asprintf(&fname, "%s" DIRSEP "empdag__%p.dot",
                                latex_dir, (void*)mdl));
          S_CHECK(empdag2dotfile(&mdl->empinfo.empdag, fname));
          FREE(fname);

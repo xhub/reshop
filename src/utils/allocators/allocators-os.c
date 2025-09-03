@@ -60,8 +60,8 @@ void* OS_MemoryReserve(u64 size) {
       assert(0 && "mmap failed");
       int errno_ = errno;
       char *msg, buf[256];
-      STRERROR(errno_, buf, sizeof(buf)-1, msg);
-      error("FATAL ERROR: mmap() failed with msg: %s\n", msg);
+      STRERROR(buf, sizeof(buf)-1, msg);
+      error("FATAL ERROR: mmap() failed with error: %d '%s'\n", errno_, msg);
       memory = NULL;
    }
 #endif

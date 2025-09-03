@@ -113,7 +113,7 @@ SWIGINTERN int errcode_rhp2swig(int code)
 
 #define RHP_FAIL(expr, msg) do { int rc42 = (expr); if (RHP_OK != rc42) { SWIG_exception_fail(errcode_rhp2swig(rc42), msg); } } while(0);
 
-#define IO_CALL_SWIG(expr) { int status42 = (expr); if (RHP_UNLIKELY(status42 < 0)) { \
+#define IO_PRINT_SWIG(expr) { int status42 = (expr); if (RHP_UNLIKELY(status42 < 0)) { \
    SWIG_exception_fail(SWIG_RuntimeError, "write error"); } }
 
 typedef rhp_idx rhp_idx_typed;

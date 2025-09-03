@@ -504,7 +504,7 @@ int rmdl_presolve(Model *mdl, unsigned backend)
          S_CHECK_EXIT(filter_subset_activate(fs, mdl, offset_pool));
 
          char *name;
-         IO_CALL_EXIT(asprintf(&name, "%s_s%u_i%u", mdl_name, s, i));
+         IO_PRINT_EXIT(asprintf(&name, "%s_s%u_i%u", mdl_name, s, i));
          S_CHECK_EXIT(mdl_setname(mdl_solver, name));
          FREE(name);
          /* TODO: add option for selection subsolver */

@@ -80,6 +80,7 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_PYTHON=python3
+        -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
      # On windows and in debug mode, we would need a debug version of the python lib...
@@ -90,6 +91,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
     - name: Build

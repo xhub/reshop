@@ -531,7 +531,7 @@ int mdl_ensure_exportdir(Model *mdl)
 #endif
    }
 
-   IO_CALL(asprintf(&mdl->commondata.exports_dir, "%s" DIRSEP "%u-%s",
+   IO_PRINT(asprintf(&mdl->commondata.exports_dir, "%s" DIRSEP "%u-%s",
                     mdl->commondata.exports_dir_parent, mdl->id,
                     mdl->commondata.name));
 

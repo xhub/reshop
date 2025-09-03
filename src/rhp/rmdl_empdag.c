@@ -921,7 +921,7 @@ int rmdl_contract_along_Vpaths(Model *mdl_src, Model **mdl_dst)
    }
 
    char *mdlname;
-   IO_CALL(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_src)));
+   IO_PRINT(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_src)));
 
    //TODO if mdl_Src is not rhp, copy
    S_CHECK(rmdl_get_editable_mdl(mdl_src, mdl_dst, mdlname));

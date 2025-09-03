@@ -74,33 +74,34 @@
 }
 
 #else
+
 #include <errno.h>
 
 #define sockerr_fatal(fmt) {\
-   char buf[256], *msg; \
+   char buf[256]; const char *msg; \
    int errno_ = errno; \
-   STRERROR(errno_, buf, sizeof(buf), msg); \
+   STRERROR(buf, sizeof(buf), msg); \
    RHP_SOCKET_FATAL(fmt ": errno %d '%s'\n", errno_, msg); \
 }
 
 #define sockerr_fatal2(fmt, ...) {\
-   char buf[256], *msg; \
+   char buf[256]; const char *msg; \
    int errno_ = errno; \
-   STRERROR(errno_, buf, sizeof(buf), msg); \
+   STRERROR(buf, sizeof(buf), msg); \
    RHP_SOCKET_FATAL(fmt ": errno %d '%s'\n", __VA_ARGS__, errno_, msg); \
 }
 
 #define sockerr_log(fmt) {\
-   char buf[256], *msg; \
+   char buf[256]; const char *msg; \
    int errno_ = errno; \
-   STRERROR(errno_, buf, sizeof(buf), msg); \
+   STRERROR(buf, sizeof(buf), msg); \
    RHP_SOCKET_LOGGER(fmt ": errno %d '%s'\n", errno_, msg); \
 }
 
 #define sockerr_log2(fmt, ...) {\
-   char buf[256], *msg; \
+   char buf[256]; const char *msg; \
    int errno_ = errno; \
-   STRERROR(errno_, buf, sizeof(buf), msg); \
+   STRERROR(buf, sizeof(buf), msg); \
    RHP_SOCKET_LOGGER(fmt ": errno %d '%s'\n", __VA_ARGS__, errno_, msg); \
 }
 #endif

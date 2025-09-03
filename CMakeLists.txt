@@ -190,7 +190,7 @@ endif ()
 
 # Maybe disable that for CC (esp. windows)
 # Disable ipo on windows + sanitizer build (intel openapi 2024 chokes on it)
-if (WINDOWS AND CMAKE_BUILD_TYPE MATCHES "san")
+if("x${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC" AND CMAKE_BUILD_TYPE MATCHES "san")
   set(HAS_IPO 0)
 else ()
   include(CheckIPOSupported)
@@ -555,7 +555,7 @@ endif (GCC_ANALYZER)
 # Sanitizers and windows don't like shared libs
 
 # Define library as target
-if (NOT CMAKE_BUILD_TYPE MATCHES "san")
+if (MINGW OR NOT CMAKE_BUILD_TYPE MATCHES "san")
    set (RESHOP_LIBNAME_OBJ "${RESHOP_LIBNAME}_obj")
    add_library (${RESHOP_LIBNAME_OBJ} OBJECT ${RESHOP_C_FILES})
    add_library (${RESHOP_LIBNAME} SHARED $<TARGET_OBJECTS:${RESHOP_LIBNAME_OBJ}>)

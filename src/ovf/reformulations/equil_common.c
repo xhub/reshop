@@ -45,7 +45,7 @@ int ovf_add_polycons(Model *mdl, union ovf_ops_data ovfd, Avar *y,
 
    char *equname;
    /* TODO NAMING */
-   IO_CALL(asprintf(&equname, "%s_setY_%u", prefix, mp_ovf->id));
+   IO_PRINT(asprintf(&equname, "%s_setY_%u", prefix, mp_ovf->id));
    S_CHECK(cdat_equname_start(cdat, equname));
 
 

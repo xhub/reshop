@@ -231,7 +231,7 @@
  * ---------------------------------------------------------------------- */
 
 // Note: Newer LLVM-based intel compiler define __INTEL_LLVM_COMPILER
-#if defined(__INTEL_COMPILER) || (defined(_MSC_VER) && !defined(__clang__))
+#if defined(__INTEL_COMPILER) || (defined(_MSC_VER) && !defined(__clang__)) || defined(__cplusplus)
 #   define VMT(...)  /* __VA_ARGS__ */
 
 #else

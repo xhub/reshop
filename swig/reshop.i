@@ -715,7 +715,7 @@ typedef struct rhp_avar {
 
   const char *__str__() {
      char *str;
-     IO_CALL_SWIG(asprintf(&str, "Abstract variable of type '%s' and size %u", rhp_avar_gettypename($self), rhp_avar_size($self)));
+     IO_PRINT_SWIG(asprintf(&str, "Abstract variable of type '%s' and size %u", rhp_avar_gettypename($self), rhp_avar_size($self)));
      return str;
      fail:
      return NULL;
@@ -757,7 +757,7 @@ typedef struct rhp_aequ {
 
   const char *__str__() {
      char *str;
-     IO_CALL_SWIG(asprintf(&str, "Abstract equation of type '%s' and size %u", rhp_aequ_gettypename($self), rhp_aequ_size($self)));
+     IO_PRINT_SWIG(asprintf(&str, "Abstract equation of type '%s' and size %u", rhp_aequ_gettypename($self), rhp_aequ_size($self)));
      return str;
      fail:
      return NULL;
@@ -799,7 +799,7 @@ fail:
 
   const char *__str__() {
      char *str;
-     IO_CALL_SWIG(asprintf(&str, "Linear Equation of size %u", $self->len));
+     IO_PRINT_SWIG(asprintf(&str, "Linear Equation of size %u", $self->len));
      return str;
      fail:
      return NULL;
@@ -882,7 +882,7 @@ typedef struct rhp_mdl {
 
      const char *__str__() {
         char *str;
-        IO_CALL_SWIG(asprintf(&str, "%s Model named '%s' #%u with %u variables and %u equations",
+        IO_PRINT_SWIG(asprintf(&str, "%s Model named '%s' #%u with %u variables and %u equations",
                                      rhp_mdl_getbackendname($self), rhp_mdl_getname($self),
                                      rhp_mdl_getid($self), rhp_mdl_nvars($self), rhp_mdl_nequs($self)));
         return str;
@@ -1186,7 +1186,7 @@ typedef struct rhp_mathprgm {
          rhp_idx objvar = rhp_mp_getobjvar($self);
          rhp_idx objequ = rhp_mp_getobjequ($self);
          const struct rhp_mdl *mdl = rhp_mp_getmdl($self);
-         IO_CALL_SWIG(asprintf(&str, FMT_COMMON "Objvar is %s; Objequ is %s",
+         IO_PRINT_SWIG(asprintf(&str, FMT_COMMON "Objvar is %s; Objequ is %s",
                           (int)strlen(name), name, id, sensestr, nvars, ncons,
                           rhp_mdl_printvarname(mdl, objvar),
                           rhp_mdl_printequname(mdl, objequ)));
@@ -1194,7 +1194,7 @@ typedef struct rhp_mathprgm {
       }
       case RHP_FEAS: {
          unsigned nvifunc = rhp_mp_nmatched($self);
-         IO_CALL_SWIG(asprintf(&str, FMT_COMMON "%u matched variables and equations\n",
+         IO_PRINT_SWIG(asprintf(&str, FMT_COMMON "%u matched variables and equations\n",
                           (int)strlen(name), name, id, sensestr, nvars, ncons, nvifunc));
          break;
       }
@@ -1225,7 +1225,7 @@ typedef struct rhp_nash_equilibrium {
       unsigned nchildren = rhp_mpe_getnumchildren($self);
       const char *name = rhp_mpe_getname($self);
 
-      IO_CALL_SWIG(asprintf(&str, "Nash Equilibrium '%.*s' (ID #%u) with %u children.",
+      IO_PRINT_SWIG(asprintf(&str, "Nash Equilibrium '%.*s' (ID #%u) with %u children.",
                           (int)(name ? strlen(name) : 6), name ? name : "NONAME", id, nchildren))
       return str;
       fail: return NULL;

@@ -225,7 +225,7 @@ int primal_check_Varc_ei(Model *mdl, ArcVFData *arc, mpid_t mpid, EiRosetta *ei_
       S_CHECK(rctr_reserve_equs(ctr, 1));
 
       char *mp_objequ_name;
-      IO_CALL(asprintf(&mp_objequ_name, "MP_objequ(%u)", mpid));
+      IO_PRINT(asprintf(&mp_objequ_name, "MP_objequ(%u)", mpid));
       S_CHECK(cdat_equname_start(cdat, mp_objequ_name));
 
       S_CHECK(rctr_add_equ_empty(ctr, &ei_dst, NULL, Mapping, CONE_NONE));

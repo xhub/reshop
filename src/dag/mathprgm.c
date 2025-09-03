@@ -1273,7 +1273,7 @@ int mp_instantiate(MathPrgm *mp)
    RhpSense sense = ovf_def->sense;
 
    char *name;
-   IO_CALL(asprintf(&name, "%s_instance", mp_getname(mp)));
+   IO_PRINT(asprintf(&name, "%s_instance", mp_getname(mp)));
    /* TODO: NAMING */
    A_CHECK(mp->ccflib.mp_instance, empdag_newmpnamed(empdag, sense, name));
    free(name);

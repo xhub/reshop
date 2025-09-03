@@ -5,12 +5,12 @@
 #if defined(_WIN32)
 
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include <fileapi.h>
+#include <io.h>
 
-#define fileno(X) (X)
-#define fsync(X) !FlushFileBuffers((HANDLE)(X))
+#define fileno(X) _fileno(X)
+#define fsync(X) !FlushFileBuffers((HANDLE)(_get_osfhandle(X)))
 
 #else
 
@@ -34,26 +34,26 @@ NONNULL static int lequ_print_dot(Lequ *lequ, FILE *f, Model *mdl)
    unsigned len  = lequ->len;
 
    /* cluster is critical */
-   IO_CALL_EXIT(fputs("\n subgraph cluster_lequ {\n rankdir=LR;\n label = \"Linear part\"; "
+   IO_PRINT_EXIT(fputs("\n subgraph cluster_lequ {\n rankdir=LR;\n label = \"Linear part\"; "
                       "style=filled; bgcolor=lightyellow; node [shape=\"record\"];\n", f));
 
-   IO_CALL_EXIT(fprintf(f, "\"coefficients\" [ label = \"{ %.4g", darr[0]));
+   IO_PRINT_EXIT(fprintf(f, "\"coefficients\" [ label = \"{ %.4g", darr[0]));
 
    for (unsigned i = 1; i < len; ++i) {
-      IO_CALL_EXIT(fprintf(f, "| %.4g", darr[i]));
+      IO_PRINT_EXIT(fprintf(f, "| %.4g", darr[i]));
    }
 
-   IO_CALL_EXIT(fputs("}\"];\n", f));
+   IO_PRINT_EXIT(fputs("}\"];\n", f));
 
-   IO_CALL_EXIT(fprintf(f, "\"variables\" [ label = \"{ %s", mdl_printvarname(mdl, varr[0])));
+   IO_PRINT_EXIT(fprintf(f, "\"variables\" [ label = \"{ %s", mdl_printvarname(mdl, varr[0])));
 
    for (unsigned i = 1; i < len; ++i) {
-      IO_CALL_EXIT(fprintf(f, "| %s ", mdl_printvarname(mdl, varr[i])));
+      IO_PRINT_EXIT(fprintf(f, "| %s ", mdl_printvarname(mdl, varr[i])));
    }
 
-   IO_CALL_EXIT(fputs("}\"];\n", f));
+   IO_PRINT_EXIT(fputs("}\"];\n", f));
 
-   IO_CALL_EXIT(fputs("\n}\n", f));
+   IO_PRINT_EXIT(fputs("\n}\n", f));
 
 _exit:
    return status;
@@ -72,7 +72,7 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
 
    const char *export_dir = mdl->commondata.exports_dir;
 
-   IO_CALL(asprintf(&fname, "%s%sequ%d.dot", export_dir, DIRSEP, ei));
+   IO_PRINT(asprintf(&fname, "%s%sequ%d.dot", export_dir, DIRSEP, ei));
    *fname_dot = fname;
 
    FILE* f = fopen(fname, RHP_WRITE_TEXT);
@@ -82,15 +82,15 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
       return Error_SystemError;
    }
 
-   IO_CALL_EXIT(fputs("digraph structs {ordering=out;\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
-   IO_CALL_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
+   IO_PRINT_EXIT(fputs("digraph structs {ordering=out;\n node [shape=\"plaintext\", style=\"filled, rounded\", margin=0.2];\n", f));
+   IO_PRINT_EXIT(fprintf(f, "label=\"%s model '%.*s' #%u: equation '%s'", mdl_fmtargs(mdl), mdl_printequname(mdl, ei)));
 
    mpid_t mpid = ctr->equmeta ? ctr->equmeta[ei].mp_id : MpId_NA;
 
    if (mpid_regularmp(mpid)) {
-      IO_CALL_EXIT(fprintf(f, " in MP(%s)", empdag_getmpname(&mdl->empinfo.empdag, mpid)));
+      IO_PRINT_EXIT(fprintf(f, " in MP(%s)", empdag_getmpname(&mdl->empinfo.empdag, mpid)));
    }
-   IO_CALL_EXIT(fputs("\";\n", f));
+   IO_PRINT_EXIT(fputs("\";\n", f));
 
    Lequ *lequ = ctr->equs[ei].lequ;
    NlTree *tree = ctr->equs[ei].tree;
@@ -103,13 +103,13 @@ static int equ2dot(Model *mdl, rhp_idx ei, char **fname_dot)
       nltree_print_dot(ctr->equs[ei].tree, f, mdl);
    }
 
-   IO_CALL_EXIT(fputs("\n}\n", f));
+   IO_PRINT_EXIT(fputs("\n}\n", f));
 
-   SYS_CALL(fflush(f));
+   IO_CALL(fflush(f));
    SYS_CALL(fsync(fileno(f)));
 
 _exit:
-   SYS_CALL(fclose(f));
+   IO_CALL(fclose(f));
    return status;
 }
 

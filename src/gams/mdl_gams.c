@@ -51,7 +51,7 @@ static int ensure_matrixfile(const char *path)
 {
 
    char *filename;
-   IO_CALL(asprintf(&filename, "%s" DIRSEP "gamsmatr.dat", path));
+   IO_PRINT(asprintf(&filename, "%s" DIRSEP "gamsmatr.dat", path));
 
 #ifdef _WIN32
    int fh = open(filename, _O_WRONLY | _O_CREAT, _S_IREAD | _S_IWRITE ); // C4996 

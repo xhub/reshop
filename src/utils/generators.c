@@ -126,12 +126,12 @@ static int _savetxt(struct gen_data *dat, const char* name, unsigned dim)
 
    for (unsigned i = 0; i < dat->size; ++i) {
       for (unsigned j = 0; j < dim; ++j) {
-         IO_CALL(fprintf(f, "%e, ", dat->val[i][j]));
+         IO_PRINT(fprintf(f, "%e, ", dat->val[i][j]));
       }
-      IO_CALL(fprintf(f, "\n"));
+      IO_PRINT(fprintf(f, "\n"));
    }
 
-   SYS_CALL(fclose(f));
+   IO_CALL(fclose(f));
 
    return OK;
 }

@@ -14,7 +14,7 @@ const char *mpid_specialvalue(mpid_t mpid)
    UNUSED int status = OK;
 
    if (!(mpid & MpId_SpecialValueMask)) {
-      IO_CALL_EXIT(snprintf(buf, sizeof buf,
+      IO_PRINT_EXIT(snprintf(buf, sizeof buf,
                             "mpid_specialvalue(): ERROR mp ID %u is not a special value", mpid));
       return buf;
    }
@@ -28,25 +28,25 @@ const char *mpid_specialvalue(mpid_t mpid)
    switch (sv) {
    case MpId_SharedVarMask: {
       mpid_t grpid = mpid & MpId_SpecialValuePayload;
-      IO_CALL_EXIT(snprintf(buf, sizeof buf,
+      IO_PRINT_EXIT(snprintf(buf, sizeof buf,
                             "Shared variable member of group %u", grpid));
       return buf;
       }
    case MpId_SharedEquMask: {
       mpid_t grpid = mpid & MpId_SpecialValuePayload;
-      IO_CALL_EXIT(snprintf(buf, sizeof buf,
+      IO_PRINT_EXIT(snprintf(buf, sizeof buf,
                             "Shared equation member of group %u", grpid));
       return buf;
       }
    case MpId_OvfDataMask: {
       mpid_t ovfid = mpid & MpId_SpecialValuePayload;
-      IO_CALL_EXIT(snprintf(buf, sizeof buf,
+      IO_PRINT_EXIT(snprintf(buf, sizeof buf,
                             "OVF equation or variable #%u", ovfid));
       return buf;
       }
 
    default: 
-      IO_CALL_EXIT(snprintf(buf, sizeof buf,
+      IO_PRINT_EXIT(snprintf(buf, sizeof buf,
                             "ERROR: Unknown MP ID special value %u", sv));
       return buf;
    }

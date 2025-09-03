@@ -130,7 +130,7 @@ file (GLOB TEST_CFG_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/test/gams/c
 
 foreach(_f ${GAMSCONFIG_YAML_FILES} ${TEST_CFG_FILES})
    # If we don't build rhpcclib64, the target doesn't exists and the file(GENERATE ...) fails
-   if (GAMSCONFIG_SKIP_GAMSLINK_LIB AND _f MATCHES "gamsconfig.yaml.in")
+   if (GAMSCONFIG_SKIP_GAMSLINK_LIB AND (_f MATCHES "gamsconfig.yaml.in" OR _f MATCHES "gamsconfig_asan.yaml.in"))
       continue()
    endif()
 
