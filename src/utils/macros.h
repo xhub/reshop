@@ -36,7 +36,7 @@
    const char *src42 = (src); \
    size_t srclen42 = strlen(src42), n42 = (n); \
    size_t sz42 = n42 > srclen42 ? srclen42 : n42 - 1; \
-   memcpy(dst42, src42, sz42); dst42[sz42+1] = '\0'; \
+   memcpy(dst42, src42, sz42); dst42[sz42] = '\0'; \
 }
 
 #define MALLOCBYTES(ptr,type,bytes) ((ptr) = (type*)malloc(bytes)); assert((ptr))
