@@ -35,7 +35,7 @@ build:
     # - sed -i -e 's|http://deb.debian.org|https://ftps.crans.org|' /etc/apt/sources.list.d/debian.sources
       #    - echo 'Dir::Bin::Methods::ftp "ftp";' | tee -a /etc/apt/apt.conf.d/99local-ftp
     - apt-get update -y
-    - apt-get install graphviz bzip2 makeself pax-utils swig -y  # bzip2 for gams-c-api, pax-utils for lddtree
+    - apt-get install graphviz bzip2 pax-utils swig -y  # bzip2 for gams-c-api, pax-utils for lddtree
     - apt-get install -y python3-numpy python3-scipy python3-pytest python3-setuptools python-wheel-common python3-venv python3-dev python3-pip
     - pip install --user --break-system-packages auditwheel
     - 'which ssh-agent || apt-get install openssh-client -y'
@@ -47,7 +47,7 @@ build:
     - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGAMS_VERSION=$GAMS_MAJVER -DDISTRIB=28
         -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DBUILD_GAMS_DRIVER=ON -DBUILD_DOCUMENTATION=1 -DGIT_HASH=$CI_COMMIT_SHORT_SHA
         -DBUILD_INSTALLER=0 -DINSTALL_COMMON_MAKESELF=0 -DBUILD_PYTHON=python3 ..
-    - make -j$N_PROCS 2>&1 install makeself | tee gcc.log
+    - make -j$N_PROCS 2>&1 install | tee gcc.log
     - make doc -j$N_PROCS
     - cp libpath50.so liblusol.so test
     - cp libpath50.so liblusol.so swig
@@ -100,13 +100,13 @@ gams_test:
     pull_policy: [always, always, always, if-not-present]
 
   before_script:
-    - export RESHOP_MAKESELF_UNATTENDED=1 GAMSDIR=$(dirname $(which gams)) VALGRIND_DIR="$(pwd)/valgrind"
+    - export GAMSDIR=$(dirname $(which gams)) VALGRIND_DIR="$(pwd)/valgrind"
     - apt-get update
     - apt-get install numdiff wget xz-utils valgrind -y
       # - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xf libvrepr.tar.xz -C /tmp/
   script:
     #   - bash build/*.run
-    - cp build/makeself/{gmsrhp_ux.out,libreshop.so} "$GAMSDIR"/
+    - cp build/output/{gmsrhp_ux.out,libreshop.so} "$GAMSDIR"/
     - cp build/output/gamsconfig_valgrind.yaml "$GAMSDIR"/gamsconfig.yaml
     - env EMPSLV=reshop bash test/gams/test.sh
     - mkdir -p "$QA_TMPDIR" && pushd "$QA_TMPDIR" > /dev/null && testlib quality && gams quality lo=2 --solver=reshop; popd > /dev/null; cp "$QA_TMPDIR"/failures_qa.gms .
