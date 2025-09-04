@@ -2,10 +2,12 @@
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <dbghelp.h>
 #include <rpc.h>
 
 #ifdef _MSC_VER
 #pragma comment(lib, "rpcrt4.lib")
+#pragma comment(lib, "dbghelp.lib")
 #endif
 
 // for malloc
@@ -19,6 +21,128 @@
 #include "reshop.h"
 #include "win-compat.h"
 
+
+static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
+{
+   fatal_error("\nReSHOP caught an exception and will terminate. Please report this issue with the following information\n");
+
+   char buf[256];
+   char *codemsg;
+   DWORD code = pExceptionInfo[0].ExceptionRecord->ExceptionCode;
+
+   unsigned len = FormatMessageA(
+      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE,
+      NULL, code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buf, sizeof(buf), NULL);
+
+   if (len > 0) { codemsg = buf; } else { codemsg = "UNKNOWN ERROR"; }
+
+   fatal_error("\nException code is %0lX '%s'", code, codemsg);
+
+   if (pExceptionInfo) {
+      fatal_error("\n--- Stack Trace ---\n");
+
+      HANDLE process = GetCurrentProcess();
+      HANDLE thread = GetCurrentThread();
+      CONTEXT context;
+      memcpy(&context, pExceptionInfo->ContextRecord, sizeof(CONTEXT));
+
+      // Initialize the symbol handler
+      SymInitialize(process, NULL, TRUE);
+
+      STACKFRAME64 stack_frame;
+      memset(&stack_frame, 0, sizeof(STACKFRAME64));
+
+      stack_frame.AddrPC.Offset = context.Rip;
+      stack_frame.AddrPC.Mode = AddrModeFlat;
+      stack_frame.AddrFrame.Offset = context.Rbp;
+      stack_frame.AddrFrame.Mode = AddrModeFlat;
+      stack_frame.AddrStack.Offset = context.Rsp;
+      stack_frame.AddrStack.Mode = AddrModeFlat;
+
+      PSYMBOL_INFO symbol_info = (PSYMBOL_INFO)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+      unsigned i = 0;
+      while (StackWalk64(
+          IMAGE_FILE_MACHINE_AMD64,
+          process,
+          thread,
+          &stack_frame,
+          &context,
+          NULL,
+          SymFunctionTableAccess64,
+          SymGetModuleBase64,
+          NULL
+      )) {
+          // Get the function name and offset
+          symbol_info->SizeOfStruct = sizeof(SYMBOL_INFO);
+          symbol_info->MaxNameLen = 255;
+          DWORD64 displacement = 0;
+
+         if (stack_frame.AddrPC.Offset == 0) {
+            break;
+         }
+
+          if (SymFromAddr(process, stack_frame.AddrPC.Offset, &displacement, symbol_info)) {
+              fatal_error("%u %s+0x%llX\n", i, symbol_info->Name, displacement);
+          } else {
+              fatal_error("%u  Address: 0x%llx (Symbol not found)\n", i, stack_frame.AddrPC.Offset);
+          }
+
+          // Break out of the loop if the stack walk is complete
+          if (stack_frame.AddrFrame.Offset == 0 || stack_frame.AddrReturn.Offset == 0 ||
+              stack_frame.AddrPC.Offset == stack_frame.AddrReturn.Offset) {
+              break;
+          }
+         i++;
+      }
+
+      free(symbol_info);
+       SymCleanup(process);
+   } else {
+      fatal_error("\n no exception information ...");
+   }
+
+    // Open a file to write the minidump to.
+    HANDLE hFile = CreateFileA(
+        "reshop-minidump.dmp",
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+        // Define the information to be included in the minidump.
+        MINIDUMP_EXCEPTION_INFORMATION mei;
+        mei.ThreadId = GetCurrentThreadId();
+        mei.ExceptionPointers = pExceptionInfo;
+        mei.ClientPointers = FALSE;
+
+        // Write the minidump to the file.
+        MiniDumpWriteDump(
+            GetCurrentProcess(),
+            GetCurrentProcessId(),
+            hFile,
+            MiniDumpWithFullMemory, // This flag specifies a detailed dump.
+            &mei,
+            NULL,
+            NULL
+        );
+        CloseHandle(hFile);
+
+        fatal_error("\nA minidump was saved to: %s\n", "reshop-minidump.dmp");
+    } else {
+        fatal_error("\nFailed to create minidump file. Error code: %lu\n", GetLastError());
+    }
+
+    // Terminate the process. Returning EXCEPTION_EXECUTE_HANDLER
+    // will prevent the default Windows crash dialog from appearing.
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+
+
 //static int __stdcall
 BOOL APIENTRY
 DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved);
@@ -27,6 +151,8 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
    switch (fdwReason) {
    case DLL_PROCESS_ATTACH:
+
+      SetUnhandledExceptionFilter(UnhandledExceptionHandler);
 
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */
@@ -39,7 +165,10 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
       debug("[OS] DllMain called with DLL_PROCESS_ATTACH\n");
       logging_syncenv();
       debug("[OS] Call to DllMain with DLL_PROCESS_ATTACH successful\n");
+
       break;
+
+   default:
    case DLL_THREAD_ATTACH:
    case DLL_THREAD_DETACH: break;
 
