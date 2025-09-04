@@ -34,43 +34,43 @@
 //);
 
 #define sockerr_log(fmt) {\
-   int errno_ = WSAGetLastError(); \
+   int error_ = WSAGetLastError(); \
    char msg42[256]; \
    DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
-        NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
+        NULL, error_, 0, msg42, sizeof(msg42), NULL); \
 \
-   RHP_SOCKET_LOGGER(fmt ": errno %d '%s'\n", errno_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
+   RHP_SOCKET_LOGGER(fmt ": error %d '%s'\n", error_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
 }
 
 #define sockerr_log2(fmt, ...) {\
-   int errno_ = WSAGetLastError(); \
+   int error_ = WSAGetLastError(); \
    char msg42[256]; \
    DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
-        NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
+        NULL, error_, 0, msg42, sizeof(msg42), NULL); \
 \
-   RHP_SOCKET_LOGGER(fmt ": errno %d '%s'\n", __VA_ARGS__, errno_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
+   RHP_SOCKET_LOGGER(fmt ": error %d '%s'\n", __VA_ARGS__, error_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
 }
 
 #define sockerr_fatal(fmt) {\
-   int errno_ = WSAGetLastError(); \
+   int error_ = WSAGetLastError(); \
    char msg42[256]; \
    DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
-        NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
+        NULL, error_, 0, msg42, sizeof(msg42), NULL); \
 \
-   RHP_SOCKET_FATAL(fmt ": errno %d '%s'\n", errno_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
+   RHP_SOCKET_FATAL(fmt ": error %d '%s'\n", error_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
 }
 
 #define sockerr_fatal2(fmt, ...) {\
-   int errno_ = WSAGetLastError(); \
+   int error_ = WSAGetLastError(); \
    char msg42[256]; \
    DWORD length = FormatMessageA( \
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, \
-        NULL, errno_, 0, msg42, sizeof(msg42), NULL); \
+        NULL, error_, 0, msg42, sizeof(msg42), NULL); \
 \
-   RHP_SOCKET_FATAL(fmt ": errno %d '%s'\n", __VA_ARGS__, errno_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
+   RHP_SOCKET_FATAL(fmt ": error %d '%s'\n", __VA_ARGS__, error_, length > 0 ? msg42 : "UNKNOWN ERROR"); \
 }
 
 #else
