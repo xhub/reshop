@@ -294,27 +294,31 @@ static CONSTRUCTOR_ATTR void register_signals(void)
 /** @brief printing utilities */
 struct printout_ops {
    void *data;                      /**< opaque data storage */
-   void (*flush)(void *data);
+   void (*flush)(void *data);       /**< flush function      */
    rhp_print_fn print;              /**< print function */
    bool use_asciicolors;            /**< If true, uses ascii colors */
+   bool user_defined;               /**< Is it user-defined? */
 };
 
-static void print_stdout(void *data, unsigned mode, const char *buf);
-static void flush_stdout(void *data);
+static void print_stdoutput(void *data, unsigned mode, const char *buf);
+static void flush_stdoutput(void *data);
 
 
 static const struct printout_ops printops_default = {
    .data  = NULL,
-   .flush = flush_stdout,
-   .print = print_stdout,
+   .flush = flush_stdoutput,
+   .print = print_stdoutput,
    .use_asciicolors = true,
+   .user_defined = false,
+
 };
 
 static tlsvar struct printout_ops print_ops = {
    .data = NULL,
-   .flush = flush_stdout,
-   .print = print_stdout,
-   .use_asciicolors = true
+   .flush = flush_stdoutput,
+   .print = print_stdoutput,
+   .use_asciicolors = true,
+   .user_defined = false,
 };
 
 static tlsvar int log_fd = -1;
@@ -521,12 +525,13 @@ void printstr(unsigned mode, const char *str)
 #endif
 }
 
-static void flush_stdout(UNUSED void *data)
+static void flush_stdoutput(UNUSED void *data)
 {
    fflush(stdout); /*NOLINT(bugprone-unused-return-value,cert-err33-c)*/
+   fflush(stderr); /*NOLINT(bugprone-unused-return-value,cert-err33-c)*/
 }
 
-static void print_stdout(UNUSED void *data, unsigned mode, const char *buf)
+static void print_stdoutput(UNUSED void *data, unsigned mode, const char *buf)
 {
    if (buf) {
       if (mode == PO_ERROR) {
@@ -553,6 +558,7 @@ void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
    print_ops.data = data;
    print_ops.flush = flush;
    print_ops.print = print;
+   print_ops.user_defined = true;
 
    const char *force_colors = mygetenv("RHP_COLORS");
 
@@ -575,6 +581,50 @@ void rhp_set_printopsdefault(void)
    print_ops.data = printops_default.data;
    print_ops.print = printops_default.print;
    print_ops.use_asciicolors = printops_default.use_asciicolors;
+   print_ops.user_defined = printops_default.user_defined;
 }
 
+void fatal_error(const char *format, ...)
+{
+   /* ---------------------------------------------------------------------
+    * If the print ops are user-defined, print message on stderr
+    * ---------------------------------------------------------------------- */
+   va_list ap;
+   char *buf = NULL;
+   int rc = 0;
+
+   va_start(ap, format);
+   rc = vsnprintf(buf, rc, format, ap);
+   va_end(ap);
+
+   if (rc <= 0) {
+      return;
+   }
+   rc++; /* for '\0' */
+   buf = malloc(rc);
+   if (!buf) return;
+
+   va_start(ap, format);
+   rc = vsnprintf(buf, rc, format, ap);
+   va_end(ap);
+
+   if (rc <= 0) {
+      free(buf);
+      return;
+   }
+
+   if (valid_fd(log_fd)) {
+      print_fd(log_fd, PO_ERROR, buf);
+   }
+
+   print_ops.print(print_ops.data, PO_ERROR & PO_ALLDEST, buf);
+
+   if (print_ops.user_defined) {
+      (void)fputs(buf, stderr);
+   } 
+
+   //print_ops.flush(print_ops.data);
+   
+   free(buf);
+}
 

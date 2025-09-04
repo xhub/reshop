@@ -5,6 +5,7 @@
 
 #include "compat.h"
 #include "printout_data.h"
+#include "rhp_defines.h"
 #include "rhp_options.h"
 #include "status.h"
 
@@ -21,6 +22,8 @@ void set_log_fd(int fd);
 #define errormsg(msg)        printstr(PO_ERROR, msg)
 #define errbug(format, ...)  printout(PO_ERROR, format " Please report his as a bug\n", __VA_ARGS__)
 #define errbugmsg(format)    printout(PO_ERROR, format " Please report his as a bug\n")
+
+void fatal_error(const char *format, ...) FORMAT_CHK(1,2);
 
 static inline int error_runtime(void)
 {
