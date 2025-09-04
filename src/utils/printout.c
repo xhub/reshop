@@ -322,7 +322,12 @@ static tlsvar struct printout_ops print_ops = {
    .user_defined = false,
 };
 
-static tlsvar int log_fd = -1;
+static tlsvar rhpfd_t log_fd =
+#ifdef _WIN32
+   INVALID_SOCKET;
+#else
+   -1;
+#endif
 
 static NONNULL void print_fd(rhpfd_t fd, unsigned mode, const char *buf)
 {
@@ -368,7 +373,7 @@ log_ipc_error:
 
 }
 
-void set_log_fd(int fd)
+void set_log_fd(rhpfd_t fd)
 {
    log_fd = fd;
 }
@@ -472,7 +477,7 @@ void printout(unsigned mode, const char *format, ...)
          return;
       }
 
-      if (log_fd >= 0) {
+      if (valid_fd(log_fd)) {
          print_fd(log_fd, mode, buf);
       }
 
@@ -503,7 +508,7 @@ void printstr(unsigned mode, const char *str)
    bool mode_has_color = true;
    if (do_print(mode, &mode_has_color) && str) {
 
-      if (log_fd >= 0) {
+      if (valid_fd(log_fd)) {
          print_fd(log_fd, mode, str);
       }
 

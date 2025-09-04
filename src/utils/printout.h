@@ -16,7 +16,7 @@
 void printout(unsigned mode, const char *format, ...) FORMAT_CHK(2,3);
 void printstr(unsigned mode, const char *str);
 void logging_syncenv(void);
-void set_log_fd(int fd);
+void set_log_fd(rhpfd_t fd);
 
 #define error(format, ...)   printout(PO_ERROR, format, __VA_ARGS__)
 #define errormsg(msg)        printstr(PO_ERROR, msg)
