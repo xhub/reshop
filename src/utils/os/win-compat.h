@@ -4,6 +4,7 @@
 // IWYU pragma: always_keep
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
+#include <stddef.h>
 
 #define CLEANUP_FNS_HAVE_DECL
 
