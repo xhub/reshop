@@ -8,6 +8,9 @@
 #define xstr(s) str(s)
 #define str(s) #s
 
+#define CHK_CORRECT_LIBVER(_gms_prefix, _GMS_PREFIX, _msg) /* */
+
+/* TODO: expose xxxXAPIVersion for a better check
 #define CHK_CORRECT_LIBVER(_gms_prefix, _GMS_PREFIX, _msg) \
    if (!_gms_prefix ## CorrectLibraryVersion(_msg, sizeof(_msg))) { \
       printstr(PO_ALLDEST, "[WARNING] " # _GMS_PREFIX  " API version differ: ReSHOP compiled with version " \
@@ -15,5 +18,5 @@
       printout(PO_ALLDEST, "          %s\n", _msg); \
       printstr(PO_ALLDEST, "          This may lead to runtime failures. Continue at your own risk, or try to update ReSHOP\n"); \
    }
-
+*/
 #endif
