@@ -184,6 +184,7 @@ static void backtrace(void) {};
 
 #elif defined(_WIN32) /* __linux__  */
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winbase.h>
 #include <dbghelp.h>
@@ -202,10 +203,10 @@ static void backtrace(void)
 
      process = GetCurrentProcess();
 
-     SymInitialize( process, NULL, TRUE );
+     SymInitialize (process, NULL, TRUE);
 
-     frames               = CaptureStackBackTrace( 0, 100, stack, NULL );
-     symbol               = ( SYMBOL_INFO * )calloc( sizeof( SYMBOL_INFO ) + 256 * sizeof( char ), 1 );
+     frames               = CaptureStackBackTrace(0, 100, stack, NULL);
+     symbol               = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1 );
      symbol->MaxNameLen   = 255;
      symbol->SizeOfStruct = sizeof( SYMBOL_INFO );
 
@@ -213,10 +214,10 @@ static void backtrace(void)
      {
          SymFromAddr( process, ( DWORD64 )( stack[ i ] ), 0, symbol );
 
-         fprintf(stderr, "%u %s - 0x%0llX\n", frames - i - 1, symbol->Name, symbol->Address );
+         fatal_error("%u %s+0x%0llX\n", frames - i - 1, symbol->Name, symbol->Address );
      }
 
-     free( symbol );
+     free(symbol);
 }
 
 #endif /*  __linux__  */
