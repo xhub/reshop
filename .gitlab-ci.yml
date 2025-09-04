@@ -46,7 +46,7 @@ build:
     - cp ../libpath50.so ../liblusol.so .
     - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGAMS_VERSION=$GAMS_MAJVER -DDISTRIB=28
         -DWITH_BACKWARD=0 -DWITH_BACKTRACE=0 -DBUILD_GAMS_DRIVER=ON -DBUILD_DOCUMENTATION=1 -DGIT_HASH=$CI_COMMIT_SHORT_SHA
-        -DBUILD_INSTALLER=1 -DINSTALL_COMMON_MAKESELF=1 -DBUILD_PYTHON=python3 ..
+        -DBUILD_INSTALLER=0 -DINSTALL_COMMON_MAKESELF=0 -DBUILD_PYTHON=python3 ..
     - make -j$N_PROCS 2>&1 install makeself | tee gcc.log
     - make doc -j$N_PROCS
     - cp libpath50.so liblusol.so test
@@ -68,16 +68,14 @@ build:
     when: always
     paths:
       - apifiles
-      - "build/*.run"
       - build/compile_commands*.json
       - build/DartConfiguration.tcl
       - build/output
       - build/gcc.log
       - build/libreshop.so
-      - build/gui/reshop_imgui
+      - build/gui/reshop_imgui/reshop_imgui
       - build/docs/html
       - build/generated
-      - build/makeself
       - build/swig
       - build/test
       - build-reshop-only/generated
