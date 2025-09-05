@@ -28,6 +28,9 @@ jobs:
         c_compiler: [gcc, clang, clang-cl, cl]
         include:
           - os: windows-2025
+            c_compiler: cl
+            cpp_compiler: cl
+          - os: windows-2025
             c_compiler: clang-cl
             cpp_compiler: clang-cl
           - os: windows-2025
@@ -73,6 +76,10 @@ jobs:
 
     - name: Install dependencies
       run: pip install swig numpy scipy pytest setuptools
+
+    - name: Setup MSVC
+      if: matrix.c_compiler == 'cl'
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure CMake
       if: matrix.build_type != 'Debug' || !contains(matrix.os, 'windows')
