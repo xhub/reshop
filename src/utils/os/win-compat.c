@@ -21,6 +21,7 @@
 #include "reshop.h"
 #include "win-compat.h"
 
+#ifndef GAMS_BUILD
 
 static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
 {
@@ -141,7 +142,7 @@ static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
-
+#endif
 
 //static int __stdcall
 BOOL APIENTRY
@@ -152,7 +153,9 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
    switch (fdwReason) {
    case DLL_PROCESS_ATTACH:
 
+#ifndef GAMS_BUILD
       SetUnhandledExceptionFilter(UnhandledExceptionHandler);
+#endif
 
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */
