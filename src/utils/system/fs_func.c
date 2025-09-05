@@ -43,7 +43,7 @@ bool dir_exists(const char *dirname)
 
 #include <sys/stat.h>
 
-#if defined(_WIN32) && !defined(__MINGW__) && !defined(__CYGWIN__)
+#ifdef RHP_COMPILER_CL
 #define stat _stat
 #endif
 

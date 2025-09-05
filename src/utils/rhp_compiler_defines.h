@@ -240,7 +240,7 @@
 
 #endif
 
-#if defined(_MSC_VER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__clang__) && !defined(__GNUC__)
 #define RHP_COMPILER_CL
 #endif
 
