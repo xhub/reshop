@@ -159,6 +159,8 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Intel")
    else()
       add_compile_options(-fp-model=precise -Qrestrict -Qvla)
    endif()
+elseif("x${CMAKE_C_COMPILER_ID}" STREQUAL "xMSVC")
+      add_compile_options(/fp:precise /Zc:__STDC__ /wd4113 /wd5105 /wd4866 /wd4200)
 endif()
 
 #if (APPLE)

@@ -343,7 +343,7 @@ int resolve_lexeme_as_gms_symbol(Interpreter * restrict interp, Token * restrict
 
 }
 
-static inline int get_uelidx_via_dct(Interpreter * restrict interp, const char uelstr[static 1],
+static inline int get_uelidx_via_dct(Interpreter * restrict interp, const char uelstr[VMT(static 1)],
                                      int * restrict uelidx)
 {
    assert(interp->dct);
@@ -373,7 +373,7 @@ int get_uelstr_for_empdag_node(Interpreter *interp, int uelidx, unsigned uelstrl
 }
 
 NONNULL static inline
-int find_uelidx_gmd(gmdHandle_t gmd, const char uelstr[static 1],
+int find_uelidx_gmd(gmdHandle_t gmd, const char uelstr[VMT(static 1)],
                     int * restrict uelidx)
 {
    if (!gmdFindUel(gmd, uelstr, uelidx)) {
@@ -384,7 +384,7 @@ int find_uelidx_gmd(gmdHandle_t gmd, const char uelstr[static 1],
    return OK;
 }
 
-int find_uelidx(Interpreter * restrict interp, const char uelstr[static 1],
+int find_uelidx(Interpreter * restrict interp, const char uelstr[VMT(static 1)],
                 int * restrict uelidx)
 {
    IdentData *symbol = &interp->last_symbol;

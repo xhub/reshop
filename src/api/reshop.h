@@ -109,7 +109,7 @@ union rhp_optval {
  * Compiler macro definitions
  * ------------------------------------------------------------------------- */
 
-#if !defined(__clang__) && (__GNUC__ >= 11)
+#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ >= 11)
    #define RHP_MALLOC(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
 #elif defined (__GNUC__)
    #define RHP_MALLOC(...) __attribute__ ((malloc))
@@ -135,7 +135,7 @@ union rhp_optval {
     #endif
   #endif
 #else /* defined _WIN32 || defined __CYGWIN__ */
-  #if (__GNUC__ >= 4) || defined(__clang__)
+  #if ( defined(__GNUC__) && (__GNUC__ >= 4) ) || defined(__clang__)
     #define RHP_PUBDLL_ATTR __attribute__ ((visibility ("default")))
   #else
     #define RHP_PUBDLL_ATTR

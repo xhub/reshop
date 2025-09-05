@@ -448,8 +448,8 @@ static void filter_subset_size(void *data, size_t* ctr_n, size_t* ctr_m)
 
 static int filter_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
                                      rhp_idx ei, unsigned len, NlPoolVars *datpool,
-                                    int instrs[restrict len],
-                                    int args[restrict len])
+                                    int instrs[VMT(restrict len)],
+                                    int args[VMT(restrict len)])
 {
    /* ----------------------------------------------------------------------
     * For each variable 
@@ -521,8 +521,8 @@ static void filter_subset_freedata(void* data)
    filter_subset_release(fs);
 }
 
-FilterSubset* filter_subset_new(unsigned vlen, Avar vars[vlen], unsigned elen,
-                                Aequ equs[elen], struct mp_descr* mp_d)
+FilterSubset* filter_subset_new(unsigned vlen, Avar vars[VMT(vlen)], unsigned elen,
+                                Aequ equs[VMT(elen)], struct mp_descr* mp_d)
 {
    FilterSubset *fs;
 

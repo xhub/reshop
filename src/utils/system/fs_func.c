@@ -40,7 +40,12 @@ bool dir_exists(const char *dirname)
 }
 
 #else
+
 #include <sys/stat.h>
+
+#if defined(_WIN32) && !defined(__MINGW__) && !defined(__CYGWIN__)
+#define stat _stat
+#endif
 
 bool dir_exists(const char *dirname)
 {

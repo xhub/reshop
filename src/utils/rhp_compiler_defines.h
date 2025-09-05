@@ -135,18 +135,18 @@
 
 #define ALLOC_SIZE(SIZE)
 #define CTRMEM
-#define NONNULL_AT(...)
+#define NONNULL_AT(...)       /* __VA_ARGS__ */
 #define NONNULL
 #define UNUSED
-#define FORMAT_CHK(S,A)
+#define FORMAT_CHK(S,A)       /* S, A */
 
-#define MALLOC_ATTR(...)          __declspec(restrict)
+#define MALLOC_ATTR(...)          /* __VA_ARGS__ */
 #define IGNORE_DEALLOC_MISMATCH(EXPR) 
 
 #define MALLOC_ATTR_SIMPLE
-#define ACCESS_ATTR(TYPE, ...)
-#define WRITE_ONLY(...)
-#define READ_ONLY(...) 
+#define ACCESS_ATTR(TYPE, ...)  /* __VA_ARGS__ */
+#define WRITE_ONLY(...)         /* __VA_ARGS__ */
+#define READ_ONLY(...)          /* __VA_ARGS__ */
 #define FALLTHRU 
 
 #define __counted_by(member)
@@ -160,16 +160,16 @@
 
 #define ALLOC_SIZE(SIZE)
 #define CTRMEM
-#define NONNULL_AT(...)
+#define NONNULL_AT(...) /* __VA_ARGS__ */
 #define NONNULL
 #define UNUSED
 #define FORMAT_CHK(S,A)
-#define MALLOC_ATTR(...)
-#define IGNORE_DEALLOC_MISMATCH(EXPR) 
+#define MALLOC_ATTR(...) /* __VA_ARGS__ */
+#define IGNORE_DEALLOC_MISMATCH(EXPR)  /* EXPR */
 #define MALLOC_ATTR_SIMPLE
-#define ACCESS_ATTR(TYPE, ...)
-#define WRITE_ONLY(...)
-#define READ_ONLY(...) 
+#define ACCESS_ATTR(TYPE, ...) /* TYPE, __VA_ARGS__ */
+#define WRITE_ONLY(...) /* __VA_ARGS__ */
+#define READ_ONLY(...)  /* __VA_ARGS__ */
 #define FALLTHRU 
 
 #define __counted_by(member)
@@ -238,6 +238,10 @@
 
 #   define VMT(...)  __VA_ARGS__
 
+#endif
+
+#if defined(_MSC_VER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__clang__)
+#define RHP_COMPILER_CL
 #endif
 
 #endif

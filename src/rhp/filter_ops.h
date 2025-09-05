@@ -39,8 +39,8 @@ int fops_deactivate_equ(void *data, rhp_idx ei) NONNULL;
 int fops_deactivate_var(void *data, rhp_idx vi) NONNULL;
 void fops_subset_init(Fops *fops, struct filter_subset *fs ) NONNULL;
 void filter_subset_release(FilterSubset *fs);
-FilterSubset* filter_subset_new(unsigned vlen, Avar vars[vlen], unsigned elen,
-                                  Aequ equs[elen], struct mp_descr* mp_d)
+FilterSubset* filter_subset_new(unsigned vlen, Avar vars[VMT(vlen)], unsigned elen,
+                                  Aequ equs[VMT(elen)], struct mp_descr* mp_d)
                                   MALLOC_ATTR(filter_subset_release,1) NONNULL_AT(5);
 
 int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned offset_pool ) NONNULL;
