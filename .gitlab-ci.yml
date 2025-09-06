@@ -63,6 +63,15 @@ build:
     - CC=gcc-$GCC_MVER CXX=g++-$GCC_MVER cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ../gui
     - cp compile_commands.json ../build/compile_commands_imgui.json
+
+  after_script:
+    - mkdir public
+    - cp build/gcc.log public/ || true
+    - cp -r build/docs/html public/doxygen || true
+    - chmod a+rx -R public
+    - chmod 600 $SSH_KEY && sed -i 's/\r$//g' $SSH_KEY
+    - scp -i $SSH_KEY -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r public huber@zamok.crans.org:www/reshop-ci
+
   artifacts:
     expire_in: 2 weeks
     when: always
@@ -71,10 +80,8 @@ build:
       - build/compile_commands*.json
       - build/DartConfiguration.tcl
       - build/output
-      - build/gcc.log
       - build/libreshop.so
       - build/gui/reshop_imgui/reshop_imgui
-      - build/docs/html
       - build/generated
       - build/swig
       - build/test
@@ -189,9 +196,7 @@ upload:
   script:
     - mkdir public
     - mkdir public/valgrind
-    - cp build/gcc.log public/ || true
     - cp -r cppcheck public/ || true
-    - cp -r build/docs/html public/doxygen || true
     - cp -r scan-build-reshop/scan-build public/scan-build-reshop || true
     - cp -r scan-build-imgui/scan-build public/scan-build-imgui || true
     - cp -r infer-out/report.html public/report-fbinfer || true
