@@ -113,12 +113,12 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      if: matrix.c_compiler != 'gcc' || !contains(matrix.os, 'windows')
+      if: (matrix.c_compiler != 'gcc' && matrix.c_compiler != 'cl') || !contains(matrix.os, 'windows')
       run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
 
     # As of 2025.09.02, the gcc-mingw toolchain produces a DLL with a dependency to libgcc for TLS.
     # This may or not be the reason the python module can't be loaded. However, tests using newer
-    # Mingw releases don't suffer form this. Both clang-cl and clang produces 
+    # Mingw releases don't suffer form this. Both clang-cl and clang produces working python module
     - name: Test (no python)
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       if: matrix.c_compiler == 'gcc' && contains(matrix.os, 'windows')
