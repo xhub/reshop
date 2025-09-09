@@ -267,7 +267,8 @@ static void process_collected_errors(GevLoggingCallbackData *dat, const char *ms
       return;
    }
 
-   rhp_idx idx1 = idx_msg1-1, idx2, idx1_gms, idx2_gms;
+   /* Init idx2 to avoid a Wmaybe-uninitialized warning wht GCC with -Og */
+   rhp_idx idx1 = idx_msg1-1, idx2 = IdxNA, idx1_gms, idx2_gms;
 
    if ((errcat != VarErr && !chk_ei(mdl, idx1, __func__)) || (errcat == VarErr && !chk_vi(mdl, idx1, __func__))) {
       write_badidx(writerFn, writerDat, msg);
