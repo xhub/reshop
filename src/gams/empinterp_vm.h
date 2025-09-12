@@ -200,10 +200,8 @@ typedef enum {
 } ScalarSymbolStatus;
 
 
+/** data for reading symbols (equations, variables, sets, parameters) */
 typedef struct {
-   ScalarSymbolStatus scalar_tracker; /**< Tracker to ensure 1 record is read */
-
-   /* data for reading symbols (equations, variables, sets, parameters) */
    Aequ e;
    Avar v;
    Aequ e_extend;
@@ -216,16 +214,27 @@ typedef struct {
    double dval;
    unsigned inrecs;
    unsigned dnrecs;
+} VmEquVarData;
 
-   mpid_t mpid_dual;
+/** VM state */
+typedef struct {
+   mpid_t mpid_dual;             /**< ID of the dual MP                      */
+   daguid_t uid_grandparent;    /**< uid of the grand parent node            */
+   daguid_t uid_parent;         /**< uid of the parent node                  */
+   LinkLabels *linklabels;      /**< Currently active LinkLabels             */
+} VmState;
+
+typedef struct {
+   ScalarSymbolStatus scalar_tracker; /**< Tracker to ensure 1 record is read */
+
+   VmEquVarData equvar;
+   VmState state;
 
    Aequ *e_current;
    Avar *v_current;
+   int *linklabel_ws;           /* why is this not iscratch ?*/
 
    ArcVFObjArray arcvfobjs;
-   daguid_t uid_grandparent;    /**< uid of the grand parent node            */
-   daguid_t uid_parent;         /**< uid of the parent node                  */
-   int *linklabel_ws;           /* why is this not iscratch ?*/
 
    /* Borrowed data follow */
    Model *mdl;
@@ -235,7 +244,6 @@ typedef struct {
    Interpreter *interp;
    CompilerGlobals *globals;
    DagRegister *dagregister;
-   LinkLabels *linklabels;
    LinkLabels2Arcs *linklabels2arcs;
    LinkLabel2Arc *linklabel2arc;
    DualsLabelArray *dualslabels;

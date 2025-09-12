@@ -30,7 +30,7 @@ UNUSED static int imm_gms_resolve_set(Interpreter* restrict interp, unsigned * r
 }
 //NOLINTEND
 
-int gmssym_iterator_init(Interpreter* restrict interp)
+void gmssym_iterator_init(Interpreter* restrict interp)
 {
    GmsSymIterator * restrict iterator = &interp->gms_sym_iterator;
    assert(!iterator->active);
@@ -44,8 +44,12 @@ int gmssym_iterator_init(Interpreter* restrict interp)
    memset(&iterator->uels, 0, sizeof(int)*interp->cur.symdat.ident.dim);
 
    gmsindices_init(&iterator->indices);
+}
 
-   return OK;
+void gmssym_iterator_fini(Interpreter* restrict interp)
+{
+   interp->gms_sym_iterator.active = false;
+   gmsindices_deactivate(&interp->gms_sym_iterator.indices);
 }
 
 int parser_filter_set(Interpreter* restrict interp, unsigned i, int val)
@@ -69,13 +73,6 @@ int parser_filter_set(Interpreter* restrict interp, unsigned i, int val)
    }
 
    return OK;
-}
-
-NONNULL static const char *get_daguid_name(EmpDag *empdag, daguid_t uid)
-{
-   if (!valid_uid(uid)) { return "None"; }
-
-   return  empdag_getname(empdag, uid);
 }
 
 NONNULL_AT(1) static
@@ -220,7 +217,7 @@ int imm_identaslabels(Interpreter * restrict interp, unsigned * restrict p, Link
    GmsIndicesData indices;
    gmsindices_init(&indices);
 
-   S_CHECK(parse_gmsindices(interp, p, &indices));
+   
 
    TO_IMPLEMENT("imm_identaslabels needs to be finished");
 }

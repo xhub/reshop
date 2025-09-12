@@ -62,22 +62,22 @@ typedef enum {
 } OvfStatus;
 
 typedef struct rhp_ovfdef {
-   unsigned idx;                /**< Index of the generator for this OVF      */
-   rhp_idx vi_ovf;              /**< index of the OVF variable                */
+   unsigned idx;                  /**< Index of the generator for this OVF      */
+   rhp_idx vi_ovf;                /**< index of the OVF variable                */
 
-   Avar *args;                  /**< variable arguments                       */
-   rhp_idx *eis;                /**< Equations which are arguments to the CCF */
-   double *coeffs;              /**< Coefficients of the OVF variable arg     */
-   unsigned num_empdag_children;/**< Number of EMPDAG children               */
+   Avar *args;                    /**< variable arguments                       */
+   rhp_idx *eis;                  /**< Equations which are arguments to the CCF */
+   double *coeffs;                /**< Coefficients of the OVF variable arg     */
+   unsigned num_empdag_children;  /**< Number of EMPDAG children                */
 
-   const OvfGenOps *generator;  /**< generator for this OVF */
-   const char *name;            /**< name of this OVF */
-   OvfDef *next;                /**< next OVF */
-   OvfParamList *params;         /**< set of parameters associated with this OVF */
-   unsigned char reformulation; /**< Reformulation scheme for this OVF */
-   bool sense;                  /**< true if the OVF is in sup form (inf form otherwise) */
-   OvfStatus status;            /**< status of the OVF def                               */
-   unsigned refcnt;             /**< Reference counter                        */
+   const OvfGenOps *generator;    /**< generator for this OVF */
+   const char *name;              /**< name of this OVF */
+   OvfDef *next;                  /**< next OVF */
+   OvfParamList *params;          /**< set of parameters associated with this OVF */
+   unsigned char reformulation;   /**< Reformulation scheme for this OVF */
+   bool sense;                    /**< true if the OVF is in sup form (inf form otherwise) */
+   OvfStatus status;              /**< status of the OVF def                               */
+   unsigned refcnt;               /**< Reference counter                        */
 } OvfDef;
 
 

@@ -1851,7 +1851,7 @@ int tok_expects(const Token *tok, const char *msg, unsigned argc, ...)
    }
 
    status = Error_EMPIncorrectSyntax;
-   error("[empparser] ERROR line %u: got the token '%.*s' of type '%s', but expected any of ",
+   error("[empparser] Error line %u: got the token '%.*s' of type '%s', but expected any of ",
          tok->linenr, tok->len, tok->start, toktype2str(toktype));
 
    bool first = true;
@@ -1866,7 +1866,7 @@ int tok_expects(const Token *tok, const char *msg, unsigned argc, ...)
       error("'%s'", toktype2str(type));
    }
 
-   error(".\n[empparser] error msg is: %s\n", msg);
+   error(".\n[empparser] Error msg is: %s\n", msg);
 
 _success:
    va_end(ap);
@@ -1886,7 +1886,7 @@ int tok_err(const Token *tok, TokenType type_expected, const char *msg)
    }  else if (type == TOK_ERROR) {
       printstr(PO_ERROR, "token type is ERROR\n");
    }  else if (type_expected != TOK_UNSET) {
-      error("while parsing '%.*s': expecting %s, got %s.\n",
+      error("while parsing token '%.*s': expecting token '%s', got '%s'.\n",
             tok->len, tok->start, toktype2str(type_expected), toktype2str(type));
    } else {
       error("got unexpected token %s from string '%.*s'\n", toktype2str(type),
@@ -1945,19 +1945,15 @@ static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
    S_CHECK(interp->ops->read_gms_symbol(interp, p));
 
    // Restore the current tokentype
-
-   // read_gms_symbol already deactivates the gmsindices
-   interp->gms_sym_iterator.active = false;
+   gmssym_iterator_fini(interp);
 
    return OK;
 }
 
-int advance(Interpreter * restrict interp, unsigned * restrict p,
-            TokenType *toktype)
+int advance(Interpreter * restrict interp, unsigned * restrict p, TokenType *toktype)
 {
    int status = lexer(interp, ParseCurrent, p);
    TokenType toktype_ = parser_getcurtoktype(interp);
-
 
    *toktype = toktype_;
    if (status != OK) return status;
@@ -2299,10 +2295,11 @@ typedef struct {
  * @param p       the position pointer
  * @param imm_fn  the function to call in immediate mode
  * @param vm_fn   the function to call in VM mode
- * @return  the error code
+ *
+ * @return        the error code
  */
-static int add_edge4label(Interpreter *interp, unsigned *p,
-                          imm_fn_label2resolve imm_fn, vm_fn_label2resolve vm_fn)
+static int add_edge4label(Interpreter *interp, unsigned *p, imm_fn_label2resolve imm_fn,
+                          vm_fn_label2resolve vm_fn)
 {
    assert(parser_getpretoktype(interp) == TOK_IDENT);
    const char *identname = emptok_getstrstart(&interp->pre);
@@ -2318,7 +2315,7 @@ static int add_edge4label(Interpreter *interp, unsigned *p,
    GmsIndicesData gmsindices_local;
    GmsIndicesData *gmsindices;
 
-   // HACK: with the new syntax, do we need to part gmsindices here?
+   // HACK: with the new syntax, do we need to parse gmsindices here?
    // See if we can kill it
    if (gmsindices_isactive(&interp->gmsindices)) {
       gmsindices = &interp->gmsindices;
@@ -2360,6 +2357,7 @@ static int add_edge4label(Interpreter *interp, unsigned *p,
       S_CHECK(c_switch_to_immmode(interp));
    }
 
+   gmsindices_deactivate(gmsindices);
 
    return OK;
 }
@@ -2762,7 +2760,7 @@ static int parse_dual_operator(Interpreter *interp, unsigned *p)
  *
  * @return        the error code
  */
-NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
+NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p, bool force_single)
 {
      /* -------------------------------------------------------------------
       * If we are called, the just parsed a potential node name
@@ -2788,13 +2786,17 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
-   
+
+   //GDB_STOP()
+
    if (toktype == TOK_LPAREN) {
       S_CHECK(parse_gmsindices(interp, p, &interp->gmsindices));
       S_CHECK(advance(interp, p, &toktype));
-   } else {
-      gmsindices_init(&interp->gmsindices);
    }
+
+//   else {
+//      gmsindices_init(&interp->gmsindices);
+//   }
 
    S_CHECK(parser_expect(interp, "operator or attribute expected after node label", TOK_DOT));
 
@@ -2810,7 +2812,20 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
 
    S_CHECK(advance(interp, p, &toktype));
 
-   PARSER_EXPECTS(interp, "valfn keyword expected after '.'", TOK_OBJFN, TOK_VALFN);
+   PARSER_EXPECTS(interp, "valfn or objfn keyword expected after '.'", TOK_OBJFN, TOK_VALFN);
+
+   /* See whether we have a conditional, as with */
+   if (force_single) {
+      TokenType toktype_peek;
+      S_CHECK(peek(interp, &p2, &toktype_peek));
+      if (toktype_peek == TOK_CONDITION) {
+         error("[empinterp] ERROR line %u: single node label selection via conditional "
+               "is not implemented yet. Please report this to help implemented it\n",
+               interp->linenr);
+         return Error_NotImplemented;
+      }
+   }
+
 
    if (toktype == TOK_OBJFN) {
       if (has_dual) {
@@ -2842,6 +2857,16 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p)
    interp_reset_last_symbol(interp);
 
    return OK;
+}
+
+NONNULL static inline int parse_single_VF_attr(Interpreter *interp, unsigned *p)
+{
+   return parse_VF_attr(interp, p, true);
+}
+
+NONNULL static inline int parse_vector_VF_attr(Interpreter *interp, unsigned *p)
+{
+   return parse_VF_attr(interp, p, false);
 }
 
 /**
@@ -2915,6 +2940,7 @@ int parse_MPargs_gmsvars_list(Interpreter * restrict interp, unsigned * restrict
  *
  * @param interp  the interpreter
  * @param p       the position pointer
+ *
  * @return  the error code
  */
 NONNULL_AT(1,2) static
@@ -2927,11 +2953,11 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
    assert(interp->cur.type == TOK_IDENT);
    interp_save_tok(interp);
 
-   S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_arc, vm_add_VFobjSimple_arc))
-
      /* we do not require '.valfn' for now, but consume it */
    // HACK: this has to be moved here. But if made mandatory should be elsewhere ...
    S_CHECK(consume_optional_valfn_kwd(interp, p));
+
+   S_CHECK(add_edge4label(interp, p, imm_add_VFobjSimple_arc, vm_add_VFobjSimple_arc))
 
   /* ----------------------------------------------------------------------
    * This is to update the number of EMPDAG children whenever we were in ImmMode
@@ -2943,7 +2969,7 @@ int parse_MPargs_labels(Interpreter * restrict interp, unsigned * restrict p,
          ovfdef->num_empdag_children++;
       }
       for (unsigned i = idx2, len = interp->linklabels2arcs.len; i < len; ++i) {
-         ovfdef->num_empdag_children += interp->linklabels2arcs.arr[i]->nchildren;
+         ovfdef->num_empdag_children += interp->linklabels2arcs.arr[i]->nrecs;
       }
    }
 
@@ -3055,6 +3081,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
     * 2. Parse the CCF arguments
     * Parse the argument: it could be either
     * - nargs(a)
+    * - nargs(a)$(...)
     * - (n1, n2, n3)
     *
     *  and either variables or nodes
@@ -3074,6 +3101,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
    switch (toktype) {
    case TOK_IDENT:
       if (has_lparent) {
+
          while (toktype == TOK_IDENT) {
             S_CHECK(parse_MPargs_labels(interp, p, ovfdef));
 
@@ -3094,7 +3122,24 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
          }
       } else {
          // HACK This is wrong
-         S_CHECK(parse_MPargs_labels(interp, p, ovfdef));
+         unsigned idx1 = interp->linklabel2arc.len;
+         unsigned idx2 = interp->linklabels2arcs.len;
+
+         S_CHECK(parse_vector_VF_attr(interp, p));
+         /* ----------------------------------------------------------------------
+          * This is to update the number of EMPDAG children whenever we were in ImmMode
+          * and had to switch to CompilerMode
+          * ---------------------------------------------------------------------- */
+
+          if (ovfdef) {
+             for (unsigned i = idx1, len = interp->linklabel2arc.len; i < len; ++i) {
+                ovfdef->num_empdag_children++;
+             }
+             for (unsigned i = idx2, len = interp->linklabels2arcs.len; i < len; ++i) {
+                ovfdef->num_empdag_children += interp->linklabels2arcs.arr[i]->nrecs;
+             }
+          }
+
          S_CHECK(advance(interp, p, &toktype));
       }
       break;
@@ -3102,7 +3147,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       if (has_lparent) {
          S_CHECK(parse_MPargs_gmsvars_list(interp, p, ovfdef));
       } else {
-         
+ 
          S_CHECK(interp->ops->ovf_addarg(interp, ovfdef));
          S_CHECK(advance(interp, p, &toktype));
       }
@@ -3112,9 +3157,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       return runtime_error(interp->linenr);
    }
 
-
    if (has_lparent) {
-
       S_CHECK(parser_expect(interp, "Closing ')' missing for MP arguments", TOK_RPAREN));
       S_CHECK(advance(interp, p, &toktype));
    }
@@ -3128,7 +3171,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       goto _finalize;
    }
 
-   S_CHECK(parser_expect(interp, "expected CCF keyword arguments", TOK_COMMA));
+   S_CHECK(parser_expect(interp, "expecting CCF keyword arguments", TOK_COMMA));
 
      /* ---------------------------------------------------------------------
       * Step 3: Parse CCF kw args as    kw=arg
@@ -3334,6 +3377,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
          interp->finalize.mp_owns_remaining_vars = mp->id;
          S_CHECK(advance(interp, p, &toktype));
       }
+
    } else if (toktype == TOK_IDENT) {
 
      /* -------------------------------------------------------------------
@@ -3343,7 +3387,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
       *  - n.dual(kwargs).valfn
       * ------------------------------------------------------------------- */
 
-      S_CHECK(parse_VF_attr(interp, p));
+      S_CHECK(parse_single_VF_attr(interp, p));
       S_CHECK(advance(interp, p, &toktype))
    }
 
@@ -3380,7 +3424,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
          S_CHECK(parse_sum(interp, p));
 
       } else if (toktype == TOK_IDENT) {          // Expecting label.valfn
-         S_CHECK(parse_VF_attr(interp, p));
+         S_CHECK(parse_single_VF_attr(interp, p));
 
       } else if (toktype == TOK_MP) {             // Expecting MP.valfn('name', ...)
 
@@ -4641,7 +4685,7 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
       return vm_labeldef_condition(interp, p, label, label_len, &gmsindices);
    }
 
-   if (gmsindices_nvaridxs(&gmsindices)) {
+   if (gmsindices_numiterators(&gmsindices)) {
       return vm_labeldef_loop(interp, p, label, label_len, &gmsindices);
    }
 
@@ -5212,8 +5256,8 @@ int labdeldef_parse_statement(Interpreter* restrict interp, unsigned* restrict p
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
    PARSER_EXPECTS(interp, "after a label definition, expecting a problem statement "
-                  "(min, max, vi, Nash)", TOK_MIN, TOK_MAX, TOK_VI, TOK_NASH, TOK_MP);
-   
+                  "(min, max, vi, Nash, MP)", TOK_MIN, TOK_MAX, TOK_VI, TOK_NASH, TOK_MP);
+ 
    // mark that we have parse an EMPDAG node
    parsed_dag_node(interp);
 
@@ -5283,6 +5327,7 @@ static inline int expect_statement(Interpreter * restrict interp, unsigned *p)
 int process_statement(Interpreter * restrict interp, unsigned * p, TokenType toktype)
 {
    S_CHECK(expect_statement(interp, p));
+   assert(!gmsindices_isactive(&interp->gmsindices));
 
    switch (toktype) {
    case TOK_EOF:

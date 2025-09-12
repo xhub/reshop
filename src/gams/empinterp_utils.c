@@ -393,3 +393,12 @@ int gmssymiter_fixup_domains(Interpreter * restrict interp, GmsIndicesData *indi
    error("[empinterp] ERROR: cannot find symbol '%.*s' in any source database", tok_fmtargs(&interp->cur));
    return Error_RuntimeError;
 }
+
+const char *get_daguid_name(EmpDag *empdag, daguid_t uid)
+{
+   if (!valid_uid(uid)) { return "None"; }
+
+   return  empdag_getname(empdag, uid);
+}
+
+

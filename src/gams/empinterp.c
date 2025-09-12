@@ -715,7 +715,7 @@ int empinterp_finalize(Interpreter *interp)
    * ---------------------------------------------------------------------- */
 
    if (interp->dagregister.len > 0) {
-      trace_empinterp("[empinterp] Resolving edges for %u nodes in the EMPDAG.\n",
+      trace_empinterp("[empinterp] Resolving arcs for %u nodes in the EMPDAG.\n",
                       interp->dagregister.len);
 
       S_CHECK(empinterp_resolve_labels(interp));

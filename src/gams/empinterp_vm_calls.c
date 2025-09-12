@@ -15,19 +15,21 @@
 #include "printout.h"
 #include "status.h"
 
-static int _argcnt(unsigned argc, unsigned arity, const char *fn)
+static int chk_argc(unsigned argc, unsigned arity, const char *fn)
 {
    if (argc != arity) {
-      error("%s :: ERROR: expecting %u arguments, got %u.\n", fn, arity, argc);
+      error("[empinterp] ERROR: function %s expects %u arguments, got %u.\n", fn, arity, argc);
       return Error_RuntimeError;
    }
+
    return OK;
 }
 
 static inline int chk_param_idx(unsigned idx, unsigned size, const char *fn)
 {
    if (idx >= size) {
-      error("%s :: param index %u >= %u, the number of parameters", fn, idx, size);
+      error("[empinterp] ERROR in function %s: param index %u >= %u, the number of "
+            "parameters", fn, idx, size);
       return Error_EMPRuntimeError;
    }
 
@@ -35,11 +37,11 @@ static inline int chk_param_idx(unsigned idx, unsigned size, const char *fn)
 }
 
 /* ------------------------------------------------------------------------
- *  Small utility functions used when creating and finalizing an empdag
+ *  Small utility functions used when creating and finalizing an empdag node
  * ------------------------------------------------------------------------ */
 
 NONNULL_AT(1) static
-int vm_common_nodeinit(VmData *data, daguid_t uid, DagRegisterEntry *regentry)
+int vm_empdagnode_init(VmData *data, daguid_t uid, DagRegisterEntry *regentry)
 {
    if (regentry) {
       regentry->daguid_parent = uid;
@@ -49,21 +51,21 @@ int vm_common_nodeinit(VmData *data, daguid_t uid, DagRegisterEntry *regentry)
       dagregister_add(data->dagregister, regentry_);
    }
 
-   if (valid_uid(data->uid_grandparent)) {
+   if (valid_uid(data->state.uid_grandparent)) {
       errormsg("[empvm] ERROR: grandparent uid is valid, please file a bug\n");
       return Error_EMPRuntimeError;
    }
 
-   data->uid_grandparent = data->uid_parent;
-   data->uid_parent = uid;
+   data->state.uid_grandparent = data->state.uid_parent;
+   data->state.uid_parent = uid;
 
    return OK;
 }
 
-NONNULL static int vm_common_nodefini(VmData *data)
+NONNULL static int vm_empdagnode_fini(VmData *data)
 {
-   data->uid_parent = data->uid_grandparent;
-   data->uid_grandparent = EMPDAG_UID_NONE;
+   data->state.uid_parent = data->state.uid_grandparent;
+   data->state.uid_grandparent = EMPDAG_UID_NONE;
 
    return OK;
 }
@@ -73,14 +75,22 @@ NONNULL static int vm_common_nodefini(VmData *data)
  *  Functions creating a new object
  * ------------------------------------------------------------------------ */
 
-static void* ccflib_newobj(VmData *data, unsigned argc, const VmValue *values)
+/**
+ * @brief Creates a new CCFLIB MP
+ *
+ * @param data     The VM data
+ * @param argc     The number of arguments (must be 2)
+ * @param argv     The arguments 
+ *
+ * @return         The CCFLIB MP
+ */
+static void* ccflib_newobj(VmData *data, unsigned argc, const VmValue *argv)
 {
-   SN_CHECK(_argcnt(argc, 2, __func__));
-   EmpDag *empdag = &data->mdl->empinfo.empdag;
-   assert(IS_UINT(values[0]));
-   unsigned ccflib_idx = AS_UINT(values[0]);
+   SN_CHECK(chk_argc(argc, 2, __func__));
+   assert(IS_UINT(argv[0]));
+   unsigned ccflib_idx = AS_UINT(argv[0]);
 
-   VmValue stack2 = values[1];
+   VmValue stack2 = argv[1];
    DagRegisterEntry *regentry;
    char *label;
    if (IS_NIL(stack2)) {
@@ -98,24 +108,24 @@ static void* ccflib_newobj(VmData *data, unsigned argc, const VmValue *values)
    }
 
    MathPrgm *mp;
+   EmpDag *empdag = &data->mdl->empinfo.empdag;
    AA_CHECK(mp, empdag_newmpnamed(empdag, RhpNoSense, label));
    SN_CHECK(mp_from_ccflib(mp, ccflib_idx));
 
-   SN_CHECK(vm_common_nodeinit(data, mpid2uid(mp->id), regentry));
+   SN_CHECK(vm_empdagnode_init(data, mpid2uid(mp->id), regentry));
 
    free(label);
 
    return mp;
 }
 
-static void* mp_newobj(VmData *data, unsigned argc, const VmValue *values)
+static void* mp_newobj(VmData *data, unsigned argc, const VmValue *argv)
 {
-   SN_CHECK(_argcnt(argc, 2, __func__));
-   EmpDag *empdag = &data->mdl->empinfo.empdag;
-   assert(IS_UINT(values[0]));
-   RhpSense sense = AS_UINT(values[0]);
+   SN_CHECK(chk_argc(argc, 2, __func__));
+   assert(IS_UINT(argv[0]));
+   RhpSense sense = AS_UINT(argv[0]);
 
-   VmValue stack2 = values[1];
+   VmValue stack2 = argv[1];
    DagRegisterEntry *regentry;
    char *label;
    if (IS_NIL(stack2)) {
@@ -133,22 +143,23 @@ static void* mp_newobj(VmData *data, unsigned argc, const VmValue *values)
    }
 
    MathPrgm *mp;
+   EmpDag *empdag = &data->mdl->empinfo.empdag;
    AA_CHECK(mp, empdag_newmpnamed(empdag, sense, label));
 
-   SN_CHECK(vm_common_nodeinit(data, mpid2uid(mp->id), regentry));
+   SN_CHECK(vm_empdagnode_init(data, mpid2uid(mp->id), regentry));
 
    free(label);
 
    return mp;
 }
 
-static void* nash_newobj(VmData *data, unsigned argc, const VmValue *values)
+static void* nash_newobj(VmData *data, unsigned argc, const VmValue *argv)
 {
-   SN_CHECK(_argcnt(argc, 1, __func__));
+   SN_CHECK(chk_argc(argc, 1, __func__));
    EmpDag *empdag = &data->mdl->empinfo.empdag;
    DagRegisterEntry *regentry;
    char *label;
-   VmValue stackval = values[0];
+   VmValue stackval = argv[0];
 
    if (IS_NIL(stackval)) {
       label = NULL;
@@ -167,18 +178,18 @@ static void* nash_newobj(VmData *data, unsigned argc, const VmValue *values)
    Nash *nash;
    AA_CHECK(nash, empdag_newnashnamed(empdag, label));
 
-   SN_CHECK(vm_common_nodeinit(data, nashid2uid(nash->id), regentry));
+   SN_CHECK(vm_empdagnode_init(data, nashid2uid(nash->id), regentry));
 
    free(label);
 
    return nash;
 }
 
-static void* ovf_newobj(VmData *data, unsigned argc, const VmValue *values)
+static void* ovf_newobj(VmData *data, unsigned argc, const VmValue *argv)
 {
-   SN_CHECK(_argcnt(argc, 1, __func__));
-   assert(IS_STR(values[0]));
-   const char *name = AS_STR(values[0]);
+   SN_CHECK(chk_argc(argc, 1, __func__));
+   assert(IS_STR(argv[0]));
+   const char *name = AS_STR(argv[0]);
 
    OvfDef *ovfdef;
    SN_CHECK(ovf_addbyname(&data->mdl->empinfo, name, &ovfdef));
@@ -191,33 +202,30 @@ static void* ovf_newobj(VmData *data, unsigned argc, const VmValue *values)
  * ------------------------------------------------------------------------ */
 
 
-static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values)
+static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_MPOBJ(values[0]));
-   S_CHECK(_argcnt(argc, 1, __func__));
+   assert(IS_MPOBJ(argv[0]));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp, *mp_parent;
-   N_CHECK(mp, AS_MPOBJ(values[0]));
+   N_CHECK(mp, AS_MPOBJ(argv[0]));
 
-   // HACK: have a better way to detect whether we are in another MP declaration
-   if (!valid_uid(data->uid_grandparent)) {
-      goto _finalize;
-   }
+   assert(mp->ccflib.ccf);
 
    /* ---------------------------------------------------------------------
-    * Is the CCF has no child, by convention it has value 1 and we delete the MP
+    * If the CCF has no child, by convention it has value 1 and we delete the MP
     * --------------------------------------------------------------------- */
 
    EmpDag *empdag = &data->mdl->empinfo.empdag;
    unsigned len = data->linklabels2arcs->len;
    daguid_t ccflib_uid = mpid2uid(mp->id);
-   bool has_child = false;
+   bool has_child = avar_size(mp->ccflib.ccf->args) > 0;
    unsigned num_children = 0;
 
    if (len > 0) {
       LinkLabels *linklabels = data->linklabels2arcs->arr[len-1];
-      assert(linklabels->nchildren > 0);
+      assert(linklabels->nrecs > 0);
       has_child = linklabels->daguid_parent == ccflib_uid;
-      if (has_child) { num_children = linklabels->nchildren; }
+      if (has_child) { num_children = linklabels->nrecs; }
    }
 
    len = data->linklabel2arc->len;
@@ -229,23 +237,27 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *values
 
    if (!has_child) {
       S_CHECK(empdag_delete(empdag, ccflib_uid));
-
-      return OK;
+      goto _fini; /* Need to cleanup the vmdata */
    }
-
-   assert(IS_MPOBJ(values[-1]));
-   N_CHECK(mp_parent, AS_MPOBJ(values[-1]));
-
-   ArcVFObj obj = {.id_parent = mp_parent->id, .id_child = mp->id};
-
-   S_CHECK(arcvfobjs_add(&data->arcvfobjs, obj))
-
-   assert(mp->ccflib.ccf);
 
    /* Update the number of children */
    mp->ccflib.ccf->num_empdag_children = num_children;
 
-_finalize:
+   /* ---------------------------------------------------------------------
+    * We need a special case to handle the following
+    * mp_parent: min obj + MP('ccf', ...) vars equs
+    *
+    * We want to add the link between the CCFLIB MP and the parent
+    * ---------------------------------------------------------------------- */
+   // HACK: have a better way to detect whether we are in another MP declaration
+   if (valid_uid(data->state.uid_grandparent)) {
+      assert(IS_MPOBJ(argv[-1]));
+      N_CHECK(mp_parent, AS_MPOBJ(argv[-1]));
+
+      ArcVFObj obj = {.id_parent = mp_parent->id, .id_child = mp->id};
+
+      S_CHECK(arcvfobjs_add(&data->arcvfobjs, obj))
+   }
 
    S_CHECK(mp_finalize(mp));
 
@@ -253,20 +265,21 @@ _finalize:
       ovf_def_print(mp->ccflib.ccf, PO_TRACE_EMPINTERP, data->mdl);
    }
 
-   return vm_common_nodefini(data);
+_fini:
+   return vm_empdagnode_fini(data);
 }
 
-static int vm_ccflib_updateparams(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_ccflib_updateparams(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_MPOBJ(values[0]) && IS_PTR(values[1]));
-   S_CHECK(_argcnt(argc, 2, __func__));
+   assert(IS_MPOBJ(argv[0]) && IS_PTR(argv[1]));
+   S_CHECK(chk_argc(argc, 2, __func__));
 
    MathPrgm *mp;
-   N_CHECK(mp, AS_MPOBJ(values[0]));
+   N_CHECK(mp, AS_MPOBJ(argv[0]));
    assert(mp->type == MpTypeCcflib);
 
    OvfParamList *params;
-   N_CHECK(params, (OvfParamList *)AS_PTR(values[1]));
+   N_CHECK(params, (OvfParamList *)AS_PTR(argv[1]));
 
    return ovf_params_sync(mp->ccflib.ccf, params);
 }
@@ -278,12 +291,12 @@ static int vm_ccflib_updateparams(UNUSED VmData *data, unsigned argc, const VmVa
 
 
 
-static int vm_mp_addcons(VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_addcons(VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
    Aequ *e = data->e_current;
 
    S_CHECK(mp_addconstraints(mp, e));
@@ -293,12 +306,12 @@ static int vm_mp_addcons(VmData *data, unsigned argc, const VmValue *values)
    return OK;
 }
 
-static int vm_mp_addvars(VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_addvars(VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
    Avar *v = data->v_current;
 
    S_CHECK(mp_addvars(mp, v));
@@ -308,12 +321,12 @@ static int vm_mp_addvars(VmData *data, unsigned argc, const VmValue *values)
    return OK;
 }
 
-static int vm_mp_addvipairs(VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_addvipairs(VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
    Avar *v = data->v_current;
    Aequ *e = data->e_current;
 
@@ -325,12 +338,12 @@ static int vm_mp_addvipairs(VmData *data, unsigned argc, const VmValue *values)
    return OK;
 }
 
-static int vm_mp_addzerofunc(VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_addzerofunc(VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
    Avar *v = data->v_current;
 
    S_CHECK(mp_addvipairs(mp, NULL, v));
@@ -340,12 +353,12 @@ static int vm_mp_addzerofunc(VmData *data, unsigned argc, const VmValue *values)
    return OK;
 }
 
-static int vm_mp_finalize(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_finalize(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
 
    /* ---------------------------------------------------------------------
     * We first call finalize as it identifies the objective function
@@ -381,38 +394,38 @@ static int vm_mp_finalize(UNUSED VmData *data, unsigned argc, const VmValue *val
       data->arcvfobjs.len = 0;
    }
 
-   return vm_common_nodefini(data);
+   return vm_empdagnode_fini(data);
 }
 
-static int vm_mp_setprobtype(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_setprobtype(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 2, __func__));
+   S_CHECK(chk_argc(argc, 2, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
-   unsigned type = AS_UINT(values[1]);
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
+   unsigned type = AS_UINT(argv[1]);
 
    return mp_setprobtype(mp, type);
 }
 
-static int vm_mp_setid_aschild(VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_setid_aschild(VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
 
-   data->mpid_dual = mp->id;
+   data->state.mpid_dual = mp->id;
 
    return OK;
 }
 
-static int vm_mp_setobjvar(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_mp_setobjvar(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
 
    Avar *v = data->v_current;
    unsigned dim = avar_size(v);
@@ -429,41 +442,41 @@ static int vm_mp_setobjvar(UNUSED VmData *data, unsigned argc, const VmValue *va
    return mp_setobjvar(mp, vi);
 }
 
-static int vm_nash_addmpbyid(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_nash_addmpbyid(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 2, __func__));
+   S_CHECK(chk_argc(argc, 2, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
 
-   assert(IS_UINT(values[1]));
-   unsigned equil_id = AS_UINT(values[1]);
+   assert(IS_UINT(argv[1]));
+   unsigned equil_id = AS_UINT(argv[1]);
 
    return empdag_nashaddmpbyid(&data->mdl->empinfo.empdag, equil_id, mp->id);
 }
 
 static int vm_nash_finalize(UNUSED VmData *data, unsigned argc, const VmValue *values)
 {
-   assert(_argcnt(argc, 1, __func__) == OK);
+   assert(chk_argc(argc, 1, __func__) == OK);
    assert(IS_NASHOBJ(values[0]));
    /* No need to dig the object for now */
    //S_CHECK(_argcnt(argc, 1, __func__));
    //Mpe *mpe;
    //N_CHECK(mpe, (Mpe *)AS_NASHOBJ(values[0]));
 
-   return vm_common_nodefini(data);
+   return vm_empdagnode_fini(data);
 }
 
 /* ------------------------------------------------------------------------
  *  OVF API functions
  * ------------------------------------------------------------------------ */
 
-static int vm_ovf_setrho(VmData *data, unsigned argc, const VmValue *values)
+static int vm_ovf_setrho(VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_OVFOBJ(values[0]));
-   S_CHECK(_argcnt(argc, 1, __func__));
+   assert(IS_OVFOBJ(argv[0]));
+   S_CHECK(chk_argc(argc, 1, __func__));
    OvfDef *ovfdef;
-   N_CHECK(ovfdef, AS_OVFOBJ(values[0]));
+   N_CHECK(ovfdef, AS_OVFOBJ(argv[0]));
    Avar *v = data->v_current;
    unsigned rho_size = avar_size(v);
 
@@ -478,15 +491,15 @@ static int vm_ovf_setrho(VmData *data, unsigned argc, const VmValue *values)
    return OK;
 }
 
-static int vm_ovf_addarg(VmData *data, unsigned argc, const VmValue *values)
+static int vm_ovf_addarg(VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_OVFOBJ(values[0]) || IS_MPOBJ(values[0]));
-   S_CHECK(_argcnt(argc, 1, __func__));
+   assert(IS_OVFOBJ(argv[0]) || IS_MPOBJ(argv[0]));
+   S_CHECK(chk_argc(argc, 1, __func__));
    OvfDef *ovfdef;
-   VmValue vmval = values[0];
+   VmValue vmval = argv[0];
 
    if (IS_OVFOBJ(vmval)) {
-      N_CHECK(ovfdef, AS_OVFOBJ(values[0]));
+      N_CHECK(ovfdef, AS_OVFOBJ(argv[0]));
    } else if (IS_MPOBJ(vmval)) {
       MathPrgm *mp = AS_MPOBJ(vmval);
 
@@ -507,12 +520,12 @@ static int vm_ovf_addarg(VmData *data, unsigned argc, const VmValue *values)
    return avar_extend(ovfdef->args, v);
 }
 
-static int vm_ovf_finalize(VmData *data, unsigned argc, const VmValue *values)
+static int vm_ovf_finalize(VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_OVFOBJ(values[0]));
-   S_CHECK(_argcnt(argc, 1, __func__));
+   assert(IS_OVFOBJ(argv[0]));
+   S_CHECK(chk_argc(argc, 1, __func__));
    OvfDef *ovfdef;
-   N_CHECK(ovfdef, AS_OVFOBJ(values[0]));
+   N_CHECK(ovfdef, AS_OVFOBJ(argv[0]));
 
    S_CHECK(ovf_check(ovfdef));
 
@@ -532,34 +545,35 @@ static int vm_ovf_finalize(VmData *data, unsigned argc, const VmValue *values)
  *
  * @param data    the VM data
  * @param argc    the number of arguments
- * @param values  the argument array
- * @return  the error code
+ * @param argv    the argument array
+ *
+ * @return        the error code
  */
-static int vm_ovf_syncparams(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_ovf_syncparams(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_OVFOBJ(values[0]) && IS_PTR(values[1]));
-   S_CHECK(_argcnt(argc, 2, __func__));
+   assert(IS_OVFOBJ(argv[0]) && IS_PTR(argv[1]));
+   S_CHECK(chk_argc(argc, 2, __func__));
 
    OvfDef *ovf;
-   N_CHECK(ovf, AS_OVFOBJ(values[0]));
+   N_CHECK(ovf, AS_OVFOBJ(argv[0]));
 
    OvfParamList *params;
-   N_CHECK(params, (OvfParamList *)AS_PTR(values[1]));
+   N_CHECK(params, (OvfParamList *)AS_PTR(argv[1]));
 
    return ovf_params_sync(ovf, params);
 }
 
-static int vm_ovfparam_setdefault(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_ovfparam_setdefault(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_OVFOBJ(values[0]) && IS_PTR(values[1]) && IS_UINT(values[2]));
-   S_CHECK(_argcnt(argc, 3, __func__));
+   assert(IS_OVFOBJ(argv[0]) && IS_PTR(argv[1]) && IS_UINT(argv[2]));
+   S_CHECK(chk_argc(argc, 3, __func__));
 
    OvfDef *ovf;
    OvfParamList *params;
-   N_CHECK(ovf, AS_OVFOBJ(values[0]));
-   N_CHECK(params, (OvfParamList *)AS_PTR(values[1]));
+   N_CHECK(ovf, AS_OVFOBJ(argv[0]));
+   N_CHECK(params, (OvfParamList *)AS_PTR(argv[1]));
 
-   unsigned idx = AS_UINT(values[2]);
+   unsigned idx = AS_UINT(argv[2]);
 
    S_CHECK(chk_param_idx(idx, params->size, __func__));
    OvfParam * restrict param = &params->p[idx];
@@ -570,18 +584,18 @@ static int vm_ovfparam_setdefault(UNUSED VmData *data, unsigned argc, const VmVa
    return param->def->default_val(param, nargs);
 }
 
-static int vm_ovfparam_update(UNUSED VmData *data, unsigned argc, const VmValue *values)
+static int vm_ovfparam_update(UNUSED VmData *data, unsigned argc, const VmValue *argv)
 {
-   assert(IS_PTR(values[0]) && IS_UINT(values[1]) && IS_PTR(values[2]));
-   S_CHECK(_argcnt(argc, 3, __func__));
+   assert(IS_PTR(argv[0]) && IS_UINT(argv[1]) && IS_PTR(argv[2]));
+   S_CHECK(chk_argc(argc, 3, __func__));
 
    OvfParamList *params;
-   N_CHECK(params, (OvfParamList *)AS_PTR(values[0]));
+   N_CHECK(params, (OvfParamList *)AS_PTR(argv[0]));
 
-   unsigned idx = AS_UINT(values[1]);
+   unsigned idx = AS_UINT(argv[1]);
 
    OvfParam * restrict param_update;
-   N_CHECK(param_update, (OvfParam*)AS_PTR(values[2]));
+   N_CHECK(param_update, (OvfParam*)AS_PTR(argv[2]));
 
 
 
@@ -630,20 +644,20 @@ static int vm_chk_scalar_var(Avar *v)
    return OK;
 }
 
-static int vm_mark_equ_as_flipped(VmData *data, unsigned argc, UNUSED const VmValue *values)
+static int vm_mark_equ_as_flipped(VmData *data, unsigned argc, UNUSED const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 0, __func__));
+   S_CHECK(chk_argc(argc, 0, __func__));
    Aequ *e = data->e_current;
 
    return ctr_markequasflipped(&data->mdl->ctr, e);
 }
 
-static int vm_mp_add_map_objfn(VmData *data, unsigned argc, UNUSED const VmValue *values)
+static int vm_mp_add_map_objfn(VmData *data, unsigned argc, UNUSED const VmValue *argv)
 {
-   S_CHECK(_argcnt(argc, 1, __func__));
+   S_CHECK(chk_argc(argc, 1, __func__));
    MathPrgm *mp;
-   assert(IS_MPOBJ(values[0]));
-   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(values[0]));
+   assert(IS_MPOBJ(argv[0]));
+   N_CHECK(mp, (MathPrgm *)AS_MPOBJ(argv[0]));
 
    Avar *v = data->v_current;
 

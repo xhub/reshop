@@ -14,8 +14,7 @@
 #define RHP_ELT_INVALID ((struct rhp_empdag_arcVF) {.mpid_child = UINT_MAX, .type = ArcVFUnset});
 #include "array_generic.inc"
 
-static int _edgeVFs_copy(VarcArray * restrict dat,
-                         const VarcArray * restrict dat_src)
+static int _edgeVFs_copy(VarcArray * restrict dat, const VarcArray * restrict dat_src)
 {
    /* ---------------------------------------------------------------------
     * The semantics of this function is to overwrite, without reading,
@@ -77,8 +76,8 @@ static inline int dagmp_array_reserve(DagMpArray *dat, unsigned reserve)
       REALLOC_(dat->Varcs, VarcArray, max_lb);
       REALLOC_(dat->rarcs, UIntArray, max_lb);
 
-      memset(&dat->arr[old_max], 0, new_elts * sizeof(unsigned));
-      memset(&dat->names[old_max], 0, new_elts * sizeof(const char*));
+      memset((void*)&dat->arr[old_max], 0, new_elts * sizeof(*dat->arr));
+      memset((void*)&dat->names[old_max], 0, new_elts * sizeof(*dat->names));
       memset(&dat->Carcs[old_max], 0, new_elts * sizeof(UIntArray));
       memset(&dat->Varcs[old_max], 0, new_elts * sizeof(VarcArray));
       memset(&dat->rarcs[old_max], 0, new_elts * sizeof(UIntArray));
@@ -93,7 +92,7 @@ int dagmp_array_add(DagMpArray *dat, MathPrgm* elt, const char *name)
 
    if (dat->len >= dat->max) {
       unsigned old_max = dat->max;
-      unsigned max = dat->max = MAX(2*dat->max, dat->len+1);
+      unsigned max = dat->max = MAX(2*old_max, dat->len+1);
       unsigned new_elts = max - old_max;
 
       REALLOC_(dat->arr, MathPrgm*, max);
@@ -102,8 +101,8 @@ int dagmp_array_add(DagMpArray *dat, MathPrgm* elt, const char *name)
       REALLOC_(dat->Varcs, VarcArray, max);
       REALLOC_(dat->rarcs, UIntArray, max);
 
-      memset(&dat->arr[old_max], 0, new_elts * sizeof(unsigned));
-      memset(&dat->names[old_max], 0, new_elts * sizeof(const char*));
+      memset((void*)&dat->arr[old_max], 0, new_elts * sizeof(*dat->arr));
+      memset((void*)&dat->names[old_max], 0, new_elts * sizeof(*dat->names));
       memset(&dat->Carcs[old_max], 0, new_elts * sizeof(UIntArray));
       memset(&dat->Varcs[old_max], 0, new_elts * sizeof(VarcArray));
       memset(&dat->rarcs[old_max], 0, new_elts * sizeof(UIntArray));
@@ -200,5 +199,3 @@ static inline int dagmp_array_trimmem(DagMpArray * restrict dat)
 
    return OK;
 }
-
-

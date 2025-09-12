@@ -27,5 +27,6 @@ int Varc_dual(Model *mdl, unsigned linenr, daguid_t uid_parent, daguid_t uid_chi
               double coeff) NONNULL;
 
 int gmssymiter_fixup_domains(Interpreter * restrict interp, GmsIndicesData *indices) NONNULL;
+NONNULL const char *get_daguid_name(EmpDag *empdag, daguid_t uid);
 
 #endif // !EMPINTERP_UTILS_H

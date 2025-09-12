@@ -64,19 +64,19 @@ static daguid_t dagregister_find(const DagRegister *dagreg, LabelDat *labeldat)
    }
 
    uint16_t labelname_len = labeldat->label_len;
-   uint8_t edge_dim = labeldat->dim;
+   uint8_t dim = labeldat->dim;
    int *uels = labeldat->uels;
 
    for (unsigned i = 0, len = dagreg->len; i < len; ++i) {
       const DagRegisterEntry *entry = dagreg->list[i];
 
       if (entry->label_len != labelname_len ||
-          entry->dim != edge_dim ||
+          entry->dim != dim ||
           strncasecmp(labelname, entry->label, labelname_len) != 0) {
          goto _loop;
       }
 
-      for (unsigned j = 0, dim = entry->dim; j < dim; ++j) {
+      for (unsigned j = 0; j < dim; ++j) {
          if (uels[j] != entry->uels[j]) goto _loop;
       }
 
@@ -336,7 +336,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
       LinkLabels *link = labels2resolve->arr[i];
 
-      unsigned num_children = link->nchildren;
+      unsigned num_children = link->nrecs;
 
       if (num_children == 0) {
          error("[empinterp] ERROR: empty daglabel for node '%s'.\n",
@@ -381,9 +381,14 @@ static int dag_resolve_arc_labels(Interpreter *interp)
       daguid_t daguid_src = link->daguid_parent;
       assert(daguid_src != EMPDAG_UID_NONE);
 
-      UIntArray *arcs = &empdag->mps.Carcs[i];
+      unsigned nrecs = link->nrecs;
 
-      unsigned num_children = link->nchildren;
+      /* FIXME: URG: This looks broken */
+      if (uidisMP(daguid_src)) {
+         UIntArray *Carcs = &empdag->mps.Carcs[uid2id(daguid_src)];
+         /* Reserve the space for the edges */
+         S_CHECK(rhp_uint_reserve(Carcs, nrecs));
+      }
 
       const double * restrict coeffs;
       const rhp_idx * restrict vis;
@@ -392,7 +397,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
 
       if (link->linktype == LinkObjAddMap) {
          assert(uidisMP(daguid_src));
-         S_CHECK(addobjaddmaps(interp, uid2id(daguid_src), num_children, coeffs, vis));
+         S_CHECK(addobjaddmaps(interp, uid2id(daguid_src), nrecs, coeffs, vis));
          continue;
       }
 
@@ -400,32 +405,26 @@ static int dag_resolve_arc_labels(Interpreter *interp)
          .type = link->linktype,
          .labeldat = {.dim = link->dim, .label_len = link->label_len, .label = link->label}};
 
-      /* Copy the fixes UELs */
-      memcpy(arcdat.labeldat.uels, link->data, sizeof(int)*dim);
-
-      /* Reserve the space for the edges */
-      S_CHECK(rhp_uint_reserve(arcs, num_children));
+      /* Copy the fixed UELs */
+      memcpy(arcdat.labeldat.uels, link->data, sizeof(*link->data)*dim);
 
       const int * restrict positions = &link->data[dim];
-      for (unsigned j = 0, nlabels = num_children; j < nlabels; ++j, child += num_vars) {
+      for (unsigned j = 0; j < nrecs; ++j, child += num_vars) {
  
-         for (uint8_t k = 0; k < num_vars; ++k) {
+         for (u8 k = 0; k < num_vars; ++k) {
             assert(positions[k] < dim);
             arcdat.labeldat.uels[positions[k]] = child[k];
          }
 
-         daguid_t daguid_dst = EMPDAG_UID_NONE;
-
-        daguid_dst = dagregister_find(dagregister, &arcdat.labeldat);
+         daguid_t daguid_dst = dagregister_find(dagregister, &arcdat.labeldat);
 
         if (daguid_dst == UINT_MAX) {
-           error("[empinterp] ERROR: while building edge for node '%s' could "
+           error("[empinterp] ERROR: while building arc for node '%s' could "
                  "not resolve the label '", empdag_getname(empdag, daguid_src));
            labeldat_print(&arcdat.labeldat, interp->dct, PO_ERROR);
            errormsg("'\n");
            num_err++;
            continue;
-
         }
 
          arcdat.basic_dat.vi  = vis[j];

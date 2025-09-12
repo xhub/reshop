@@ -295,9 +295,9 @@ int rhp_syncenv(void)
       {"solver",      rhp_show_solver_log,     "display solver log"},
    };
 
-   const char* loglevel_vals[]   = {"all",   "error", "info",   "v",  "vv",  "vvv"};
-   const unsigned loglevel_num[] = {INT_MAX, PO_ERROR, PO_INFO, PO_V, PO_VV, PO_VVV};
-   const unsigned n_loglevels = ARRAY_SIZE(loglevel_num);
+   const char* loglevel_strvals[] = {"all",   "error", "info",   "v",  "vv",  "vvv"};
+   const unsigned loglevel_vals[] = {INT_MAX, PO_ERROR, PO_INFO, PO_V, PO_VV, PO_VVV};
+   const unsigned n_loglevels = ARRAY_SIZE(loglevel_vals);
 
    const unsigned n_opts = sizeof(log_opts)/sizeof(log_opts[0]);
 
@@ -337,9 +337,9 @@ int rhp_syncenv(void)
             const char *loglevel_env = &envopt[6];
 
             for (unsigned i = 0; i < n_loglevels; ++i) {
-               const char *loglevel = loglevel_vals[i];
+               const char *loglevel = loglevel_strvals[i];
                if (!strncmp(loglevel, loglevel_env, strlen(loglevel))) {
-                  O_Output = (O_Output & ~(unsigned)PO_MASK_LEVEL) + loglevel_num[i];
+                  O_Output = (int)(((unsigned)O_Output & ~(unsigned)PO_MASK_LEVEL) + loglevel_vals[i]);
                   goto _continue;
                }
             }
@@ -382,8 +382,6 @@ _continue:
 
 _exit:
    myfreeenvval(env_varval);
-
-
    free(env_varname);
 
    if (status == OK) {

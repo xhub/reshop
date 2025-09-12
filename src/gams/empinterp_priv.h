@@ -168,9 +168,14 @@ static inline uint8_t gmsindices_nargs(GmsIndicesData *indices)
    return indices->nargs != UINT8_MAX ? indices->nargs : 0;
 }
 
-static inline uint8_t gmsindices_nvaridxs(GmsIndicesData *indices)
+static inline uint8_t gmsindices_numiterators(GmsIndicesData *indices)
 {
    return indices->num_sets + indices->num_localsets + indices->num_loopiterators;
+}
+
+static inline uint8_t gmsindices_nvaridxs(GmsIndicesData *indices)
+{
+   return indices->num_sets + indices->num_localsets;
 }
 
 static inline void gmsindices_deactivate(GmsIndicesData *indices)
@@ -178,6 +183,7 @@ static inline void gmsindices_deactivate(GmsIndicesData *indices)
    if (indices->nargs == UINT8_MAX) { assert(0 && "indices not active"); }
 
    indices->nargs = UINT8_MAX;
+   gmsindices_init(indices);
 }
 
 static inline bool gmsindices_needcompmode(GmsIndicesData *indices)

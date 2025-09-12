@@ -1357,8 +1357,13 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mpid, AnalysisData *data)
          DagUidArray *rarcs = &mps->rarcs[mpid];
 
          if (rarcs->len > 1) {
-            error("[empdag] ERROR: MP(%s) has %u parents, we only support at most one for now.\n",
-                  empdag_getmpname(dfsdata->empdag, mpid), rarcs->len);
+            int offset;
+            EmpDag *empdag = dfsdata->empdag;
+            error("[empdag] ERROR: %nMP(%s) has %u parents, we only support at most one "
+                  "for now.\n", &offset, empdag_getmpname(empdag, mpid), rarcs->len);
+            for (unsigned p = 0, plen = rarcs->len; p < plen; ++p) {
+               error("%*s%s\n", offset, "", empdag_getname(empdag, rarcs->arr[p]));
+            }
             num_err++;
             break;
          }

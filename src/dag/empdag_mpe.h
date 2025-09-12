@@ -43,8 +43,8 @@ static inline int dagnash_array_reserve(DagNashArray *dat, unsigned reserve)
       REALLOC_(dat->arcs, UIntArray, max_lb);
       REALLOC_(dat->rarcs, UIntArray, max_lb);
 
-      memset(&dat->arr[old_max], 0, new_elts * sizeof(unsigned));
-      memset(&dat->names[old_max], 0, new_elts * sizeof(const char*));
+      memset(&dat->arr[old_max], 0, new_elts * sizeof(*dat->arr));
+      memset(&dat->names[old_max], 0, new_elts * sizeof(*dat->names));
       memset(&dat->arcs[old_max], 0, new_elts * sizeof(UIntArray));
       memset(&dat->rarcs[old_max], 0, new_elts * sizeof(UIntArray));
    }
@@ -66,8 +66,8 @@ int dagnash_array_add(DagNashArray *dat, Nash* elt, const char *name)
       REALLOC_(dat->arcs, UIntArray, max);
       REALLOC_(dat->rarcs, UIntArray, max);
 
-      memset(&dat->arr[old_max], 0, new_elts * sizeof(unsigned));
-      memset(&dat->names[old_max], 0, new_elts * sizeof(const char*));
+      memset(&dat->arr[old_max], 0, new_elts * sizeof(*dat->arr));
+      memset(&dat->names[old_max], 0, new_elts * sizeof(*dat->names));
       memset(&dat->arcs[old_max], 0, new_elts * sizeof(UIntArray));
       memset(&dat->rarcs[old_max], 0, new_elts * sizeof(UIntArray));
    }

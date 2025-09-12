@@ -114,7 +114,7 @@
 
 
 #define AS_OBJ(type, value) \
-    ((type)(uintptr_t)((value) & MASK_PAYLOAD_PTR)) //NOLINT(performance-no-int-to-ptr)
+    ((type)(uintptr_t)((value) & MASK_PAYLOAD_PTR)) /*NOLINT(performance-no-int-to-ptr)*/
 
 #define AS_STR(value)        AS_OBJ(const char*, (value))
 #define AS_MPOBJ(value)      AS_OBJ(MathPrgm*, (value))
@@ -155,7 +155,7 @@
 #define VM_VALUE_INC(value)  ((value))++
 
 /* Custom defines */
-#define AS_PTR(X) AS_OBJ(void*, X)
+#define AS_PTR(X) AS_OBJ(void*, X) /* NOLINT(bugprone-casting-through-void) */
 #define PTR_VAL OBJ_VAL
 
 

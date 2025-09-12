@@ -487,6 +487,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
             uint8_t nargs = READ_BYTE(vm);
             assert(nargs < GMS_MAX_INDEX_DIM);
 
+            printout(mode, "%2u  ", nargs);
             for (unsigned k = 0; k < nargs; ++k) {
                val = READ_BYTE(vm);
                printout(mode, "%20u ", val);
@@ -514,6 +515,7 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
             uint8_t nargs = READ_BYTE(vm);
             assert(nargs < GMS_MAX_INDEX_DIM);
 
+            printout(mode, "%2u  ", nargs);
             for (unsigned k = 0; k < nargs; ++k) {
                val = READ_BYTE(vm);
                printout(mode, "%20u ", val);

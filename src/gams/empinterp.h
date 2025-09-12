@@ -55,9 +55,9 @@ enum _dag_idents {
 
 typedef struct gms_indices_data {
    uint8_t nargs;
-   uint8_t num_loopiterators;                /**< Number of loop iterator */
-   uint8_t num_sets;
-   uint8_t num_localsets;
+   uint8_t num_loopiterators;                /**< Number of loop iterators */
+   uint8_t num_sets;                         /**< Number of sets           */
+   uint8_t num_localsets;                    /**< Number of local sets     */ 
    IdentData idents[GMS_MAX_INDEX_DIM];
 } GmsIndicesData;
 
@@ -250,19 +250,19 @@ typedef struct linklabels_list {
  *
  */
 typedef struct linklabels {
-   uint8_t dim;            /**< Label dimension                     */
-   uint8_t nvaridxs;       /**< Number of variable indices          */
-   LinkType linktype;      /**< Linkage type                        */
-   uint16_t label_len;     /**< label length                        */
-   unsigned nchildren;     /**< Number of children                  */
-   unsigned maxchildren;   /**< Max number of children              */
-   daguid_t daguid_parent; /**< daguid ot the parent                */
-   const char *label;      /**< Label                               */
-   int *uels_var;          /**< uel_var[nvaridxs] per child         */
-   rhp_idx *vi;            /**< Optional variable index             */
-   double *coeff;          /**< Optional coefficient                */
-   void **extras;           /**< extra objects                      */
-   int data[];              /**< Layout: uels[dim] + pos[nvaridxs]  */
+   uint8_t dim;            /**< Label dimension                           */
+   uint8_t nvaridxs;       /**< Number of variable indices                */
+   LinkType linktype;      /**< Linkage type                              */
+   uint16_t label_len;     /**< label length                              */
+   unsigned nrecs;         /**< Number of children                        */
+   unsigned maxrecs;       /**< Max number of children                    */
+   daguid_t daguid_parent; /**< daguid of the parent                      */
+   const char *label;      /**< Label                                     */
+   int *uels_var;          /**< uel_var[nvaridxs] per child               */
+   rhp_idx *vi;            /**< Optional variable index                   */
+   double *coeff;          /**< Optional coefficient                      */
+   void **extras;          /**< extra objects                             */
+   int data[];             /**< Layout: fixed_uels[dim] + pos[nvaridxs]   */
 } LinkLabels;
 
 typedef struct linklabel {
@@ -449,7 +449,6 @@ typedef struct interpreter {
    GmsSymIterator gms_sym_iterator;        /**< Iterator for GAMS symbol     */
    GmsIndicesData gmsindices;              /**< Indices                      */
    /* Set filtering data structures */
-   GmsIndicesData indices_membership_test;
 
    /* Immediate mode data*/
    daguid_t daguid_parent;                    /**< UID of the EMPDAG parent node */
@@ -520,7 +519,9 @@ typedef struct interp_ops {
 extern const struct interp_ops interp_ops_imm;
 extern const struct interp_ops interp_ops_compiler;
 
-int gmssym_iterator_init(Interpreter* restrict interp) NONNULL;
+void gmssym_iterator_init(Interpreter* restrict interp) NONNULL;
+void gmssym_iterator_fini(Interpreter* restrict interp) NONNULL;
+
 int parser_filter_set(Interpreter* restrict interp, unsigned i, int val) NONNULL;
 
 int empinterp_process_statements(Interpreter * restrict interp,

@@ -15,6 +15,7 @@
 #include "empparser_utils.h"
 #include "macros.h"
 #include "mathprgm.h"
+#include "mdl.h"
 #include "ovf_parameter.h"
 #include "printout.h"
 
@@ -162,8 +163,8 @@ trace_empparser("%s :: JUMP: adding to " #jumps " at pos %u; depth = %5u; addr =
  * --------------------------------------------------------------------- */
 
 
-static inline void iterators_init(LoopIterators* restrict iterators,
-                                  GmsIndicesData* restrict gmsindices)
+static inline void iterators_init_from_gmsindices(LoopIterators* restrict iterators,
+                                                  GmsIndicesData* restrict gmsindices)
 {
    unsigned nargs = gmsindices->nargs;
    iterators->size = nargs;
@@ -842,12 +843,13 @@ static int vm_regentry_alloc(Compiler* restrict c, const char *basename,
 
 static int vm_linklabels_alloc(EmpVm * restrict vm, LinkLabels **link,
                               const char* label, unsigned label_len,
-                              uint8_t dim, uint8_t num_vars, unsigned size,
+                              uint8_t dim, uint8_t nvaridxs, unsigned children_sz,
                               LinkType linktype, unsigned *gidx)
 {
    LinkLabels *link_;
-   A_CHECK(link_, linklabels_new(linktype, label, label_len, dim, num_vars, size));
+   A_CHECK(link_, linklabels_new(linktype, label, label_len, dim, nvaridxs, children_sz));
 
+   assert(linklabels_valid(link_));
    S_CHECK(vmvals_add(&vm->globals, ARCOBJ_VAL(link_)));
 
    *link = link_;
@@ -927,8 +929,6 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
 
    iterators->size = loopi;
 
-   gmsindices_deactivate(indices);
-
    return OK;
 }
 
@@ -1000,6 +1000,8 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
    LinkLabels *linklabels;
    uint8_t dim = gmsindices_nargs(indices);
    uint8_t nvaridxs = gmsindices_nvaridxs(indices);
+   assert(dim >= nvaridxs);
+
    unsigned gidx;
    S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label, label_len, dim,
                                nvaridxs, 0, linktype, &gidx));
@@ -1010,6 +1012,45 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
       loopiterators->loopobj_gidx = UINT_MAX;
       return OK;
    }
+
+   loopiterators->loopobj_gidx = *linklabels_gidx;
+   loopiterators->loopobj_opcode = OP_LINKLABELS_SETFROM_LOOPVAR;
+
+   bool dummy;
+
+   S_CHECK(ident_gmsindices_process(indices, loopiterators, tape, linklabels->data, &dummy));
+
+  /* ----------------------------------------------------------------------
+   * Copy the coordinate (of the index) where the loop iterators belong,
+   * but can't use memcpy as we don't have the same type. Example:
+   *
+   * n('1', i, '2', j) -> varidxs2pos = [1, 3]
+   * ---------------------------------------------------------------------- */
+
+   for (unsigned i = 0, len = loopiterators->size, j = dim; i < len; ++i, ++j) {
+      linklabels->data[j] = loopiterators->varidxs2pos[i];
+   }
+
+   return OK;
+}
+
+static int
+linklabels_init_from_loopiterators(Interpreter * restrict interp, Tape * restrict tape,
+                                   const char* label, unsigned label_len,
+                                   LinkType linktype, GmsIndicesData *indices,
+                                   LoopIterators *loopiterators, unsigned *linklabels_gidx)
+{
+   Compiler *c = interp->compiler;
+
+   LinkLabels *linklabels;
+   uint8_t dim = gmsindices_nargs(indices);
+   uint8_t nvaridxs = indices->num_loopiterators;
+   assert(dim >= nvaridxs);
+
+   unsigned gidx;
+   S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, label, label_len, dim,
+                               nvaridxs, 0, linktype, &gidx));
+   *linklabels_gidx = gidx;
 
    loopiterators->loopobj_gidx = *linklabels_gidx;
    loopiterators->loopobj_opcode = OP_LINKLABELS_SETFROM_LOOPVAR;
@@ -1071,15 +1112,16 @@ static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
                   identtype2str(ident_gmsarray.type), ident_gmsarray.dim);
 
    /* WARNING: This operates on the current token */
-   GmsIndicesData *indices = &interp->indices_membership_test;
-   gmsindices_init(indices);
+   /* TODO: why not store the gmsindices on the stack */
+   GmsIndicesData gmsindices;
+   gmsindices_init(&gmsindices);
 
 // TODO(URG) is needed?  parser_save(interp);
 
    S_CHECK(advance(interp, p, &toktype));
    S_CHECK(parser_expect(interp, "'(' expected", TOK_LPAREN));
 
-   S_CHECK(parse_gmsindices(interp, p, indices));
+   S_CHECK(parse_gmsindices(interp, p, &gmsindices));
 
    /* ---------------------------------------------------------------------
     * We have all GAMS indices. Depending on the data, we have different behavior:
@@ -1091,7 +1133,7 @@ static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
    LoopIterators loopiter;
 
    unsigned gmsfilter_gidx;
-   S_CHECK(gmssymiter_init(interp, &ident_gmsarray, indices, &loopiter, tape, &gmsfilter_gidx));
+   S_CHECK(gmssymiter_init(interp, &ident_gmsarray, &gmsindices, &loopiter, tape, &gmsfilter_gidx));
 
    S_CHECK(loop_initandstart(interp, tape, &loopiter));
 
@@ -1369,6 +1411,7 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
        * --------------------------------------------------------------------- */
 
       if (toktype == TOK_AND) {
+
          Jump jump = {.depth = depth};
          S_CHECK(emit_jump(tape, OP_JUMP_IF_FALSE, &jump.addr));
          S_CHECK(jumps_add_verbose(&c->falsey_jumps, jump));
@@ -1388,11 +1431,12 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
    } while (true);
 
    if (closing_delimiter != TOK_UNSET && toktype != closing_delimiter) {
+
       char msg[] = "Expecting a XXX to end conditional";
       const char *closing_delimiter_str = toktype2str(closing_delimiter);
       assert(strlen(closing_delimiter_str) == 3);
       memcpy(&msg[12], closing_delimiter_str, 3);
-      
+ 
       return parser_err(interp, msg);
    }
 
@@ -1538,7 +1582,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
 
    /*
     *  We have parsed an expression of the type:
-    *  - max obj + VF('name', n.valfn(set)$(cond(set)), ...)  ...
+    *  - max obj + MP('name', n(set).valfn$(cond(set)), ...)  ...
     *  - max obj x nLower ...
     *  - Nash(n(set)$(cond(set)))
     *
@@ -1561,7 +1605,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
     * And we are done
     * --------------------------------------------------------------------- */
 
-   uint8_t num_iterators = gmsindices->num_localsets + gmsindices->num_sets;
+   uint8_t num_iterators = gmsindices_nvaridxs(gmsindices);
    if (num_iterators == 0) {
       assert(gmsindices->num_loopiterators > 0);
       S_CHECK(emit_bytes(tape, OP_LINKLABELS_DUP));
@@ -1601,6 +1645,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
     * This will duplicate the DagLabels and put it on the stack.
     * --------------------------------------------------------------------- */
 
+   assert(num_iterators <= AS_ARCOBJ(vm->globals.arr[linklabels_gidx])->nvaridxs);
    S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
 
    for (unsigned i = 0; i < num_iterators; ++i) {
@@ -1627,6 +1672,8 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
    assert(no_outstanding_jump(&c->falsey_jumps, c->scope_depth));
 
    S_CHECK(emit_bytes(tape, OP_LINKLABELS_FINI));
+
+   gmsindices_deactivate(gmsindices);
 
    return end_scope(interp, tape);
 }
@@ -1921,6 +1968,7 @@ static int parse_loopiters_operator(Interpreter * restrict interp, unsigned * re
    PARSER_EXPECTS(interp, "a single GAMS set or a collection", TOK_IDENT, TOK_LPAREN, TOK_GMS_SET);
 
    GmsIndicesData gmsindices = {.nargs = 0};
+
    if (toktype == TOK_LPAREN) {
       S_CHECK(parse_loopsets(interp, p, &gmsindices));
    } else {
@@ -1959,8 +2007,8 @@ static int parse_loopiters_operator(Interpreter * restrict interp, unsigned * re
    Tape _tape = {.code = &c->vm->code, .linenr = UINT_MAX};
    Tape * restrict const tape = &_tape;
    tape->linenr = interp->linenr;
-   
-   iterators_init(iterators, &gmsindices);
+ 
+   iterators_init_from_gmsindices(iterators, &gmsindices);
    S_CHECK(loop_initandstart(interp, tape, iterators));
 
    /* ---------------------------------------------------------------------
@@ -2121,10 +2169,10 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    begin_scope(c, __func__);
 
    /* ---------------------------------------------------------------------
-    * Step 1: Parse loop iterators
+    * Step 1: Parse sum iterators
     * --------------------------------------------------------------------- */
-   LoopIterators iterators;
-   S_CHECK(parse_loopiters_operator(interp, p, c, &iterators));
+   LoopIterators sum_iterators;
+   S_CHECK(parse_loopiters_operator(interp, p, c, &sum_iterators));
 
    /* ---------------------------------------------------------------------
     * Step 2: parse the expression like param * n(...){.dual()}.valFn * variables
@@ -2251,32 +2299,31 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 
    // WE need to ensure that all parameters / variables only resolve to scalar quantities
  
-   // HACK: move this around, toards the end of the function
+   // HACK: move this around, towards the end of the function
    /* Consume the delimiter_endloop token */
    S_CHECK(parser_expect(interp, "end delimiter of loop", closing_delimiter));
 
    unsigned gidx;
 
    if (has_valfn) {
-      
-      uint8_t num_iterators = label_gmsindices.num_localsets + label_gmsindices.num_sets;
 
       // HACK
-      if (num_iterators > 0 && !embmode(interp)) {
-         TO_IMPLEMENT()
+      if (gmsindices_nvaridxs(&label_gmsindices) > 0 && !embmode(interp)) {
+         TO_IMPLEMENT("Implementation of the SUM operator is incomplete")
       }
 
       LinkType linktype = has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
       LoopIterators loopiters = {.size = 0};
-      S_CHECK(linklabels_init(interp, tape, label_valfn.start,
-                              label_valfn.len, linktype, &label_gmsindices,
-                              &loopiters, &gidx));
+      S_CHECK(linklabels_init_from_loopiterators(interp, tape, label_valfn.start,
+                                                 label_valfn.len, linktype,
+                                                 &label_gmsindices, &loopiters, &gidx));
 
-      uint8_t nvaridxs = gmsindices_nvaridxs(&label_gmsindices);
-      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, nvaridxs));
+      u8 num_iterators = sum_iterators.size;
 
-      for (unsigned i = 0; i < nvaridxs; ++i) {
-         S_CHECK(emit_byte(tape, iterators.iters[i].iter_lidx));
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
+
+      for (unsigned i = 0; i < num_iterators; ++i) {
+         S_CHECK(emit_byte(tape, sum_iterators.iters[i].iter_lidx));
       }
 
 
@@ -2312,7 +2359,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    /* Resolve all remaining jumps linked to a false condition */
    S_CHECK(patch_jumps(&c->falsey_jumps, tape, c->scope_depth));
 
-   S_CHECK(loop_increment(tape, &iterators));
+   S_CHECK(loop_increment(tape, &sum_iterators));
 
    /* ---------------------------------------------------------------------
     * We are at the end of the loop. We allow for outstanding "true" jump
@@ -2802,7 +2849,6 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
 {
    Compiler *c = interp->compiler;
    assert(interp->gms_sym_iterator.active);
-   interp->gms_sym_iterator.active = false;
 
    EmpVm *vm = c->vm;
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
@@ -2880,7 +2926,7 @@ _exit:
 
    S_CHECK(end_scope(interp, tape));
 
-
+   interp->gms_sym_iterator.active = false;
    c->gmsfilter.active = false;
 
    return OK;
@@ -3213,6 +3259,7 @@ static int c_read_param(Interpreter* restrict interp, unsigned *p,
 
    if (toktype == TOK_CONDITION) {
       *p = p2;
+      parser_cpypeek2cur(interp);
       S_CHECK(parse_condition(interp, p, c, tape));
    }
 
@@ -3579,8 +3626,15 @@ int c_switch_to_compmode(Interpreter *interp, bool *switched)
       begin_scope(interp->compiler, __func__);
 
       interp->ops = &interp_ops_compiler;
-      vm->data.uid_parent = interp->daguid_parent;
-      vm->data.uid_grandparent = interp->daguid_grandparent;
+      vm->data.state.uid_parent = interp->daguid_parent;
+      vm->data.state.uid_grandparent = interp->daguid_grandparent;
+
+      trace_empinterp("[empinterp] Switching to VM bytecode. UID parent = '%s' #%u; "
+                      "UID GP = '%s' #%u\n",
+                      get_daguid_name(&interp->mdl->empinfo.empdag, vm->data.state.uid_parent),
+                      vm->data.state.uid_parent,
+                      get_daguid_name(&interp->mdl->empinfo.empdag, vm->data.state.uid_grandparent),
+                      vm->data.state.uid_grandparent);
 
       return OK;
    }
@@ -3608,8 +3662,8 @@ int c_switch_to_immmode(Interpreter *interp)
       interp->ops = &interp_ops_imm;
    }
 
-   vm->data.uid_parent = EMPDAG_UID_NONE;
-   vm->data.uid_grandparent = EMPDAG_UID_NONE;
+   vm->data.state.uid_parent = EMPDAG_UID_NONE;
+   vm->data.state.uid_grandparent = EMPDAG_UID_NONE;
 
    return OK;
 }
