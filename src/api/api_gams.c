@@ -267,7 +267,7 @@ int rhp_gms_setgamscntr(Model *mdl, const char *cntrfile)
    S_CHECK(gams_chk_mdl(mdl, __func__));
    S_CHECK(gams_chk_str(cntrfile, __func__));
 
-   trace_stack("[GAMS] %s model '%.*s' #%u: set gamscntr to '%s'\n",
+   trace_backend("[GAMS] %s model '%.*s' #%u: set gamscntr to '%s'\n",
                mdl_fmtargs(mdl), cntrfile);
 
    GmsModelData *mdldat = (GmsModelData *)mdl->data;
@@ -291,7 +291,7 @@ int rhp_gms_setgamsdir(Model *mdl, const char *gamsdir)
    S_CHECK(gams_chk_mdl(mdl, __func__));
    S_CHECK(gams_chk_str(gamsdir, __func__));
 
-   trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir set to '%s'\n", mdl_fmtargs(mdl),
+   trace_backend("[GAMS] %s model '%.*s' #%u: gamsdir set to '%s'\n", mdl_fmtargs(mdl),
                gamsdir);
 
    GmsModelData *mdldat = (GmsModelData *)mdl->data;
@@ -321,7 +321,7 @@ int rhp_gams_setglobalgamscntr(const char *cntrfile)
 {
    S_CHECK(gams_chk_str(cntrfile, __func__));
 
-   trace_stack("[GAMS] global gamscntr set to '%s'\n", cntrfile);
+   trace_backend("[GAMS] global gamscntr set to '%s'\n", cntrfile);
 
    return gams_setgamscntr(cntrfile);
 }
@@ -338,7 +338,7 @@ int rhp_gams_setglobalgamsdir(const char *gamsdir)
 {
    S_CHECK(gams_chk_str(gamsdir, __func__));
 
-   trace_stack("[GAMS] global gamsdir set to '%s'\n", gamsdir);
+   trace_backend("[GAMS] global gamsdir set to '%s'\n", gamsdir);
 
    S_CHECK(gams_setgamsdir(gamsdir));
 

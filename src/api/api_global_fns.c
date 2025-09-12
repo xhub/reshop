@@ -290,7 +290,7 @@ int rhp_syncenv(void)
       {"process",     rhp_show_processtrace,   "lists processing actions"},
       {"refcnt",      rhp_show_refcnttrace,    "display reference counter information"},
       {"timings",     rhp_show_timings,        "display timings information"},
-      {"stack",       rhp_show_backendinfo,    "display backend information"},
+      {"backend",     rhp_show_backendinfo,    "display backend information"},
       {"solreport",   rhp_show_solreporttrace, "display solution/values reporting actions"},
       {"solver",      rhp_show_solver_log,     "display solver log"},
    };

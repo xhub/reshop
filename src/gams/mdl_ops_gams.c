@@ -442,8 +442,8 @@ static int gams_solve(Model *mdl)
 
       if (0 == strncasecmp(mdldat->solvername, "reshop", strlen("reshop"))) {
          gevGetSolverDefault(gms->gev, gams_probtype, mdldat->solvername);
-         trace_stack("[model] %s model '%.*s' #%u: setting solver to %s\n",
-                     mdl_fmtargs(mdl), mdldat->solvername);
+         trace_backend("[model] %s model '%.*s' #%u: setting solver to %s\n",
+                       mdl_fmtargs(mdl), mdldat->solvername);
       }
 
       for (unsigned i = 0; mdldat->solvername[i] != '\0'; i++) {
@@ -546,7 +546,7 @@ static int gams_solve(Model *mdl)
       myfreeenvval(subsolver_log);
 
 
-      trace_stack("[GAMS] Solving %s model '%.*s' #%u with solver='%s', "
+      trace_backend("[GAMS] Solving %s model '%.*s' #%u with solver='%s', "
                   "gamsdir='%s', gamscntr='%s', sl=%d\n", mdl_fmtargs(mdl),
                   mdldat->solvername, mdldat->gamsdir, mdldat->gamscntr, solvelink);
 

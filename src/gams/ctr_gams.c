@@ -192,8 +192,8 @@ int gcdat_init_withdct(GmsContainerData * restrict gms, GmsModelData * restrict 
    GAMS_CHECK1(dctCreate, &gms->dct, buffer);
    gms->owndct = true;
 
-   trace_stack("[GAMS] Successful initialization GAMS model with "
-               "gamsdir='%s'; gamscntr='%s'\n", gmdldat->gamsdir, gmdldat->gamscntr);
+   trace_backend("[GAMS] Successful initialization GAMS model with gamsdir='%s'; "
+                 "gamscntr='%s'\n", gmdldat->gamsdir, gmdldat->gamscntr);
 
    return OK;
 }

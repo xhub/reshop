@@ -310,14 +310,14 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
        * ------------------------------------------------------------------- */
 
       if (strlen(mdldat_up->gamsdir)) {
-         trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' inherited"
-                     " from %s model '%.*s' #%u\n", mdl_fmtargs(mdl_gms),
-                     mdldat_up->gamsdir, mdl_fmtargs(mdl_gms_up));
+         trace_backend("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' inherited"
+                       " from %s model '%.*s' #%u\n", mdl_fmtargs(mdl_gms),
+                       mdldat_up->gamsdir, mdl_fmtargs(mdl_gms_up));
          STRNCPY_FIXED(mdldat->gamsdir, mdldat_up->gamsdir);
       } else {
          gevGetStrOpt(gev, gevNameSysDir, mdldat->gamsdir);
-         trace_stack("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' set from GEV\n",
-                     mdl_fmtargs(mdl_gms), mdldat->gamsdir);
+         trace_backend("[GAMS] %s model '%.*s' #%u: gamsdir value '%s' set from GEV\n",
+                       mdl_fmtargs(mdl_gms), mdldat->gamsdir);
       }
 
       if(!dir_exists(mdldat_up->gamsdir)) {
