@@ -238,7 +238,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    if(VENV_TESTING)
       # Testing using a vitual environment
       set(VENV_EXECUTABLE ${Python3_EXECUTABLE} -m venv)
-      set(VENV_DIR ${CMAKE_CURRENT_BINARY_DIR}/${pytarget}/venv)
+      set(VENV_DIR ${CMAKE_BINARY_DIR}/venv/${pytarget})
 
       if(WINDOWS)
          if (CMAKE_CROSSCOMPILING_EMULATOR)
@@ -255,40 +255,39 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       set(TEST_PYTHON_WRKDIR ${CMAKE_BINARY_DIR})
 
       if (NOT EXISTS ${VENV_DIR})
-     # make a virtualenv to install our python package in it
-     execute_process (COMMAND ${VENV_EXECUTABLE} ${VENV_DIR})
+         # make a virtualenv to install our python package in it
+         execute_process (COMMAND ${VENV_EXECUTABLE} ${VENV_DIR})
 
-      # Make sure pip is installed
-      execute_process (COMMAND ${VENV_Python3_EXECUTABLE} -m ensurepip
-                    RESULT_VARIABLE ENSUREPIP)
+         # Make sure pip is installed
+         execute_process (COMMAND ${VENV_Python3_EXECUTABLE} -m ensurepip RESULT_VARIABLE ENSUREPIP)
 
-      if (ENSUREPIP GREATER 0)
-         file(DOWNLOAD "https://bootstrap.pypa.io/get-pip.py" ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py
+         if (ENSUREPIP GREATER 0)
+            file(DOWNLOAD "https://bootstrap.pypa.io/get-pip.py" ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py
            TIMEOUT 10
            STATUS DL_STATUS)
 
-         if(NOT DL_STATUS MATCHES "0;")
-            MESSAGE(FATAL_ERROR "ERROR: Couldn't download get-pip.py from URL https://bootstrap.pypa.io/get-pip.py; got status ${DL_STATUS}")
-         endif()
+            if(NOT DL_STATUS MATCHES "0;")
+               MESSAGE(FATAL_ERROR "ERROR: Couldn't download get-pip.py from URL https://bootstrap.pypa.io/get-pip.py; got status ${DL_STATUS}")
+            endif()
 
-         execute_process(COMMAND ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py
+            execute_process(COMMAND ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py
                          RESULT_VARIABLE GET_PIP
                          OUTPUT_VARIABLE GETPIP_STDOUT
                          ERROR_VARIABLE  GETPIP_STDERR)
 
-         if (GET_PIP GREATER 0)
-            message(FATAL_ERROR "Could not execute ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py. Stderr content is \n${GETPIP_STDERR}\n\n"
+            if (GET_PIP GREATER 0)
+               message(FATAL_ERROR "Could not execute ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py. Stderr content is \n${GETPIP_STDERR}\n\n"
                           "Stdout content is \n${GETPIP_STDOUT}\n")
+            endif()
          endif()
-      endif()
 
-      execute_process (COMMAND ${VENV_Python3_EXECUTABLE} -m pip install setuptools numpy scipy pytest
+         execute_process (COMMAND ${VENV_Python3_EXECUTABLE} -m pip install setuptools numpy scipy pytest
                        OUTPUT_VARIABLE PIP_INSTALL_STDOUT
                        ERROR_VARIABLE  PIP_INSTALL_STDERR
                        RESULT_VARIABLE PIP_INSTALL)
 
          if (PIP_INSTALL GREATER 0)
-            message(FATAL_ERROR "Could not execute ${VENV_Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/get-pip.py. Stderr content is \n${PIP_INSTALL_STDERR}\n\n"
+            message(FATAL_ERROR "'pip install setuptools numpy scipy pytest' failed. Stderr content is \n${PIP_INSTALL_STDERR}\n\n"
                           "Stdout content is \n${PIP_INSTALL_STDOUT}\n")
          endif()
 
@@ -372,7 +371,8 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
   
    if(VENV_TESTING)
      add_custom_command(TARGET ${pytarget}_package POST_BUILD
-                        COMMAND ${VENV_Python3_EXECUTABLE} -m pip install --force-reinstall --find-links=${PYTHON_PROJECT_DIR}/dist reshop
+                        COMMAND ${VENV_Python3_EXECUTABLE} -m pip uninstall -qqy reshop
+                        COMMAND ${VENV_Python3_EXECUTABLE} -m pip install --find-links=${PYTHON_PROJECT_DIR}/dist reshop
                         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                         COMMENT "Installing reshop in venv"
                         VERBATIM)
