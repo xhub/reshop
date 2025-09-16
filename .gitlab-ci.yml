@@ -73,7 +73,7 @@ build:
     - scp -i $SSH_KEY -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r public huber@zamok.crans.org:www/reshop-ci
 
   artifacts:
-    expire_in: 2 weeks
+    expire_in: 1 day
     when: always
     paths:
       - apifiles
@@ -83,28 +83,46 @@ build:
       - build/libreshop.so
       - build/gui/reshop_imgui/reshop_imgui
       - build/generated
-      - build/swig
       - build/test
       - build-reshop-only/generated
       - libpath50.so
       - liblusol.so
 
+python-test:
+  stage: test
+  before_script:
+    - apt-get install -y python3-venv python3-pip
+    - python3 -m venv venv
+    - ./venv/bin/pip install pytest
+    - ./venv/bin/pip install --find-links=build/output reshop
+    - export VALGRIND_DIR="$(pwd)/valgrind"
+  script:
+    - valgrind --trace-children=yes --track-origins=yes ./venv/bin/python -m pytest "--rootdir=/tmp" "./swig/tests/"
+  allow_failure: true
+  artifacts:
+    expire_in: 1 day
+    when: always
+    paths:
+      - $VALGRIND_DIR 
+
 ctest:
   stage: test
   script:
-    - cd build; ctest -D ExperimentalMemCheck || ctest --rerun-failed --output-on-failure
+    - export VALGRIND_DIR="$(pwd)/valgrind"
+    - cd build; ctest -E python -D ExperimentalMemCheck || ctest --rerun-failed --output-on-failure
   allow_failure: true
   artifacts:
-    expire_in: 2 weeks
+    expire_in: 1 day
     when: always
     paths:
       - build/Testing/Temporary
+      - $VALGRIND_DIR
 
 gams_test:
   stage: test
   image:
     name: gams/gams:latest
-    pull_policy: [always, always, always, if-not-present]
+    pull_policy: [always, if-not-present]
 
   before_script:
     - export GAMSDIR=$(dirname $(which gams)) VALGRIND_DIR="$(pwd)/valgrind"
@@ -126,6 +144,55 @@ gams_test:
       - failures_qa.gms
       - failures_emp.gms
       - valgrind
+
+quality_test:
+  stage: test
+  image:
+    name: gams/gams:latest
+    pull_policy: [always, if-not-present]
+
+  before_script:
+    - export GAMSDIR=$(dirname $(which gams)) VALGRIND_DIR="$(pwd)/valgrind"
+    - apt-get update
+    - apt-get install wget xz-utils valgrind -y
+      # - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xf libvrepr.tar.xz -C /tmp/
+  script:
+    #   - bash build/*.run
+    - cp build/output/{gmsrhp_ux.out,libreshop.so} "$GAMSDIR"/
+    - cp build/output/gamsconfig_valgrind.yaml "$GAMSDIR"/gamsconfig.yaml
+    - mkdir -p "$QA_TMPDIR" && pushd "$QA_TMPDIR" > /dev/null && testlib quality && gams quality lo=2 --solver=reshop; popd > /dev/null; cp "$QA_TMPDIR"/failures_qa.gms .
+  allow_failure: true
+  artifacts:
+    expire_in: 1 day
+    when: always
+    paths:
+      - *.gms
+      - valgrind
+
+emplib_test:
+  stage: test
+  image:
+    name: gams/gams:latest
+    pull_policy: [always, if-not-present]
+
+  before_script:
+    - export GAMSDIR=$(dirname $(which gams)) VALGRIND_DIR="$(pwd)/valgrind"
+    - apt-get update
+    - apt-get install wget xz-utils valgrind -y
+      # - wget -nv http://perso.crans.org/~huber/libvrepr.tar.xz && tar xf libvrepr.tar.xz -C /tmp/
+  script:
+    #   - bash build/*.run
+    - cp build/output/{gmsrhp_ux.out,libreshop.so} "$GAMSDIR"/
+    - cp build/output/gamsconfig_valgrind.yaml "$GAMSDIR"/gamsconfig.yaml
+    - mkdir -p "$EMPLIB_TMPDIR" && pushd "$EMPLIB_TMPDIR" > /dev/null && emplib goempgo && gams goempgo lo=2 --solver=reshop; popd > /dev/null; cp "$EMPLIB_TMPDIR"/failures_emp.gms .
+  allow_failure: true
+  artifacts:
+    expire_in: 1 day
+    when: always
+    paths:
+      - *.gms
+      - valgrind
+
 
 scan-build-reshop:
   stage: scan-build-reshop
@@ -171,7 +238,6 @@ cppcheck:
     when: always
     paths:
       - cppcheck
-  allow_failure: true
 
 sanitizer:
   stage: sanitizers
@@ -196,14 +262,14 @@ upload:
   script:
     - mkdir public
     - mkdir public/valgrind
-    - cp -r cppcheck public/ || true
-    - cp -r scan-build-reshop/scan-build public/scan-build-reshop || true
-    - cp -r scan-build-imgui/scan-build public/scan-build-imgui || true
-    - cp -r infer-out/report.html public/report-fbinfer || true
-    - cp *.gms public || true
+    - cp -r build/cppcheck public/ || true
+    - cp -r build/scan-build-reshop/scan-build public/scan-build-reshop || true
+    - cp -r build/scan-build-imgui/scan-build public/scan-build-imgui || true
+    - cp -r build/infer-out/report.html public/report-fbinfer || true
     - cp build/Testing/Temporary/MemoryChecker*.log public/valgrind/ || true
     - cp valgrind/* public/valgrind/ || true
     - find public/valgrind -type f -empty -delete || true  # delete empty files
     - chmod a+rx -R public
     - chmod 600 $SSH_KEY && sed -i 's/\r$//g' $SSH_KEY
     - scp -i $SSH_KEY -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r public huber@zamok.crans.org:www/reshop-ci
+    - scp -i $SSH_KEY -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r build/output huber@zamok.crans.org:reshop-build-output
