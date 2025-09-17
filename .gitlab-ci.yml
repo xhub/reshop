@@ -166,7 +166,7 @@ quality_test:
     expire_in: 1 day
     when: always
     paths:
-      - *.gms
+      - "*.gms"
       - valgrind
 
 emplib_test:
@@ -190,7 +190,7 @@ emplib_test:
     expire_in: 1 day
     when: always
     paths:
-      - *.gms
+      - "*.gms"
       - valgrind
 
 
