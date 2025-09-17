@@ -5,13 +5,43 @@
 #include "reshop.h"
 #include "status.h"
 
-
-int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir, unsigned char codelen, const char *code, unsigned char argslen, const char *args)
+/**
+ * @brief Processes an embeddedcode statement in order for reshop to process it during
+ *        the solve statement
+ *
+ *  Steps:
+ *  - Save any sets and parameters present in the embeddedcode in a GDX file
+ *  - Perform some basic checks for early error detection
+ *
+ * @param gmd        the GMD database
+ * @param scrdirlen  the length of the scrdir string
+ * @param scrdir     the scrdir string
+ * @param codelen    the length of the code string
+ * @param code       the code string
+ * @param argslen    the length of the args string
+ * @param args       the args string
+ *
+ * @return           the error code 
+ */
+int rhp_embcode(void *gmd, unsigned char scrdirlen, const char scrdir[VMT(scrdirlen)],
+                unsigned char codelen, const char code[VMT(codelen)], unsigned char argslen,
+                const char args[VMT(argslen)])
 {
    /* Print the reshop banner */
    rhp_print_banner();
 
-   trace_empinterp("[embcode] scrdir '%.*s', file '%.*s' and args '%.*s'\n", scrdirlen, scrdir, codelen, code, argslen, args);
+   if (!code) {
+      errormsg("[embcode] ERROR: 'code' argument is NULL\n");
+      return Error_NullPointer;
+   }
+
+   if (!scrdir) {
+      errormsg("[embcode] ERROR: 'scrdir' argument is NULL\n");
+      return Error_NullPointer;
+   }
+
+   trace_empinterp("[embcode] scrdir '%.*s', file '%.*s' and args '%.*s'\n", scrdirlen,
+                   scrdir, codelen, code, argslen, args);
    int status = OK;
 
    if (argslen > 0) {
@@ -19,6 +49,7 @@ int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir, unsigned
       return Error_NotImplemented;
    }
 
+   /* Copy the strings to make them NUL-terminated */
    char *fname = NULL, *scrdir2;
    MALLOC_(fname, char, codelen+1);
    MALLOC_EXIT(scrdir2, char, scrdirlen+1);
