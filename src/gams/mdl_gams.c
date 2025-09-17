@@ -219,6 +219,14 @@ int gmdl_set_gamsdata_from_env(Model *mdl)
   return OK;
 }
 
+/**
+ * @brief Export the GMO solution to a GDX file 
+ *
+ * @param mdl       the GAMS model containing the GMO object
+ * @param gdxname   the (full) name of the output GDX file
+ *
+ * @return          the error code
+ */
 int gmdl_writesol2gdx(Model *mdl, const char *gdxname)
 {
    assert(gams_chk_mdl(mdl, __func__) == OK);

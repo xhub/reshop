@@ -354,7 +354,7 @@ int rhp_gams_setglobalgamsdir(const char *gamsdir)
 }
 
 /**
- * @brief Write the GMO solution to a GDX file
+ * @brief Write the GMO solution of a GAMS model to a GDX file
  *
  * @ingroup publicAPI
  *
