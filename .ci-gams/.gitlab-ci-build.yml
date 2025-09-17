@@ -82,7 +82,7 @@ deg-cleanup:
 
 dac-cleanup:
   stage: build
-  tags: [macos-arm64]
+  tags: [stan]
   variables:
     GIT_STRATEGY: none
   before_script:
@@ -130,7 +130,7 @@ build-deg:
 
 build-dac:
   stage: build
-  tags: [macos-arm64]
+  tags: [stan]
   script:
     - !reference [.get-gams]
     - !reference [.gams-folder-dac]

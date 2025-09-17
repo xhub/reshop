@@ -159,7 +159,7 @@ test-deg:
 
 test-dac:
   stage: test
-  tags: [macos-arm64]
+  tags: [stan]
   needs: [fetch-ci-scripts,build-dac]
   script:
     - !reference [.get-gams]
