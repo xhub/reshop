@@ -822,7 +822,7 @@ int rhp_opt_seti(const char *name, int ival);
 RHP_PUBLIB
 int rhp_opt_sets(const char *name, const char *value);
 RHP_PUBLIB
-int rhp_opt_setfromstr(char *optstring);
+int rhp_opt_setfromstr(const char *optstring);
 
 RHP_PUBLIB
 int rhp_opt_getb(const char *name, int *boolval);

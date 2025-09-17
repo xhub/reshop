@@ -19,8 +19,8 @@ const char* optsingleopt_getcurstr(unsigned i)
 
 int optsingleopt_getidxfromstr(const char *buf)
 {
-   for (int i = 0; i < ARRAY_SIZE(singleopt_names); ++i) {
-      if (!strcasecmp(buf, singleopt_names[i][0])) { return i; }
+   for (size_t i = 0; i < ARRAY_SIZE(singleopt_names); ++i) {
+      if (!strcasecmp(buf, singleopt_names[i][0])) { return (int)i; }
    }
 
    return -1;

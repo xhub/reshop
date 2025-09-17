@@ -69,7 +69,7 @@ bool optvalb(const Model *mdl, enum rhp_options_enum opt)
 
    /* TODO: implement model */
 
-   if (opt >= ARRAY_SIZE(rhp_options) || ((int)opt) < 0) {
+   if ((size_t)opt >= ARRAY_SIZE(rhp_options) || ((int)opt) < 0) {
       error("%s ERROR: option value %d is outside of the range [0, %d]",
             __func__, opt, Options_Last);
       return false;
@@ -123,7 +123,7 @@ int optvali(const Model *mdl, enum rhp_options_enum opt)
 
    /* TODO: implement model */
 
-   if (opt >= ARRAY_SIZE(rhp_options) || ((int)opt) < 0) {
+   if ((size_t)opt >= ARRAY_SIZE(rhp_options) || ((int)opt) < 0) {
       error("%s ERROR: option value %d is outside of the range [0, %d]",
             __func__, opt, Options_Last);
       return false;

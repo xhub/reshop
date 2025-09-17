@@ -205,11 +205,12 @@ int rhp_opt_gettype(const char *name, unsigned *type)
  *
  * @return          the error code
  */
-int rhp_opt_setfromstr(char *optstring)
+int rhp_opt_setfromstr(const char *optstring)
 {
    S_CHECK(chk_arg_nonnull(optstring, 1, __func__));
 
    if (optstring[0] == '*') {
+      error("[option] ERROR: string option argument starts with '*':\n\t'%s'\n", optstring);
       return Error_WrongOptionValue;
    }
 
@@ -217,17 +218,16 @@ int rhp_opt_setfromstr(char *optstring)
    while (isspace(optstring[start])) { start++; }
 
    if (optstring[start] == '\0') {
+      error("[option] ERROR: string option argument is empty:\n\t'%s'\n", optstring);
       return Error_WrongOptionValue;
    }
-
-   char *optval, *optname = &optstring[start];
 
    unsigned end = start;
    while (isalnum(optstring[end]) || optstring[end] == '_') { end++; }
 
-   unsigned pos1 = end;
-   char c1 = optstring[pos1];
-   optstring[pos1] = '\0';
+   char c1 = optstring[end];
+
+  const char *optname = strndup(&optstring[start], end-start);
 
   /* ----------------------------------------------------------------------
    * To simplify the logic, we plough throw the string until we find the end
@@ -235,11 +235,11 @@ int rhp_opt_setfromstr(char *optstring)
    * Note that if c1 is NUL, then we are already at the end
    * ---------------------------------------------------------------------- */
 
-   if (c1 != '\0') {
+   const char *optval;
+   if (c1 == ' ' || c1 == '=') {
 
-      start = end;
+      start = end+1;
       while (isspace(optstring[start])) { start++; }
-      optval = &optstring[start];
 
       /* Look for the end of the string */
       end = start;
@@ -247,13 +247,19 @@ int rhp_opt_setfromstr(char *optstring)
 
       /* Backtrack to remove trailing spaces */
       while (isspace(optstring[end-1])) { end--; }
-   } else {
-      optval = &optstring[end];
-   }
 
-   unsigned pos2 = end;
-   char c2 = optstring[pos2];
-   optstring[pos2] = '\0';
+      optval = strndup(&optstring[start], end-start);
+   } else if (c1 == '\0') {
+      optval = strdup("");
+   } else {
+      char sep = c1 == '\'' ? '"' : '\'';
+      error("[option] ERROR: invalid separator %c%c%c between option name and value. ",
+            sep, c1, sep);
+      error("Valid values are ' ' and '='. The string argument is:\n\t%c%s%c\n", sep,
+            optstring, sep);
+      free((void*)optname);
+      return Error_WrongOptionValue;
+   }
 
    int status;
    struct option_set *optset;
@@ -262,11 +268,13 @@ int rhp_opt_setfromstr(char *optstring)
    if (opt_find(optname, &optset, &index)) {
       status = opt_setfromstr(&optset->opts[index], optval);
    } else {
+      error("[option] ERROR: could not find option named '%s' while processing argument:\n\t'%s'\n",
+            optname, optstring);
       status = Error_OptionNotFound;
    }
 
-   optstring[pos1] = c1;
-   optstring[pos2] = c2;
+   free((void*)optname);
+   free((void*)optval);
 
    return status;
 }

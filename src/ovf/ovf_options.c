@@ -67,7 +67,13 @@ int optovf_setreformulation(struct option *optovf_reformulation, const char *opt
       return OK;
    }
 
-   error("%s ERROR: cannot set option %s to value '%s'\n", __func__, optovf_reformulation->name, optval);
+   error("[option/ovf] ERROR: cannot set option '%s' to value '%s'. Valid values are:\n",
+         optovf_reformulation->name, optval);
+
+   for (unsigned i = 0; i < OVF_Scheme_Last; ++i) {
+      error("\t%-15s (%s) \n", ovf_reformulation_names[i][0], ovf_reformulation_names[i][1]);
+   }
+
    return Error_WrongOptionValue;
 }
 

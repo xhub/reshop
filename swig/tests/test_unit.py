@@ -18,6 +18,19 @@ def init_solver(backend=rhp.BackendReSHOP):
     return mdl_solver
 
 
+def test_opt_setfromstr():
+    with pytest.raises(RuntimeError):
+        rhp.opt_setfromstr("ovf_reformulation -fenchel")
+    with pytest.raises(RuntimeError):
+        rhp.opt_setfromstr("ovf_reformulation5fenchel")
+    with pytest.raises(RuntimeError):
+        rhp.opt_setfromstr('ovf_reformulation"fenchel')
+    with pytest.raises(RuntimeError):
+        rhp.opt_setfromstr("ovf_reformulation'fenchel")
+
+    rhp.opt_setfromstr("ovf_reformulation fenchel")
+    rhp.opt_setfromstr("ovf_reformulation=equilibrium")
+
 def test_specialfloats():
     mdl = init()
     sv = rhp.mdl_getspecialfloats(mdl)
@@ -29,7 +42,4 @@ def test_specialfloats():
 def test_variablebounds():
     mdl = init()
 
-
-def bletype():
-    mdl = init()
 
