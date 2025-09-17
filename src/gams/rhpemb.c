@@ -23,9 +23,9 @@
  *
  * @return           the error code 
  */
-int rhp_embcode(void *gmd, unsigned char scrdirlen, const char scrdir[VMT(scrdirlen)],
-                unsigned char codelen, const char code[VMT(codelen)], unsigned char argslen,
-                const char args[VMT(argslen)])
+int rhp_embcode(void *gmd, unsigned char scrdirlen, const char *scrdir,
+                unsigned char codelen, const char *code, unsigned char argslen,
+                const char *args)
 {
    /* Print the reshop banner */
    rhp_print_banner();

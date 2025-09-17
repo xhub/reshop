@@ -1,9 +1,13 @@
+#include "reshop_config.h"
+
+#include <ctype.h>
+
 #include "checks.h"
 #include "macros.h"
 #include "printout.h"
 #include "reshop.h"
 #include "rhpgui_launcher.h"
-#include <ctype.h>
+#include "win-compat.h"
 
 static int chk_name(const char *optname, const char *fn)
 {
