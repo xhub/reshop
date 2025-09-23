@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "cdat_rhp_data.h"
+#include "cmat.h"
 #include "compat.h"
 #include "equ.h"
 /*  TODO(Xhub) rework the solvestatus */
@@ -99,11 +100,7 @@ struct postproc_data {
    unsigned remove_objvars;
 };
 
-/**
- * @struct model_repr cdat_rhp.h
- *
- * In memory representation of a model
- */
+/** In memory representation of a model */
 typedef struct ctrdata_rhp {
    unsigned *m;                       /**< number of (active) equations            */
    unsigned *n;                       /**< number of (active) variables            */
@@ -120,17 +117,12 @@ typedef struct ctrdata_rhp {
    struct e_inh equname_inherited; /**< Inherited equations names            */
 
    unsigned char current_stage;     /**< Index for the current model
-                                         transformation                       */
-   bool objequ_val_eq_objvar;       /**< Flag to trigger the addition */
-   bool borrow_inherited;           /**< True if inherited data is borrowed */
+                                         transformation                      */
+   bool objequ_val_eq_objvar;       /**< Flag to trigger the addition        */
+   bool borrow_inherited;           /**< True if inherited data is borrowed  */
    bool strict_alloc;               /**< If true, be strict about model size */
 
-   struct ctr_mat_elt **equs;         /**< list of equations                    */
-   struct ctr_mat_elt **vars;         /**< list of variables                    */
-   struct ctr_mat_elt **last_equ;     /**< pointer to the last equation where a variable appears*/
-
-   struct ctr_mat_elt **deleted_equs; /**< list of deleted equations            */
-
+   CMat cmat;                       /**< Container Matrix                    */
    struct rosetta *equ_rosetta;
 
    unsigned char *equ_stage;        /**< Correspondence between stage and model
@@ -161,7 +153,7 @@ typedef struct ctrdata_rhp {
 /* pointer to the last variable in an equation*/
 
 
-int cdat_alloc(Container *ctr, unsigned max_n, unsigned max_m) NONNULL;
+int cdat_init(Container *ctr, unsigned max_n, unsigned max_m) NONNULL;
 int cdat_dealloc(Container *ctr, RhpContainerData* cdat);
 int cdat_add_subctr(RhpContainerData* cdat, struct filter_subset* fs) NONNULL;
 OWNERSHIP_TAKES(2)

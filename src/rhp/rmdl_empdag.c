@@ -136,27 +136,36 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, const DagMpArr
 }
 #endif
 
-typedef enum {
+/** Copy expression types */
+__extension__ typedef enum ENUM_U8 {
    CopyExprNone,
    CopyExprInvalid,
    CopyExprSingle,
-   CopyExprMultiple
+   CopyExprMultiple,   /**< */
 } CopyExprType;
 
-typedef struct {
-   ArcVFBasicData bdat;
+typedef struct copy_expr_single {
+   rhp_idx ei;
+   double coeff_path;
    NlNode *nlnode;
 } CopyExprSingleDat;
 
-typedef struct {
-   ObjArray bdat;
-   ObjArray *nlnode;
+typedef struct copy_expr_multiple {
+   unsigned len;
+   unsigned max;
+   CopyExprSingleDat *arr;
 } CopyExprMultipleDat;
+
+#define RHP_LOCAL_SCOPE
+#define RHP_ARRAY_PREFIX copyexprs
+#define RHP_ARRAY_TYPE copy_expr_multiple
+#define RHP_ELT_TYPE struct copy_expr_single
+#define RHP_ELT_INVALID ((CopyExprSingleDat){.ei = IdxNA, .coeff_path = SNAN, .nlnode = NULL})
+#include "array_generic.inc"
 
 typedef struct {
    CopyExprType type;
-   ArcVFData *rarc;
-   double coeff; // HACK for constant propagation along the Varcs
+   ArcVFData rarc;
    union {
       CopyExprSingleDat single;
       CopyExprMultipleDat multiple;
@@ -173,31 +182,43 @@ typedef struct {
 #include "array_generic.inc"
 
 
+/**
+ * @brief Initialize the copy expression data from arvVFData
+ *
+ * @param cpydat  the copy expression to initialize
+ *
+ * @return        the error code
+ */
 NONNULL static inline int arcVFdata2copyexprdat(CopyExprDat *cpydat)
 {
    assert(cpydat->type == CopyExprNone);
-   /* Initializa the coeff to 1. */
-   cpydat->coeff = 1.;
+   ArcVFData *rarc = &cpydat->rarc;
 
-   ArcVFData *arc = cpydat->rarc;
-   switch (arc->type) {
+   switch (rarc->type) {
+
    case ArcVFBasic:
-      assert(isfinite(arc->basic_dat.cst));
-      memcpy(&cpydat->single.bdat, &arc->basic_dat, sizeof(ArcVFBasicData));
+      assert(isfinite(rarc->basic_dat.cst));
+      cpydat->single.ei = rarc->basic_dat.ei;
+      cpydat->single.coeff_path = rarc->basic_dat.cst;
+      
       cpydat->type = CopyExprSingle;
       break;
+
    case ArcVFMultipleBasic: {
-      unsigned len = arc->basics_dat.len;
-      ObjArray *bdats = &cpydat->multiple.bdat;
-      S_CHECK(rhp_obj_reserve(bdats, len));
-      ArcVFBasicData *arr = arc->basics_dat.list;
+      unsigned len = rarc->basics_dat.len;
+      CopyExprMultipleDat *bdats = &cpydat->multiple;
+      S_CHECK(copyexprs_resize(bdats, len));
+      ArcVFBasicData *arr = rarc->basics_dat.list;
 
       for (unsigned i = 0; i < len; ++i) {
-         S_CHECK(rhp_obj_add(bdats, &arr[i]));
+            bdats->arr[i] = (CopyExprSingleDat){.ei = arr[i].ei, .coeff_path = arr[i].cst };
+            bdats->arr[i].nlnode = NULL;
       }
+
       cpydat->type = CopyExprMultiple;
       break;
    }
+
    default:
       return error_runtime();
    }
@@ -206,68 +227,81 @@ NONNULL static inline int arcVFdata2copyexprdat(CopyExprDat *cpydat)
 }
 
 NONNULL
-static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
-                                      Equ *eobj, rhp_idx objvar,
-                                      CopyExprDat *cpydat, CopyExprDat *cpydat_child)
+static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *eobj,
+                                      rhp_idx objvar, CopyExprDat *cpydat,
+                                      CopyExprDat *cpydat_child)
 {
-
    switch (cpydat->type) {
-   case CopyExprNone:
 
-      cpydat_child->coeff = 1.;
-      memcpy(&cpydat_child->single.bdat, arcdat, sizeof (*arcdat));
+   case CopyExprNone:
+      cpydat_child->single.ei = arcdat->ei;
+      cpydat_child->single.nlnode = NULL;
+      cpydat_child->single.coeff_path = arcdat->cst;
       return OK;
 
    case CopyExprSingle: {
+
       CopyExprSingleDat *cpydat_single = &cpydat->single;
-      double coeff = cpydat->coeff; 
-      assert(isfinite(coeff));
-      double cst = arcdat->cst * coeff;
-      //printf("\n\nDEBUG: cst is %e\n\n", cst);
-      rhp_idx vi = arcdat->vi;
-      NlNode *nlnode = cpydat_single->nlnode;
+      double coeff_path;
+      rhp_idx vi = arcdat->vi, ei = arcdat->ei, ei_dst;
       Equ *e;
+      NlNode *nlnode;
 
-      rhp_idx ei_rarc = cpydat_single->bdat.ei;
-      S_CHECK(rmdl_get_equation_modifiable(mdl, ei_rarc, &e));
+      /* If the VF is in the objective of the parent MP, then use the current path equation */
+      if (mdl->ctr.equmeta[ei].role == EquObjective) {
+        ei_dst = cpydat_single->ei;
+        nlnode = cpydat_single->nlnode;
+        coeff_path = arcdat->cst * cpydat_single->coeff_path;
+     } else {
+        ei_dst = ei;
+        nlnode = NULL;
+        coeff_path = arcdat->cst;
+     }
 
-      if (ei_rarc != e->idx) {
-         cpydat_child->single.bdat.ei = e->idx;
-      }
+      assert(isfinite(coeff_path));
+
+      S_CHECK(rmdl_get_equation_modifiable(mdl, ei_dst, &e));
+
+      cpydat_child->single.ei = e->idx;
+
+      trace_empdag("[empdag/contraction] copying objective equation '%s' into '%s'\n",
+                   mdl_printequname(mdl, eobj->idx), mdl_printequname2(mdl, e->idx));
 
       Container *ctr = &mdl->ctr;
       NlTree *dtree = e->tree;
 
       unsigned offset, s = valid_vi(vi) ? 1 : equ_get_nladd_estimate(eobj);
 
-  /* ----------------------------------------------------------------------
-   * If we already have an NLnode, then we just copy the eobj there
-   * ---------------------------------------------------------------------- */
+     /* ----------------------------------------------------------------------
+      * If we already have an NLnode, then we just copy the eobj there
+      * ---------------------------------------------------------------------- */
 
       if (nlnode) {
-         assert(dtree && dtree->root);
 
+         assert(dtree && dtree->root);
 
          S_CHECK(nltree_ensure_add_node_inplace(dtree, &nlnode, s, &offset));
          NlNode **addr = &nlnode->children[offset];
 
-  /* ----------------------------------------------------------------------
-   * Add either cst * vi * (...) or cst * (...)
-   * ---------------------------------------------------------------------- */
+        /* ----------------------------------------------------------------------
+         * Add either cst * vi * (...) or cst * (...)
+         * ---------------------------------------------------------------------- */
 
          if (valid_vi(vi)) {
-            S_CHECK(rctr_nltree_add_bilin(ctr, dtree, &addr, cst, vi, IdxNA));
-         } else if (cst != 1.) {
-            S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
+            S_CHECK(rctr_nltree_add_bilin(ctr, dtree, &addr, coeff_path, vi, IdxNA));
+         } else if (coeff_path != 1.) {
+            S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, coeff_path));
          }
 
+         /* Save node as starting point for future */
          cpydat_child->single.nlnode = *addr;
+
          S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, 1.));
 
          /* The constant is already propagated through the tree */
-         cpydat_child->coeff = 1.;
+         cpydat_child->single.coeff_path = 1.;
 
-        return OK;
+         return OK;
       }
 
   /* ----------------------------------------------------------------------
@@ -277,17 +311,18 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
    * ---------------------------------------------------------------------- */
 
       if (valid_vi(vi)) {
+
          unsigned lequ_len = eobj->lequ->len;
          double ecst = equ_get_cst(eobj);
 
          if (valid_vi(objvar)) { lequ_len--; assert(lequ_debug_hasvar(eobj->lequ, objvar)); }
 
          /* If the equation is just a constant, just add the term vi * cst */
-         if (lequ_len == 0 && (!e->tree || !e->tree->root)) {
-            cpydat_child->coeff = cst;
-            return rctr_equ_addlvar(&mdl->ctr, e, vi, cst*ecst);
+         if (lequ_len == 0 && (!eobj->tree || !eobj->tree->root)) {
+            assert(((RhpContainerData*)&mdl->ctr)->cmat.equs[eobj->idx]->type == CMatEltCstEqu);
+            cpydat_child->single.coeff_path = coeff_path;
+            return rctr_equ_addlvar(&mdl->ctr, e, vi, coeff_path*ecst);
          }
-
 
          if (!dtree) {
             S_CHECK(nltree_bootstrap(e, lequ_len+1, lequ_len+1));
@@ -299,27 +334,31 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
          NlNode **addr = &root->children[offset];
 
          if (valid_vi(vi)) {
-            S_CHECK(rctr_nltree_add_bilin(&mdl->ctr, dtree, &addr, cst, vi, IdxNA));
-         } else if (cst != 1.) {
-            S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, cst));
+            S_CHECK(rctr_nltree_add_bilin(&mdl->ctr, dtree, &addr, coeff_path, vi, IdxNA));
+         } else if (coeff_path != 1.) {
+            S_CHECK(rctr_nltree_mul_cst(ctr, dtree, &addr, coeff_path));
          }
 
          S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, 1.));
          cpydat_child->single.nlnode = *addr;
 
          /* The constant is already propagated through the tree */
-         cpydat_child->coeff = 1.;
+         cpydat_child->single.coeff_path = 1.;
 
       } else { /* vi not valid */
 
          if (valid_vi(objvar)) {
-            S_CHECK(rctr_equ_add_map(ctr, e, eobj->idx, objvar, cst));
+
+            S_CHECK(rctr_equ_add_map(ctr, e, eobj->idx, objvar, coeff_path));
+
+            /* NOTE: we do not need to propagate the constant from objvar */
+
          } else {
-            S_CHECK(rctr_equ_add_equ_coeff(ctr, e, eobj, cst));
+            S_CHECK(rctr_equ_add_equ_coeff(ctr, e, eobj, coeff_path));
          }
 
          /* Propagate the constant */
-         cpydat_child->coeff = cst;
+         cpydat_child->single.coeff_path = coeff_path;
       }
       break;
    }
@@ -335,14 +374,15 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat,
    return OK;
 }
 
-static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
-                                       CopyExprDat *cpydat, CopyExprDat *cpydat_child)
+static inline int copy_expr_arc_parent(Model *mdl, MathPrgm * restrict mp_child,
+                                       CopyExprDat * restrict cpydat,
+                                       CopyExprDat * restrict cpydat_child)
 {
-   ArcVFData *rarc = cpydat->rarc;
+   ArcVFData *rarc = &cpydat->rarc;
 
-   if (!rarc) {
+   /* *This is true at the subtree root node */
+   if (rarc->type == ArcVFUnset) {
       assert(cpydat->type == CopyExprNone);
-      // TT cpydat_child->rarc = NULL;
       EMPDAG_DEBUG("MP(%s) has no reverse arc\n", mp_getname(mp_child));
       return OK;
    }
@@ -356,7 +396,7 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
 
    if (objequ == IdxNA) {
       assert(mp_child->mdl->empinfo.empdag.mps.Varcs[mp_child->id].len > 0);
-      cpydat_child->coeff = 1.;
+      cpydat_child->single.coeff_path = 1.;
       return OK;
    }
 
@@ -368,22 +408,26 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
    }
 
    Equ *eobj = &mdl->ctr.equs[objequ];
-
    ArcVFType type = rarc->type;
+
    switch (type) {
+
    case ArcVFBasic:
+
       cpydat_child->type = CopyExprSingle;
       EMPDAG_DEBUG("MP(%s) has a single parent\n", mp_getname(mp_child));
       S_CHECK(copy_expr_arc_parent_basic(mdl, &rarc->basic_dat, eobj, objvar,
-                                        cpydat, cpydat_child));
+                                         cpydat, cpydat_child));
       break;
 
    case ArcVFMultipleBasic: {
+
       cpydat_child->type = CopyExprMultiple;
       unsigned len = rarc->basics_dat.len;
       ArcVFBasicData *arcb_arr = rarc->basics_dat.list;
 
       EMPDAG_DEBUG("MP(%s) has %u parents\n", mp_getname(mp_child), len);
+
       for (unsigned i = 0; i < len; ++i) {
          S_CHECK(copy_expr_arc_parent_basic(mdl, &arcb_arr[i], eobj, objvar,
                                             cpydat, cpydat_child))
@@ -392,7 +436,7 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm *mp_child,
    }
 
    default:
-      error("[graph:contraction] ERROR: support for arc type %s not implemented", arcVFType2str(type));
+      error("[empdag/contraction] ERROR: support for arc type %s not implemented", arcVFType2str(type));
       return Error_NotImplemented;
    }
 
@@ -427,7 +471,7 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
    * 1. Prepare the reformulation:
    *   - allocate num_newequs
    *
-   * 2. Iterate via DFS through the subDAG:
+   * 2. Iterate over the subDAG:
    *   - for each starting MP:
    *     x All constraints and decision variables are now attached to the starting MP
    *     x Inject the obj(equ|var), weighted by arc data, into the equations
@@ -474,31 +518,34 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
                 num_mp_big, mdl_fmtargs(mdl));
 
    for (unsigned i = 0; i < num_mp_big; ++i) {
-      mpid_t mpid = vfdag_root_arr[i];
+
+      mpid_t mpid_subtree_root = vfdag_root_arr[i];
+
+      trace_empdag("[empdag/contract] Contracting subtree starting at MP(%s)\n",
+                   empdag_getmpname(empdag, mpid_subtree_root));
 
       /* Reset the working arrays */
       VFdag_mpids->len = 0;
-      cpy_expr.len = 0;
+      mpidarray_add(VFdag_mpids, mpid_subtree_root);
 
-      mpidarray_add(VFdag_mpids, mpid);
       cpy_expr.len = 1;
       CopyExprDat *root_cpy_expr = &cpy_expr.arr[0];
       root_cpy_expr->type = CopyExprNone;
-      root_cpy_expr->rarc = NULL;
-      root_cpy_expr->coeff = 1.;
+      memset(&root_cpy_expr->rarc, 0, sizeof(root_cpy_expr->rarc));
+      root_cpy_expr->single.coeff_path = 1.;
 
-      MathPrgm *mp_root_src = mps->arr[mpid];
-      if (!mp_isopt(mp_root_src)) {
+      MathPrgm *mp_subtree_root = mps->arr[mpid_subtree_root];
+      if (!mp_isopt(mp_subtree_root)) {
          error("[empdag] ERROR: cannot contract with root MP(%s) of type %s\n",
-               empdag_getmpname(empdag, mpid), mp_gettypestr(mp_root_src));
+               empdag_getmpname(empdag, mpid_subtree_root), mp_gettypestr(mp_subtree_root));
       }
 
       mpid_t mpid_big;
-      S_CHECK(empdag_addmpnamed(empdag, mp_getsense(mp_root_src),
-                                empdag_getmpname(empdag, mpid), &mpid_big));
+      S_CHECK(empdag_addmpnamed(empdag, mp_getsense(mp_subtree_root),
+                                empdag_getmpname(empdag, mpid_subtree_root), &mpid_big));
 
 
-      if (valid_mpid(mpid_root) && mpid == mpid_root) {
+      if (valid_mpid(mpid_root) && mpid_subtree_root == mpid_root) {
          S_CHECK(empdag_setroot(empdag, mpid2uid(mpid_big)));
       }
 
@@ -515,18 +562,18 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
 
       IdxArray * restrict vars_bigmp = &mp_big->vars;
       IdxArray * restrict equs_bigmp = &mp_big->equs;
-      S_CHECK(rhp_idx_copy(vars_bigmp, &mp_root_src->vars));
-      S_CHECK(rhp_idx_copy(equs_bigmp, &mp_root_src->equs));
+      S_CHECK(rhp_idx_copy(vars_bigmp, &mp_subtree_root->vars));
+      S_CHECK(rhp_idx_copy(equs_bigmp, &mp_subtree_root->equs));
       assert(rhp_idx_chksorted(vars_bigmp));
       assert(rhp_idx_chksorted(equs_bigmp));
 
       /* Most of the opt data is the same, minus the objequ */
-      memcpy(&mp_big->opt, &mp_root_src->opt, sizeof(struct mp_opt));
+      memcpy(&mp_big->opt, &mp_subtree_root->opt, sizeof(struct mp_opt));
 
       /* Hide mp_root_src */
-      mp_hide(mp_root_src);
+      mp_hide(mp_subtree_root);
 
-      S_CHECK(daguidarray_rmnofail(&empdag->roots, mpid2uid(mp_root_src->id)));
+      S_CHECK(daguidarray_rmnofail(&empdag->roots, mpid2uid(mp_subtree_root->id)));
 
       rhp_idx objvar_big = mp_getobjvar(mp_big);
       rhp_idx objequ_big = mp_getobjequ(mp_big);
@@ -541,13 +588,18 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
          S_CHECK(rmdl_mp_objequ2objfun(mdl, mp_big, objvar_big, objequ_big));
       }
 
-      S_CHECK(empdag_substitute_mp_parents_arcs(empdag, mpid, mpid_big));
+      /* TODO: what does this do? */
+      S_CHECK(empdag_substitute_mp_parents_arcs(empdag, mpid_subtree_root, mpid_big));
 
       /* -------------------------------------------------------------------
        * MAIN LOOP for the iteration. 
+       * This is not a DFS or BFS iteration. We do not need to be particularily
+       * picky about the order as we store the relevant data in cpy_expr.
+       * As long as it is in sync with VFdag_mpids, it is all good
        * ------------------------------------------------------------------- */
 
       for (unsigned j = 0; j < VFdag_mpids->len; ++j) {
+
          mpid_t mpid_ = VFdag_mpids->arr[j];
          assert(mpid_ < mps->len);
 
@@ -555,32 +607,32 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
           * If a MP has been removed, this implies that it has been contracted
           * - We would need to link the contracted 
           * ---------------------------------------------------------------- */
-         MathPrgm *mp_parent = mps->arr[mpid_];
+         MathPrgm *mp = mps->arr[mpid_];
 
-         if (!mp_parent) {
+         if (!mp) {
             TO_IMPLEMENT("Partial subtree contraction");
          }
 
          /* Now copy the MP objequ at the right spots */
          CopyExprDat *cpydat = &cpy_expr.arr[j];
+         assert(cpydat->rarc.type == ArcVFUnset || mpid_ == cpydat->rarc.mpid_child);
 
-         CopyExprDat cpydat_child_template = {.type = CopyExprNone, .rarc = NULL, .coeff = NAN};
-         S_CHECK(copy_expr_arc_parent(mdl, mp_parent, cpydat, &cpydat_child_template));
-         assert(isfinite(cpydat_child_template.coeff) || cpydat_child_template.type == CopyExprNone);
+         CopyExprDat cpydat_child_template = {.type = CopyExprNone, .rarc = {0}};
+         S_CHECK(copy_expr_arc_parent(mdl, mp, cpydat, &cpydat_child_template));
 
          /* Need to get the type of arc*/
          VarcArray *varcs = &mps->Varcs[mpid_];
-         ArcVFData *varcs_arr = varcs->arr;
+         ArcVFData * restrict varcs_arr = varcs->arr;
 
+         for (unsigned lenk = varcs->len, k = 0; k < lenk; ++k) {
 
-         for (unsigned k = 0, lenk = varcs->len; k < lenk; ++k) {
             ArcVFData *arc = &varcs_arr[k];
-            cpydat_child_template.rarc = arc;
+            cpydat_child_template.rarc = *arc;
 
             unsigned arc_cons = arcVF_getnumcons(arc, mdl);
 
             if (arc_cons == UINT_MAX) {
-               error("[empdag/contract] ERROR while procesing arcVF %u of MP(%s). "
+               error("[empdag/contract] ERROR while processing arcVF %u of MP(%s). "
                      "Please open a bug report\n", k, empdag_getmpname(empdag, mpid_));
                return Error_RuntimeError;
             }
@@ -588,11 +640,13 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
             mpid_t mpid_child = arc->mpid_child;
             MathPrgm *mp_child = mps->arr[mpid_child];
 
+            trace_empdag("[empdag/contract] Adding MP(%s) to the list of nodes to visit.\n",
+                         empdag_getmpname(empdag, mpid_child));
             mpidarray_add(VFdag_mpids, mpid_child);
-
 
             cpy_expr.arr[cpy_expr.len++] = cpydat_child_template;
             assert(cpy_expr.len <= cpy_expr.max);
+            assert(cpy_expr.len == VFdag_mpids->len);
 
 
         /* --------------------------------------------------------------
@@ -600,16 +654,19 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
          * -------------------------------------------------------------- */
 
             if (cpydat_child_template.type == CopyExprNone) {
+
                CopyExprDat *cpydat_child = &cpy_expr.arr[cpy_expr.len-1];
 
                if (arcVF_has_abstract_objfunc(arc)) {
+
                   if (!valid_ei(objequ_big)) {
                      S_CHECK(mp_ensure_objfunc(mp_big, &objequ_big));
                   }
-                  arcVF_subei(cpydat_child->rarc, IdxObjFunc, objequ_big);
+
+                  arcVF_subei(&cpydat_child->rarc, IdxObjFunc, objequ_big);
                }
+
                S_CHECK(arcVFdata2copyexprdat(cpydat_child));
-               assert(isfinite(cpydat_child->coeff));
             }
 
             rhp_idx objequ = mp_getobjequ(mp_child);
@@ -634,8 +691,8 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       * Free MP in the contracted subtree
       * ---------------------------------------------------------------------- */
 
-      mpid_t * mpid_arr = VFdag_mpids->arr;
-      MathPrgm **mp_arr = empdag->mps.arr;
+      mpid_t * restrict mpid_arr = VFdag_mpids->arr;
+      MathPrgm ** restrict mp_arr = empdag->mps.arr;
       mpid_t mpid_max = empdag->mps.len;
 
       for (unsigned j = 0, lenj = VFdag_mpids->len; j < lenj; ++j) {

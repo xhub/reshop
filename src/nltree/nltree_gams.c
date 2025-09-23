@@ -3,10 +3,6 @@
 #include "nltree.h"
 #include "nltree_priv.h"
 
-struct rhp_stack {
-   void *ptr;
-};
-
 static NONNULL unsigned count_children(const NlNode * restrict node)
 {
    unsigned cnt = 0;

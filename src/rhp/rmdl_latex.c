@@ -470,8 +470,8 @@ static int rmdl_latex(Model *mdl, const char *fname)
    int status = OK;
 
    Container *ctr = &mdl->ctr;
-   struct ctrdata_rhp *model = (struct ctrdata_rhp *)ctr->data;
-   size_t total_n = model->total_n, total_m = model->total_m;
+   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)ctr->data;
+   size_t total_n = cdat->total_n, total_m = cdat->total_m;
 
    //struct var_meta * restrict vmd = ctr->varmeta;
    struct equ_meta * restrict emd = ctr->equmeta;
@@ -533,7 +533,7 @@ static int rmdl_latex(Model *mdl, const char *fname)
     *  than effectively needed*/
    IO_PRINT_EXIT(fputs("\\newline\\textbf{Variables}\n\n$", f));
     for (size_t i = 0; i < total_n; ++i) {
-      if (model->vars[i]) {
+      if (cdat->cmat.vars[i]) {
          Var *v = &ctr->vars[i];
          S_CHECK_EXIT(_printvarname(ctr, i, f));
          IO_PRINT_EXIT(fputs(var_type_latex(v->type), f));
@@ -557,7 +557,7 @@ static int rmdl_latex(Model *mdl, const char *fname)
     IO_PRINT_EXIT(fputs("$\n \\textbf{Equations}:\n\n", f));
 
    for (size_t i = 0; i < total_m; ++i) {
-      if (model->equs[i]) {
+      if (cdat->cmat.equs[i]) {
          Equ *e = &ctr->equs[i];
          Lequ *le = e->lequ;
          bool need_plus = false;

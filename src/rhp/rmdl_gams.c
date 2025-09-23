@@ -77,22 +77,22 @@ UNUSED static int _debug_check_nlcode(int opcode, int value, size_t nvars, size_
    return OK;
 }
 
-static void _debug_lequ(const CMatElt *me, const Container *ctr)
+static void _debug_lequ(const CMatElt *cme, const Container *ctr)
 {
 #ifndef NDEBUG
    unsigned dummy;
    double lval;
-   Lequ *lequ = ctr->equs[me->ei].lequ;
-   if (!lequ || me->placeholder) {
+   Lequ *lequ = ctr->equs[cme->ei].lequ;
+   if (!lequ || cme_isplaceholder(cme)) {
       return;
    }
-   assert(!lequ_find(lequ, me->vi, &lval, &dummy));
-   assert(me->isNL || fabs(me->value - lval) < DBL_EPSILON);
-   assert(me->isNL || ((isfinite(me->value) && isfinite(lval))
-          || (!isfinite(me->value) && !isfinite(lval))));
-   if (fabs(me->value - lval) > DBL_EPSILON) {
-      printout(PO_DEBUG, "%s :: in %5d %e vs %e\n", __func__, me->ei,
-                         me->value, lval);
+   assert(!lequ_find(lequ, cme->vi, &lval, &dummy));
+   assert(cme_isNL(cme) || fabs(cme->value - lval) < DBL_EPSILON);
+   assert(cme_isNL(cme) || ((isfinite(cme->value) && isfinite(lval))
+          || (!isfinite(cme->value) && !isfinite(lval))));
+   if (fabs(cme->value - lval) > DBL_EPSILON) {
+      printout(PO_DEBUG, "%s :: in %5d %e vs %e\n", __func__, cme->ei,
+                         cme->value, lval);
    }
 #endif
 }
@@ -318,7 +318,7 @@ int rctr_reporvalues_from_gams(Container * restrict ctr, const Container * restr
 
 static int _check_deleted_equ(struct ctrdata_rhp *cdat, rhp_idx i)
 {
-   if (cdat->deleted_equs && cdat->deleted_equs[i]) {
+   if (cdat->cmat.deleted_equs && cdat->cmat.deleted_equs[i]) {
       return OK;
    }
 
@@ -377,14 +377,17 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
       int *isvarNL = mdl_memtmp_get(mdl_src, sizeof(int)*maxdim);
       double *jacval = mdl_memtmp_get(mdl_src, sizeof(double)*maxdim);
 
+      CMatElt * restrict * restrict cmat_equs = cdat->cmat.equs;
+
       for (int i = 0, m = ctr_gms->m, ei = 0; i < m; ++i, ++ei) {
          int nz, nlnz;
          gmoGetRowSparse(gmo, i, equidx, jacval, isvarNL, &nz, &nlnz);
 
          while (!valid_ei(ctr_src->rosetta_equs[ei])) { ei++; assert(ei < cdat->total_m); }
-         CMatElt *ce = cdat->equs[ei];
+
+         CMatElt *cme = cmat_equs[ei];
          int nz_rhp = 0, nlnz_rhp = 0;
-         while (ce) { nz_rhp++; if (ce->isNL) { nlnz_rhp++; } ce = ce->next_var; }
+         while (cme) { nz_rhp++; if (cme_isNL(cme)) { nlnz_rhp++; } cme = cme->next_var; }
 
          if (nz != nz_rhp || nlnz != nlnz_rhp) {
             error("[GMOexport] ERROR for equation %s: GMO nz = %d, nlnz = %d; RHP "
@@ -397,16 +400,17 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
 
       }
 
-      int * vidxs = equidx;
+      int *vidxs = equidx;
+      CMatElt * restrict * restrict cmat_vars = cdat->cmat.vars;
 
       for (int i = 0, n = ctr_gms->n, vi = 0; i < n; ++i, ++vi) {
          int nz, nlnz;
          gmoGetColSparse(gmo, i, vidxs, jacval, isvarNL, &nz, &nlnz);
 
          while (!valid_ei(ctr_src->rosetta_vars[vi])) { vi++; assert(vi < cdat->total_n); }
-         CMatElt *ce = cdat->vars[vi];
+         CMatElt *cme = cmat_vars[vi];
          int nz_rhp = 0, nlnz_rhp = 0;
-         while (ce) { nz_rhp++; if (ce->isNL) { nlnz_rhp++; } ce = ce->next_equ; }
+         while (cme) { nz_rhp++; if (cme_isNL(cme)) { nlnz_rhp++; } cme = cme->next_equ; }
 
          if (nz != nz_rhp || nlnz != nlnz_rhp) {
 
@@ -602,7 +606,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
       /* This kludge maybe removed if we decide not to delete part of the
        * representation */
       /*  TODO(Xhub) should we skip creating the equation here? */
-      if (!cdat->equs[i]) {
+      if (!cdat->cmat.equs[i]) {
          S_CHECK_EXIT(_check_deleted_equ(cdat, i));
       }
 
@@ -709,7 +713,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
       rhp_idx vi = rosetta_vars[i];
       if (!valid_vi(vi)) { continue; }
 
-      CMatElt *vtmp = cdat->vars[i];
+      CMatElt *vtmp = cdat->cmat.vars[i];
       Var *v = &ctr_src->vars[i];
 
       S_CHECK_EXIT(ctr_copyvarname(ctr_src, i, buffer, sizeof(buffer)));
@@ -737,7 +741,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
        * with 
        * ----------------------------------------------------------------- */
 
-      vtmp = cdat->vars[i];
+      vtmp = cdat->cmat.vars[i];
       int indx = 0;
       while (vtmp) {
 //         assert(vtmp->vidx == v->idx);
@@ -756,7 +760,8 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
              * it in the equation ... Make sure we have this kludge
              * ---------------------------------------------------------- */
 
-         if (vtmp->placeholder && ctr_src->varmeta
+         bool isplaceholder = cme_isplaceholder(vtmp);
+         if (isplaceholder && ctr_src->varmeta
             && ctr_src->varmeta[i].type == VarPrimal) {
 
             if (ctr_src->varmeta[i].ppty == VarPerpToViFunction) {
@@ -776,12 +781,12 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
                jacval[indx] = SNAN;
             }
 
-         } else if (!vtmp->placeholder) {
+         } else if (!isplaceholder) {
 
             /* TODO(xhub) Use a not available?  */
             jacval[indx] = dbl_to_gams(vtmp->value, gms_pinf, gms_minf, gms_na);
 
-         } else if (vtmp->placeholder && valid_vi(vtmp->vi)
+         } else if (isplaceholder && valid_vi(vtmp->vi)
             && !valid_ei(vtmp->ei) && vtmp->vi == objvar) {
             vtmp = vtmp->next_equ;
             continue;
@@ -794,11 +799,12 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
 
          equidx[indx] = rosetta_equs[vtmp->ei];
 
-         assert(vtmp->isNL || isfinite(jacval[indx]));
+         assert(cme_isNL(vtmp) || isfinite(jacval[indx]));
          _debug_lequ(vtmp, ctr_src);
          assert(equidx[indx] < ctr_gms->m);
 
-         isvarNL[indx] = vtmp->isNL ? 1 : 0;
+         bool varNL = cme_isNL(vtmp);
+         isvarNL[indx] = varNL ? 1 : 0;
 
          /* ----------------------------------------------------------
              * Update the NL status of the equation if the variable is
@@ -806,7 +812,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
              * TODO(Xhub) QUAD
              * ---------------------------------------------------------- */
 
-         if (!NLequs[equidx[indx]] && vtmp->isNL) {
+         if (!NLequs[equidx[indx]] && varNL) {
             NLequs[equidx[indx]] = true;
             DPRINT("Equation %d is NL due to variable #%d (#%d)\n",
                    equidx[indx], vi, vtmp->vi);

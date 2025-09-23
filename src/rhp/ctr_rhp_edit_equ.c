@@ -20,6 +20,7 @@ UNUSED static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
    bool valid_vimap = valid_vi(vi_map);
    if (!valid_ei_(ei, rctr_totalm(ctr), __func__)) { return false; }
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   CMat *cmat = &cdat->cmat;
    
    // TODO: equation might already have been deleted. Maybe base this on rctr_walkallequ
    //if (!cdat->equs[ei]) { return false; }
@@ -28,7 +29,7 @@ UNUSED static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
       if (!valid_vi_(vi_map, rctr_totaln(ctr), __func__)) { return false; }
 
       // TODO: equation might already have been deleted. Maybe base this on rctr_walkallequ
-      if (cdat->equs[ei] && !cmat_chk_varinequ(cdat->last_equ[vi_map], ei)) { return false; }
+      if (cmat->equs[ei] && !cmat_chk_varinequ(cmat->last_equ[vi_map], ei)) { return false; }
    }
 
    EquObjectType object = ctr->equs[ei].object;
@@ -38,12 +39,13 @@ UNUSED static bool rctr_chk_map(Container *ctr, rhp_idx ei, rhp_idx vi_map)
 
 int rctr_equ_addnewvar(Container *ctr, Equ *e, rhp_idx vi, double val)
 {
-   UNUSED RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   DBGUSED RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   DBGUSED CMat *cmat = &cdat->cmat;
    rhp_idx ei = e->idx;
 
    assert(valid_ei_(ei, cdat->total_m, __func__));
    assert(valid_vi_(vi, cdat->total_n, __func__));
-   assert(cdat->equs[ei] || rctr_eq_not_deleted(cdat, ei));
+   assert(cmat->equs[ei] || rctr_eq_not_deleted(cdat, ei));
 
    S_CHECK(equ_add_newlvar(e, vi, val));
 
@@ -320,8 +322,7 @@ int rctr_set_equascst(Container *ctr, rhp_idx ei)
 
    double cst = equ_get_cst(&ctr->equs[ei]);
    if (isfinite(cst)) {
-      A_CHECK(cdat->equs[ei], cmat_cst_equ(ei));
-      return OK;
+      return cmat_cst_equ(&cdat->cmat, ei);
    }
 
    error("[container] ERROR: equation '%s' is invalid: no variable and "
@@ -341,6 +342,7 @@ int rctr_set_equascst(Container *ctr, rhp_idx ei)
 int rctr_fix_equ(Container *ctr, rhp_idx ei)
 {
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   CMat *cmat = &cdat->cmat;
    assert(valid_ei_(ei, cdat->total_m, __func__));
 
    /* ----------------------------------------------------------------------
@@ -350,7 +352,7 @@ int rctr_fix_equ(Container *ctr, rhp_idx ei)
     * model_elt to encode that case.
     * ---------------------------------------------------------------------- */
 
-   if (!cdat->equs[ei]) {
+   if (!cmat->equs[ei]) {
       S_CHECK(rctr_set_equascst(ctr, ei));
    }
 
@@ -365,16 +367,15 @@ int rctr_fix_equ(Container *ctr, rhp_idx ei)
       rhp_idx vi = ctr->equmeta[ei].dual;
       assert(valid_vi(vi));
 
-      if (!cdat->vars[vi]) {
-         A_CHECK(cdat->vars[vi], cmat_isolated_var_perp_equ(vi, ei));
-         cdat_add2free(cdat, cdat->vars[vi]);
-         cdat->last_equ[vi] = cdat->vars[vi];
+      if (!cmat->vars[vi]) {
 
+         S_CHECK(cmat_isolated_var_perp_equ(cmat, vi, ei));
          ctr->varmeta[vi].ppty = VarPerpToViFunction;
          ctr->n++;
+
       } else {
-         assert(!cdat->vars[vi]->placeholder ||
-               (valid_vi(cdat->vars[vi]->vi) && valid_ei(cdat->vars[vi]->ei)));
+         assert(!cme_isplaceholder(cmat->vars[vi]) ||
+               (valid_vi(cmat->vars[vi]->vi) && valid_ei(cmat->vars[vi]->ei)));
       }
    }
 
@@ -563,8 +564,8 @@ int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, doub
     * -------------------------------------------------------------------- */
    if (valid_vi(vi_map)) {
       unsigned pos_dummy;
-      double vi_coeff;
-      S_CHECK(lequ_find(lequ_src, vi_map, &vi_coeff, &pos_dummy));
+      double vi_map_coeff;
+      S_CHECK(lequ_find(lequ_src, vi_map, &vi_map_coeff, &pos_dummy));
 
       if (pos_dummy == UINT_MAX) {
          error("[container] ERROR: could not find variable '%s' in equation '%s'",
@@ -572,8 +573,8 @@ int rctr_equ_add_map(Container *ctr, Equ *edst, rhp_idx ei, rhp_idx vi_map, doub
          return Error_RuntimeError;
       }
 
-      assert(isfinite(vi_coeff));
-      coeff = -coeff/vi_coeff;
+      assert(isfinite(vi_map_coeff));
+      coeff = -coeff/vi_map_coeff;
    }
 
    /* --------------------------------------------------------------------
@@ -1033,15 +1034,14 @@ int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
 
    if (valid_vi(vi_map)) {
       unsigned idx;
-      assert(lequ);
       double vi_coeff;
 
+      assert(lequ);
       lequ_find(lequ, vi_map, &vi_coeff, &idx);
 
       if (idx == UINT_MAX) {
-         error("ERROR: variable '%s' not found in equation '%s'\n",
-               ctr_printvarname(ctr, vi_map),
-               ctr_printequname(ctr, esrc->idx));
+         error("[container] ERROR: variable '%s' not found in equation '%s'\n",
+               ctr_printvarname(ctr, vi_map), ctr_printequname(ctr, esrc->idx));
       }
 
       assert(isfinite(vi_coeff));

@@ -666,9 +666,9 @@ int rmdl_setobjvar(Model *mdl, rhp_idx objvar)
 
    if (objvar == IdxNA) { return OK; }
 
-   if (!cdat->vars[objvar]) {
-      cdat->vars[objvar] = cmat_objvar(objvar);
-      cdat_add2free(cdat, cdat->vars[objvar]);
+   CMat *cmat = &cdat->cmat;
+   if (!cmat->vars[objvar]) {
+      S_CHECK(cmat_objvar(cmat, objvar));
 
       if (mdl->ctr.varmeta && (mdl->ctr.varmeta[objvar].ppty & VarIsDeleted)) {
         mdl->ctr.varmeta[objvar].ppty &= ~VarIsDeleted;

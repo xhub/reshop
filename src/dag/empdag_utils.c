@@ -15,9 +15,16 @@ static tlsvar char bufMP2[3*sizeof(unsigned)*CHAR_BIT/8+5];
 static tlsvar char msg[3*sizeof(unsigned)*CHAR_BIT/8+41];
 static tlsvar char msg2[3*sizeof(unsigned)*CHAR_BIT/8+41];
 
-const char *daguid_type2str(unsigned uid)
+const char *daguid_type2str(daguid_t uid)
 {
    return uidisMP(uid) ? "MP" : "Nash";
+}
+
+const char * rarclinktype2str(daguid_t uid)
+{
+   if (uidisNash(uid))  { return "Nash link"; }
+   if (rarcTypeVF(uid)) { return "valFn link"; }
+   return "CTRL link";
 }
 
 bool valid_uid_(const EmpDag *empdag, daguid_t uid, const char *fn)
@@ -261,18 +268,19 @@ int empdag_export(Model *mdl)
 
    if (optvalb(mdl, Options_Display_EmpDag) || optvalb(mdl, Options_Save_EmpDag)) {
       if (mdl_ensure_exportdir(mdl) != OK) {
-         error("%s ERROR: could not create an export dir", __func__);
-      } else {
-         const char *export_dir = mdl->commondata.exports_dir;
-         IO_PRINT(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", export_dir, cnt));
-         S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
-         free(fname); fname = NULL;
+         error("[empdag] ERROR: could not create an export directory for %s model '%*s' #%u\n", mdl_fmtargs(mdl));
+         return Error_SystemError;
       }
+
+      const char *export_dir = mdl->commondata.exports_dir;
+      IO_PRINT(asprintf(&fname, "%s" DIRSEP "empdag_%u.dot", export_dir, cnt));
+      S_CHECK_EXIT(empdag2dotfile(&mdl->empinfo.empdag, fname));
+      free(fname);
    }
 
    return OK;
 
 _exit:
-   FREE(fname);
+   free(fname);
    return status;
 }

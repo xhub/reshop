@@ -133,7 +133,6 @@ int rhp_int_copy(IntArray * restrict dat,
 
 int rhp_int_extend(IntArray * restrict dat, const IntArray * restrict dat_src)
 {
-
    unsigned len = dat_src->len;
 
    if (len == 0) {
@@ -283,6 +282,7 @@ int rhp_int_extend_except_sorted(IntArray * restrict dat,
 {
    /* Quick and dirty implementation */
    S_CHECK(rhp_int_extend_sorted(dat, dat_src));
+   assert(rhp_idx_chksorted(dat));
 
    return rhp_int_rmsorted(dat, val);
 }

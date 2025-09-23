@@ -160,8 +160,16 @@ static inline const char* mdl_printvarname(const Model *mdl, rhp_idx vi) {
    return ctr_printvarname(&mdl->ctr, vi);
 }
 
+static inline const char* mdl_printvarname2(const Model *mdl, rhp_idx vi) {
+   return ctr_printvarname2(&mdl->ctr, vi);
+}
+
 static inline const char* mdl_printequname(const Model *mdl, rhp_idx ei) {
    return ctr_printequname(&mdl->ctr, ei);
+}
+
+static inline const char* mdl_printequname2(const Model *mdl, rhp_idx ei) {
+   return ctr_printequname2(&mdl->ctr, ei);
 }
 
 static inline bool mdl_metachecked(const Model *mdl) {

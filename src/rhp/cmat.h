@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#include "allocators.h"
 #include "compat.h"
 #include "rhp_fwd.h"
 
@@ -12,19 +13,24 @@
  *  @brief matrix representation of the (algebraic) container content
  */
 
-/**
- * Element of the matrix representation
- */
+/** Type of container matrix element */
+__extension__ typedef enum ctr_mat_elt_type ENUM_U8 {
+   CMatEltLin      = 0,  /**< The variable appears linearly in the equation            */
+   CMatEltQuad     = 1,  /**< The variable appears quadratically in the equation       */
+   CMatEltNL       = 2,  /**< The variable appears non-linearly in the equation        */
+   CMatEltCstEqu   = 3,  /**< The equation is constant                                 */
+   CMatEltVarPerp  = 4,  /**< The variable is perpendicular to an equation, but not 
+                              present in any valid equation                            */
+   CMatEltObjVar   = 5,  /**< The variable is tagged as objective, but not present in
+                              any equation (useful for feasibility problem)            */
+} CMatEltType;
+
+/** Element of the matrix representation */
 typedef struct ctr_mat_elt {
    double value;                /**< value of the jacobian. When the variable is
                                      appears linearly, this value is used as the
                                      coefficient in GAMS                      */
-   bool isNL;                   /**< true if the variable appears in a nonlinear
-                                     (not quadratic) fashion in this equation */
-   bool isQuad;                 /**< flag if the the variable appears in a
-                                     quadratic fashion in this equation (TODO)*/
-   bool placeholder;            /**< True if this object is a placeholder to
-                                     keep the element active in the model     */
+   CMatEltType type;            /**< Type of the container matrix element     */
    struct ctr_mat_elt *next_var;  /**< next variable in equation                */
    struct ctr_mat_elt *next_equ;  /**< next equation for the variable           */
    struct ctr_mat_elt *prev_equ;  /**< previous equation for the variable       */
@@ -32,16 +38,28 @@ typedef struct ctr_mat_elt {
    rhp_idx vi;                    /**< index of the variable                    */
 } CMatElt;
 
-CMatElt * cmat_cst_equ(rhp_idx ei);
-CMatElt * cmat_isolated_var_perp_equ(rhp_idx vi, rhp_idx ei);
-CMatElt * cmat_objvar(rhp_idx objvar);
-NONNULL void cmat_elt_print(unsigned mode, CMatElt *ce, Container *ctr);
+/** Container matrix to store the information equation (row) and variable (col)
+ * information */
+typedef struct ctr_mat {
+   M_ArenaLink arena;      /**< Arena for memory allocation          */
+   CMatElt **equs;         /**< list of equations                    */
+   CMatElt **vars;         /**< list of variables                    */
+   CMatElt **last_equ;     /**< pointer to the last equation where a variable appears  */
+   CMatElt **deleted_equs; /**< list of deleted equations            */
+} CMat;
+
+int cmat_init(CMat *cmat) NONNULL;
+void cmat_fini(CMat *cmat) NONNULL;
+int cmat_cst_equ(CMat *cmat, rhp_idx ei) NONNULL;
+int cmat_isolated_var_perp_equ(CMat *cmat, rhp_idx vi, rhp_idx ei) NONNULL;
+int cmat_objvar(CMat *cmat, rhp_idx objvar) NONNULL;
+NONNULL void cmat_elt_print(unsigned mode, const CMatElt *cme, Container *ctr) NONNULL;
 
 int cmat_fill_equ(Container *ctr, rhp_idx ei, const Avar *v,
                   const double *values, const bool* nlflags) NONNULL;
 
 int cmat_add_lvar_equ(Container *ctr, rhp_idx ei, rhp_idx vi, double coeff ) NONNULL;
-int cmat_equ_add_newlvars(Container *ctr, int ei, const Avar *v, const double *vals ) NONNULL;
+int cmat_equ_add_newlvars(Container *ctr, rhp_idx ei, const Avar *v, const double *vals ) NONNULL;
 
 int cmat_equ_add_nlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double jac_val) NONNULL;
 int cmat_equ_add_lvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val, bool *isNL) ACCESS_ATTR(read_write, 5) NONNULL;
@@ -76,11 +94,11 @@ int cmat_chk_expensive(Container *ctr) NONNULL;
  * present in a given equation. If this is the case, there is a bug in
  * the code.
  * ---------------------------------------------------------------------- */
-static inline bool cmat_chk_varnotinequ(CMatElt *me, rhp_idx ei)
+static inline bool cmat_chk_varnotinequ(const CMatElt *cme, rhp_idx ei)
 {
-   while (me) {
-      if (me->ei == ei) { assert(me->ei != ei); return false; }
-      me = me->prev_equ;
+   while (cme) {
+      if (cme->ei == ei) { assert(cme->ei != ei); return false; }
+      cme = cme->prev_equ;
    }
 
    return true;
@@ -91,13 +109,41 @@ static inline bool cmat_chk_varnotinequ(CMatElt *me, rhp_idx ei)
  * present in a given equation. If this is the case, there is a bug in
  * the code.
  * ---------------------------------------------------------------------- */
-static inline bool cmat_chk_varinequ(CMatElt *me, rhp_idx ei)
+static inline bool cmat_chk_varinequ(const CMatElt *cme, rhp_idx ei)
 {
-   while (me) {
-      if (me->ei == ei) { return true; }
-      me = me->prev_equ;
+   while (cme) {
+      if (cme->ei == ei) { return true; }
+
+      cme = cme->prev_equ;
    }
 
    return false;
 }
+
+/**
+ * @brief Return true if the container matrix element is a placeholder
+ *
+ * @param cme  the container matrix element
+ *
+ * @return     the error code
+ */
+static inline bool cme_isplaceholder(const CMatElt *cme)
+{
+   CMatEltType type = cme->type;
+   return type >= CMatEltCstEqu;
+}
+
+/**
+ * @brief Return true if the container matrix element is non-linear
+ *
+ * @param cme  the container matrix element
+ *
+ * @return     the error code
+ */
+static inline bool cme_isNL(const CMatElt *cme)
+{
+   return cme->type == CMatEltNL;
+}
+
+
 #endif /* CONTAINER_MATRIX_H  */

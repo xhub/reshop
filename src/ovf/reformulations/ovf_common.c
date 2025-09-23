@@ -27,7 +27,7 @@
  *
  *  @param      mdl         the model (must be RHP)
  *  @param      ovf_vidx    OVF variable index
- *  @param[out] jacptr      pointer to the next equation where the OVF variable
+ *  @param[in,out] iterator pointer to the next equation where the OVF variable
  *                          appears. Must be set to NULL on the first call for a
  *                          given OVF variable
  *  @param[out] ovf_coeff   coefficient of the OVF variable
@@ -36,14 +36,14 @@
  *
  *  @return               the error code
  */
-int ovf_replace_var(Model *mdl, rhp_idx ovf_vidx, void **jacptr,
+int ovf_replace_var(Model *mdl, rhp_idx ovf_vidx, void **iterator,
                     double *ovf_coeff, rhp_idx *ei, unsigned extra_vars)
 {
    rhp_idx eidx;
    int nlflag;
    Container *ctr = &mdl->ctr;
 
-   S_CHECK(ctr_var_iterequs(ctr, ovf_vidx, jacptr, ovf_coeff, &eidx, &nlflag));
+   S_CHECK(ctr_var_iterequs(ctr, ovf_vidx, iterator, ovf_coeff, &eidx, &nlflag));
 
    EquInfo equinfo;
    S_CHECK(rctr_get_equation(ctr, eidx, &equinfo));

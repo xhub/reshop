@@ -33,7 +33,7 @@ int rmdl_equ_rm(Model *mdl, rhp_idx ei)
 
    S_CHECK(ei_inbounds(ei,  ctrdat->total_m, __func__));
 
-   if (!ctrdat->equs[ei]) {
+   if (!ctrdat->cmat.equs[ei]) {
       error("[container] ERROR: equation %s is not active, cannot delete it\n",
             ctr_printequname(ctr, ei));
       return Error_NullPointer;
@@ -201,6 +201,7 @@ int rmdl_equ_dup_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_
 
       /* metadata has already been copied in equ_copy_to */
       EquMeta *emeta = &ctr->equmeta[ei_new];
+
       /* We don't want the equation to be marked as deleted */
       emeta->ppty &= ~EquPptyIsDeleted;
 
@@ -213,7 +214,7 @@ int rmdl_equ_dup_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_
 
       MathPrgm *mp;
       S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp))
-      
+   
       EquRole equrole = emeta->role;
 
       //HACK use of internal MP DS

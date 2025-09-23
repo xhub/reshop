@@ -15,6 +15,7 @@
 #include "nltree_priv.h"
 #include "printout.h"
 
+//#define DEBUG_CMAT
 
 /** @file cmat.c 
  *
@@ -30,6 +31,17 @@
  *
  */
 
+/**
+ * @brief Check whether a container matrix element is regular
+ *
+ * @param cme  the container matrix element
+ *
+ * @return     true if the element is regular
+ */
+DBGUSED static bool cme_regular_elt(const CMatElt *cme)
+{
+   return !cme_isplaceholder(cme) && valid_vi(cme->vi) && valid_ei(cme->ei);
+}
 
 
 DBGUSED static bool cmat_chk_equvaridx(RhpContainerData *cdat, rhp_idx ei, rhp_idx vi)
@@ -38,109 +50,135 @@ DBGUSED static bool cmat_chk_equvaridx(RhpContainerData *cdat, rhp_idx ei, rhp_i
    if (!valid_ei_(ei, cdat->total_m, __func__)) { return false; }
    if (valid_vi(vi) && !valid_vi_(vi, cdat->total_n, __func__)) { return false; }
 
-   return (cdat->equs[ei] || rctr_eq_not_deleted(cdat, ei));
+   return (cdat->cmat.equs[ei] || rctr_eq_not_deleted(cdat, ei));
+}
+
+static CMatElt* cmat_get_equ_cme(CMat *cmat, rhp_idx ei, Container *ctr)
+{
+   CMatElt * restrict prev_cme = cmat->equs[ei];
+
+   if (prev_cme && cme_isplaceholder(prev_cme)) {
+
+      if (prev_cme->type != CMatEltCstEqu) {
+         error("[container/matrix] ERROR: equation '%s' has unexpected placeholder\n",
+               ctr_printequname(ctr, ei));
+         assert(0);
+      }
+
+      return NULL;
+   }
+
+   return prev_cme;
 }
 
 /* \TODO(xhub) is this still necessary? */
 static int push_on_deleted(RhpContainerData *cdat, CMatElt *ce)
 {
    assert(ce->ei < cdat->max_m);
-   if (!cdat->deleted_equs) {
-      CALLOC_(cdat->deleted_equs, CMatElt *, cdat->max_m);
+   if (!cdat->cmat.deleted_equs) {
+      CALLOC_(cdat->cmat.deleted_equs, CMatElt *, cdat->max_m);
    }
 
-   cdat->deleted_equs[ce->ei] = ce;
+   cdat->cmat.deleted_equs[ce->ei] = ce;
 
    return OK;
 }
 
 
-static int _debug_print_var(Container *ctr, rhp_idx vidx)
+static int _debug_print_var(Container *ctr, rhp_idx vi)
 {
-#ifdef DEBUG_MR
-   char *varname = ctr_printvarname(ctr, vidx);
-   printout(PO_INFO, "%s :: Variable %s (%d) information: ", __func__, varname, vidx);
+#ifdef DEBUG_CMAT
+   const char *varname = ctr_printvarname(ctr, vi);
+   printout(PO_INFO, "[cmat] Variable '%s' (%d) information: ", varname, vi);
 
-   struct model_repr *model = (struct model_repr *)ctr->data;
-   assert(model);
-   const struct model_elt *me = model->vars[vidx];
-   if (!me) {
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   const CMatElt *cme = cdat->cmat.vars[vi];
+   if (!cme) {
       printout(PO_INFO, "Variable is no longer in the active model\n");
       return OK;
    }
 
-   while (me) {
-      printout(PO_INFO, "Equ %s (#%d); ", ctr_printequname(ctr, me->eidx), me->eidx);
-      me = me->next_equ;
+   while (cme) {
+      printout(PO_INFO, "Equ '%s'; ", ctr_printequname(ctr, cme->ei));
+      cme = cme->next_equ;
    }
+
    puts("");
 #endif
 
    return OK;
 }
 
-static int _debug_print_me(Container *ctr, const CMatElt *me)
+NONNULL static int _debug_print_me(Container *ctr, const CMatElt *cme)
 {
-#ifdef DEBUG_MR
-   cmat_elt_print(PO_INFO, me, ctr);
-   printout(PO_INFO, "%s :: Model element for variable %s (%d) in equation %s (%d)\n",
-           __func__, ctr_printvarname(ctr, me->vidx), me->vidx,
-           ctr_printequname(ctr, me->eidx), me->eidx);
-
-   printout(PO_INFO, "\t prev_equ = %s (%d); ",
-         me->prev_equ ? ctr_printequname(ctr, me->prev_equ->eidx) : "nil",
-         me->prev_equ ? me->prev_equ->eidx: IdxNA);
-   printout(PO_INFO, "next_equ = %s (%d); ",
-         me->next_equ ? ctr_printequname(ctr, me->next_equ->eidx) : "nil",
-         me->next_equ ? me->next_equ->eidx: IdxNA);
-   printout(PO_INFO, "next_var = %s (#%d)\n",
-         me->next_var ? ctr_printvarname(ctr, me->next_var->vidx) : "nil",
-         me->next_var ? me->next_var->vidx : IdxNA);
+#ifdef DEBUG_CMAT
+   cmat_elt_print(PO_INFO, cme, ctr);
 #endif
 
    return OK;
 }
 
-void cmat_elt_print(unsigned mode, CMatElt *ce, Container *ctr)
+void cmat_elt_print(unsigned mode, const CMatElt *cme, Container *ctr)
 {
    printout(mode, "Container matrix element for variable %s in equation %s\n",
-            ctr_printvarname(ctr, ce->vi), ctr_printequname(ctr, ce->ei));
+            ctr_printvarname(ctr, cme->vi), ctr_printequname(ctr, cme->ei));
 
-   printout(mode, "\t prev_equ = %s; ",
-            ce->prev_equ ? ctr_printequname(ctr, ce->prev_equ->ei) : "nil");
-   printout(mode, "next_equ = %s; ",
-            ce->next_equ ? ctr_printequname(ctr, ce->next_equ->ei) : "nil");
-   printout(mode, "next_var = %s\n",
-            ce->next_var ? ctr_printvarname(ctr, ce->next_var->vi) : "nil");
+   printout(mode, "\t prev_equ = '%20s'; ",
+            cme->prev_equ ? ctr_printequname(ctr, cme->prev_equ->ei) : "nil");
+   printout(mode, "next_equ = '%20s'; ",
+            cme->next_equ ? ctr_printequname(ctr, cme->next_equ->ei) : "nil");
+   printout(mode, "next_var = '%20s'\n",
+            cme->next_var ? ctr_printvarname(ctr, cme->next_var->vi) : "nil");
 
 }
 
-static CMatElt* cmat_elt_new(Container *ctr, rhp_idx ei, rhp_idx vi, bool isNL,
+int cmat_init(CMat *cmat)
+{
+   cmat->equs = NULL;
+   cmat->vars = NULL;
+   cmat->last_equ = NULL;
+   cmat->deleted_equs = NULL;
+
+   return arenaL_init(&cmat->arena);
+}
+
+void cmat_fini(CMat *cmat)
+{
+   FREE(cmat->equs);
+   FREE(cmat->vars);
+   FREE(cmat->last_equ);
+   FREE(cmat->deleted_equs);
+
+   arenaL_free(&cmat->arena);
+}
+
+static CMatElt* cmat_elt_new(Container * restrict ctr, rhp_idx ei, rhp_idx vi, bool isNL,
                              double val)
 {
    assert(valid_ei(ei));
    RhpContainerData *cdat = ctr->data; 
+   CMat * restrict cmat = &cdat->cmat;
+   CMatElt ** restrict cmat_vars = cmat->vars;
 
-   CMatElt* me;
-   MALLOC_NULL(me, CMatElt, 1);
-   me->value = val;
-   me->next_var = NULL;
-   me->next_equ = NULL;
-   me->ei = ei;
-   me->vi = vi;
-   me->isNL = isNL;
-   me->isQuad = false;
-   me->placeholder = false;
+   CMatElt* cme;
+   AA_CHECK(cme, arenaL_alloc(&cmat->arena, sizeof(CMatElt)));
+
+   cme->value = val;
+   cme->next_var = NULL;
+   cme->next_equ = NULL;
+   cme->ei = ei;
+   cme->vi = vi;
+   cme->type = isNL ? CMatEltNL : CMatEltLin;
 
    /* Is this the first time the variable appears? */
-   if (!cdat->vars[vi]) {
+   if (!cmat_vars[vi]) {
 
-      me->prev_equ = NULL;
-      cdat->vars[vi] = me;
+      cme->prev_equ = NULL;
+      cmat->vars[vi] = cme;
       ctr->n++;
 
-      trace_ctr("[container] ADD var '%s' via equ '%s'%s",
-                ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei),
+      trace_ctr("[container] ADD var '%s' via equ '%s'%s", ctr_printvarname(ctr, vi),
+                ctr_printequname(ctr, ei),
                 ctr->vars[vi].is_deleted ? ", previously deleted\n" : "\n");
 
       ctr->vars[vi].is_deleted = false;
@@ -152,25 +190,27 @@ static CMatElt* cmat_elt_new(Container *ctr, rhp_idx ei, rhp_idx vi, bool isNL,
       }
 
    /* If there is no last_equ, then it is was a placeholder var  */
-   } else if (!cdat->last_equ[vi]) {
+   } else if (!cmat->last_equ[vi]) {
 
-      assert(cdat->vars[vi]->placeholder);
-      me->prev_equ = NULL;
+      assert(cme_isplaceholder(cmat_vars[vi]));
+      cme->prev_equ = NULL;
 
-      cdat->vars[vi] = me;
+      cmat_vars[vi] = cme;
 
    } else {
+
       /* We show have a pointer to the equation were the variable previously appeared */
-      me->prev_equ = cdat->last_equ[vi];
-      me->prev_equ->next_equ = me;
+      cme->prev_equ = cmat->last_equ[vi];
+      cme->prev_equ->next_equ = cme;
       /*  TODO(xhub) make an option for that */
       bool do_test = false;
 #ifndef NDEBUG
       do_test = true;
 #endif
-      if (do_test && !cmat_chk_varnotinequ(me->prev_equ, ei)) {
-         error("%s :: variable %u already appeared in equation %u",
-                  __func__, vi, ei);
+
+      if (do_test && !cmat_chk_varnotinequ(cme->prev_equ, ei)) {
+         error("[container/matrix] ERROR: variable %u already appeared in equation %u",
+               vi, ei);
          return NULL;
       }
    }
@@ -178,9 +218,9 @@ static CMatElt* cmat_elt_new(Container *ctr, rhp_idx ei, rhp_idx vi, bool isNL,
    assert(!ctr->varmeta || !(ctr->varmeta[vi].ppty & VarIsDeleted));
 
    /* Always update last equation since we add new equation */
-   cdat->last_equ[vi] = me;
+   cmat->last_equ[vi] = cme;
 
-   return me;
+   return cme;
 }
 
 /**
@@ -193,83 +233,105 @@ static CMatElt* cmat_elt_new(Container *ctr, rhp_idx ei, rhp_idx vi, bool isNL,
  *
  * @return     the error code
  */
-struct ctr_mat_elt* cmat_cst_equ(rhp_idx ei)
+int cmat_cst_equ(CMat *cmat, rhp_idx ei)
 {
    assert(valid_ei(ei));
 
-   struct ctr_mat_elt *me;
-   MALLOC_NULL(me, struct ctr_mat_elt, 1);
+   if (cmat->equs[ei]) {
+      error("[container/matrix] ERROR: equation %u is non-empty. Please file a bug report\n",
+            ei);
+      return Error_RuntimeError;
+   }
 
-   me->value  = SNAN;
-   me->isNL   = false;
-   me->isQuad = false;
-   me->placeholder = true;
-   me->next_var = NULL;
-   me->next_equ = NULL;
-   me->prev_equ = NULL;
-   me->ei     = ei;
-   me->vi     = IdxNA;
+   CMatElt *me;
+   A_CHECK(me, arenaL_alloc(&cmat->arena, sizeof(CMatElt)));
 
-   return me;
+   me->value       = SNAN;
+   me->type        = CMatEltCstEqu;
+   me->next_var    = NULL;
+   me->next_equ    = NULL;
+   me->prev_equ    = NULL;
+   me->ei          = ei;
+   me->vi          = IdxNA;
+
+   cmat->equs[ei] = me;
+
+   return OK;
 }
 
 /**
- * @brief Return a special model element to indicate that a variable is
+ * @brief Return a special container matrix element to indicate that a variable is
  * perpendicular to an equation.
  *
- * @warning Only when the variable does not appear in the model anymore,
+ * @warning Only use this when the variable does not appear in the model anymore,
  * but there is still an inclusion relation involving this variable
  *
- * @param vi  the variable index
- * @param ei  the equation index
+ * @param cmat  the container matrix
+ * @param vi    the variable index
+ * @param ei    the equation index
  *
  * @return    the error code
  */
-struct ctr_mat_elt* cmat_isolated_var_perp_equ(rhp_idx vi, rhp_idx ei)
+int cmat_isolated_var_perp_equ(CMat *cmat, rhp_idx vi, rhp_idx ei)
 {
-   /*  TODO(xhub) Do not use malloc, but an arena in the model.
-    *  Right now this requires the use of mem2free in order not to memleaks as
-    *  this ME will not appear in any equation, and will not be freed in
-    *  model_dealloc */
-   assert(valid_vi(vi));
+   assert(valid_vi(vi) && valid_ei(ei));
 
-   struct ctr_mat_elt *me;
-   MALLOC_NULL(me, struct ctr_mat_elt, 1);
+   CMatElt *me;
+   A_CHECK(me, arenaL_alloc(&cmat->arena, sizeof(CMatElt)));
 
    me->value  = SNAN;
-   me->isNL   = false;
-   me->isQuad = false;
-   me->placeholder = true;
+   me->type = CMatEltVarPerp;
    me->next_var = NULL;
    me->next_equ = NULL;
    me->prev_equ = NULL;
    me->ei     = ei;
    me->vi     = vi;
 
-   return me;
+   cmat->vars[vi] = me;
+   cmat->last_equ[vi] = me;
+
+   return OK;
 }
 
-struct ctr_mat_elt* cmat_objvar(rhp_idx objvar)
+/**
+ * @brief Add a placeholder container matrix element for an objective variable not already
+ * present in the container matrix;
+ *
+ * @warning Only call this function when the variable does not appear in any valid
+ * equation
+ *
+ * @param cmat    the container matrix
+ * @param objvar  the objective variable
+ *
+ * @return        the error code
+ */
+int cmat_objvar(CMat *cmat, rhp_idx objvar)
 {
    assert(valid_vi(objvar));
 
-   struct ctr_mat_elt *me;
-   MALLOC_NULL(me, struct ctr_mat_elt, 1);
+   if (cmat->vars[objvar]) {
+      error("[container/matrix] ERROR: variable %u is already present in the model. ", objvar);
+      errormsg("Please file a bug report.\n");
+      return Error_RuntimeError;
+   }
+
+   CMatElt *me;
+   A_CHECK(me, arenaL_alloc_zero(&cmat->arena, sizeof(CMatElt)));
 
    me->value  = SNAN;
-   me->isNL   = false;
-   me->isQuad = false;
-   me->placeholder = true;
+   me->type = CMatEltObjVar;
    me->next_var = NULL;
    me->next_equ = NULL;
    me->prev_equ = NULL;
    me->ei     = IdxNA;
    me->vi     = objvar;
 
-   return me;
+   cmat->vars[objvar] = me;
+
+   return OK;
 }
 
-/** @brief Add new linear variables to an equation in the container matrix
+/** @brief Add a new linear variable to an equation in the container matrix
  *
  * @ingroup CMatUnsafeUpdate
  *
@@ -285,19 +347,20 @@ int cmat_equ_add_newlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val)
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, vi));
 
-   CMatElt * restrict prev_e = cdat->equs[ei];
-   assert(cmat_chk_varnotinequ(cdat->vars[vi], ei));
+   CMatElt *prev_cme = cmat_get_equ_cme(&cdat->cmat, ei, ctr);
 
-   CMatElt * restrict me;
-   A_CHECK(me, cmat_elt_new(ctr, ei, vi, false, val));
+   assert(cmat_chk_varnotinequ(cdat->cmat.vars[vi], ei));
+
+   CMatElt * restrict cme;
+   A_CHECK(cme, cmat_elt_new(ctr, ei, vi, false, val));
 
    /*  TODO(xhub) think of placeholders */
-   if (prev_e) {
-      me->next_var = prev_e;
-      cdat->equs[ei] = me;
-   } else {
-      cdat->equs[ei] = me;
+   if (prev_cme) {
+      assert(cme_regular_elt(prev_cme));
+      cme->next_var = prev_cme;
    }
+
+   cdat->cmat.equs[ei] = cme;
 
    return OK;
 }
@@ -313,15 +376,20 @@ int cmat_equ_add_newlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val)
  *
  *  @return      the error code
  */
-int cmat_equ_add_newlvars(Container *ctr, rhp_idx ei, const Avar *v,
-                          const double *vals)
+int cmat_equ_add_newlvars(Container *ctr, rhp_idx ei, const Avar *v, const double *vals)
 {
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, IdxNA));
 
-   CMatElt* prev_e = cdat->equs[ei];
+   CMatElt *prev_cme = cmat_get_equ_cme(&cdat->cmat, ei, ctr);
+
    /* TODO: just add all elements in front? */
-   if (prev_e) { while (prev_e->next_var) { prev_e = prev_e->next_var; }; }
+   if (prev_cme) {
+      while (prev_cme->next_var) {
+         assert(cme_regular_elt(prev_cme));
+         prev_cme = prev_cme->next_var;
+      };
+   }
 
    /* TODO: this looks wrong: what if the variable was already present*/
    /* Add all the variables from that equation  */
@@ -329,24 +397,23 @@ int cmat_equ_add_newlvars(Container *ctr, rhp_idx ei, const Avar *v,
       rhp_idx vi = avar_fget(v, i);
 
       S_CHECK(vi_inbounds(vi, cdat->total_n, __func__));
-      assert(cmat_chk_varnotinequ(cdat->vars[vi], ei));
+      assert(cmat_chk_varnotinequ(cdat->cmat.vars[vi], ei));
  
-      CMatElt* me;
-      A_CHECK(me, cmat_elt_new(ctr, ei, vi, false, vals[i]));
+      CMatElt* cme;
+      A_CHECK(cme, cmat_elt_new(ctr, ei, vi, false, vals[i]));
 
       /* If there is a previous variable */
-      if (prev_e) {
-         prev_e->next_var = me;
+      if (prev_cme) {
+         prev_cme->next_var = cme;
       } else /* if not, the eqn is most likely empty */ {
-         cdat->equs[ei] = me;
+         cdat->cmat.equs[ei] = cme;
       }
 
       /* Update for the next variable */
-      prev_e = me;
+      prev_cme = cme;
    }
 
    return OK;
-
 }
 
 /**
@@ -377,8 +444,14 @@ int cmat_sync_lequ(Container *ctr, Equ *e)
 
    if (!lequ) { goto _end; }
 
-   CMatElt *prev_e = cdat->equs[ei];
-   if (prev_e) { while (prev_e->next_var) { prev_e = prev_e->next_var; } }
+   CMatElt *prev_cme = cmat_get_equ_cme(&cdat->cmat, ei, ctr);
+
+   if (prev_cme) {
+      while (prev_cme->next_var) {
+         assert(cme_regular_elt(prev_cme));
+         prev_cme = prev_cme->next_var;
+      }
+   }
 
    /* ----------------------------------------------------------------------
     * Walk over the linear part and add the linear variables in the container matrix
@@ -393,21 +466,21 @@ int cmat_sync_lequ(Container *ctr, Equ *e)
       rhp_idx vi = vis[i];
       S_CHECK(vi_inbounds(vi, total_n, __func__));
 
-      CMatElt *me;
-      A_CHECK(me, cmat_elt_new(ctr, ei, vi, false, vals[i]));
+      CMatElt *cme;
+      A_CHECK(cme, cmat_elt_new(ctr, ei, vi, false, vals[i]));
       _debug_print_var(ctr, vi);
 
-      if (prev_e) {
-         prev_e->next_var = me;
-         _debug_print_me(ctr, prev_e);
+      if (prev_cme) {
+         prev_cme->next_var = cme;
+         _debug_print_me(ctr, prev_cme);
       } else {
-          cdat->equs[ei] = me;
+          cdat->cmat.equs[ei] = cme;
       }
 
       /* Update for the next variable */
-      prev_e = me;
+      prev_cme = cme;
    }
-   _debug_print_me(ctr, prev_e);
+   _debug_print_me(ctr, prev_cme);
 
 _end:
    S_CHECK(rctr_fix_equ(ctr, ei));
@@ -435,19 +508,21 @@ int cmat_equ_add_lvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val, bool *
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, vi));
 
-   CMatElt *prev_e = cdat->equs[ei];
+   CMatElt *prev_cme = cmat_get_equ_cme(&cdat->cmat, ei, ctr);
 
-   if (prev_e) {
+   if (prev_cme) {
       do {
+         assert(cme_regular_elt(prev_cme));
+
          /* The variable has been found and we can return  */
-         if (prev_e->vi == vi) {
-            prev_e->value += val;
-            *isNL = prev_e->isNL;
+         if (prev_cme->vi == vi) {
+            prev_cme->value += val;
+            *isNL = cme_isNL(prev_cme);
             return OK;
          }
 
-         if (!prev_e->next_var) { break; }
-         prev_e = prev_e->next_var;
+         if (!prev_cme->next_var) { break; }
+         prev_cme = prev_cme->next_var;
       }
       while (true);
    }
@@ -455,10 +530,10 @@ int cmat_equ_add_lvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val, bool *
    CMatElt *me;
    A_CHECK(me, cmat_elt_new(ctr, ei, vi, *isNL, val));
 
-   if (prev_e) {
-      prev_e->next_var = me;
+   if (prev_cme) {
+      prev_cme->next_var = me;
    } else {
-      cdat->equs[ei] = me;
+      cdat->cmat.equs[ei] = me;
    }
 
    return OK;
@@ -472,7 +547,7 @@ int cmat_equ_add_lvar(Container *ctr, rhp_idx ei, rhp_idx vi, double val, bool *
  * @param ctr      the model
  * @param ei       the equation index
  * @param vi       the variable index
- * @param jac_val  the jacobian value for the variable
+ * @param jac_val  the Jacobian value for the variable
  *
  * @return         the error code
  */
@@ -483,15 +558,19 @@ int cmat_equ_add_nlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double jac_val)
 
    /*  We need to scan from the start of the equation, since the variable
     *  may already be present */
-   CMatElt *prev_e = cdat->equs[ei];
+   CMatElt *prev_cme = cmat_get_equ_cme(&cdat->cmat, ei, ctr);
 
-#ifdef DEBUG_MR
-   DPRINT("%s :: adding variable %s (#%d) to the model, NL = %s\n",
-         __func__, ctr_printvarname(ctr, vi), vi, "true");
+#ifdef DEBUG_CMAT
+   printout(PO_INFO, "[cmat] Adding variable '%s' via equation '%s', NL = %s\n",
+            ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei), "true");
 #endif
-   if (prev_e) {
+
+   if (prev_cme) {
       do {
-         if (prev_e->vi == vi) {
+
+         assert(cme_regular_elt(prev_cme));
+
+         if (prev_cme->vi == vi) {
 
             /* -----------------------------------------------------------
              * This variable is already in this equation
@@ -499,10 +578,13 @@ int cmat_equ_add_nlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double jac_val)
              * non-linear status, before moving to the next variable
              * ---------------------------------------------------------- */
 
-            prev_e->value += jac_val;
+            prev_cme->value += jac_val;
 
-            if (!prev_e->isNL) {
-               prev_e->isNL = true;
+            if (prev_cme->type != CMatEltNL) {
+
+               assert(prev_cme->type == CMatEltLin || prev_cme->type == CMatEltQuad);
+
+               prev_cme->type = CMatEltNL;
                /*  TODO(xhub) figure out whether this is correct
                    prev_e->value = NAN; */
 
@@ -512,27 +594,24 @@ int cmat_equ_add_nlvar(Container *ctr, rhp_idx ei, rhp_idx vi, double jac_val)
                 * ------------------------------------------------------- */
                S_CHECK(equ_switch_var_nl(ctr, &ctr->equs[ei], vi));
             }
-            goto _end_loop;
+
+            return OK;
          }
 
-         if (!prev_e->next_var) { break; }
-         prev_e = prev_e->next_var;
+         if (!prev_cme->next_var) { break; }
+         prev_cme = prev_cme->next_var;
 
       } while (true);
    }
 
-   CMatElt *e;
-   A_CHECK(e, cmat_elt_new(ctr, ei, vi, true, jac_val));
+   CMatElt *cme;
+   A_CHECK(cme, cmat_elt_new(ctr, ei, vi, true, jac_val));
 
-   if (prev_e) {
-      prev_e->next_var = e;
+   if (prev_cme) {
+      prev_cme->next_var = cme;
    } else {
-      cdat->equs[ei] = e;
+      cdat->cmat.equs[ei] = cme;
    }
-   /* ------------------------------------------------------------------
-    * Move to the next variable 
-    * ------------------------------------------------------------------ */
-_end_loop: ;
 
    return OK;
 }
@@ -559,8 +638,10 @@ int cmat_equ_add_vars_excpt(Container *ctr, rhp_idx ei, Avar *v, rhp_idx vi_no,
 {
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, IdxNA));
+   
+   CMatElt * restrict prev_cme = cmat_get_equ_cme(&cdat->cmat, ei, ctr);
 
-   for (unsigned i = 0; i < v->size; ++i) {
+   for (unsigned i = 0, len = v->size; i < len; ++i) {
 
       /* -------------------------------------------------------------------
        *
@@ -568,8 +649,6 @@ int cmat_equ_add_vars_excpt(Container *ctr, rhp_idx ei, Avar *v, rhp_idx vi_no,
        *  may already be present
        *
        * ------------------------------------------------------------------- */
-
-      CMatElt *prev_e = cdat->equs[ei];
 
       rhp_idx vi = avar_fget(v, i);
       if (vi == vi_no) continue;
@@ -579,20 +658,23 @@ int cmat_equ_add_vars_excpt(Container *ctr, rhp_idx ei, Avar *v, rhp_idx vi_no,
          return Error_IndexOutOfRange;
       }
 
-#ifdef DEBUG_MR
-      DPRINT("%s :: adding variable %s (%d) to the model, NL = %s\n",
-            __func__, ctr_printvarname(ctr, vidx), vidx, isNL ? "true" : "false");
+#ifdef DEBUG_CMAT
+      DPRINT("[cmat] Adding variable '%s' to the model, NL = %s\n",
+             ctr_printvarname(ctr, vi), vi, isNL ? "true" : "false");
 #endif
 
-      if (prev_e) {
+      if (prev_cme) {
          do {
-            if (prev_e->vi == vi) {
+            assert(cme_regular_elt(prev_cme));
+
+            if (prev_cme->vi == vi) {
                /* This variable is already in this equation
                 * We just invalidate the jacobian value and check the
                 * non-linear status, before moving to the next variable*/
-               prev_e->value += values ? values[i] : SNAN;
-               if (!prev_e->isNL && isNL) {
-                  prev_e->isNL = isNL;
+               prev_cme->value += values ? values[i] : SNAN;
+               if (prev_cme->type != CMatEltNL && isNL) {
+                  assert(prev_cme->type == CMatEltLin || prev_cme->type == CMatEltQuad);
+                  prev_cme->type = CMatEltNL;
                   /*  TODO(xhub) figure out whether this is correct
                   prev_e->value = NAN; */
                   /*  We need to move the variable from the linear part to the
@@ -601,8 +683,9 @@ int cmat_equ_add_vars_excpt(Container *ctr, rhp_idx ei, Avar *v, rhp_idx vi_no,
                }
                goto _end_loop;
             }
-            if (!prev_e->next_var) { break; }
-            prev_e = prev_e->next_var;
+
+            if (!prev_cme->next_var) { break; }
+            prev_cme = prev_cme->next_var;
          }
          while (true);
       }
@@ -613,12 +696,17 @@ int cmat_equ_add_vars_excpt(Container *ctr, rhp_idx ei, Avar *v, rhp_idx vi_no,
       CMatElt *e;
       A_CHECK(e, cmat_elt_new(ctr, ei, vi, isNL, val));
 
-      if (prev_e) {
-         prev_e->next_var = e;
+      if (prev_cme) {
+         prev_cme->next_var = e;
       } else {
-          cdat->equs[ei] = e;
+          cdat->cmat.equs[ei] = e;
       }
+
 _end_loop: ;
+
+      /* Reset prev_cme as the presence of the next variable in the equation must be searched */
+      prev_cme = cdat->cmat.equs[ei];
+
    }
 
    return OK;
@@ -642,33 +730,37 @@ int cmat_equ_add_vars(Container *ctr, rhp_idx ei, Avar *v, double* values, bool 
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, IdxNA));
 
-   for (unsigned i = 0; i < v->size; ++i) {
+   CMatElt * restrict prev_cme = cmat_get_equ_cme(&cdat->cmat, ei, ctr);
+
+   for (unsigned i = 0, len = v->size; i < len; ++i) {
       /*  We need to scan from the start of the equation, since the variable
        *  may already be present */
-      CMatElt *prev_e = cdat->equs[ei];
 
       /* XXX this is suboptimal --xhub  */
       rhp_idx vi = avar_fget(v, i);
 
       S_CHECK(vi_inbounds(vi, cdat->total_n, __func__));
 
-#ifdef DEBUG_MR
-      DPRINT("%s :: adding variable %s (%d) to the model, NL = %s\n",
-            __func__, ctr_printvarname(ctr, vidx), vidx, isNL ? "true" : "false");
+#ifdef DEBUG_CMAT
+      printout(PO_INFO, "[cmat] Adding variable '%s' via equation '%s', NL = %s\n",
+             ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei), isNL ? "true" : "false");
 #endif
 
-      if (prev_e) {
+      if (prev_cme) {
          do {
-            if (prev_e->vi == vi) {
+            assert(cme_regular_elt(prev_cme));
+
+            if (RHP_UNLIKELY(prev_cme->vi == vi)) {
 
                /* This variable is already in this equation
-                * We just invalidate the jacobian value and check the
+                * We just invalidate the Jacobian value and check the
                 * non-linear status, before moving to the next variable*/
 
-               prev_e->value += values ? values[i] : SNAN;
+               prev_cme->value += values ? values[i] : SNAN;
 
-               if (!prev_e->isNL && isNL) {
-                  prev_e->isNL = isNL;
+               if (prev_cme->type != CMatEltNL && isNL) {
+                  assert(prev_cme->type == CMatEltLin || prev_cme->type == CMatEltQuad);
+                  prev_cme->type = CMatEltNL;
                   /*  TODO(xhub) figure out whether this is correct
                   prev_e->value = NAN; */
                   /*  We need to move the variable from the linear part to the
@@ -679,26 +771,29 @@ int cmat_equ_add_vars(Container *ctr, rhp_idx ei, Avar *v, double* values, bool 
                goto _end_loop;
             }
 
-            if (!prev_e->next_var) { break; }
+            if (!prev_cme->next_var) { break; }
 
-            prev_e = prev_e->next_var;
+            prev_cme = prev_cme->next_var;
 
          } while (true);
       }
 
       double val = values ? values[i] : SNAN;
 
-      CMatElt *e = cmat_elt_new(ctr, ei, vi, isNL, val);
+      CMatElt *cme;
+      A_CHECK(cme, cmat_elt_new(ctr, ei, vi, isNL, val));
 
-      if (!e) return Error_InsufficientMemory;
-
-      if (prev_e) {
-         prev_e->next_var = e;
+      if (prev_cme) {
+         prev_cme->next_var = cme;
       } else {
-          cdat->equs[ei] = e;
+          cdat->cmat.equs[ei] = cme;
       }
 
 _end_loop: ;
+
+      /* Reset prev_cme as the presence of the next variable in the equation must be searched */
+      prev_cme = cdat->cmat.equs[ei];
+
    }
 
    return OK;
@@ -706,8 +801,7 @@ _end_loop: ;
 
 /** @brief remove a variable from an equation in the container matrix
  *
- *  @warning    it is not advised to use this function directly. Use
- *              equ_rm_var() instead
+ *  @warning    it is not advised to use this function directly. Use equ_rm_var() instead
  *
  *  @param ctr  the container
  *  @param ei   the equation
@@ -719,16 +813,17 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
 {
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, vi));
+   CMat * restrict cmat = &cdat->cmat;
 
-   CMatElt *e = cdat->equs[ei];
-   CMatElt *prev_e = NULL;
+   CMatElt *cme = cmat->equs[ei];
+   CMatElt *prev_cme = NULL;
 
-   if (!e) {
-      error("%s :: equation %s is empty!\n", __func__, ctr_printequname(ctr, ei));
+   if (!cme) {
+      error("[container/matrix] ERROR: equation '%s' is empty!\n",  ctr_printequname(ctr, ei));
       return Error_NullPointer;
    }
 
-   trace_ctr("[container] DEL var %s from equ %s\n",
+   trace_ctr("[container] DEL var '%s' from equ '%s'\n",
              ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei));
 
    /* -----------------------------------------------------------------------
@@ -751,28 +846,30 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
     *
     */
    while (true) {
-      if (e->vi == vi) {
+      if (cme->vi == vi) {
 
          /* -----------------------------------------------------------------
           * If there is a previous equation where this variable appear, replace
           * the link to this variable to the next one
           * ----------------------------------------------------------------- */
 
-         if (prev_e) {
-            assert(cdat->equs[ei] != e);
-            prev_e->next_var = e->next_var;
+         if (prev_cme) {
+
+            assert(cmat->equs[ei] != cme);
+            prev_cme->next_var = cme->next_var;
+
          } else {
-            if (e->next_var) {
-               cdat->equs[ei] = e->next_var;
+
+            if (cme->next_var) {
+               cmat->equs[ei] = cme->next_var;
             } else {
                /*  EQU2 */
                double cst = equ_get_cst(&ctr->equs[ei]);
                if (ctr->equs[ei].object == Mapping && isfinite(cst)) {
-                  A_CHECK(cdat->equs[ei], cmat_cst_equ(ei));
+                  S_CHECK(cmat_cst_equ(cmat, ei));
                } else {
-                  error("[container] ERROR: the equation %s no longer contains "
-                        "any variable and has a CST of %e",
-                        ctr_printequname(ctr, ei), cst);
+                  error("[container] ERROR: the equation '%s' no longer contains any "
+                        "variable and has a CST of %e\n", ctr_printequname(ctr, ei), cst);
                   return Error_Inconsistency;
                }
             }
@@ -786,11 +883,14 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
           * is updated.
           * ----------------------------------------------------------------- */
 
-         if (e->next_equ) {
-            e->next_equ->prev_equ = e->prev_equ;
+         if (cme->next_equ) {
+
+            cme->next_equ->prev_equ = cme->prev_equ;
+
          } else {
-            assert(cdat->last_equ[vi] == e);
-            cdat->last_equ[vi] = e->prev_equ;
+
+            assert(cdat->cmat.last_equ[vi] == cme);
+            cmat->last_equ[vi] = cme->prev_equ;
 /* \TODO(xhub) check that it is valid to not do the following
             if (e->prev_equ) {
                model->last_equ[vidx] = e->prev_equ;
@@ -812,14 +912,17 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
           * there is no next equation, then the variable must disappear.
           * ----------------------------------------------------------------- */
 
-         if (e->prev_equ) {
-            e->prev_equ->next_equ = e->next_equ;
+         if (cme->prev_equ) {
+
+            cme->prev_equ->next_equ = cme->next_equ;
+
          } else {
 
-            cdat->vars[vi] = e->next_equ;
+            cmat->vars[vi] = cme->next_equ;
 
-            if (!e->next_equ) {
-               assert(!cdat->last_equ[vi]);
+            if (!cme->next_equ) {
+
+               assert(!cmat->last_equ[vi]);
 
                ctr->n--;
                ctr->vars[vi].is_deleted = true;
@@ -827,24 +930,22 @@ int cmat_equ_rm_var(Container *ctr, rhp_idx ei, rhp_idx vi)
                    ctr->varmeta[vi].ppty |= VarIsDeleted;
                }
 
-            trace_ctr("[container] %14s var '%s' deleted\n",
-                      "->", ctr_printvarname(ctr, vi));
+            trace_ctr("[container] %14s var '%s' deleted\n", "->", ctr_printvarname(ctr, vi));
             }
          }
 
          break;
       }
-      prev_e = e;
-      e = e->next_var;
 
-      if (!e) {
-         error("[container] ERROR: variable '%s' does not appear in equation "
-               "'%s'\n", ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei));
+      prev_cme = cme;
+      cme = cme->next_var;
+
+      if (!cme) {
+         error("[container] ERROR: variable '%s' does not appear in equation '%s'\n",
+               ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei));
          return Error_Inconsistency;
       }
    }
-
-   FREE(e);
 
    return OK;
 }
@@ -873,26 +974,32 @@ int cmat_fill_equ(Container *ctr, rhp_idx ei, const Avar * restrict v,
 
    S_CHECK(cdat_equ_init(cdat, ei));
 
-   CMatElt* prev_e = NULL;
+   if (RHP_UNLIKELY(cdat->cmat.equs[ei])) {
+      error("[container] ERROR: cannot fill non-empty equation #%u\n", ei);
+      return Error_RuntimeError;
+   }
+
+   CMatElt* prev_cme = NULL;
 
    /* Add all the variables from that equation */
    for (unsigned i = 0, total_n = cdat->total_n, len = v->size; i < len; ++i) {
-      rhp_idx vi = avar_fget(v, i);
 
+      rhp_idx vi = avar_fget(v, i);
       S_CHECK(vi_inbounds(vi, total_n, __func__));
  
-      CMatElt* e;
-      A_CHECK(e, cmat_elt_new(ctr, ei, vi, nlflags[i], values[i]));
+      CMatElt* cme;
+      A_CHECK(cme, cmat_elt_new(ctr, ei, vi, nlflags[i], values[i]));
 
       /* If there is a previous variable */
-      if (prev_e) {
-         prev_e->next_var = e;
-      } else /* if not, the eqn is most likely empty */ {
-         cdat->equs[ei] = e;
+      if (prev_cme) {
+         assert(cme_regular_elt(prev_cme));
+         prev_cme->next_var = cme;
+      } else /* if not, the equation is most likely empty */ {
+         cdat->cmat.equs[ei] = cme;
       }
 
       /* Update for the next variable */
-      prev_e = e;
+      prev_cme = cme;
    }
 
    return OK;
@@ -912,46 +1019,48 @@ int cmat_rm_equ(Container *ctr, rhp_idx ei)
 {
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, IdxNA));
+   CMat * restrict cmat = &cdat->cmat;
 
-   CMatElt * restrict me = cdat->equs[ei];
+   CMatElt * restrict cme = cdat->cmat.equs[ei];
 
-   if (!me) {
-      error("[container] ERROR: cannot remove equation '%s', it is already inactive\n",
+   if (!cme) {
+      error("[container/matrix] ERROR: cannot remove equation '%s', it is already inactive\n",
             ctr_printequname(ctr, ei));
       return Error_NullPointer;
    }
 
    /* Clear from the model */
-   cdat->equs[ei] = NULL;
+   cdat->cmat.equs[ei] = NULL;
 
    /* Add the equation to deleted_equs  */
-   assert(me->ei == ei);
-   S_CHECK(push_on_deleted(cdat, me));
+   assert(cme->ei == ei);
+   S_CHECK(push_on_deleted(cdat, cme));
 
    /* Remove the equation from the model*/
-   while (me) {
+   while (cme) {
 
       /* Update last_equ if necessary */
-      if (me->next_equ) {
-         me->next_equ->prev_equ = me->prev_equ;
+      if (cme->next_equ) {
+         cme->next_equ->prev_equ = cme->prev_equ;
       } else {
-         assert(me == cdat->last_equ[me->vi]);
-         cdat->last_equ[me->vi] = me->prev_equ;
+         assert(cme == cdat->cmat.last_equ[cme->vi]);
+         cmat->last_equ[cme->vi] = cme->prev_equ;
       }
 
       /* If the variable appeared in a previous equ */
-      if (me->prev_equ) {
-         me->prev_equ->next_equ = me->next_equ;
+      if (cme->prev_equ) {
+         cme->prev_equ->next_equ = cme->next_equ;
       } else { /* We are deleting the first equation where the variable appears */
          /* set model->vars  */
-         rhp_idx vi = me->vi;
+         rhp_idx vi = cme->vi;
 
-         assert(!cdat->vars[vi] || !cdat->vars[vi]->placeholder);
-         cdat->vars[vi] = me->next_equ;
+         assert(!cmat->vars[vi] || !cme_isplaceholder(cmat->vars[vi]));
+         cmat->vars[vi] = cme->next_equ;
 
          /*  If this is true, the variable disappear from the container */
-         if (!me->next_equ) {
-            assert(!cdat->last_equ[vi]);
+         if (!cme->next_equ) {
+
+            assert(!cmat->last_equ[vi]);
 
             ctr->n--;
             ctr->vars[vi].is_deleted = true;
@@ -964,10 +1073,10 @@ int cmat_rm_equ(Container *ctr, rhp_idx ei)
          }
       }
 
-      _debug_print_var(ctr, me->vi);
+      _debug_print_var(ctr, cme->vi);
 
       /* Update the next variable */
-      me = me->next_var;
+      cme = cme->next_var;
    }
 
    return OK;
@@ -985,36 +1094,39 @@ int cmat_rm_equ(Container *ctr, rhp_idx ei)
 int cmat_cpy_equ_flipped(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
 {
    RhpContainerData *cdat = ctr->data;
-   const CMatElt * restrict me_src = cdat->equs[ei_src];
-   CMatElt * restrict prev_e = NULL;
+   const CMatElt * restrict cme_src = cdat->cmat.equs[ei_src];
+   CMatElt * restrict prev_cme = NULL;
 
    S_CHECK(ei_inbounds(ei_src, ctr_nequs_total(ctr), __func__));
    S_CHECK(ei_inbounds(ei_dst, ctr_nequs_total(ctr), __func__));
 
-   if (cdat->equs[ei_dst]) {
-      error("[container] ERROR: the equation #%u is not empty, cannot flip '%s' "
-            "into it!\n", ei_dst, ctr_printequname(ctr, ei_src));
+   if (cdat->cmat.equs[ei_dst]) {
+      error("[container] ERROR: cannot copy '%s' into non-empty equation #%u\n",
+            ctr_printequname(ctr, ei_src), ei_dst);
       return Error_RuntimeError;
    }
 
    /* Add all the variables from that equation  */
-   while (me_src) {
+   while (cme_src) {
+      assert(cme_regular_elt(cme_src));
 
-      CMatElt *me_dst;
-      A_CHECK(me_dst, cmat_elt_new(ctr, ei_dst, me_src->vi, me_src->isNL, -me_src->value));
+      CMatElt *cme_dst;
+      A_CHECK(cme_dst, cmat_elt_new(ctr, ei_dst, cme_src->vi, cme_isNL(cme_src),
+                                    -cme_src->value));
 
       /* If there is a previous variable */
-      if (prev_e) {
-         prev_e->next_var = me_dst;
+      if (prev_cme) {
+         assert(cme_regular_elt(prev_cme));
+         prev_cme->next_var = cme_dst;
       } else /* if not, the eqn is most likely empty */ {
-         cdat->equs[ei_dst] = me_dst;
+         cdat->cmat.equs[ei_dst] = cme_dst;
       }
 
       /* Update for the next variable */
-      prev_e = me_dst;
+      prev_cme = cme_dst;
 
       /* Go to the next variable in the equation */
-      me_src = me_src->next_var;
+      cme_src = cme_src->next_var;
    }
 
    return OK;
@@ -1038,34 +1150,36 @@ int cmat_copy_equ(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
    S_CHECK(ei_inbounds(ei_src, ctr_nequs_total(ctr), __func__));
    S_CHECK(ei_inbounds(ei_dst, ctr_nequs_total(ctr), __func__));
 
-   const CMatElt * restrict me_src = cdat->equs[ei_src];
-   assert(me_src);
-   CMatElt * restrict prev_e = NULL;
+   const CMatElt * restrict cme_src = cdat->cmat.equs[ei_src];
+   assert(cme_src);
+   CMatElt * restrict prev_cme = NULL;
 
-   if (cdat->equs[ei_dst]) {
-      error("[container] ERROR: the equation #%u is not empty, cannot copy '%s' "
-            "into it!\n", ei_dst, ctr_printequname(ctr, ei_src));
+   if (cdat->cmat.equs[ei_dst]) {
+      error("[container] ERROR: cannot copy '%s' into non-empty equation #%u\n",
+            ctr_printequname(ctr, ei_src), ei_dst);
       return Error_RuntimeError;
    }
 
    /* Add all the variables from that equation  */
-   while (me_src) {
+   while (cme_src) {
 
       CMatElt *me_dst;
-      A_CHECK(me_dst, cmat_elt_new(ctr, ei_dst, me_src->vi, me_src->isNL, me_src->value));
+      A_CHECK(me_dst, cmat_elt_new(ctr, ei_dst, cme_src->vi, cme_isNL(cme_src),
+                                   cme_src->value));
 
       /* If there is a previous variable */
-      if (prev_e) {
-         prev_e->next_var = me_dst;
-      } else /* if not, the eqn is most likely empty */ {
-         cdat->equs[ei_dst] = me_dst;
+      if (prev_cme) {
+         assert(cme_regular_elt(prev_cme));
+         prev_cme->next_var = me_dst;
+      } else /* if not, the equation is most likely empty */ {
+         cdat->cmat.equs[ei_dst] = me_dst;
       }
 
       /* Update for the next variable */
-      prev_e = me_dst;
+      prev_cme = me_dst;
 
       /* Go to the next variable in the equation */
-      me_src = me_src->next_var;
+      cme_src = cme_src->next_var;
    }
 
    return OK;
@@ -1087,40 +1201,48 @@ int cmat_copy_equ_except(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst, rhp_idx
 {
    RhpContainerData *cdat = ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei_src, vi_no));
+   CMat *cmat = &cdat->cmat;
 
    S_CHECK(ei_inbounds(ei_src, ctr_nequs_total(ctr), __func__));
    S_CHECK(ei_inbounds(ei_dst, ctr_nequs_total(ctr), __func__));
 
-   const CMatElt * restrict me_src = cdat->equs[ei_src];
-   assert(me_src);
-   CMatElt * restrict prev_e = NULL;
+   const CMatElt * restrict cme_src = cmat->equs[ei_src];
+   assert(cme_src);
+   CMatElt * restrict prev_cme = NULL;
 
-   if (cdat->equs[ei_dst]) {
-      error("[container] ERROR: the equation #%u is not empty, cannot copy '%s' "
-            "into it!\n", ei_dst, ctr_printequname(ctr, ei_src));
+   if (cmat->equs[ei_dst]) {
+      error("[container] ERROR: cannot copy '%s' into non-empty equation #%u\n",
+            ctr_printequname(ctr, ei_src), ei_dst);
       return Error_RuntimeError;
    }
 
    /* Add all the variables from that equation  */
-   while (me_src) {
+   while (cme_src) {
 
-      if (me_src->vi == vi_no) { me_src = me_src->next_var; continue; }
+      if (cme_src->vi == vi_no) { cme_src = cme_src->next_var; continue; }
 
-      CMatElt *me_dst;
-      A_CHECK(me_dst, cmat_elt_new(ctr, ei_dst, me_src->vi, me_src->isNL, me_src->value));
+      CMatElt *cme_dst;
+      A_CHECK(cme_dst, cmat_elt_new(ctr, ei_dst, cme_src->vi, cme_isNL(cme_src),
+                                    cme_src->value));
 
       /* If there is a previous variable */
-      if (prev_e) {
-         prev_e->next_var = me_dst;
-      } else /* if not, the eqn is most likely empty */ {
-         cdat->equs[ei_dst] = me_dst;
+      if (prev_cme) {
+         assert(cme_regular_elt(prev_cme));
+         prev_cme->next_var = cme_dst;
+      } else /* if not, the equation is most likely empty */ {
+         cmat->equs[ei_dst] = cme_dst;
       }
 
       /* Update for the next variable */
-      prev_e = me_dst;
+      prev_cme = cme_dst;
 
       /* Go to the next variable in the equation */
-      me_src = me_src->next_var;
+      cme_src = cme_src->next_var;
+   }
+
+   /* It can happen that the new equation is empty. Use a placeholder then */
+   if (!cmat->equs[ei_dst]) {
+      S_CHECK(cmat_cst_equ(cmat, ei_dst));
    }
 
    return OK;
@@ -1136,10 +1258,8 @@ int cmat_copy_equ_except(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst, rhp_idx
  *
  * @return                the error code
  */
-int cmat_append_equs(Container * restrict ctr_dst,
-                     const Container * restrict ctr_src,
-                     const Aequ * restrict e,
-                     rhp_idx ei_dst_start)
+int cmat_append_equs(Container * restrict ctr_dst, const Container * restrict ctr_src,
+                     const Aequ * restrict e, rhp_idx ei_dst_start)
 {
    RhpContainerData *cdat_dst = ctr_dst->data;
    RhpContainerData *cdat_src = ctr_src->data;
@@ -1150,39 +1270,47 @@ int cmat_append_equs(Container * restrict ctr_dst,
    cdat_dst->total_m += len;
    ctr_dst->m += len;
 
+   CMatElt * restrict * restrict cmat_dst_equs = cdat_dst->cmat.equs;
+
    for (unsigned i = 0; i < len; ++i) {
 
       rhp_idx ei_src = aequ_fget(e, i);
       assert(!valid_ei(ctr_getcurrent_ei(ctr_src, ei_src)) ||
              ei_dst == ctr_getcurrent_ei(ctr_src, ei_src));
 
-      const CMatElt * restrict me_src = cdat_src->equs[ei_src];
+      const CMatElt * restrict cme_src = cdat_src->cmat.equs[ei_src];
       /* TODO GITLAB #110 */
-      if (!me_src) { continue; }
-      CMatElt * restrict prev_e = NULL;
+      if (!cme_src) { continue; }
+      CMatElt * restrict prev_cme = NULL;
+
+      if (cmat_dst_equs[ei_dst]) {
+         error("[container] ERROR: cannot copy '%s' into non-empty equation #%u\n",
+               ctr_printequname(ctr_src, ei_src), ei_dst);
+         return Error_RuntimeError;
+      }
 
       /* Add all the variables from that equation  */
-      while (me_src) {
+      while (cme_src) {
 
-         rhp_idx vi_dst = ctr_getcurrent_vi(ctr_src, me_src->vi);
+         rhp_idx vi_dst = ctr_getcurrent_vi(ctr_src, cme_src->vi);
          assert(valid_vi_(vi_dst, cdat_dst->total_n, __func__));
 
 
          CMatElt *me_dst;
-         A_CHECK(me_dst, cmat_elt_new(ctr_dst, ei_dst, vi_dst, me_src->isNL, me_src->value));
+         A_CHECK(me_dst, cmat_elt_new(ctr_dst, ei_dst, vi_dst, cme_isNL(cme_src), cme_src->value));
 
          /* If there is a previous variable */
-         if (prev_e) {
-            prev_e->next_var = me_dst;
-         } else /* if not, the eqn is most likely empty */ {
-            cdat_dst->equs[ei_dst] = me_dst;
+         if (prev_cme) {
+            prev_cme->next_var = me_dst;
+         } else /* if not, the equation is most likely empty */ {
+            cmat_dst_equs[ei_dst] = me_dst;
          }
 
          /* Update for the next variable */
-         prev_e = me_dst;
+         prev_cme = me_dst;
 
          /* Go to the next variable in the equation */
-         me_src = me_src->next_var;
+         cme_src = cme_src->next_var;
       }
 
       ei_dst++;
@@ -1206,7 +1334,7 @@ int cmat_scal(Container *ctr, rhp_idx ei, double coeff)
    RhpContainerData *cdat = ctr->data;
    assert(cmat_chk_equvaridx(cdat, ei, IdxNA));
 
-   CMatElt * restrict me = cdat->equs[ei]; assert(me);
+   CMatElt * restrict me = cdat->cmat.equs[ei]; assert(me);
 
    /* Add all the variables from that equation  */
    while (me) {
@@ -1235,12 +1363,12 @@ static const char *vtag2str(enum vtag tag)
    case vlin: return "linear";
    case vquad: return "quadratic";
    case vnl: return "nonlinear";
-   default: return "unkonwn tag ERROR";
+   default: return "unknown tag ERROR";
    }
 }
 
-NONNULL static int cmat_chk_lequ(Container *ctr, RhpContainerData *cdat,
-                                 rhp_idx ei, enum vtag *vtags) 
+NONNULL static int cmat_chk_lequ(Container *ctr, RhpContainerData *cdat, rhp_idx ei,
+                                 enum vtag *vtags) 
 {
    int status = OK;
 
@@ -1253,21 +1381,19 @@ NONNULL static int cmat_chk_lequ(Container *ctr, RhpContainerData *cdat,
    rhp_idx total_n = cdat->total_n;
 
    for (size_t j = 0, len = le->len; j < len; ++j) {
-      double v = vals[j];
+      double val = vals[j];
       rhp_idx vi = vidx[j];
 
-      if (!isfinite(v)) {
-         if (isnan(v) && vi < total_n && cdat->vars[vi]) {
-            error("[cmat/check] ERROR: variable %s appears with value %E in "
-                  "equation %s, but is marked as active\n",
-                  ctr_printvarname(ctr, vi), v,
+      if (!isfinite(val)) {
+         if (isnan(val) && vi < total_n && cdat->cmat.vars[vi]) {
+            error("[cmat/check] ERROR: variable '%s' has value %E in equation '%s', "
+                  "but is marked as active\n", ctr_printvarname(ctr, vi), val,
                   ctr_printequname(ctr, ei));
             status = Error_Inconsistency;
 
-         } else if (!isnan(v)) {
-            error("[cmat/check] ERROR: variable %s appears with value %E in "
-                  "equation %s, which is inconsistent\n",
-                  ctr_printvarname(ctr, vi), v,
+         } else if (!isnan(val)) {
+            error("[cmat/check] ERROR: variable '%s' has value %E in equation '%s', "
+                  "which is inconsistent,\n", ctr_printvarname(ctr, vi), val,
                   ctr_printequname(ctr, ei));
             status = Error_Inconsistency;
 
@@ -1294,6 +1420,8 @@ int cmat_chk_expensive(Container *ctr)
 {
    assert(ctr_is_rhp(ctr));
 
+   trace_ctr("[container] Checking reshop container.\n");
+
    int status = OK;
    RhpContainerData *restrict cdat = ctr->data;
    rhp_idx total_n = cdat->total_n, total_m = cdat->total_m;
@@ -1306,21 +1434,21 @@ int cmat_chk_expensive(Container *ctr)
 
    for (rhp_idx i = 0, len = total_m; i < len; ++i)
    {
-      CMatElt *ce = cdat->equs[i];
+      CMatElt *cme = cdat->cmat.equs[i];
 
-      if (ce && ce->placeholder) {
-         if (valid_vi(ce->vi) || !valid_ei(ce->ei) || ce->ei != i || ce->next_var || ce->next_equ || ce->prev_equ) {
+      if (cme && cme_isplaceholder(cme)) {
+         if (valid_vi(cme->vi) || !valid_ei(cme->ei) || cme->ei != i || cme->next_var || cme->next_equ || cme->prev_equ) {
             error("[cmat/check] ERROR: placeholder for equation %s is invalid: "
                   "vi: %u; ei: %u; next_var: %p; prev_equ: %p; next_equ: %p\n",
-                  ctr_printequname(ctr, i), ce->vi, ce->ei, (void*)ce->next_var,
-                  (void*)ce->prev_equ, (void*)ce->next_equ);
+                  ctr_printequname(ctr, i), cme->vi, cme->ei, (void*)cme->next_var,
+                  (void*)cme->prev_equ, (void*)cme->next_equ);
 
             status = Error_Inconsistency;
          }
          continue;
       }
 
-      if (!ce) {
+      if (!cme) {
          if (emd && !(emd[i].ppty & EquPptyIsDeleted)) {
             error("[cmat/check] ERROR: equation %s is absent from the container "
                   "matrix but not marked as such in the metadata\n",
@@ -1335,12 +1463,12 @@ int cmat_chk_expensive(Container *ctr)
 
       unsigned nlinvar = le ? le->len : 0;
 
-        status = cmat_chk_lequ(ctr, cdat, i, vtags);
-        if (status != OK) { continue;}
+      status = cmat_chk_lequ(ctr, cdat, i, vtags);
+      if (status != OK) { continue; }
 
       /*TODO QUAD*/
-      assert(!ce->isQuad);
-      
+      assert(cme->type != CMatEltQuad);
+
       /* TODO thin container: change this */
       S_CHECK(rctr_getnl(ctr, &ctr->equs[i]));
       NlTree *nltree = ctr->equs[i].tree;
@@ -1370,9 +1498,9 @@ int cmat_chk_expensive(Container *ctr)
          } 
       }
 
-      while (ce) {
+      while (cme) {
 
-         rhp_idx ei = ce->ei, vi = ce->vi;
+         rhp_idx ei = cme->ei, vi = cme->vi;
 
          if (ei != i) {
             error("[cmat/check] ERROR: inconsistency between the container matrix "
@@ -1388,7 +1516,7 @@ int cmat_chk_expensive(Container *ctr)
             goto _end;
          }
 
-         if (!cdat->vars[vi]) {
+         if (!cdat->cmat.vars[vi]) {
             error("[cmat/check] ERROR: variable %s in equation %s is absent "
                   "from the container matrix\n", ctr_printvarname(ctr, vi),
                   ctr_printequname(ctr, i));
@@ -1405,7 +1533,7 @@ int cmat_chk_expensive(Container *ctr)
                   "matrix. Tag is %s and current container matrix element is:\n",
                   ctr_printvarname(ctr, vi), ctr_printvarname(ctr, ei),
                   vtag2str(vtags[vi]));
-            cmat_elt_print(PO_ERROR, ce, ctr);
+            cmat_elt_print(PO_ERROR, cme, ctr);
             status = Error_Inconsistency;
             goto _end;
          }
@@ -1430,7 +1558,7 @@ int cmat_chk_expensive(Container *ctr)
                 goto _end;
             }
 
-            if (ce->isNL || ce->isQuad) {
+            if (cme->type != CMatEltLin) {
                error("[cmat/check] ERROR: in equation %s: variable %s is "
                      "marked as nonlinear or quadratic, but could be found "
                      "in the linear equation\n", ctr_printequname(ctr, ei),
@@ -1440,11 +1568,11 @@ int cmat_chk_expensive(Container *ctr)
 
             S_CHECK(lequ_find(le, vi, &val, &pos));
 
-            if (fabs(ce->value - val) > DBL_EPSILON) {
+            if (fabs(cme->value - val) > DBL_EPSILON) {
                error("[cmat/check] ERROR: in equation %s: linear variable %s "
                      "has coefficient %e in the container matrix, and %e in the "
                      "equation; diff = %e\n", ctr_printequname(ctr, ei),
-                     ctr_printvarname(ctr, vi), ce->value, val, ce->value - val);
+                     ctr_printvarname(ctr, vi), cme->value, val, cme->value - val);
                status = Error_Inconsistency;
             }
 
@@ -1464,7 +1592,7 @@ int cmat_chk_expensive(Container *ctr)
             nNLvar--;
             vtags[vi] |= vchecked;
 
-             if (!ce->isNL) {
+             if (!cme_isNL(cme)) {
                 error("[cmat/check] ERROR in equation %s: variable %s is found "
                       "in the nonlinear expression tree, but is not marked as such"
                       " in the container matrix\n", ctr_printequname(ctr, ei),
@@ -1478,7 +1606,7 @@ int cmat_chk_expensive(Container *ctr)
              error("[cmat/check] ERROR in equation %s: variable %s is found in "
                    "the container matrix, but isn't found in the equation data\n",
                    ctr_printequname(ctr, ei), ctr_printvarname(ctr, vi));
-              cmat_elt_print(PO_ERROR, ce, ctr);
+              cmat_elt_print(PO_ERROR, cme, ctr);
              status = Error_Inconsistency;
              goto _end;
 
@@ -1489,7 +1617,7 @@ int cmat_chk_expensive(Container *ctr)
          }
 
 _end:
-         ce = ce->next_var;
+         cme = cme->next_var;
       }
 
       int offset;

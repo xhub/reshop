@@ -1309,7 +1309,7 @@ int rhp_is_equ_valid(Model *mdl, rhp_idx ei)
 
    RhpContainerData *cdat = (RhpContainerData *)mdl->ctr.data;
     if (!valid_ei(ei) || ei >= (int)cdat->total_m) return 0;
-   return cdat->equs[ei] ? 1 : 0;
+   return cdat->cmat.equs[ei] ? 1 : 0;
 }
 
 /**

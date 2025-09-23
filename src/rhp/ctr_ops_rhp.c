@@ -76,7 +76,7 @@ static int rctr_allocdata(Container *ctr)
       A_CHECK(ctr->pool, pool_new_gams());
    }
 
-   return cdat_alloc(ctr, ctr->n, ctr->m);
+   return cdat_init(ctr, ctr->n, ctr->m);
 }
 
 static void rctr_deallocdata(Container *ctr)
@@ -522,10 +522,10 @@ static int rctr_getcoljacinfo(const Container *ctr, int colidx,
    }
 
    if (!e) {
-      e = cdat->vars[colidx];
+      e = cdat->cmat.vars[colidx];
       if (!e) {
-        error("%s :: variable %d (%s) is not in the model\n",
-                 __func__, colidx, ctr_printvarname(ctr, colidx));
+        error("[container/matrix] ERROR: variable '%s' is not in the container matrix\n",
+              ctr_printvarname(ctr, colidx));
          return Error_NullPointer;
       }
    }
@@ -533,7 +533,7 @@ static int rctr_getcoljacinfo(const Container *ctr, int colidx,
    *jacptr = e->next_equ;
    *jacval = e->value;
    *rowidx = e->ei;
-   *nlflag = (int)e->isNL;
+   *nlflag = cme_isNL(e);
 
    return OK;
 }

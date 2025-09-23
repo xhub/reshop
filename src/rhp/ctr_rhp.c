@@ -170,12 +170,12 @@ int rctr_evalfuncs(Container *ctr)
                       ctr_printequname(ctr, ei), ei, e->value);
    }
 
-   if (!cdat->deleted_equs) { return OK; }
+   if (!cdat->cmat.deleted_equs) { return OK; }
 
    /* TODO: investigate performance */
    for (rhp_idx ei = 0; ei < m; ++ei) {
 
-      if (!cdat->deleted_equs[ei]) { continue; }
+      if (!cdat->cmat.deleted_equs[ei]) { continue; }
 
       Equ *e = &ctr->equs[ei];
       S_CHECK(rctr_evalfunc(ctr, ei, &e->value));
@@ -234,7 +234,7 @@ int rctr_delete_var(Container *ctr, rhp_idx vi)
      return Error_InvalidValue;
    }
 
-   const struct ctr_mat_elt *me = cdat->vars[vi];
+   const struct ctr_mat_elt *me = cdat->cmat.vars[vi];
 
    /* ----------------------------------------------------------------------
     * One must be extremely cautious here
@@ -249,8 +249,7 @@ int rctr_delete_var(Container *ctr, rhp_idx vi)
       S_CHECK(equ_rm_var(ctr, e, vi));
    }
 
-   FREE(cdat->vars[vi]);
-   cdat->vars[vi] = NULL;
+   cdat->cmat.vars[vi] = NULL;
 
    ctr->vars[vi].is_deleted = true;
 
@@ -371,31 +370,31 @@ int rctr_evalfunc(Container *ctr, rhp_idx ei, double * restrict F)
 }
 
 
-int rctr_walkequ(const Container *ctr, rhp_idx ei, void **iterator,
-                double *jacval, rhp_idx *vi, int *nlflag)
+int rctr_walkequ(const Container *ctr, rhp_idx ei, void **iterator, double *jacval,
+                 rhp_idx *vi, int *nlflag)
 {
    assert(ctr_is_rhp(ctr));
    const RhpContainerData *cdat = (RhpContainerData *) ctr->data;
-   struct ctr_mat_elt *e = (struct ctr_mat_elt*)*iterator;
+   CMatElt *cme = (CMatElt*)*iterator;
 
    S_CHECK(ei_inbounds(ei, cdat->total_m, __func__));
 
-   assert(!e || (valid_ei(e->ei) && e->ei == ei &&
+   assert(!cme || (valid_ei(cme->ei) && cme->ei == ei &&
           "In rctr_walkequ :: inconsistency between jacptr and ei"));
 
-   if (!e) {
-      e = cdat->equs[ei];
-      if (!e) {
-         error("%s ERROR: equation '%s' is empty in the model\n", __func__,
+   if (!cme) {
+      cme = cdat->cmat.equs[ei];
+      if (!cme) {
+         error("[container/matrix] ERROR: equation '%s' is empty in the container matrix\n",
                ctr_printequname(ctr, ei));
          return Error_NullPointer;
       }
    }
 
-   *iterator = e->next_var;
-   *jacval = e->value;
-   *vi = e->vi;
-   *nlflag = (int)e->isNL;
+   *iterator = cme->next_var;
+   *jacval = cme->value;
+   *vi = cme->vi;
+   *nlflag = cme_isNL(cme);
 
    return OK;
 }
@@ -472,6 +471,7 @@ int rctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
    ctr->varmeta[vi].dual = ei;
 
    if (valid_ei(ei)) {
+
       if (ctr->equs[ei].object != Mapping) {
          debug("%s ERROR: equ '%s' is of type %s, should be %s\n", __func__,
                ctr_printequname(ctr, ei), equtype_name(ctr->equs[ei].object),
@@ -481,7 +481,7 @@ int rctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
       struct equ_meta *equmeta = &ctr->equmeta[ei];
       EquRole equrole = equmeta->role;
       if (equrole != EquUndefined) {
-         error("[container] ERROR: equ '%s' already has type '%s'. It should be unset\n",
+         error("[container] ERROR: equ '%s' already has type '%s'. It should be unset.\n",
                ctr_printequname(ctr, ei), equrole2str(equrole));
          return Error_UnExpectedData;
       }
@@ -562,7 +562,7 @@ int rctr_var_in_equ(const Container *ctr, rhp_idx vi, rhp_idx ei, bool *res)
    S_CHECK(vi_inbounds(vi, cdat->total_n, __func__));
    S_CHECK(ei_inbounds(ei, cdat->total_m, __func__));
 
-   CMatElt *elt = cdat->vars[vi];
+   CMatElt *elt = cdat->cmat.vars[vi];
    while (elt) {
       if (elt->ei == ei) { *res = true; return OK; }
       elt = elt->next_equ;

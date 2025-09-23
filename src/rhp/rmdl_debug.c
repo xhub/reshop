@@ -23,7 +23,7 @@ void rmdl_debug_active_vars(Container *ctr)
    errormsg("\nList of active variables:\n");
 
    for (size_t i = 0; i < total_n; ++i) {
-      if (cdat->vars[i]) {
+      if (cdat->cmat.vars[i]) {
          error("[%5zu] %s\n", i, ctr_printvarname(ctr, i));
       }
    }
@@ -31,7 +31,7 @@ void rmdl_debug_active_vars(Container *ctr)
    errormsg("\nList of inactive variables:\n");
 
    for (size_t i = 0; i < total_n; ++i) {
-      if (!cdat->vars[i]) {
+      if (!cdat->cmat.vars[i]) {
          error("[%5zu] %s\n", i, ctr_printvarname(ctr, i));
       }
    }
@@ -55,7 +55,7 @@ void rctr_debug_active_equs(Container *ctr)
    errormsg("\nList of active equations:\n");
 
    for (size_t i = 0; i < total_m; ++i) {
-      if (model->equs[i]) {
+      if (model->cmat.equs[i]) {
          error("[%5zu] %s\n", i, ctr_printequname(ctr, i));
       }
    }
@@ -63,7 +63,7 @@ void rctr_debug_active_equs(Container *ctr)
 
    bool has_inactive_equ = false;
    for (size_t i = 0; i < total_m; ++i) {
-      if (!model->equs[i]) {
+      if (!model->cmat.equs[i]) {
          if (!has_inactive_equ) {
             errormsg("\nList of inactive equations:\n");
             has_inactive_equ = true;
@@ -80,10 +80,10 @@ void rctr_debug_active_equs(Container *ctr)
 
 int rmdl_print(Model *mdl)
 {
-   struct ctrdata_rhp *model = (struct ctrdata_rhp *)mdl->ctr.data;
-   for (size_t i = 0; i < model->total_n; ++i)
+   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)mdl->ctr.data;
+   for (size_t i = 0; i < cdat->total_n; ++i)
    {
-      struct ctr_mat_elt* e = model->vars[i];
+      struct ctr_mat_elt* e = cdat->cmat.vars[i];
       printout(PO_INFO, "showing variable %s: ", ctr_printvarname(&mdl->ctr, i));
       while (e)
       {
@@ -93,9 +93,9 @@ int rmdl_print(Model *mdl)
       printout(PO_INFO, "\n");
    }
 
-   for (size_t i = 0; i < model->total_m; ++i)
+   for (size_t i = 0; i < cdat->total_m; ++i)
    {
-      struct ctr_mat_elt* e = model->equs[i];
+      struct ctr_mat_elt* e = cdat->cmat.equs[i];
       printout(PO_INFO, "showing equation %s: ", ctr_printequname(&mdl->ctr, i));
       while (e)
       {

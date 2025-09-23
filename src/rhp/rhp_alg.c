@@ -33,7 +33,7 @@ int ctr_compress_equs_check_x(const Container *ctr_src, Container *ctr_dst,
    if (ctr_is_rhp(ctr_src)) {
       RhpContainerData *cdat_src = (RhpContainerData *)ctr_src->data;
       total_m = cdat_src->total_m;
-      deleted_equs = cdat_src->deleted_equs;
+      deleted_equs = cdat_src->cmat.deleted_equs;
    } else if (ctr_src->backend == RhpBackendGamsGmo) {
       total_m = ctr_src->m;
       deleted_equs = NULL;

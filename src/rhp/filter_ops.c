@@ -140,7 +140,7 @@ UNUSED static unsigned filter_active_deactivatedequslen(void *data)
 static inline bool rctr_active_var(const Container *ctr, rhp_idx vi)
 {
    RhpContainerData *cdat = ctr->data;
-   return cdat->vars[vi];
+   return cdat->cmat.vars[vi];
 }
 
 /*  TODO(xhub) PERF measure impact of indirection */
@@ -150,7 +150,7 @@ static bool filter_active_var(void *data, rhp_idx vi)
    RhpContainerData *cdat = dat->ctr->data;
    assert(valid_vi_(vi, cdat->total_n, __func__));
 
-   return cdat->vars[vi] && !deactivated_var(&dat->deactivated, vi);
+   return cdat->cmat.vars[vi] && !deactivated_var(&dat->deactivated, vi);
 }
 
 static bool filter_active_equ(void *data, rhp_idx ei)
@@ -159,7 +159,7 @@ static bool filter_active_equ(void *data, rhp_idx ei)
    RhpContainerData *cdat = dat->ctr->data;
    assert(valid_ei_(ei, cdat->total_m, __func__));
 
-   return cdat->equs[ei] && !deactivated_equ(&dat->deactivated, ei);
+   return cdat->cmat.equs[ei] && !deactivated_equ(&dat->deactivated, ei);
 }
 
 static void filter_active_size(void *data, size_t* n, size_t* m)
@@ -331,7 +331,7 @@ static bool filter_subset_var(void *data, rhp_idx vi)
    FilterSubset* fs = (FilterSubset *)data;
    const Container * restrict ctr_src = fs->ctr_src;
    RhpContainerData * restrict cdat = fs->ctr_src->data;
-   bool is_active = ctr_is_rhp(ctr_src) ? cdat->vars[vi] != NULL : true;
+   bool is_active = ctr_is_rhp(ctr_src) ? cdat->cmat.vars[vi] != NULL : true;
 
    return avar_contains(&fs->vars, vi) &&
          !avar_contains(ctr_src->fixed_vars, vi) &&
@@ -345,7 +345,7 @@ static bool filter_subset_equ(void *data, rhp_idx ei)
    FilterSubset* fs = (FilterSubset *)data;
    const Container * restrict ctr_src = fs->ctr_src;
    RhpContainerData * restrict cdat = fs->ctr_src->data;
-   bool is_active = ctr_is_rhp(ctr_src) ? cdat->equs[ei] != NULL : true;
+   bool is_active = ctr_is_rhp(ctr_src) ? cdat->cmat.equs[ei] != NULL : true;
 
    /* TODO: GITLAB #107 */
    return is_active && aequ_contains(&fs->equs, ei);
@@ -389,8 +389,8 @@ static void filter_subset_size(void *data, size_t* ctr_n, size_t* ctr_m)
    size_t nvars, nequs;
 
    if (ctr_is_rhp(ctr_src)) {
-      nvars = subset_nvars_rhp(v, ctr_src->fixed_vars, cdat->vars);
-      nequs = subset_nequs_rhp(e, cdat->equs);
+      nvars = subset_nvars_rhp(v, ctr_src->fixed_vars, cdat->cmat.vars);
+      nequs = subset_nequs_rhp(e, cdat->cmat.equs);
    } else {
       nvars = avar_size(v) - avar_size(fs->ctr_src->fixed_vars);
       nequs = aequ_size(&fs->equs);

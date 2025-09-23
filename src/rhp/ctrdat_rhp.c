@@ -117,21 +117,21 @@ static int cdat_resize_equs(RhpContainerData *cdat, unsigned max_m, unsigned old
       return Error_RuntimeError;
    }
 
-   REALLOC_(cdat->equs, CMatElt *, max_m);
+   REALLOC_(cdat->cmat.equs, CMatElt *, max_m);
    REALLOC_(cdat->equ_rosetta, struct rosetta, max_m);
    REALLOC_(cdat->equ_stage, unsigned char, max_m);
 
    if (max_m > old_max_m) {
-      memset(&cdat->equs[old_max_m], 0, diff*sizeof(CMatElt *));
+      memset(&cdat->cmat.equs[old_max_m], 0, diff*sizeof(CMatElt *));
       memset(&cdat->equ_rosetta[old_max_m], 0, diff*sizeof(struct rosetta));
       memset(&cdat->equ_stage[old_max_m], 0, diff*sizeof(unsigned char));
    }
 
-   if (cdat->deleted_equs) {
-      REALLOC_(cdat->deleted_equs, CMatElt *, max_m);
+   if (cdat->cmat.deleted_equs) {
+      REALLOC_(cdat->cmat.deleted_equs, CMatElt *, max_m);
 
       if (max_m > old_max_m) {
-         memset(&cdat->deleted_equs[old_max_m], 0, diff * sizeof(CMatElt*));
+         memset(&cdat->cmat.deleted_equs[old_max_m], 0, diff * sizeof(CMatElt*));
       }
    }
 
@@ -143,11 +143,11 @@ static int cdat_resize_vars(RhpContainerData *cdat, unsigned max_n, unsigned old
    assert(max_n > old_max_n);
    unsigned diff = max_n - old_max_n;
 
-   REALLOC_(cdat->vars, CMatElt *, max_n);
-   REALLOC_(cdat->last_equ, CMatElt *, max_n);
+   REALLOC_(cdat->cmat.vars, CMatElt *, max_n);
+   REALLOC_(cdat->cmat.last_equ, CMatElt *, max_n);
 
-   memset(&cdat->vars[old_max_n], 0, diff*sizeof(CMatElt *));
-   memset(&cdat->last_equ[old_max_n], 0, diff*sizeof(CMatElt *));
+   memset(&cdat->cmat.vars[old_max_n], 0, diff*sizeof(CMatElt *));
+   memset(&cdat->cmat.last_equ[old_max_n], 0, diff*sizeof(CMatElt *));
 
    if (cdat->equvar_evals && cdat->equvar_evals[cdat->current_stage].len > 0) {
       struct equvar_eval *dat = &cdat->equvar_evals[cdat->current_stage];
@@ -347,7 +347,7 @@ int cdat_resize(RhpContainerData *cdat, unsigned max_n, unsigned max_m)
    if (max_m > 0 && max_m > old_max_m) {
       S_CHECK(cdat_resize_equs(cdat, max_m, old_max_m));
    } else if (max_m == 0) {
-      FREE(cdat->equs);
+      FREE(cdat->cmat.equs);
       FREE(cdat->equ_rosetta);
       FREE(cdat->equ_stage);
    }
@@ -355,19 +355,21 @@ int cdat_resize(RhpContainerData *cdat, unsigned max_n, unsigned max_m)
    if (max_n > 0 && max_n > old_max_n) {
        S_CHECK(cdat_resize_vars(cdat, max_n, old_max_n));
    } else if (max_n == 0) {
-      FREE(cdat->vars);
-      FREE(cdat->last_equ);
+      FREE(cdat->cmat.vars);
+      FREE(cdat->cmat.last_equ);
    }
 
 
    return OK;
 }
 
-int cdat_alloc(Container *ctr, unsigned max_n, unsigned max_m)
+int cdat_init(Container *ctr, unsigned max_n, unsigned max_m)
 {
    RhpContainerData *cdat;
 
    CALLOC_(cdat, RhpContainerData, 1);
+
+   S_CHECK(cmat_init(&cdat->cmat));
 
    ctr->data = cdat;
 
@@ -387,7 +389,6 @@ int cdat_alloc(Container *ctr, unsigned max_n, unsigned max_m)
 
    cdat->pp.remove_objvars = 0;
 
-   cdat->deleted_equs = NULL;
    cdat->mem2free = NULL;
 
    cdat->borrow_inherited = true;
@@ -467,15 +468,6 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
    avar_empty(&cdat->var_inherited.v_src);
  
    for (size_t i = 0, len = cdat->total_m; i < len; ++i) {
-      CMatElt* me = cdat->equs[i];
-
-      while(me) {
-         CMatElt* tmp = me->next_var;
-         FREE(me);
-         me = tmp;
-      }
-      cdat->equs[i] = NULL;
-
       if (i < inherited_equ_start || i >= inherited_equ_stop) {
          equ_free(&ctr->equs[i]);
       }
@@ -536,26 +528,6 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
             __func__, backend2str(ctr->backend));
    }
 
-   /* ----------------------------------------------------------------------
-    * Need to delete the model_elt for deleted equations
-    * ---------------------------------------------------------------------- */
-
-   if (cdat->deleted_equs) {
-      for (size_t i = 0, len = cdat->total_m; i < len; ++i)
-      {
-         CMatElt* equ_elt = cdat->deleted_equs[i];
-
-         while(equ_elt) {
-            CMatElt* tmp = equ_elt->next_var;
-            FREE(equ_elt);
-            equ_elt = tmp;
-         }
-         cdat->deleted_equs[i] = NULL;
-      }
-
-      FREE(cdat->deleted_equs);
-   }
-
    /* ------------------------------------------------------------------------
    * Free all the loose bits of memory
    * ------------------------------------------------------------------------ */
@@ -566,9 +538,6 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
 
    FREE(cdat->equ_rosetta);
    FREE(cdat->equ_stage);
-   FREE(cdat->equs);
-   FREE(cdat->vars);
-   FREE(cdat->last_equ);
 
    for (unsigned i = 0; i < cdat->equvar_evals_size; ++i) {
       FREE(cdat->equvar_evals[i].var2evals);
@@ -589,7 +558,9 @@ int cdat_dealloc(Container *ctr, RhpContainerData* cdat)
 
    FREE(cdat->equvar_evals);
 
-   FREE(cdat);
+   cmat_fini(&cdat->cmat);
+
+   free(cdat);
 
    return OK;
 }
@@ -730,8 +701,8 @@ int rctr_walkallequ(const Container *ctr, rhp_idx ei, void **iterator, double *v
    assert(ctr->backend == RhpBackendReSHOP);
    const RhpContainerData *cdat = (const RhpContainerData *)ctr->data;
 
-   CMatElt *e = (CMatElt*)*iterator;
-   assert(!e || (valid_ei(e->ei) && e->ei == ei &&
+   CMatElt *cme = (CMatElt*)*iterator;
+   assert(!cme || (valid_ei(cme->ei) && cme->ei == ei &&
             "In model_walkallequ :: unconsistency between jacptr and rowidx"));
 
    /* ----------------------------------------------------------------------
@@ -739,23 +710,23 @@ int rctr_walkallequ(const Container *ctr, rhp_idx ei, void **iterator, double *v
     * If it has been deleted, look through the deleted equations
     * ---------------------------------------------------------------------- */
 
-   if (!e) {
-      if (cdat->equs[ei]) {
-         e = cdat->equs[ei];
-      } else if (cdat->deleted_equs[ei]){
-         e = cdat->deleted_equs[ei];
+   if (!cme) {
+      if (cdat->cmat.equs[ei]) {
+         cme = cdat->cmat.equs[ei];
+      } else if (cdat->cmat.deleted_equs[ei]){
+         cme = cdat->cmat.deleted_equs[ei];
       }
    }
 
-   if (!e) {
-      error("%s :: No equation with index %u exists!\n", __func__, ei);
+   if (!cme) {
+      error("[container] ERROR: no equation with index %u exists!\n", ei);
       return Error_NotFound;
    }
 
-   *iterator = e->next_var;
-   *val = e->value;
-   *vi = e->vi;
-   *nlflag = e->isNL;
+   *iterator = cme->next_var;
+   *val = cme->value;
+   *vi = cme->vi;
+   *nlflag = cme_isNL(cme);
 
    return OK;
 }

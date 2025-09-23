@@ -210,7 +210,7 @@ int rmdl_initctrfromfull(Model *mdl, Model *mdl_up)
    }
 
    /* ---------------------------------------------------------------------
-    * Copy the variable and eqation metadata
+    * Copy the variable and equation metadata
     * --------------------------------------------------------------------- */
 
    ModelType mdltype_up;
@@ -424,7 +424,7 @@ int rmdl_appendequs(Model *mdl, const Aequ *e)
       assert(!valid_ei(rosetta_equs[ei_src]));
       
       /* TODO GITLAB #110 */
-      if (!cdat_up->equs[ei_src]) { continue; }
+      if (!cdat_up->cmat.equs[ei_src]) { continue; }
 
       rosetta_equs[ei_src] = ei_new;
       rev_rosetta_newequs[i] = ei_src;
@@ -486,7 +486,7 @@ int rmdl_appendequs(Model *mdl, const Aequ *e)
          assert(valid_vi_(ei_src, ctr_nequs_total(ctr_up), __func__));
 
          /* TODO GITLAB #110 */
-         if (!cdat_up->equs[ei_src]) {
+         if (!cdat_up->cmat.equs[ei_src]) {
             assert(emeta_src[ei_src].ppty & EquPptyIsDeleted);
             continue;
          }

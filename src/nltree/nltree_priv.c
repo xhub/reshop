@@ -88,15 +88,16 @@ int nlnode_dup(NlNode** new_node, const NlNode* node, NlTree* tree)
 
    if (tree->v_list && (node->op == NlNode_Var || node->oparg == NLNODE_OPARG_VAR)) {
       rhp_idx vidx = VIDX_R(node->value);
-      for (size_t i = 0; i < tree->v_list->idx; ++i) {
+      for (size_t i = 0, len = tree->v_list->idx; i < len; ++i) {
          if (vidx == tree->v_list->pool[i]) {
             goto _no_add;
          }
       }
       if (tree->v_list->idx >= tree->v_list->max) {
          tree->v_list->max = MAX(tree->v_list->max*2, 2);
-         REALLOC_(tree->v_list->pool, int, tree->v_list->max);
+         REALLOC_(tree->v_list->pool, rhp_idx, tree->v_list->max);
       }
+
       tree->v_list->pool[tree->v_list->idx++] = vidx;
    }
 

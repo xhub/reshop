@@ -36,6 +36,7 @@ typedef struct {
 } ArcVFBasicData;
 
 
+
 /** arc VF weight of the form: Σᵢ bᵢ yᵢ   */
 typedef struct {
    rhp_idx   ei;          /**< mapping where the term appears */
@@ -57,10 +58,9 @@ typedef struct {
    ArcVFBasicData *list;
 } ArcVFMultipleBasicData;
 
-
 /** VF arc data */
 typedef struct rhp_empdag_arcVF {
-   ArcVFType type;       /**< arcVF type */
+   ArcVFType type;          /**< type */
    mpid_t mpid_child;       /**< MP index */
    union {
       ArcVFBasicData basic_dat;
@@ -481,7 +481,7 @@ bool arcVF_in_objfunc(const ArcVFData *arc, const Model *mdl)
 int arcVFb_subei(ArcVFData *arc, rhp_idx ei_old, rhp_idx ei_new);
 
 /**
- * @brief Subsitute ei in an arcVF
+ * @brief Substitute ei in an arcVF
  *
  * @param  arc     the EMPDAG arc
  * @param  ei_old  the old equation index

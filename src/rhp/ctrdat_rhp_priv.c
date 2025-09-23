@@ -307,7 +307,7 @@ int vnames_lookup_copyname(VecNamesFoocLookup *dat, unsigned idx, char *name,
 /*  function for internal consistency */
 bool rctr_eq_not_deleted(RhpContainerData *cdat, rhp_idx ei)
 {
-   return !cdat->deleted_equs || !cdat->deleted_equs[ei];
+   return !cdat->cmat.deleted_equs || !cdat->cmat.deleted_equs[ei];
 }
 
 // everybody can dream ...

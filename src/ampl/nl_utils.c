@@ -96,8 +96,8 @@ UNUSED static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
       bool isNLo = false;
       bool isBin = (pmdl->ctr.vars[i].type == VAR_B || pmdl->ctr.vars[i].type == VAR_I);
 
-      struct ctr_mat_elt *me = cdat->vars[i];
-      assert(me);
+      CMatElt *cme = cdat->cmat.vars[i];
+      assert(cme);
 
       /* -------------------------------------------------------------------
        * Iterate through all the equations for this variable and update the
@@ -109,9 +109,9 @@ UNUSED static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
       /*  XXX: Very important! why do we stop as soon as has_seen_obj? A
        *  variable could be linear in the obj, but NL in a constraint*/
 
-      while (!has_seen_obj && !isNLc && me) {
-         if (me->isNL) {
-            if (old_objequ == me->ei) {
+      while (!has_seen_obj && !isNLc && cme) {
+         if (cme_isNL(cme)) {
+            if (old_objequ == cme->ei) {
                isNLo = true;
                nlvo++;
                if (isBin) nlvoi++;
@@ -122,11 +122,11 @@ UNUSED static int nl_write_header(Model *mdl, FILE *stream, Model *pmdl)
             }
          }
 
-         if (old_objequ == me->ei) {
+         if (old_objequ == cme->ei) {
             has_seen_obj = true;
          }
 
-         me = me->next_equ;
+         cme = cme->next_equ;
       }
 
       if (isNLo && isNLc) {

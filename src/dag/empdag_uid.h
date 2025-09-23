@@ -30,14 +30,15 @@ typedef enum {
 } EmpNodeType;
 
 typedef enum {
-  EmpEdgeMask  = 1,    /**< Edge mask                           */
+  EmpArcMask   = 1,    /**< Arc mask                            */
   EmpNodeMask  = 2,    /**< Node type mask                      */
 } EmpUidMask;
 
+/** EmpDag MP2MP arc type */
 typedef enum {
-  EmpEdgeCtrl  = 0,    /**< Edge is a control one               */
-  EmpEdgeVF    = 1,    /**< Edge is a value function (VF) one   */
-} EmpEdgeType;
+  EmpArcCtrl  = 0,    /**< Arc is a control one               */
+  EmpArcVF    = 1,    /**< Arc is a value function (VF) one   */
+} EmpArcType;
 
 
 static inline bool valid_uid(daguid_t uid) { return uid != EMPDAG_UID_NONE; }
@@ -62,12 +63,12 @@ static inline daguid_t mpid2uid(mpid_t id)
 
 static inline daguid_t rarcVFuid(daguid_t uid)
 {
-   return uid | EmpEdgeVF;
+   return uid | EmpArcVF;
 }
 
 static inline daguid_t rarcCTRLuid(daguid_t uid)
 {
-   return uid | EmpEdgeCtrl;
+   return uid | EmpArcCtrl;
 }
 
 static inline unsigned uid2id(daguid_t uid)
@@ -87,13 +88,15 @@ static inline bool uidisNash(daguid_t uid)
 
 static inline bool rarcTypeVF(daguid_t uid)
 {
-  return (uid & EmpEdgeMask) == EmpEdgeVF; 
+  return (uid & EmpArcMask) == EmpArcVF; 
 }
 
 static inline bool rarcTypeCtrl(daguid_t uid)
 {
-  return (uid & EmpEdgeMask) == EmpEdgeCtrl; 
+  return (uid & EmpArcMask) == EmpArcCtrl; 
 }
+
+const char * rarclinktype2str(daguid_t uid);
 
 #endif // !EMPDAG_UID_H
 

@@ -548,23 +548,23 @@ NlTree* nltree_dup(const NlTree *tree, const unsigned *var_indices, unsigned nb_
 {
    if (!tree) return NULL;
 
-   NlTree* copy;
-   AA_CHECK(copy, nltree_alloc2(nltree_numnodes(tree), nltree_numchildren(tree)));
+   NlTree* tree_copy;
+   AA_CHECK(tree_copy, nltree_alloc2(nltree_numnodes(tree), nltree_numchildren(tree)));
 
-   if (!tree->root) return copy;
+   if (!tree->root) return tree_copy;
 
    if (nb_var > 0 && var_indices) {
-      AA_CHECK_EXIT(copy->vt, _vartree_alloc(nb_var, var_indices));
+      AA_CHECK_EXIT(tree_copy->vt, _vartree_alloc(nb_var, var_indices));
    }
 
-   SN_CHECK_EXIT(nlnode_dup(&copy->root, tree->root, copy))
+   SN_CHECK_EXIT(nlnode_dup(&tree_copy->root, tree->root, tree_copy))
 
-   if (copy->vt) copy->vt->done = true;
+   if (tree_copy->vt) tree_copy->vt->done = true;
 
-   return copy;
+   return tree_copy;
 
 _exit:
-   nltree_dealloc(copy);
+   nltree_dealloc(tree_copy);
    return NULL;
 }
 
@@ -1471,6 +1471,7 @@ int nltree_ensure_add_node(NlTree *tree, NlNode **node, unsigned size, unsigned 
 int nltree_ensure_add_node_inplace(NlTree *tree, NlNode **node, unsigned size, unsigned *offset)
 {
    NlNode *lnode = *node;
+
    if (lnode) {
       if (lnode->op == __OPCODE_LEN) {
          nlnode_default(lnode, NlNode_Add);
@@ -1487,12 +1488,23 @@ int nltree_ensure_add_node_inplace(NlTree *tree, NlNode **node, unsigned size, u
           * the array
           * ---------------------------------------------------------------- */
 
-         *offset = lnode->children_max;
-         S_CHECK(nlnode_reserve(tree, lnode, size));
+         unsigned cnt = 0, max = lnode->children_max;
+         while (cnt < max && lnode->children[cnt]) { cnt++; }
+
+         *offset = cnt;
+
+         if (max - cnt <= size) {
+            S_CHECK(nlnode_reserve(tree, lnode, size));
+         }
+
       } else {
+
          NlNode *node_dup;
          A_CHECK(node_dup, nlnode_dup_norecur(lnode, tree));
+
          nlnode_default(lnode, NlNode_Add);
+         lnode->children_max = 0;
+
          S_CHECK(nlnode_reserve(tree, lnode, size+1));
          lnode->children[0] = node_dup;
          *offset = 1;

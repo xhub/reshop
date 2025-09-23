@@ -1357,12 +1357,17 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mpid, AnalysisData *data)
          DagUidArray *rarcs = &mps->rarcs[mpid];
 
          if (rarcs->len > 1) {
-            int offset;
+            int col1, col2;
             EmpDag *empdag = dfsdata->empdag;
             error("[empdag] ERROR: %nMP(%s) has %u parents, we only support at most one "
-                  "for now.\n", &offset, empdag_getmpname(empdag, mpid), rarcs->len);
+                  "for now.\n", &col1, empdag_getmpname(empdag, mpid), rarcs->len);
+            error("%*sParent node%n", col1, "", &col2);
+            error("%*sLink type\n", MAX(50-col2, 0), "");
             for (unsigned p = 0, plen = rarcs->len; p < plen; ++p) {
-               error("%*s%s\n", offset, "", empdag_getname(empdag, rarcs->arr[p]));
+               daguid_t puid = rarcs->arr[p];
+               error("%*s%s(%s)%n", col1, "", uidisMP(puid) ? "MP" : "Nash",
+                     empdag_getname(empdag, rarcs->arr[p]), &col2);
+               error("%*s%s", MAX(50-col2, 0), "", rarclinktype2str(puid));
             }
             num_err++;
             break;

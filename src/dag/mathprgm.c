@@ -1046,13 +1046,14 @@ void mp_print(MathPrgm *mp)
    }
 
    const struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)ctr->data;
+   CMatElt **cmat_equs = cdat->cmat.equs;
    printout(PO_INFO, "\n External Variables in the equations:\n");
    for (unsigned i = 0; i < mp->equs.len; ++i) {
       rhp_idx eidx = mp->equs.arr[i];
       bool has_print_equ = false;
 
       /*  TODO(xhub) create API to walk over all variables in an eqn */
-      struct ctr_mat_elt *me = cdat->equs[eidx];
+      CMatElt *me = cmat_equs[eidx];
       while (me) {
          rhp_idx vidx = me->vi;
          if (valid_vi(vidx) && !_mp_own_var(mp, vidx)) {

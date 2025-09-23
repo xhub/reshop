@@ -98,6 +98,15 @@ void* arena_alloc(M_Arena* arena, u64 size)
    return memory;
 }
 
+void* arena_alloc_zero(M_Arena* arena, u64 size)
+{
+   void *mem = arena_alloc(arena, size);
+   if (!mem) { return NULL; }
+
+   memset(mem, 0, size);
+
+   return mem;
+}
 int arena_alloc_blocks(M_Arena *arena, unsigned num_blocks,
                        void *blocks[VMT(static num_blocks)],
                        u64 sizes[VMT(static num_blocks)])
@@ -125,12 +134,6 @@ int arena_alloc_blocks(M_Arena *arena, unsigned num_blocks,
    }
 
    return OK;
-}
-
-void* arena_alloc_zero(M_Arena* arena, u64 size) {
-   void* result = arena_alloc(arena, size);
-   memset(result, 0, size);
-   return result;
 }
 
 void arena_dealloc(M_Arena* arena, u64 size) {
@@ -173,6 +176,14 @@ int arena_init(M_Arena* arena)
    return arena->memory ? OK : Error_SystemError;
 }
 
+/**
+ * @brief Initialize an arena at a given size
+ *
+ * @param arena  the arena to initialize
+ * @param max    the size to reserve
+ *
+ * @return       the error code
+ */
 int arena_init_sized(M_Arena* arena, u64 max)
 {
    memset(arena, 0, sizeof(M_Arena));
@@ -227,6 +238,12 @@ int arena_free(M_Arena* arena)
 
 //~ Temp arena
 
+int arenaL_init(M_ArenaLink *arena)
+{
+   arena->next = NULL;
+   return arena_init(&arena->arena);
+}
+
 int arenaL_init_sized(M_ArenaLink *arena, u64 size)
 {
    arena->next = NULL;
@@ -255,6 +272,13 @@ void* arenaL_alloc(M_ArenaLink* arenaL, u64 size)
    while (arenaL->next) { arenaL = arenaL->next; }
 
    return arena_alloc(&arenaL->arena, size);
+}
+
+void* arenaL_alloc_zero(M_ArenaLink* arenaL, u64 size)
+{
+   while (arenaL->next) { arenaL = arenaL->next; }
+
+   return arena_alloc_zero(&arenaL->arena, size);
 }
 
 int arenaL_alloc_blocks(M_ArenaLink *arenaL, unsigned num_blocks,

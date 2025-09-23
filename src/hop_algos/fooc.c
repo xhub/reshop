@@ -1434,9 +1434,12 @@ int fooc_mcp(Model *mdl_mcp)
    *                          |                 Ax + b                      |
    * ---------------------------------------------------------------------- */
 
-  int status = OK;
-  Container *ctr_mcp = &mdl_mcp->ctr;
-  RhpContainerData *cdat_mcp = (RhpContainerData *)ctr_mcp->data;
+   trace_fooc("[fooc] Building %s model '%*s' #%u as MCP FOOC of %s model '%*s' #%u\n",
+              mdl_fmtargs(mdl_mcp), mdl_fmtargs(mdl_mcp->mdl_up));
+
+   int status = OK;
+   Container *ctr_mcp = &mdl_mcp->ctr;
+   RhpContainerData *cdat_mcp = (RhpContainerData *)ctr_mcp->data;
 
    McpInfo * restrict mcpstats;
    S_CHECK(mdl_settype(mdl_mcp, MdlType_mcp));

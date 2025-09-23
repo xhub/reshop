@@ -104,21 +104,21 @@ const char* arcVFType2str(ArcVFType type)
 {
    switch(type) {
    case ArcVFUnset:
-      return "EdgeVFUnset";
+      return "ArcVFUnset";
    case ArcVFBasic:
-      return "EdgeVFBasic";
+      return "ArcVFBasic";
    case ArcVFMultipleBasic:
-      return "EdgeVFMultipleBasic";
+      return "ArcVFMultipleBasic";
    case ArcVFLequ:
-      return "EdgeVFLequ";
+      return "ArcVFLequ";
    case ArcVFMultipleLequ:
-      return "EdgeVFMultipleLequ";
+      return "ArcVFMultipleLequ";
    case ArcVFEqu:
-      return "EdgeVFEqu";
+      return "ArcVFEqu";
    case ArcVFMultipleEqu:
-      return "EdgeVFMultipleEqu";
+      return "ArcVFMultipleEqu";
    default:
-      return "ERROR unknown edgeVFType";
+      return "ERROR unknown arcVFType";
    }
 }
 
@@ -486,13 +486,14 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
 
    VarMeta * restrict vmd = mdl->ctr.varmeta;
 
+   CMatElt **vars = cdat->cmat.vars;
    for (rhp_idx vi = 0, len = cdat->total_n; vi < len; ++vi) {
       /* The objective variable should not be added (already added via
      * mp_setobjvar. The ovf variable to going to be removed and
      * therefore should not be added.*/
-      if (cdat->vars[vi]) {
+      if (vars[vi]) {
          if (vi != objvar && !avar_contains(v_no, vi) && !valid_mpid(vmd[vi].mp_id)) {
-         S_CHECK(mp_addvar(mp, vi));
+            S_CHECK(mp_addvar(mp, vi));
          }
       } else {
          vmd[vi].ppty |= VarIsDeleted;
@@ -501,10 +502,11 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
 
    EquMeta * restrict emd = mdl->ctr.equmeta;
 
+   CMatElt **equs = cdat->cmat.equs;
    for (rhp_idx ei = 0, len = cdat->total_m; ei < len; ++ei) {
-      if (cdat->equs[ei]) {
+      if (equs[ei]) {
          if (ei != objequ && !valid_mpid(emd[ei].mp_id)) {
-         S_CHECK(mp_addconstraint(mp, ei));
+            S_CHECK(mp_addconstraint(mp, ei));
          }
       } else {
          emd[ei].ppty |= EquPptyIsDeleted;

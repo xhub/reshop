@@ -44,7 +44,7 @@ int arena_init_sized(M_Arena* arena, u64 max);
 M_Arena* arena_create(u64 max) MALLOC_ATTR(arena_free, 1);
 void arena_clear(M_Arena* arena);
 
-/** Arena for temporary objects / workspaces
+/** Arena for temporary objects / workspaces / objects refered by pointers
  *
  * For this usage, we don't want to reallocate / change the virtual memory mappings
  * as pointers are used in the code and that would invalidate them. Hence, we
@@ -63,10 +63,12 @@ typedef struct M_ArenaTempStamp {
 
 
 int           arenaL_free(M_ArenaLink *arena);
+int           arenaL_init(M_ArenaLink *arena);
 int           arenaL_init_sized(M_ArenaLink *arena, u64 size);
 M_ArenaLink*  arenaL_create(u64 max) MALLOC_ATTR(arenaL_free, 1);
 int           arenaL_empty(M_ArenaLink *arena) NONNULL;
 void*         arenaL_alloc(M_ArenaLink* arena, u64 size) NONNULL;
+void*         arenaL_alloc_zero(M_ArenaLink* arena, u64 size) NONNULL;
 int           arenaL_alloc_blocks(M_ArenaLink *arenaL, unsigned num_blocks,
                                      void *blocks[VMT(static num_blocks)],
                                      u64 sizes[VMT(static num_blocks)]) NONNULL;
