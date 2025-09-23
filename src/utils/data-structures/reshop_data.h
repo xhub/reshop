@@ -6,7 +6,7 @@
 #include "compat.h"
 #include "rhpidx.h"
 
-/** @file reshop_data
+/** @file reshop_data.h
  *
  *  @brief Basic data structures
  */
@@ -14,17 +14,18 @@
 struct rhp_stack_idx;
 
 
-/**  @brief Container for integer data */
+/** Container for signed integer data */
 typedef struct rhp_int_data {
-   unsigned len;     /**< number of elements in the container  */
+   unsigned len;     /**< number of elements in the container   */
    unsigned max;     /**< maximum number of elements            */
-   int *arr;         /**< elements                     */
+   int *arr;         /**< elements                              */
 } IntArray;
 
+/** Container for unsigned integer data */
 typedef struct rhp_uint_data {
-   unsigned len;     /**< number of elements in the container  */
+   unsigned len;     /**< number of elements in the container   */
    unsigned max;     /**< maximum number of elements            */
-   unsigned *arr;   /**< elements                     */
+   unsigned *arr;    /**< elements                              */
 } UIntArray;
 
 typedef struct rhp_obj_data {
@@ -110,7 +111,7 @@ static inline unsigned rhp_uint_at(const UIntArray *dat, unsigned i)
 #define rhp_idx_chksorted rhp_int_chksorted
 #define rhp_idx_copy rhp_int_copy
 #define rhp_idx_empty rhp_int_empty
-#define rhp_idx_extend_sorted rhp_int_extend
+#define rhp_idx_extend_sorted rhp_int_extend_sorted
 #define rhp_idx_extend_except_sorted rhp_int_extend_except_sorted
 #define rhp_idx_extend rhp_int_extend
 #define rhp_idx_extend_except rhp_int_extend_except
@@ -172,4 +173,5 @@ int scratchint_ensure(IntScratch *scratch, unsigned size) NONNULL;
 void scratchdbl_empty(DblScratch *scratch) NONNULL;
 void scratchdbl_init(DblScratch *scratch) NONNULL;
 int scratchdbl_ensure(DblScratch *scratch, unsigned size) NONNULL;
+
 #endif
