@@ -35,10 +35,7 @@ const char *find_rhpenvvar(const char* optname, char **env_varname, size_t *env_
     * --------------------------------------------------------------------- */
 
    char * restrict s = _env_varname;
-   while (*s != '\0') {
-      *s = RhpToUpper(*s);
-      s++;
-   }
+   while (*s) { *s = RhpToUpper(*s); s++; }
 
    return mygetenv(_env_varname);
 }

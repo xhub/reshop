@@ -58,35 +58,40 @@ int option_addcommon(struct option_list *list)
    return optset_add(list, &common_optset);
 }
 
+/**
+ * @brief Get the value of a boolean option
+ *
+   * The order of priority:
+   * - 1) Look for env variable
+   * - 2) Take the value in the struct
+   *
+ * @param mdl the model
+ * @param opt the option value
+ *
+ * @return    the value of the option
+ */
 bool optvalb(const Model *mdl, enum rhp_options_enum opt)
 {
-  /* ----------------------------------------------------------------------
-   * The order of priority:
-   * - 1) If the model has options, then look there
-   * - 2) Look for env variable
-   * - 3) Take the value in the struct
-   * ---------------------------------------------------------------------- */
-
    /* TODO: implement model */
 
    if ((size_t)opt >= ARRAY_SIZE(rhp_options) || ((int)opt) < 0) {
-      error("%s ERROR: option value %d is outside of the range [0, %d]",
-            __func__, opt, Options_Last);
+      error("[option] ERROR: option value %d is outside of the range [0, %d]", opt,
+            Options_Last);
       return false;
    }
 
    struct option *o = &rhp_options[opt];
 
    if (o->type != OptBoolean) {
-      error("%s ERROR: option '%s' is of type %s, expecting %s\n", __func__,
-            o->name, opttype_name(o->type), opttype_name(OptBoolean));
+      error("[option] ERROR: option '%s' is of type %s, expecting %s\n", o->name,
+            opttype_name(o->type), opttype_name(OptBoolean));
       return false;
    }
 
    char* env_var;
 
-   if (asprintf(&env_var, "RHP_%s", rhp_options[opt].name) < 0) {
-      errormsg("%s ERROR: asprintf() failed!");
+   if (asprintf(&env_var, "RHP_%s", o->name) < 0) {
+      errormsg("[option] ERROR: asprintf() failed!");
       return false;
    }
 
@@ -97,16 +102,9 @@ bool optvalb(const Model *mdl, enum rhp_options_enum opt)
    free(env_var);
 
    if (env) {
-      bool res;
-      /* Lazy way of checking if set to 0 */
-      if (env[0] == '0') {
-         res = false;
-      } else {
-         res = true;
-      }
       myfreeenvval(env);
-
-      return res;
+      /* Cheap way to detect if it has been set to 0 */
+      return env[0] != '0';
    }
 
    return o->value.b;
