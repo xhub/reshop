@@ -187,7 +187,7 @@ Parameters
 ----------
 size : int
     Size of the variable.
-start : rhp_idx
+start : int
     Index of the first component of the variable.
 
 Returns
@@ -478,7 +478,7 @@ gamsdir : str
 %feature("autodoc", "gms_writesol2gdx(mdl, gdxname, /)
 --
 
-Write the GMO solution to a GDX file.
+Write the GMO solution of a GAMS model to a GDX file.
 
 Parameters
 ----------
@@ -650,9 +650,9 @@ m : int
     The number of rows.
 nnz : int
     The number of non-zero elements.
-rowidx : array-like of int
+rowidx : array of indices
     The row indices.
-colidx : array-like of int
+colidx : array of indices
     The column indices.
 data : array-like of float
     The values.
@@ -1264,7 +1264,7 @@ v : Vars
 
 Returns
 -------
-BasisStatus
+array of BasisStatus
     The basis array.
 ") rhp_mdl_getvarsbasis;
 %feature("autodoc", "mdl_getequcst(mdl, ei, /)
@@ -1402,7 +1402,7 @@ e : Equs
 
 Returns
 -------
-BasisStatus
+array of BasisStatus
     The basis array.
 ") rhp_mdl_getequsbasis;
 %feature("autodoc", "mdl_setobjvar(mdl, objvar, /)
@@ -1692,7 +1692,7 @@ mdl : Model
 
 Returns
 -------
-BasisStatus
+ModelStatus
     The model status.
 ") rhp_mdl_getmodelstat;
 %feature("autodoc", "mdl_getsolvestat(mdl, /)
@@ -1707,7 +1707,7 @@ mdl : Model
 
 Returns
 -------
-BasisStatus
+SolveStatus
     The solve status.
 ") rhp_mdl_getsolvestat;
 %feature("autodoc", "mdl_getallequsmult(mdl, /)

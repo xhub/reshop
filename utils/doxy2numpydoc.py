@@ -30,6 +30,14 @@ class FnDecl(NamedTuple):
 
 reshop_argname2ret = ('eout', 'vout', 'mdlout', 'dval', 'ival', 'eidx', 'vidx', 'minf', 'pinf', 'nan')
 reshop_argout_simple = (
+    ('int *', 'ei'),
+    ('int *', 'eidx'),
+    ('int **', 'eis'),
+    ('int *', 'objequ'),
+    ('int *', 'objvar'),
+    ('int *', 'vi'),
+    ('int *', 'vidx'),
+    ('int **', 'vis'),
     ('rhp_idx *', 'ei'),
     ('rhp_idx *', 'eidx'),
     ('rhp_idx **', 'eis'),
@@ -63,8 +71,9 @@ reshop_argout_simple = (
 )
 
 reshop_argout_multiple = {
-    ('unsigned *', 'len'): ({"args": (('rhp_idx **', 'idxs'), ('double **', 'vals')),
-                             "ret": FnRet(type="LinearEquation", name="", descr="The linear equation")},),
+    ('unsigned *', 'len'): ({
+        "args": (('rhp_idx **', 'idxs'), ('double **', 'vals')),
+        "ret": FnRet(type="LinearEquation", name="", descr="The linear equation")},),
 }
 
 types_c2swig = {
@@ -111,6 +120,7 @@ argout_c2swig = {
     'unsigned **': 'array of int',
     'double *': 'float',
     'int *': 'BasisStatus',
+    'int **': 'array of int',
     'rhp_idx **': 'array of int',
     'NlNode ***': 'NlNode **',   #Do a better job here
     'NlTree *': 'NlTree',   #Do a better job here
@@ -237,7 +247,7 @@ def fnDecl_combine(fns: list[FnDecl], fnout: FnDecl) -> FnDecl:
 
 swig_type_drop = ('const', 'restrict')
 pattern_keep_star = r"(\s*[*]\s*)|\s"
-def type_c2swig(typ: str) ->str:
+def type_c2swig(typ: str) -> str:
     typ_ = " ".join(e.strip() for e in re.split(pattern_keep_star, typ.strip()) if (e and e.strip() and e.strip() not in swig_type_drop))
     typ_, cnt = re.subn(r'\* \*', '**', typ_)
     while cnt > 0:
@@ -253,7 +263,7 @@ def fnArg_c2swig(arg: FnArg) -> FnArg:
     dir = arg.direction
     descr = arg.descr.strip()
 
-    if typ == 'rhp_idx':
+    if typ == 'rhp_idx' or typ == 'int':
         if name == 'vi' or name == 'objvar':
             typ = "VariableRef or int"
         elif name == 'ei' or name == 'objequ':
@@ -263,11 +273,13 @@ def fnArg_c2swig(arg: FnArg) -> FnArg:
         else:
             assert (f"ERROR: Unhandled rhp_idx argument '{name}' in {arg}")
 
-    elif typ == 'rhp_idx *':
+    elif typ == 'rhp_idx *' or typ == 'int *':
         if name == 'vis':
             typ = "array-like of VariableRef or int"
         elif name == 'eis':
             typ = "array-like of EquationRef or int"
+        elif name in ('colidx', 'rowidx'):
+            typ = "array of indices"
         else:
             print(f"ERROR: Unhandled rhp_idx * argument '{name}' in {arg}")
     else:
@@ -282,11 +294,19 @@ def fnArgOut_c2swig(arg: FnArg) -> FnRet:
     descr = arg.descr.strip()
     typ = type_c2swig(arg.type)
 
-    if typ == 'rhp_idx *':
+    if typ == 'rhp_idx *' or typ == 'int *': 
         if name == 'vi' or name == 'objvar':
             typ = "VariableRef"
         elif name == 'vidx' or name == 'eidx':   # This is for rhp_a(var|equ)_get
             typ = "int"
+        elif name == 'modelstat':
+            typ = "ModelStatus"
+        elif name in ('equs_basis', 'vars_basis'):
+            typ = "array of BasisStatus"
+        elif name == 'basis_status':
+            typ = "BasisStatus"
+        elif name == 'solvestat':
+            typ = "SolveStatus"
         elif name == 'ei' or name == 'objequ':
             typ = "EquationRef"
         else:

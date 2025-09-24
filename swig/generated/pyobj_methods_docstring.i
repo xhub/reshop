@@ -41,7 +41,7 @@ v : Vars
 
 Returns
 -------
-BasisStatus
+array of BasisStatus
     The basis array.
 ";
 %feature("docstring") rhp_mdl::getvarsval "getvarsval(v, /)
@@ -86,7 +86,7 @@ e : Equs
 
 Returns
 -------
-BasisStatus
+array of BasisStatus
     The basis array.
 ";
 %feature("docstring") rhp_mdl::getequsval "getequsval(e, /)
@@ -260,7 +260,7 @@ Get the model status.
 
 Returns
 -------
-BasisStatus
+ModelStatus
     The model status.
 ";
 %feature("docstring") rhp_mdl::getobjequ "getobjequ()
@@ -334,7 +334,7 @@ Get the solve status of a model.
 
 Returns
 -------
-BasisStatus
+SolveStatus
     The solve status.
 ";
 %feature("docstring") rhp_mdl::getspecialfloats "getspecialfloats()
@@ -815,7 +815,7 @@ gamsdir : str
 %feature("docstring") rhp_mdl::gms_writesol2gdx "gms_writesol2gdx(gdxname, /)
 --
 
-Write the GMO solution to a GDX file.
+Write the GMO solution of a GAMS model to a GDX file.
 
 Parameters
 ----------

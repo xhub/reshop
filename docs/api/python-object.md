@@ -1,8 +1,10 @@
 # Object-based Python API
 
-Welcome to the documentation for My Project.
+Welcome to the documentation for object-based Python API
 
 ## Model Object
+
+The `Model` is the main object.
 
 ::: reshop.Model
 
