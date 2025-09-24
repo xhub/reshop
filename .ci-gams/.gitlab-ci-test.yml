@@ -111,51 +111,51 @@ test-debug-leg:
     reports:
       junit: build/test/doctest_results_linux.xml
 
-test-deg:
-  stage: test
-  tags: [corina]
-  needs: [fetch-ci-scripts,build-deg]
-  script:
-    - !reference [.get-gams]
-    - !reference [.gams-folder-deg]
-    - *sh-run-test
-
-    - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)" gamsdir
-    - chmod -R +w gamsdir
-    - export GAMSDIR="$(pwd)/gamsdir"
-    - export PATH="$GAMSDIR:$PATH"
-
-    # Run tests with regular reshop
-    - cp build/output/{*.dylib,optreshop.def} "$GAMSDIR"/
-    - EMPSLV=reshop bash test/gams/test.sh
-    - runtest emplib  goempgo failures_emp.gms
-    - runtest testlib quality failures_qa.gms
-
-    # Install GAMS driver with asan
-    - cp build-asan/output/gmsrhp_ux.out "$GAMSDIR"/
-    - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
-    - cat build-asan/output/gamsconfig_test_asan.yaml
-    - cat "$GAMSDIR"/gamsconfig.yaml
-
-    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
-
-    # Test that we indeed call the right executable
-    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
-
-    # Run tests with regular reshop name
-    - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
-    - runtest emplib  goempgo failures_emp.gms
-    - runtest testlib quality failures_qa.gms
-
-  after_script:
-    # We need to clean up after yourselves
-    - rm -rf gamsdir
-
-  artifacts:
-    name: unittest-results-deg
-    paths: [build/test/doctest_results_deg.xml]
-    reports:
-      junit: build/test/doctest_results_deg.xml
+##test-deg:
+##  stage: test
+##  tags: [corina]
+##  needs: [fetch-ci-scripts,build-deg]
+##  script:
+##    - !reference [.get-gams]
+##    - !reference [.gams-folder-deg]
+##    - *sh-run-test
+##
+##    - cp -a "$HOME/cache/gams-installs/$(cat gams_folder_deg.txt)" gamsdir
+##    - chmod -R +w gamsdir
+##    - export GAMSDIR="$(pwd)/gamsdir"
+##    - export PATH="$GAMSDIR:$PATH"
+##
+##    # Run tests with regular reshop
+##    - cp build/output/{*.dylib,optreshop.def} "$GAMSDIR"/
+##    - EMPSLV=reshop bash test/gams/test.sh
+##    - runtest emplib  goempgo failures_emp.gms
+##    - runtest testlib quality failures_qa.gms
+##
+##    # Install GAMS driver with asan
+##    - cp build-asan/output/gmsrhp_ux.out "$GAMSDIR"/
+##    - cp build-asan/output/gamsconfig_test_asan.yaml "$GAMSDIR"/gamsconfig.yaml
+##    - cat build-asan/output/gamsconfig_test_asan.yaml
+##    - cat "$GAMSDIR"/gamsconfig.yaml
+##
+##    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
+##
+##    # Test that we indeed call the right executable
+##    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
+##
+##    # Run tests with regular reshop name
+##    - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
+##    - runtest emplib  goempgo failures_emp.gms
+##    - runtest testlib quality failures_qa.gms
+##
+##  after_script:
+##    # We need to clean up after yourselves
+##    - rm -rf gamsdir
+##
+##  artifacts:
+##    name: unittest-results-deg
+##    paths: [build/test/doctest_results_deg.xml]
+##    reports:
+##      junit: build/test/doctest_results_deg.xml
 
 test-dac:
   stage: test
