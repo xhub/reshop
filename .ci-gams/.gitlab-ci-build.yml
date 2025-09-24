@@ -143,6 +143,8 @@ build-dac:
     - cmake --install build -v
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
 
+    # libconoptlu.dylib requires some gcc libs. 
+    - export DYLD_FALLBACK_LIBRARY_PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$DYLD_FALLBACK_LIBRARY_PATH"
     - ctest --test-dir build --output-junit doctest_results_dac.xml || ctest --test-dir build --rerun-failed --output-on-failure
 
     # Asan
@@ -152,7 +154,7 @@ build-dac:
     - cmake --install build-asan
 
     - export GAMSDIR="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt)"
-    - export DYLD_LIBRARY_PATH="$GAMSDIR"
+    - export DYLD_FALLBACK_LIBRARY_PATH="$GAMSDIR"
     - ctest --test-dir build-asan -E gams --output-on-failure 
 
     - ctest --test-dir build-asan -R gams || ctest --test-dir build-asan -R gams --rerun-failed --output-on-failure
