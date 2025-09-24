@@ -268,6 +268,7 @@ static int interp_loadgmdsets(Interpreter *interp)
    bool has_set = false;
 
    for (int i = 0; i < nsymbols; ++i) {
+
       void *symptr;
       int symtype, symdim, nrecs;
       GMD_CHK(gmdGetSymbolByIndex, gmd, i+1, &symptr);
@@ -279,17 +280,28 @@ static int interp_loadgmdsets(Interpreter *interp)
 
       if (symdim != 1) { continue; }
 
+      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, setname);
+
       GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NRRECORDS, &nrecs, NULL, NULL);
-      assert(nrecs > 0);
 
       IntArray set;
       rhp_int_init(&set);
+
+      if (nrecs == 0) { /* Do not continue with an empty symbol */
+         S_CHECK(namedints_add(&interp->globals.sets, set, strdup(setname)));
+         continue;
+      }
+
+      if (nrecs < 0) {
+         error("\n\n[empinterp] ERROR: symbol '%s' has a negative (%d) number of records\n",
+               setname, nrecs);
+         return Error_RuntimeError;
+      }
+
       S_CHECK(rhp_int_reserve(&set, nrecs))
 
       void *symiterptr = NULL;
       GMD_CHK(gmdFindFirstRecord, gmd, symptr, &symiterptr);
-
-      GMD_CHK(gmdSymbolInfo, gmd, symptr, GMD_NAME, NULL, NULL, setname);
 
       do {
          // HACK: gmdCopySymbol on sets does not copy the level values

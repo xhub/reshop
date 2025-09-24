@@ -323,11 +323,14 @@ int empdag_fini(EmpDag *empdag)
    printout(PO_INFO, "\nEmpdag for %s model '%.*s' #%u has type %s\n",
             mdl_fmtargs(empdag->mdl), empdag_typename(empdag->type));
 
-   unsigned n_opt = 0, n_vi = 0, n_ccflib = 0, n_hidden = 0, n_dual = 0, n_fooc = 0;
+   unsigned n_opt = 0, n_vi = 0, n_ccflib = 0, n_hidden = 0, n_dual = 0, n_fooc = 0, n_mps = 0;
+
    for (unsigned i = 0, len = empdag->mps.len; i < len; ++i) {
       MathPrgm *mp = empdag->mps.arr[i];
 
       if (!mp) { continue; }
+
+      n_mps++;
 
       if (mp_ishidden(mp)) { n_hidden++; }
       else if (mp_isopt(mp)) { n_opt++; }
@@ -337,10 +340,9 @@ int empdag_fini(EmpDag *empdag)
       else if (mp_isfooc(mp)) { n_fooc++; }
       else { return error_runtime(); }
    }
-   
+
    struct lineppty l = {.colw = 40, .mode = PO_INFO, .ident = 2 };
 
-   unsigned n_mps = empdag->mps.len;
    printuint(&l, "MPs", n_mps);
    l.ident += 2;
    printuint(&l, "OPT MPs", n_opt);
@@ -351,8 +353,8 @@ int empdag_fini(EmpDag *empdag)
    printuint(&l, "FOOC MPs", n_fooc);
    l.ident -= 2;
    printuint(&l, "Nash nodes", empdag->nashs.len);
-   printuint(&l, "VF edges", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
-   printuint(&l, "CTRL edges", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
+   printuint(&l, "VF arcs", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
+   printuint(&l, "CTRL arcs", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
    printuint(&l, "Children of Nash nodes", empdag->nashs.arcs ? empdag->nashs.arcs->len : 0);
 
    unsigned n_roots = empdag->roots.len;

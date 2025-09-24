@@ -613,15 +613,14 @@ static int vm_membership_test(VmData *vmdata, VmGmsSymIterator *symiter, bool *r
       return vm_multiset_membership_test(vmdata, symiter, res);
    case IdentLocalSet:
    case IdentSet: {
-      IntArray *obj = symiter->ident.ptr;
-      assert(obj && valid_set(*obj));
+      IntArray *obj = symiter->ident.ptr; assert(obj);
       int uel = symiter->uels[0];
       unsigned idx = rhp_int_find(obj, uel);
       *res = idx < UINT_MAX;
       return OK;
    }
    default:
-      error("[empvm_run] unexpected runtime error: no membership test for ident '%s'",
+      error("\n[empvm_run] unexpected runtime error: no membership test for ident '%s'\n",
             identtype2str(type));
       return Error_EMPRuntimeError;
    }
@@ -842,7 +841,7 @@ int empvm_run(struct empvm *vm)
             break;
          }
          default:
-            error("[empvm_run] in %s: unexpected ident type %s", opcodes_name(instr),
+            error("\n[empvm_run] ERROR in %s: unexpected ident type %s\n", opcodes_name(instr),
                   identtype2str(type));
             goto _exit;
          }
@@ -882,7 +881,7 @@ int empvm_run(struct empvm *vm)
             break;
          }
          default:
-            error("[empvm_run] in %s: unexpected ident type %s", opcodes_name(instr),
+            error("\n[empvm_run] ERROR in %s: unexpected ident type %s\n", opcodes_name(instr),
                   identtype2str(type));
             goto _exit;
          }
@@ -1006,8 +1005,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          mpid_t mpid_dual = vm->data.state.mpid_dual;
          if (!mpid_regularmp(mpid_dual)) {
-            error("[empvm] ERROR: invalid value %s #%u\n",
-                  mpid_specialvalue(mpid_dual), mpid_dual);
+            error("\n[empvm] ERROR: invalid value %s #%u\n", mpid_specialvalue(mpid_dual), mpid_dual);
          }
 
          S_CHECK_EXIT(dualslabel_add(dualslabel, uels, nargs, mpid_dual));
@@ -1139,7 +1137,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          /* Reset the length for the next use */
          vmvec->len = 0;
-         
+
          DEBUGVMRUN("param %p has now value\n", (void*)param);
          DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < size; ++i) { trace_empinterp("[%5u] %e\n", i, param->vec[i]); }});
          break;
