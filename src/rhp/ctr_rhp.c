@@ -39,8 +39,7 @@ UNUSED static size_t _pool_zero(enum rhp_backendtype type)
    case RhpBackendGamsGmo:
       return nlconst_zero-1;
    default:
-      error("%s ERROR: not implemented for container %d\n", __func__,
-               type);
+      error("%s ERROR: not implemented for container %d\n", __func__, type);
    }
    return SSIZE_MAX;
 }
@@ -48,13 +47,79 @@ UNUSED static size_t _pool_zero(enum rhp_backendtype type)
 int rhp_chk_ctr(const Container *ctr, const char *fn)
 {
    if (!ctr_is_rhp(ctr)) {
-      error("%s ERROR: the container.has the wrong type: expected %d, %d"
-                         "or %d, got %d\n", fn, RhpBackendReSHOP, RhpBackendJulia,
-                         RhpBackendAmpl, ctr->backend);
+      error("%s ERROR: the container has the wrong type: expected %d, %d or %d, got %d\n",
+            fn, RhpBackendReSHOP, RhpBackendJulia, RhpBackendAmpl, ctr->backend);
       return Error_InvalidValue;
    }
 
    return OK;
+}
+
+void rctr_print_active_vars(Container *ctr)
+{
+   assert(ctr_is_rhp(ctr));
+   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)ctr->data;
+   size_t total_n = cdat->total_n;
+
+   error("[container] There are %zu variables in total; %zu are active\n", total_n,
+         (size_t)ctr->n);
+   errormsg("\nList of active variables:\n");
+
+   for (size_t i = 0; i < total_n; ++i) {
+      if (cdat->cmat.vars[i]) {
+         error("[%5zu] %s\n", i, ctr_printvarname(ctr, i));
+      }
+   }
+
+   errormsg("\nList of inactive variables (not present in any equations):\n");
+
+   for (size_t i = 0; i < total_n; ++i) {
+      if (!cdat->cmat.vars[i]) {
+         error("[%5zu] %s\n", i, ctr_printvarname(ctr, i));
+      }
+   }
+}
+
+void rctr_debug_active_equs(Container *ctr)
+{
+   assert(ctr_is_rhp(ctr));
+
+   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *)ctr->data;
+   CMat * restrict cmat = &cdat->cmat; 
+   size_t total_m = cdat->total_m;
+
+   error("[container] There are %zu equations in total; %zu are active\n", total_m,
+         (size_t)ctr->m);
+
+   if (ctr->m > total_m) {
+      error("\n[container] MAJOR BUG: there are more active equations (%zu) than "
+            "reserved ones (%zu), Please report this!\n", (size_t)ctr->m, total_m);
+   }
+
+   errormsg("\nList of active equations:\n");
+
+   for (size_t i = 0; i < total_m; ++i) {
+      if (cmat->equs[i]) {
+         error("[%5zu] %s\n", i, ctr_printequname(ctr, i));
+      }
+   }
+
+   bool has_inactive_equ = false;
+   for (size_t i = 0; i < total_m; ++i) {
+      if (!cmat->equs[i]) {
+
+         if (!has_inactive_equ) {
+            errormsg("\nList of inactive equations:\n");
+            has_inactive_equ = true;
+         }
+
+         error("[%5zu] %s\n", i, ctr_printequname(ctr, i));
+      }
+   }
+
+   if (!has_inactive_equ) {
+      errormsg("\nNo inactive equation\n");
+   }
 }
 
 /**

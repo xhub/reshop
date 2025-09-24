@@ -1110,7 +1110,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          break;
       }
       case OP_LVEC_ADD: {
-         TO_IMPLEMENT("OP_GVEC_ADD");
+         TO_IMPLEMENT("OP_LVEC_ADD");
       }
       case OP_LVEC_RESET: {
          GIDX_TYPE gidx = READ_GIDX(vm);
@@ -1619,7 +1619,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 _exit:
 
    linenr = getlinenr(vm);
-   error("\n\n[empvm_run] %nError occurred on line %u:\n", &poffset, linenr);
+   error("\n\n[empvm_run] %nERROR on line %u:\n", &poffset, linenr);
 
    const char * restrict start = vm->data.interp->buf, * restrict end;
    linenr--;

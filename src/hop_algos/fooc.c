@@ -29,7 +29,6 @@
 #include "mdl_data.h"
 #include "ctrdat_rhp.h"
 #include "rhp_alg.h"
-#include "rmdl_debug.h"
 #include "printout.h"
 #include "reshop_data.h"
 #include "sd_tool.h"
@@ -1907,9 +1906,9 @@ int fooc_mcp(Model *mdl_mcp)
 
    size_t nvars_expected = fooc_dat.info->n_primalvars + fooc_dat.info->n_constraints;
    if (ctr_mcp->n < nvars_expected) {
-      error("[fooc] ERROR: the number of active variables %zu is smaller than the "
-            "expected size %zu\n", (size_t)ctr_mcp->n, nvars_expected);
-      rmdl_debug_active_vars(ctr_mcp);
+      error("[fooc] ERROR: %zu active variables when expecting %zu\n", (size_t)ctr_mcp->n,
+            nvars_expected);
+      rctr_print_active_vars(ctr_mcp);
       status = Error_RuntimeError;
       goto _exit;
    }

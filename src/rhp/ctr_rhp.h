@@ -157,6 +157,9 @@ int rctr_deactivate_equ(Container *ctr, rhp_idx ei) NONNULL;
 int rctr_deactivate_var(Container *ctr, rhp_idx vi) NONNULL;
 int rctr_var_in_equ(const Container *ctr, rhp_idx vi, rhp_idx ei, bool *res) NONNULL;
 
+void rctr_print_active_vars(Container *ctr) NONNULL;
+void rctr_debug_active_equs(Container *ctr) NONNULL;
+
 /* ----------------------------------------------------------------------
  * Reformulation of container data
  * ---------------------------------------------------------------------- */
