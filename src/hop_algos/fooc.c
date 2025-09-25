@@ -64,9 +64,9 @@ UNUSED static const char* empdagc_err(unsigned len)
   }
 }
 
-static inline int alloc_memory_(Model *mdl, const size_t nl_cons_size,
-                                const MathPrgm *mp, struct sd_tool ***sd_cequ,
-                                bool **var_in_mp) {
+static inline int alloc_memory_(Model *mdl, const size_t nl_cons_size, const MathPrgm *mp,
+                                struct sd_tool ***sd_cequ, bool **var_in_mp)
+{
   if (nl_cons_size > 0) {
     /* CALLOC prevents some weird freeing  */
     CALLOC_(*sd_cequ, struct sd_tool *, nl_cons_size);
@@ -140,8 +140,7 @@ int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
          goto end;
          break;
       default:
-         error("%s :: ERROR: unsupported backend %s", __func__,
-               backend2str(mdl->backend));
+         error("\n[fooc] ERROR: unsupported backend %s\n", backend2str(mdl->backend));
       }
    }
 
@@ -468,7 +467,7 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, FoocData *fooc_dat
       }
 
       default:
-         error("%s ERROR: unsupported MP of type %s\n", __func__, mp_gettypestr(mp));
+         error("\n[fooc] ERROR: unsupported MP of type '%s'\n", mp_gettypestr(mp));
          return Error_NotImplemented;
       }
 
@@ -796,7 +795,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
             ei = vi2ei_F ? vi2ei_F[vi] : vi; assert(valid_ei(ei));
 
             if (n_mappings >= n_vifuncs) {
-               error("[fooc] ERROR: processed %u mappings, but only %u VI funcs"
+               error("\n[fooc] ERROR: processed %u mappings, but only %u VI funcs"
                      "have been detected\n", n_mappings+1, n_vifuncs);
                return Error_RuntimeError;
             }
@@ -932,7 +931,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
 
    /* Basic sanity check */
    if (n_mappings != n_vifuncs) {
-      error("[fooc] ERROR: Expected to add %zu VI mappings, but only %u were!\n",
+      error("\n[fooc] ERROR: Expected to add %zu VI mappings, but only %u were!\n",
             (size_t)n_vifuncs, n_mappings);
       return Error_RuntimeError;
    }
@@ -967,7 +966,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
    }
 
    if (n_vizerofunc > 0) {
-      error("[fooc] ERROR: %zu VI zero function could not be added!\n", n_vizerofunc);
+      error("\n[fooc] ERROR: %zu VI zero function could not be added!\n", n_vizerofunc);
       return Error_RuntimeError;
    }
 
@@ -1451,8 +1450,8 @@ int fooc_mcp(Model *mdl_mcp)
    if (cdat_mcp->total_m == 0) {
       ctr_mcp->m = 0;
    } else if (cdat_mcp->total_m != ctr_mcp->m) {
-      error("[fooc] ERROR: the MCP model has a different number of total and "
-            "active equations: %zu vs %u\n", cdat_mcp->total_m, ctr_mcp->m);
+      error("\n[fooc] ERROR: the MCP model has a different number of total and active "
+            "equations: %zu vs %u\n", cdat_mcp->total_m, ctr_mcp->m);
       return Error_Inconsistency;
    }
 
@@ -1465,8 +1464,10 @@ int fooc_mcp(Model *mdl_mcp)
   rhp_idx *cons_idxs = NULL;
 
    Model *mdl_src = mdl_mcp->mdl_up;
+
    if (!mdl_src) {
-      error("%s ERROR: the source container is missing!\n", __func__);
+      error("[fooc] ERROR: the upstream model of %s model '%.*s' #%u is missing!\n",
+            mdl_fmtargs(mdl_mcp));
       return Error_NullPointer;
    }
 
@@ -1732,11 +1733,13 @@ int fooc_mcp(Model *mdl_mcp)
    unsigned mps_len = mps->len;
 
    if (mps_len > 0 ) {
+
     if (!fooc_dat.mp2objequ) {
-      error("%s ERROR: Need allocated mp2objequ\n", __func__);
+      errormsg("\n[fooc] ERROR: mp2objequ is NULL. Please report this bug\n");
       status = Error_RuntimeError;
       goto _exit;
     }
+
       // expected size cons_size - nb_lin
       // expected size nb_lin
       S_CHECK_EXIT(aequ_setblock(&fooc_dat.cons_nl, mps_len));
@@ -1843,7 +1846,7 @@ int fooc_mcp(Model *mdl_mcp)
             break;
 
          default:
-            error("%s ERROR: unsupported MP of type %s\n", __func__, mp_gettypestr(mp));
+            error("\n[fooc] ERROR: unsupported MP of type '%s'\n", mp_gettypestr(mp));
             status = Error_NotImplemented;
             goto _exit;
          }
@@ -1873,8 +1876,7 @@ int fooc_mcp(Model *mdl_mcp)
                fooc_mcp_primal_vi(mdl_mcp, NULL, &fooc_dat.cons_nl, &fooc_dat.cons_lin, mdl_src, &fooc_dat));
 
          } else { /* TODO: we could have a feasibility problem here */
-            error("%s ERROR: unsupported model of type %s\n", __func__,
-                  mdl_getprobtypetxt(mdltype));
+            error("\n[fooc] ERROR: unsupported model of type %s\n", mdl_getprobtypetxt(mdltype));
             status = Error_WrongModelForFunction;
             goto _exit;
          }
@@ -1906,16 +1908,16 @@ int fooc_mcp(Model *mdl_mcp)
 
    size_t nvars_expected = fooc_dat.info->n_primalvars + fooc_dat.info->n_constraints;
    if (ctr_mcp->n < nvars_expected) {
-      error("[fooc] ERROR: %zu active variables when expecting %zu\n", (size_t)ctr_mcp->n,
-            nvars_expected);
+      error("\n[fooc] ERROR: %zu active variables in the MCP model when expecting %zu\n",
+            (size_t)ctr_mcp->n, nvars_expected);
       rctr_print_active_vars(ctr_mcp);
       status = Error_RuntimeError;
       goto _exit;
    }
 
    if (ctr_mcp->m != cdat_mcp->total_m) {
-    error("[fooc] ERROR: the container has %zu active equations, but %zu are "
-          "expected.\n", (size_t)ctr_mcp->m, cdat_mcp->total_m);
+    error("\n[fooc] ERROR: %zu active equations in the MCP model, but %zu are expected.\n",
+          (size_t)ctr_mcp->m, cdat_mcp->total_m);
     rctr_debug_active_equs(ctr_mcp);
     status = Error_RuntimeError;
     goto _exit;
@@ -1931,7 +1933,7 @@ _exit:
 
    rosettas_free(&rosettas_vars);
    fooc_data_fini(&fooc_dat);
-   FREE(cons_idxs);
+   free(cons_idxs);
 
    return status;
 }
