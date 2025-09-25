@@ -210,7 +210,7 @@ static void backtrace(void)
      symbol->MaxNameLen   = 255;
      symbol->SizeOfStruct = sizeof( SYMBOL_INFO );
 
-     for( i = 0; i < frames; i++ )
+     for (i = 0; i < frames; i++)
      {
          SymFromAddr( process, ( DWORD64 )( stack[ i ] ), 0, symbol );
 
@@ -238,9 +238,9 @@ static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* _ctr)
 #if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
    psiginfo(info, 0);
 #elif defined(_DEFAULT_SOURCE) || defined(_DARWIN_C_SOURCE)
-   psignal(sigcode, "ReSHOP is in trouble!");
+   psignal(sigcode, "\n\nReSHOP experienced a major error");
 #else
-   puts("ReSHOP caught a signal: ");
+   puts("\n\nReSHOP caught a signal: ");
    char nb[4];
    snprintf(nb, sizeof nb, "%d\n", sigcode);
    fputs(nb, stderr);
@@ -282,6 +282,7 @@ static CONSTRUCTOR_ATTR void register_signals(void)
 
    }
 }
+
 #endif /* (defined(__linux__) || defined(__APPLE__)) */
 
 #endif /* WITH_BACKTRACE */

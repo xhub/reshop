@@ -1148,8 +1148,6 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
          goto _exit;
       }
 
-   
-
       goto add_multiplier_terms;
    }
 
@@ -1161,8 +1159,7 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
       int nlflag;
       rhp_idx vi_src;
 
-      S_CHECK_EXIT(
-         ctr_equ_itervars(ctr_src, objequ, &iterator, &jacval, &vi_src, &nlflag));
+      S_CHECK_EXIT(ctr_equ_itervars(ctr_src, objequ, &iterator, &jacval, &vi_src, &nlflag));
 
     /* -------------------------------------------------------------------
      * ctr_src is still in the original namespace
@@ -1179,7 +1176,7 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
     if (var_in_mp && !var_in_mp[vi]) { continue; }
 
     Equ ediff;
-    memset(&ediff, 0, sizeof(struct equ));
+    memset(&ediff, 0, sizeof(Equ));
     equ_basic_init(&ediff);
     /* Dummy trick to avoid an error later  */
     ediff.idx = IdxNA;
@@ -1202,8 +1199,8 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
       assert(ei >= fooc_dat->ei_F_start && ei < fooc_dat->ei_cons_start);
 
       S_CHECK(rctr_setequvarperp(ctr_mcp, ei, vi));
-    Equ *e = &ctr_mcp->equs[ei];
-    assert(e && e->idx == ei);
+      Equ *e = &ctr_mcp->equs[ei];
+      assert(e && e->idx == ei);
 
     /* -------------------------------------------------------------------
      * If the model is a maximization problem, we need to add -∇ₖf(x)
@@ -1231,9 +1228,8 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
    * ---------------------------------------------------------------------- */
 
 add_multiplier_terms:
-  S_CHECK_EXIT(
-      add_nonlinear_normal_cone_term(mdl_mcp, cons_nl, sd_cequ, var_in_mp,
-                                      vi_primal2ei_F));
+  S_CHECK_EXIT(add_nonlinear_normal_cone_term(mdl_mcp, cons_nl, sd_cequ, var_in_mp,
+                                               vi_primal2ei_F));
 
   /* ----------------------------------------------------------------------
    * Phase 3:  Compute and add   - <λ, Aₓ^T>
@@ -1251,8 +1247,8 @@ _exit:
     }
   }
 
-  FREE(sd_cequ);
-  FREE(var_in_mp);
+  free((void*)sd_cequ);
+  free(var_in_mp);
 
   return status;
 }
