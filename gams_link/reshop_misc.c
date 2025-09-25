@@ -14,11 +14,17 @@
  *  @param  reshop_mode  mode indicating log, status, or both.
  *  @param  str          the actual string
  */
-void printgams(void* env, UNUSED unsigned reshop_mode, const char *str)
+void printgams(void* env, unsigned reshop_mode, const char *str)
 {
    rhpRec_t *jh = (rhpRec_t *)env;
    /* TODO(Xhub) support status and all ...  */
-   int mode = LOGMASK;
+
+   int mode;
+   if (!(reshop_mode & ~0x3)) {
+      mode = ALLMASK;
+   } else {
+      mode = LOGMASK;
+   }
 
    switch (mode & ALLMASK) {
    case LOGMASK:
