@@ -228,27 +228,42 @@ static void backtrace(void)
 #include <execinfo.h>
 #include "reshop_error_handling.h"
 
-static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* _ctr)
+static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* ctx)
 {
    void *array[90];
-   int size = sizeof array / sizeof array[0];
+   int size = ARRAY_SIZE(array);
 
    size = backtrace(array, size);
 
 #if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
-   psiginfo(info, 0);
+   psiginfo(info, "\n\nReSHOP experienced a major error");
 #elif defined(_DEFAULT_SOURCE) || defined(_DARWIN_C_SOURCE)
    psignal(sigcode, "\n\nReSHOP experienced a major error");
 #else
-   puts("\n\nReSHOP caught a signal: ");
+   fatal_error("\n\nReSHOP caught a signal: ");
    char nb[4];
    snprintf(nb, sizeof nb, "%d\n", sigcode);
-   fputs(nb, stderr);
+   fatal_error(nb);
 #endif
 
-   backtrace_symbols_fd(array, size, STDERR_FILENO);
+   /* Now save this to the registered logger, if it is not the default one */
+   char **strings = backtrace_symbols(array, size);
 
-   reshop_fatal_error(Error_SystemError, "ReSHOP caught a signal");
+   if (strings) {
+
+      for (int i = 0; i < size; ++i) {
+         fatal_error("%s\n", strings[i]);
+      }
+
+      free(strings);
+
+   } else {
+      fatal_error("Could not get symbols via backtrace_symbols()\n");
+   }
+
+   fatal_error("\n\nPlease open a bug report with the above information.\n");
+
+   handle_fatal_error(sigcode, "ReSHOP caught a signal");
 }
 
 static CONSTRUCTOR_ATTR void register_signals(void)
@@ -268,12 +283,16 @@ static CONSTRUCTOR_ATTR void register_signals(void)
 //		SIGUNUSED,  // Synonymous with SIGSYS
 		SIGXCPU,    // CPU time limit exceeded (4.2BSD)
 		SIGXFSZ,    // File size limit exceeded (4.2BSD)
+#if defined(__APPLE__)
+      SIGEMT, // emulation instruction executed
+#endif
+
 	};
 
    for (size_t i = 0; i < sizeof(posix_signals)/sizeof(int); ++i) {
       struct sigaction action;
       memset(&action, 0, sizeof action);
-      action.sa_flags = (SA_SIGINFO | SA_NODEFER | SA_RESETHAND);
+      action.sa_flags = (SA_SIGINFO | SA_ONSTACK | SA_NODEFER | SA_RESETHAND);
       sigfillset(&action.sa_mask);
       sigdelset(&action.sa_mask, posix_signals[i]);
       action.sa_sigaction = &_sighdl_backtrace;
@@ -591,6 +610,14 @@ void rhp_set_printopsdefault(void)
    print_ops.user_defined = printops_default.user_defined;
 }
 
+/**
+ * @brief Print a fatal error user message
+ *
+ * The message is printed on stderr.
+ * If the print ops are user-defined, print the message there as well.
+ *
+ * @param format the format string
+ */
 void fatal_error(const char *format, ...)
 {
    /* ---------------------------------------------------------------------
@@ -624,14 +651,14 @@ void fatal_error(const char *format, ...)
       print_fd(log_fd, PO_ERROR, buf);
    }
 
-   print_ops.print(print_ops.data, PO_ERROR & PO_ALLDEST, buf);
+   print_ops.print(print_ops.data, PO_ERROR | PO_ALLDEST, buf);
 
    if (print_ops.user_defined) {
       (void)fputs(buf, stderr);
    } 
 
    //print_ops.flush(print_ops.data);
-   
+ 
    free(buf);
 }
 

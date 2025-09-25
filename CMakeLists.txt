@@ -109,9 +109,11 @@ option(EXPERIMENTAL "Enable experimental features" OFF)
 
 option(WITH_BACKTRACE "Build with backtracing facilities" OFF)
 
+option(BACKWARD_BACKEND "Backend for backward-cpp (OS-dependent)" "")
+
 CMAKE_DEPENDENT_OPTION (WITH_BACKWARD
-  "Build with the backward backtracing library" ON
-  "NOT WINDOWS;NOT APPLE;NOT DISTRIB;DEV_MODE" OFF)
+  "Build with the backward backtracing library" OFF
+  "DEV_MODE" ON)
 
 #################################################
 # Less common options
@@ -330,6 +332,8 @@ endfunction()
 #################################################
 # Process options that change library content
 #################################################
+
+
 
 if (WITH_BACKTRACE)
    add_compile_definitions(WITH_BACKTRACE)

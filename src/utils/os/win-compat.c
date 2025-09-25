@@ -53,17 +53,43 @@ static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
       STACKFRAME64 stack_frame;
       memset(&stack_frame, 0, sizeof(STACKFRAME64));
 
-      stack_frame.AddrPC.Offset = context.Rip;
-      stack_frame.AddrPC.Mode = AddrModeFlat;
-      stack_frame.AddrFrame.Offset = context.Rbp;
-      stack_frame.AddrFrame.Mode = AddrModeFlat;
-      stack_frame.AddrStack.Offset = context.Rsp;
       stack_frame.AddrStack.Mode = AddrModeFlat;
+      stack_frame.AddrFrame.Mode = AddrModeFlat;
+      stack_frame.AddrPC.Mode = AddrModeFlat;
+
+#if defined(_M_X64)
+      stack_frame.AddrPC.Offset = context.Rip;
+      stack_frame.AddrStack.Offset = context.Rsp;
+      stack_frame.AddrFrame.Offset = context.Rbp;
+#elif defined(_M_ARM64)
+      stack_frame.AddrPC.Offset = context.Pc;
+      stack_frame.AddrStack.Offset = context.Sp;
+      stack_frame.AddrFrame.Offset = context.Fp;
+#elif defined(_M_ARM)
+      stack_frame.AddrPC.Offset = context.Pc;
+      stack_frame.AddrStack.Offset = context.Sp;
+      stack_frame.AddrFrame.Offset = context.R11;
+#else
+      stack_frame.AddrPC.Offset = context.Eip;
+      stack_frame.AddrStack.Offset = context.Esp;
+      stack_frame.AddrFrame.Offset = context.Ebp;
+#endif
+
+      DWORD machine_type;
+#if defined(_M_X64)
+      machine_type = IMAGE_FILE_MACHINE_AMD64;
+#elif defined(_M_ARM64)
+      machine_type = IMAGE_FILE_MACHINE_ARM64;
+#elif defined(_M_ARM)
+      machine_type = IMAGE_FILE_MACHINE_ARMNT;
+#else
+      machine_type = IMAGE_FILE_MACHINE_I386;
+#endif
 
       PSYMBOL_INFO symbol_info = (PSYMBOL_INFO)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
       unsigned i = 0;
       while (StackWalk64(
-          IMAGE_FILE_MACHINE_AMD64,
+          machine_type,
           process,
           thread,
           &stack_frame,

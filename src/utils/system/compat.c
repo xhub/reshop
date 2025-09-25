@@ -47,8 +47,7 @@ int rmfn(const char *pathname)
 #include "printout.h"
 #include "status.h"
 
-static int _rmelt(const char *fpath, const struct stat *sb, int tflag,
-              struct FTW *ftwbuf)
+static int _rmelt(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftwbuf)
 {
    if (tflag == FTW_DP) {
       if(rmdir(fpath) == -1) {
