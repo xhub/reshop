@@ -81,8 +81,8 @@ static inline unsigned READ_VMINT(EmpVm *vm)
 printout(PO_TRACE_EMPINTERP, "[%s] " fmt, opcodes_name(instr), __VA_ARGS__);
 */
 
-#   define DEBUGVMRUN(...) trace_empinterp(__VA_ARGS__);
-#   define DEBUGVMRUN_EXEC(EXPR) EXPR
+#define DEBUGVMRUN(...)       trace_empinterp(__VA_ARGS__);
+#define DEBUGVMRUN_EXEC(EXPR) EXPR
 
 #else /* defined(NDEBUG) */
 
@@ -781,15 +781,20 @@ int empvm_run(struct empvm *vm)
 
 
          if (vm->stack_top > vm->stack) {
-            trace_empinterp("stack%n", &poffset);
+            trace_empinterp("\nstack%n", &poffset);
             for (VmValue *val = vm->stack; val < vm->stack_top; val++, poffset = 0) {
                trace_empinterp("%*s", 50-poffset, "");
                print_vmval_full(*val, vm);
             }
-         }
 
          trace_empinterp("[%5td] %30s%10s",
                          (vm->code.ip - vm->instr_start) - 1, opcodes_name(instr), "");
+         } else {
+
+            trace_empinterp("\n[%5td] %30s%10s",
+                            (vm->code.ip - vm->instr_start) - 1, opcodes_name(instr), "");
+
+         }
       }
 
       switch (instr) {
@@ -849,14 +854,14 @@ int empvm_run(struct empvm *vm)
          assert(valid_set(set) && idx < set.len);
          vm->locals[lidx_loopvar] = LOOPVAR_VAL(set.arr[idx]);
          DEBUGVMRUN_EXEC({vm_printuel(&vm->data, (set.arr[idx]), PO_TRACE_EMPINTERP, &offset2);});
-         DEBUGVMRUN("%*s%s#%u[lvar%u = %u]\n", getpadding(offset0 + offset1 + offset2), "",
+         DEBUGVMRUN("%*s%s#%u[lvar%u = %u]", getpadding(offset0 + offset1 + offset2), "",
                     type == IdentSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
          break;
       }
       case OP_LOCAL_COPYFROM_GIDX: {
          uint8_t slot = READ_BYTE(vm);
          vm->locals[slot] = read_global(vm);
-         DEBUGVMRUN("lvar@%u = %" PRIu64 "\n", slot, vm->locals[slot] & MASK_PAYLOAD_32);
+         DEBUGVMRUN("lvar@%u = %" PRIu64, slot, vm->locals[slot] & MASK_PAYLOAD_32);
          break;
       }
       case OP_LOCAL_COPYOBJLEN: {
@@ -870,14 +875,14 @@ int empvm_run(struct empvm *vm)
             IntArray obj = namedints_at(&vm->data.globals->localsets, gidx);
             assert(valid_set(obj));
             len = obj.len;
-            DEBUGVMRUN("objname is %s of type localset\n", vm->data.globals->localsets.names[gidx]);
+            DEBUGVMRUN("objname is %s of type localset", vm->data.globals->localsets.names[gidx]);
             break;
          }
          case IdentLocalVector: {
             Lequ obj = namedvec_at(&vm->data.globals->localvectors, gidx);
             assert(valid_vector(obj));
             len = obj.len;
-            DEBUGVMRUN("objname is %s of type localvector\n", vm->data.globals->localvectors.names[gidx]);
+            DEBUGVMRUN("objname is %s of type localvector", vm->data.globals->localvectors.names[gidx]);
             break;
          }
          default:
@@ -886,7 +891,7 @@ int empvm_run(struct empvm *vm)
             goto _exit;
          }
          vm->locals[slot] = UINT_VAL(len);
-         DEBUGVMRUN("lvar@%u <- %u = len(obj[%u])\n", slot, len, gidx);
+         DEBUGVMRUN("lvar@%u <- %u = len(obj[%u])", slot, len, gidx);
          break;
 
       }
@@ -910,7 +915,7 @@ int empvm_run(struct empvm *vm)
          DEBUGVMRUN("%.*s[%u] <- %n", lexeme->len, lexeme->start, idx, &offset1);
          DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN(" #%u%n", uel, &offset2);
-         DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
+         DEBUGVMRUN("%*sloopvar@%u", getpadding(offset1 + offset2), "", lidx);
 
       /* -------------------------------------------------------------------
        * If the GAMS symbol is an equation or variable, one needs to convert
@@ -1016,7 +1021,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             vm_printuel(&vm->data, uels[i], PO_TRACE_EMPINTERP, &dummy);
             if (i == nargs-1) { DEBUGVMRUN(")");}}
             });
-         DEBUGVMRUN("\n");
  
          break;
       }
@@ -1042,7 +1046,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          DBGUSED int offset1, offset2;
          DEBUGVMRUN("%.*s[%u] <- %n", linklabels->label_len, linklabels->label, dim_idx, &offset1);
          DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
-         DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
+         DEBUGVMRUN("%*sloopvar@%u", getpadding(offset1 + offset2), "", lidx);
 
          break;
       }
@@ -1064,7 +1068,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          DBGUSED int offset1, offset2; 
          DEBUGVMRUN("%.*s[%u] <- %n", regentry->label_len, regentry->label, dim_idx, &offset1);
          DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
-         DEBUGVMRUN("%*sloopvar@%u\n", getpadding(offset1 + offset2), "", lidx);
+         DEBUGVMRUN("%*sloopvar@%u", getpadding(offset1 + offset2), "", lidx);
 
          break;
       }
@@ -1079,13 +1083,13 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          uint8_t lidx = READ_BYTE(vm);
          assert(IS_UINT(vm->locals[lidx]));
          VM_VALUE_INC(vm->locals[lidx]);
-         DEBUGVMRUN("lidx@%u <- %u\n", lidx, AS_UINT(vm->locals[lidx]));
+         DEBUGVMRUN("lidx@%u <- %u", lidx, AS_UINT(vm->locals[lidx]));
          break;
       }
       case OP_STACKTOP_COPYTO_LOCAL: {
          uint8_t lidx = READ_BYTE(vm);
          vm->locals[lidx] = vmpeek(vm, 0);
-         DEBUGVMRUN("lidx@%u <- %u\n", lidx, AS_UINT(vm->locals[lidx]));
+         DEBUGVMRUN("lidx@%u <- %u", lidx, AS_UINT(vm->locals[lidx]));
          break;
       }
       case OP_LSET_ADD: {
@@ -1219,43 +1223,36 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
       case OP_JUMP: {
          uint16_t offset = READ_SHORT(vm);
          vm->code.ip += offset;
-         DEBUGVMRUN("\n");
          break;
       }
       case OP_JUMP_IF_TRUE: {
          uint16_t offset = READ_SHORT(vm);
          if (AS_BOOL(pop(vm))) vm->code.ip += offset;
-         DEBUGVMRUN("\n");
          break;
       }
       case OP_JUMP_IF_FALSE: {
          uint16_t offset = READ_SHORT(vm);
          if (!AS_BOOL(pop(vm))) vm->code.ip += offset;
-         DEBUGVMRUN("\n");
          break;
       }
       case OP_JUMP_IF_TRUE_NOPOP: {
          uint16_t offset = READ_SHORT(vm);
          if (AS_BOOL(vmpeek(vm, 0))) vm->code.ip += offset;
-         DEBUGVMRUN("\n");
          break;
       }
       case OP_JUMP_IF_FALSE_NOPOP: {
          uint16_t offset = READ_SHORT(vm);
          if (!AS_BOOL(vmpeek(vm, 0))) vm->code.ip += offset;
-         DEBUGVMRUN("\n");
          break;
       }
       case OP_JUMP_BACK: {
          uint16_t offset = READ_SHORT(vm);
          vm->code.ip -= offset;
-         DEBUGVMRUN("\n");
          break;
       }
       case OP_JUMP_BACK_IF_FALSE: {
          uint16_t offset = READ_SHORT(vm);
          if (!AS_BOOL(pop(vm))) vm->code.ip -= offset;
-         DEBUGVMRUN("\n");
          break;
       }
       case OP_GMS_SYMBOL_READ_SIMPLE: {
@@ -1319,11 +1316,11 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          const empapi fn = callobj.fn;
          ptrdiff_t argc = callobj.argc;
          assert(argc <= vm->stack_top - vm->stack);
-         DEBUGVMRUN("%s with %td stack args\n", empapis_names[api_idx], argc);
+         DEBUGVMRUN("%s with %td stack args", empapis_names[api_idx], argc);
 
          int rc = fn(&vm->data, argc, vm->stack_top - argc);
          if (rc != OK) {
-            error("[empvm_run] error %d while calling '%s'\n", rc,
+            error("\n\n[empvm_run] ERROR: return code %d after calling '%s'\n", rc,
                   empapis_names[api_idx]);
             status = rc;
             goto _exit;
@@ -1341,12 +1338,12 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          const empnewobj fn = callobj.fn;
          ptrdiff_t argc = callobj.argc;
          assert(argc <= vm->stack_top - vm->stack);
-         DEBUGVMRUN("%s with %td stack args\n", empnewobjs_names[newobj_call_idx],
+         DEBUGVMRUN("%s with %td stack args", empnewobjs_names[newobj_call_idx],
                     argc);
 
          void *o = fn(&vm->data, argc, vm->stack_top - argc);
          if (!o) {
-            error("[empvm_run] allocation failed in '%s'\n",
+            error("\n\n[empvm_run] ERROR: allocation failed in '%s'\n",
                   empnewobjs_names[newobj_call_idx]);
             return Error_RuntimeError;
          }
@@ -1386,7 +1383,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->nvaridxs);
          }
 
-         DEBUGVMRUN("DAGUID parent %u\n", linklabels_cpy->daguid_parent);
+         DEBUGVMRUN("DAGUID parent %u", linklabels_cpy->daguid_parent);
          break;
       }
 
@@ -1453,7 +1450,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             if (valid_vi(vi)) {DEBUGVMRUN(" vi = %s", mdl_printvarname(vm->data.mdl, vi));}
             if (isfinite(coeff) && coeff != 1.) {DEBUGVMRUN(" c = %e", coeff);}
             });
-         DEBUGVMRUN("\n");
          
          break;
       }
@@ -1472,7 +1468,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             vm->data.linklabels2arcs->len--;
          }
          vm->data.state.linklabels = NULL;
-         DEBUGVMRUN("\n");
          break;
       }
 
@@ -1499,7 +1494,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          default: ;
 
          }
-         DEBUGVMRUN("\n");
          break;
       }
 
@@ -1521,7 +1515,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
                           mpid2uid(mpid_dual), coeff));
 
 
-         DEBUGVMRUN("\n");
          break;
       }
 
@@ -1537,7 +1530,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          vm->data.state.uid_parent = dagregister->list[reglen-1]->daguid_parent;
          assert(valid_uid(vm->data.state.uid_parent));
 
-         DEBUGVMRUN("\n");
          break;
       }
 
@@ -1554,7 +1546,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             goto _exit;
          }
 
-         DEBUGVMRUN("\n");
          break;
 
       /* Check that only one value has been read */
@@ -1584,7 +1575,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             goto _exit;
          }
 
-         DEBUGVMRUN("\n");
          break;
       }
 
@@ -1592,7 +1582,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
       case OP_HACK_SCALAR2VMDATA: {
          GIDX_TYPE gidx = READ_GIDX(vm); assert(gidx < vm->data.globals->scalars.len);
          double val = vm->data.globals->scalars.list[gidx];
-         DEBUGVMRUN("stored %e\n", val);
+         DEBUGVMRUN("stored %e", val);
          vm->data.equvar.dval = val;
          break;
       }
@@ -1603,7 +1593,6 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             errormsg("[empvm_run]: ERROR: stack non-empty at the end.\n");
          }
          vm->code.ip = vm->instr_start;
-         DEBUGVMRUN("\n");
          return OK;
       }
 
