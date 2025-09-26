@@ -1904,7 +1904,7 @@ int fooc_mcp(Model *mdl_mcp)
 
    size_t nvars_expected = fooc_dat.info->n_primalvars + fooc_dat.info->n_constraints;
    if (ctr_mcp->n < nvars_expected) {
-      error("\n[fooc] ERROR: %zu active variables in the MCP model when expecting %zu\n",
+      error("\n[fooc] ERROR: %zu active variables in the MCP model; expecting %zu.\n",
             (size_t)ctr_mcp->n, nvars_expected);
       rctr_print_active_vars(ctr_mcp);
       status = Error_RuntimeError;
@@ -1912,7 +1912,7 @@ int fooc_mcp(Model *mdl_mcp)
    }
 
    if (ctr_mcp->m != cdat_mcp->total_m) {
-    error("\n[fooc] ERROR: %zu active equations in the MCP model, but %zu are expected.\n",
+    error("\n[fooc] ERROR: %zu active equations in the MCP model, expecting %zu.\n",
           (size_t)ctr_mcp->m, cdat_mcp->total_m);
     rctr_debug_active_equs(ctr_mcp);
     status = Error_RuntimeError;

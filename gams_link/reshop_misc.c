@@ -1,14 +1,8 @@
 #include "reshop_priv.h"
 #include "reshop.h"
-
-#if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_LLVM_COMPILER)
-#   define UNUSED __attribute__((unused))
-#else
-#   define UNUSED
-#endif
+#include <string.h>
 
 /** @brief Print out log or status message to the screen.
- *         It strips off one new line if it exists.
  *
  *  @param  env          ReSHOP GAMS record as an opaque object
  *  @param  reshop_mode  mode indicating log, status, or both.
@@ -20,21 +14,37 @@ void printgams(void* env, unsigned reshop_mode, const char *str)
    /* TODO(Xhub) support status and all ...  */
 
    int mode;
-   if (!(reshop_mode & ~0x3)) {
+   if (reshop_mode == 0x3 || reshop_mode == 0x7) {
       mode = ALLMASK;
    } else {
       mode = LOGMASK;
    }
 
-   switch (mode & ALLMASK) {
-   case LOGMASK:
-      gevLogPChar(jh->eh, str);
-      break;
+   switch (mode) {
    case STATUSMASK:
       gevStatPChar(jh->eh, str);
       break;
-   case ALLMASK:
+   case ALLMASK: {
+      char *newline = strchr(str, '\n');
+      bool simple_copy = newline && newline[1] == '\0'; 
+      const char *start = simple_copy ? "=C" : "=1\n";
+
+      gevStatPChar(jh->eh, start);
+
       gevLogStatPChar(jh->eh, str);
+
+      if (!simple_copy) {
+         size_t sz = strlen(str);
+
+         /* If the string does not end with '\n', add one before "=2" */
+         const char *end = (sz >= 1 && str[sz-1] != '\n') ? "\n=2\n" : "=2\n";
+         gevStatPChar(jh->eh, end);
+      }
+      break;
+   }
+   default:
+   case LOGMASK:
+      gevLogPChar(jh->eh, str);
       break;
    }
 
@@ -49,5 +59,4 @@ void flushgams(void* env)
 {
    rhpRec_t *jh = (rhpRec_t *)env;
    gevLogStatFlush(jh->eh);
-
 }

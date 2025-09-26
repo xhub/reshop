@@ -127,13 +127,13 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       uint32_t tag = VALUE_TAG(val_);
       switch (tag) {
       case TAG_FALSE:
-         trace_empinterp("%*s\n", pad, "FALSE");
+         trace_empinterp("%*s", pad, "FALSE");
          break;
       case TAG_TRUE:
-         trace_empinterp("%*s\n", pad, "TRUE");
+         trace_empinterp("%*s", pad, "TRUE");
          break;
       case TAG_NULL:
-         trace_empinterp("%*s\n", pad, "NULL");
+         trace_empinterp("%*s", pad, "NULL");
          break;
       default:
          error("%s :: Unknown TAG value %u", __func__, tag);
@@ -141,10 +141,10 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       break;
    }
    case SIGNATURE_INTEGER:
-      trace_empinterp("%*s: %5d\n", pad, "INT", AS_INT(val_));
+      trace_empinterp("%*s: %5d", pad, "INT", AS_INT(val_));
       break;
    case SIGNATURE_UINTEGER:
-      trace_empinterp("%*s: %5u\n", pad, "UINT", AS_UINT(val_));
+      trace_empinterp("%*s: %5u", pad, "UINT", AS_UINT(val_));
       break;
    case SIGNATURE_LOOPVAR: {
       int uel = AS_LOOPVAR(val_);
@@ -152,67 +152,67 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
       if (gmdGetUelByIndex(vm->data.gmd, uel, uel_label)) {
          strcpy(uel_label, "ERROR getting LOOPVAR");
       }
-      trace_empinterp("%*s: %5d %s\n", pad, "LOOPVAR", uel, uel_label);
+      trace_empinterp("%*s: %5d %s", pad, "LOOPVAR", uel, uel_label);
       break;
    }
    case SIGNATURE_STRING:
-      trace_empinterp("%*s: %s\n", pad, "STR", AS_STR(val_));
+      trace_empinterp("%*s: %s", pad, "STR", AS_STR(val_));
       break;
    case SIGNATURE_MPOBJ: {
       const MathPrgm *mp = AS_PTR(val_);
       if (!mp) {
-         trace_empinterpmsg("   MP: NULL!\n");
+         trace_empinterpmsg("   MP: NULL!");
          break;
       } 
       unsigned mp_id = mp_getid(mp);
-      trace_empinterp("%*s: '%s'\n", pad, "MP",
+      trace_empinterp("%*s: '%s'", pad, "MP",
                       empdag_getmpname(&vm->data.mdl->empinfo.empdag, mp_id));
       break;
    }
    case SIGNATURE_NASHOBJ: {
       const Nash *nash = AS_PTR(val_);
       if (!nash) {
-         trace_empinterpmsg("  Nash: NULL!\n");
+         trace_empinterpmsg("  Nash: NULL!");
          break;
       } 
       unsigned nashid = nash_getid(nash);
-      trace_empinterp("%*s: '%s'\n", pad, "Nash",
+      trace_empinterp("%*s: '%s'", pad, "Nash",
                       empdag_getnashname(&vm->data.mdl->empinfo.empdag, nashid));
       break;
    }
    case SIGNATURE_OVFOBJ: {
       const OvfDef *ovf = AS_PTR(val_);
       if (!ovf) {
-         trace_empinterpmsg("  OVF: NULL!\n");
+         trace_empinterpmsg("  OVF: NULL!");
          break;
       } 
       unsigned ovf_id = ovf->idx;
-      trace_empinterp("%*s: id %5d '%s'\n", pad, "OVF", ovf_id, ovf->name);
+      trace_empinterp("%*s: id %5d '%s'", pad, "OVF", ovf_id, ovf->name);
       break;
    }
    case SIGNATURE_POINTER:
-      trace_empinterp("%*s: %p\n", pad, "PTR", AS_PTR(val_));
+      trace_empinterp("%*s: %p", pad, "PTR", AS_PTR(val_));
       break;
    case SIGNATURE_REGENTRY: {
       DagRegisterEntry *regentry = AS_REGENTRY(val_);
-      trace_empinterp("%*s: %.*s\n", pad, "RegEntry", regentry->label_len, regentry->label);
+      trace_empinterp("%*s: %.*s", pad, "RegEntry", regentry->label_len, regentry->label);
       break;
    }
    case SIGNATURE_ARCOBJ: {
       LinkLabels *arcobj = AS_ARCOBJ(val_);
-      trace_empinterp("%*s: %.*s\n", pad, "ArcObj", arcobj->label_len, arcobj->label);
+      trace_empinterp("%*s: %.*s", pad, "ArcObj", arcobj->label_len, arcobj->label);
       break;
    }
    case SIGNATURE_GMSSYMITER: {
       VmGmsSymIterator *symiter = AS_GMSSYMITER(val_);
       Lexeme *lexeme = &symiter->ident.lexeme;
-      trace_empinterp("%*s: %.*s\n", pad, "GmsSymIterator", lexeme->len, lexeme->start);
+      trace_empinterp("%*s: %.*s", pad, "GmsSymIterator", lexeme->len, lexeme->start);
       break;
    }
    default: ;
    }
-
 }
+
 static void vm_printuel(VmData *vmdata, int uel, unsigned mode, int *offset)
 {
    gmdHandle_t gmd = vmdata->gmd ? vmdata->gmd : (vmdata->gmddct ? vmdata->gmddct : NULL);
@@ -785,6 +785,7 @@ int empvm_run(struct empvm *vm)
             for (VmValue *val = vm->stack; val < vm->stack_top; val++, poffset = 0) {
                trace_empinterp("%*s", 50-poffset, "");
                print_vmval_full(*val, vm);
+               trace_empinterp("\n");
             }
 
          trace_empinterp("[%5td] %30s%10s",
@@ -1477,7 +1478,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          unsigned num_children = linklabels->nrecs;
 
          if (linklabels->nrecs == 0) {
-            errormsg("[empvm] ERROR: empty linklabels!\n");
+            errormsg("\n\n[empvm] ERROR: empty linklabels!\n");
             status = Error_EMPRuntimeError;
             goto _exit;
          }
@@ -1524,7 +1525,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          unsigned reglen = dagregister->len;
 
          if (reglen == 0) {
-            errormsg("[empvm_run] ERROR: dagregister is empty. Please report this\n");
+            errormsg("\n\n[empvm_run] ERROR: dagregister is empty. Please report this\n");
             return Error_EMPRuntimeError;
          }
          vm->data.state.uid_parent = dagregister->list[reglen-1]->daguid_parent;
@@ -1541,7 +1542,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             vm->data.scalar_tracker = ScalarSymbolZero;
             break;
          default:
-            errbugmsg("[empvm] ERROR: scalar symbol tracker has the wrong value");
+            errbugmsg("\n\n[empvm] ERROR: scalar symbol tracker has the wrong value");
             status = Error_BugPleaseReport;
             goto _exit;
          }
@@ -1554,14 +1555,14 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          switch (symbol_tracker) {
          case ScalarSymbolInactive:
-            errbugmsg("[empvm] ERROR: scalar symbol tracker is inactive.");
+            errbugmsg("\n\n[empvm] ERROR: scalar symbol tracker is inactive.");
             status = Error_BugPleaseReport;
             goto _exit;
 
          case ScalarSymbolRead:
             // TODO: improve to provide the user better error message
             // TODO: TEST!
-            errormsg("[empvm] ERROR: More than one value read for a given symbol! "
+            errormsg("\n\n[empvm] ERROR: More than one value read for a given symbol! "
                      "Exactly one value was expected\n");
             status = Error_EMPIncorrectInput;
             goto _exit;
@@ -1570,7 +1571,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             vm->data.scalar_tracker = ScalarSymbolRead;
             break;
          default:
-            errbug("[empvm] ERROR: unexpected value %u for symbol tracker.", symbol_tracker);
+            errbug("\n\n[empvm] ERROR: unexpected value %u for symbol tracker.", symbol_tracker);
             status = Error_BugPleaseReport;
             goto _exit;
          }
@@ -1590,9 +1591,10 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
       case OP_END: {
          // HACK: turn this into an error?
          if (vm->stack != vm->stack_top) {
-            errormsg("[empvm_run]: ERROR: stack non-empty at the end.\n");
+            errormsg("\n\n[empvm_run]: ERROR: stack non-empty at the end.\n");
          }
          vm->code.ip = vm->instr_start;
+         trace_empinterp("\n");
          return OK;
       }
 

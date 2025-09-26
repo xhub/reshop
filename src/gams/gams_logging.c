@@ -46,7 +46,7 @@ static void GEV_CALLCONV gevupstream_gevlogger(const char *msg, int mode, void *
    } else if (mode == GamsCbLog) {
       gevLogPChar(dat->gev_upstream, msg);
    } else {
-      error("[GAMS/GEV] ERROR in GEV writer: unknown mode %d", mode);
+      error("\n[GAMS/GEV] ERROR in GEV writer: unknown mode %d\n", mode);
    }
 }
 

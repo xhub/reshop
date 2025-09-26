@@ -178,7 +178,7 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
    gevGetStrOpt(jh->eh, gevNameSysDir, sysdir);
 
    if (!dctGetReadyD(sysdir, msg, sizeof(msg))) {
-      gevLogStat(jh->eh, msg);
+      gevLogStatNoC(jh->eh, msg);
       rc = 1; goto _exit;
    }
    CHK_CORRECT_LIBVER(dct, DCT);
@@ -186,12 +186,16 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
    if (gmoDictionary(gh)) {
       jh->dh = gmoDict(gh);
    } else {
-      gevLogStat(jh->eh, "*** ReSHOP ERROR: GMO lacks a dictionary. This is not supported");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "*** ReSHOP ERROR: GMO lacks a dictionary. This is not supported");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
    if (!cfgCreateD(&jh->ch, sysdir, msg, sizeof(msg))) {
-      gevLogStat(jh->eh, msg);
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
@@ -201,18 +205,22 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 
    size_t sysdir_len = strlen(sysdir);
    if (sizeof(sysdir) <= sysdir_len + sizeof(GMS_CONFIG_FILE)) {
-      gevLogStat(jh->eh, "*** ReSHOP ERROR: SysDir is too long");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "*** ReSHOP ERROR: SysDir is too long");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
    strcat(sysdir, GMS_CONFIG_FILE);
 
    if (cfgReadConfig(jh->ch, sysdir)) {
+      gevStatCon(jh->eh);
       gevLogStatPChar(jh->eh, "*** ReSHOP ERROR: Could not parse config file ");
-      gevLogStat(jh->eh, sysdir);
+      gevLogStatNoC(jh->eh, sysdir);
       while (cfgNumMsg(jh->ch) > 0) {
          cfgGetMsg(jh->ch, msg);
-         gevLogStat(jh->eh, msg);
+         gevLogStatNoC(jh->eh, msg);
       }
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
@@ -222,7 +230,9 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 
 #ifdef GAMS_BUILD
   if (!palCreateD(&jh->ph, sysdir, msg, sizeof(msg))) {
-      gevLogStat(jh->eh, "*** ReSHOP ERROR: Could not create PAL object");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "*** ReSHOP ERROR: Could not create PAL object");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
   }
 
@@ -243,10 +253,12 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 #include "cmagic2.h"
 
    if  (palLicenseCheck(jh->ph, gmoM(gh), gmoN(gh), gmoNZ(gh), gmoNLNZ(gh), gmoNDisc(gh))) {
+      gevStatCon(jh->eh);
       while (palLicenseGetMessage(jh->ph, msg, sizeof(msg))) {
-         gevLogStat(jh->eh, msg);
+         gevLogStatNoC(jh->eh, msg);
       }
-      gevLogStat(jh->eh, "*** ReSHOP ERROR while checking GAMS distribution version");
+      gevLogStatNoC(jh->eh, "*** ReSHOP ERROR while checking GAMS distribution version");
+      gevStatCoff(jh->eh);
       gmoSolveStatSet(gh, gmoSolveStat_SetupErr);
       gmoModelStatSet(gh, gmoModelStat_NoSolutionReturned);
       rc = 1; goto _exit;
@@ -262,14 +274,18 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 
    if (!jh->oh) {
       if (!optGetReadyD(sysdir, msg, sizeof(msg))) {
+         gevStatCon(jh->eh);
          gevLogStatPChar(jh->eh, "*** ReSHOP ERROR: Could not load option library: ");
-         gevLogStat(jh->eh, msg);
+         gevLogStatNoC(jh->eh, msg);
+         gevStatCoff(jh->eh);
          rc = 1; goto _exit;
       }
 
       if (!optCreate(&jh->oh, msg, sizeof(msg))) {
+         gevStatCon(jh->eh);
          gevLogStatPChar(jh->eh, "*** ReSHOP ERROR: Could not create option struct: ");
-         gevLogStat(jh->eh, msg);
+         gevLogStatNoC(jh->eh, msg);
+         gevStatCoff(jh->eh);
          rc = 1; goto _exit;
       }
 
@@ -282,7 +298,9 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
    rc = opt_process(jh, opt_need_init, sysdir);
    if (rc) {
       (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: Could not process options (rc=%d)", rc);
-      gevLogStat(jh->eh, msg);
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
@@ -290,20 +308,26 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
    rhp_print_banner();
 
    if (rhp_syncenv()) {
-      gevLogStat(jh->eh, "\n\n*** ReSHOP ERROR: Failed to sync with environment variables");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "\n\n*** ReSHOP ERROR: Failed to sync with environment variables");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
    /* Now we can initialize the GAMS library in ReSHOP */
    if (rhp_gms_loadlibs(sysdir)) {
-      gevLogStat(jh->eh, "\n\n*** ReSHOP ERROR: Could not initialize GAMS library");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "\n\n*** ReSHOP ERROR: Could not initialize GAMS library");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
    mdl = rhp_mdl_new(RhpBackendGamsGmo);
 
    if (!mdl) {
-      gevLogStat(jh->eh, "\n\n*** ReSHOP ERROR: Could not create a ReSHOP model");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "\n\n*** ReSHOP ERROR: Could not create a ReSHOP model");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
@@ -318,13 +342,17 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 
    rc = rhp_gms_fillgmshandles(mdl, &gset);
    if (rc) {
-      gevLogStat(jh->eh, "\n\n*** ReSHOP ERROR: Could not initialize model from the GAMS objects");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "\n\n*** ReSHOP ERROR: Could not initialize model from the GAMS objects");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
    rc = rhp_gms_fillmdl(mdl);
    if (rc) {
-      gevLogStat(jh->eh, "\n\n*** ReSHOP ERROR: Could not fill the model");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, "\n\n*** ReSHOP ERROR: Could not fill the model");
+      gevStatCoff(jh->eh);
       rc = 1; goto _exit;
    }
 
@@ -351,52 +379,64 @@ DllExport int STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
 
    rc = opt_pushtosolver(jh);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: reading options failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
-      gevLogStatPChar(jh->eh, msg);
+      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: reading options failed! Error message is %s (%d)",
+                     rhp_status_descr(rc), rc);
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       return rc; /* Early return */
    }
 
    /* Process the EMPINFO  */
    rc = rhp_gms_readempinfo(jh->mdl, NULL);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: Reading EMPINFO failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
-      gevLogStatPChar(jh->eh, msg);
+      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: Reading EMPINFO failed! Error message is '%s' (%d)",
+                     rhp_status_descr(rc), rc);
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       goto _exit;
    }
 
    mdl_solver = rhp_newsolvermdl(jh->mdl);
    if (!mdl_solver) {
-      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: couldn't create solver model object\n");
-      gevLogStatPChar(jh->eh, msg);
+      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: couldn't create solver model object");
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       goto _exit;
    }
 
    /* Process the solver model (reformulations, ...) */
    rc = rhp_process(jh->mdl, mdl_solver);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: EMP transformation failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
-      gevLogStatPChar(jh->eh, msg);
+      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: EMP transformation failed! Error message is '%s' (%d)",
+                     rhp_status_descr(rc), rc);
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       goto _exit;
    }
 
    /* Process the solver model  */
    rc = rhp_solve(mdl_solver);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: solve failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
-      gevLogStatPChar(jh->eh, msg);
+      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: solve failed! Error message is '%s' (%d)",
+                     rhp_status_descr(rc), rc);
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       goto _exit;
    }
 
    /* Perform the postprocessing  */
    rc = rhp_postprocess(mdl_solver);
    if (rc) {
-      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: postprocessing failed! Error message is %s (%d)\n",
-               rhp_status_descr(rc), rc);
-      gevLogStatPChar(jh->eh, msg);
+      (void)snprintf(msg, sizeof msg, "\n\n*** ReSHOP ERROR: postprocessing failed! Error message is '%s' (%d)",
+                     rhp_status_descr(rc), rc);
+      gevStatCon(jh->eh);
+      gevLogStatNoC(jh->eh, msg);
+      gevStatCoff(jh->eh);
       goto _exit;
    }
 

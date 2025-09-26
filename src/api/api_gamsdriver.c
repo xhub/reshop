@@ -225,7 +225,6 @@ int rhp_rc2gmosolvestat(int rc)
    }
 }
 
-
 void rhp_printrcmsg(int rc, void *gev)
 {
    gevHandle_t gev_ = gev;
@@ -235,7 +234,8 @@ void rhp_printrcmsg(int rc, void *gev)
    case Error_BugPleaseReport:
       (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: The model triggered a bug in ReSHOP. "
                      "Please consider filing a bug report. Thanks!");
-      gevLogStat(gev_, msg);
+      gevLog(gev_, msg);
+      gevStatC(gev_, msg);
       break;
    default: ;
    }

@@ -361,7 +361,7 @@ int empdag_fini(EmpDag *empdag)
 
    if (n_roots == 1) {
       daguid_t root = empdag->roots.arr[0];
-      printout(PO_INFO, "\n%*sRoot is %s(%s)", l.ident, "", daguid_type2str(root),
+      printout(PO_INFO, "\n%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(root),
                 empdag_getname(empdag, root));
    } else if (n_roots > 1) {
       printout(PO_INFO, "\n%*sRoots are:\n", l.ident, "");

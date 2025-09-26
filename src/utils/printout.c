@@ -107,7 +107,7 @@ static inline const char *get_mode_color(unsigned mode)
 #ifdef WITH_BACKWARD
 
 #include "bck_dotrace.h"
-#define backtrace bck_dotrace
+#define rhp_backtrace bck_dotrace
 #define regsig bck_regsig
 tlsvar void *bck_obj = NULL;
 
@@ -134,7 +134,7 @@ static CONSTRUCTOR_ATTR void register_signals(void)
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
 
-static void backtrace(void)
+static void rhp_backtrace(void)
 {
    unw_cursor_t cursor;
    unw_context_t container;
@@ -174,7 +174,7 @@ static void backtrace(void)
 
 #else
 
-static void backtrace(void) {};
+static void rhp_backtrace(void) {};
 
 #endif /* WITH_BACKTRACE */
 
@@ -193,7 +193,7 @@ static void backtrace(void) {};
 #pragma comment(lib, "dbghelp.lib")
 #endif
 
-static void backtrace(void)
+static void rhp_backtrace(void)
 {
      unsigned       i;
      void         * stack[ 100 ];
@@ -501,7 +501,7 @@ void printout(unsigned mode, const char *format, ...)
          print_fd(log_fd, mode, buf);
       }
 
-      unsigned mode_ops = mode & PO_ALLDEST;
+      unsigned mode_ops = mode;
       if (print_ops.use_asciicolors && mode_has_color) {
          print_ops.print(print_ops.data, mode_ops, get_mode_color(mode));
          print_ops.print(print_ops.data, mode_ops, buf);
@@ -516,7 +516,7 @@ void printout(unsigned mode, const char *format, ...)
 #ifdef WITH_BACKTRACE
    if (mode == PO_ERROR && !getenv("RHP_NO_BACKTRACE")) {
       print_ops.flush(print_ops.data);
-      backtrace();
+      rhp_backtrace();
       if (!getenv("RHP_NO_STOP")) { GDB_STOP() }
    }
 #endif
@@ -545,7 +545,7 @@ void printstr(unsigned mode, const char *str)
 
 #ifdef WITH_BACKTRACE
    if (mode == PO_ERROR && !getenv("RHP_NO_BACKTRACE")) {
-      backtrace();
+      rhp_backtrace();
       if (!getenv("RHP_NO_STOP")) { GDB_STOP() }
    }
 #endif
