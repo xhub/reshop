@@ -52,9 +52,23 @@ int gams_chk_ctr(const Container *ctr, const char *fn)
    return gams_chk_ctrdata(ctr, fn);
 }
 
+/**
+ * @brief Creates and initializes the GAMS container data (GEV, GMO, and CFG)
+ *
+ * - The GAMS control file is used to initialize the GEV object, via
+ *   gevInitEnvironmentLegacy()
+ * - The GMO object is initialized using gmoRegisterEnvironment()
+ * - CFG object reads the configuration file "subsys". Note that gamsconfig.yaml seems to
+ *   be always read.
+ *
+ * @param gms      the GAMS container data
+ * @param gmdldat  the GAMS model data
+ *
+ * @return         the error code
+ */
 static int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict gmdldat)
 {
-   char buffer[GMS_SSSIZE];
+   char buf[GMS_SSSIZE];
 
    /* ---------------------------------------------------------------------
     * Fail if gamsdir has not already being given
@@ -73,10 +87,9 @@ static int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict g
     * Initialize GMO and GEV libraries.
     * --------------------------------------------------------------------- */
 
-   if (!gmoCreateDD(&gms->gmo, gmdldat->gamsdir, buffer, sizeof(buffer))
-       || !gevCreateDD(&gms->gev, gmdldat->gamsdir, buffer, sizeof(buffer))) {
-      error("[GAMS] ERROR: loading GMO or GEV failed with message '%s'\n", 
-            buffer);
+   if (!gmoCreateDD(&gms->gmo, gmdldat->gamsdir, buf, sizeof(buf))
+       || !gevCreateDD(&gms->gev, gmdldat->gamsdir, buf, sizeof(buf))) {
+      error("[GAMS] ERROR: loading GMO or GEV failed with message '%s'\n", buf);
       return Error_RuntimeError;
    }
 
@@ -101,9 +114,9 @@ static int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict g
     * Register GAMS environment.
     * --------------------------------------------------------------------- */
 
-   if (gmoRegisterEnvironment(gms->gmo, gms->gev, buffer)) {
+   if (gmoRegisterEnvironment(gms->gmo, gms->gev, buf)) {
       error("[GAMS] ERROR: registering GAMS environment failed with error '%s'\n",
-            buffer);
+            buf);
       return Error_GamsCallFailed;
    }
 
@@ -111,9 +124,9 @@ static int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict g
     * Create a configuration object.
     * --------------------------------------------------------------------- */
 
-   if (!cfgCreateD(&gms->cfg, gmdldat->gamsdir, buffer, sizeof(buffer))) {
+   if (!cfgCreateD(&gms->cfg, gmdldat->gamsdir, buf, sizeof(buf))) {
       error("[GAMS] ERROR: creating cfg object failed with message '%s'\n",
-            buffer);
+            buf);
       return Error_GamsCallFailed;
    }
 
@@ -140,23 +153,32 @@ static int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict g
    }
 
    /* TODO: GAMS review*/
+   int isDefaultSubsys = gevGetIntOpt(gms->gev, gevisDefaultSubsys);
 
-   size_t slen = len + dirsep_len + strlen(GMS_CONFIG_FILE);
-   if (slen > sizeof(buffer)-1) {
-      error("[GAMS] ERROR: filename '%s%s%s' has size %zu, max is %zu",
-            gmdldat->gamsdir, DIRSEP, GMS_CONFIG_FILE, slen, sizeof(buffer)-1);
-      return Error_NameTooLongForGams;
-   }
+   if (isDefaultSubsys) {
+      size_t slen = len + dirsep_len + strlen(GMS_CONFIG_FILE);
+      if (slen > sizeof(buf)-1) {
+         error("[GAMS] ERROR: filename '%s%s%s' has size %zu, max is %zu",
+               gmdldat->gamsdir, DIRSEP, GMS_CONFIG_FILE, slen, sizeof(buf)-1);
+         return Error_NameTooLongForGams;
+      }
 
-   strcpy(buffer, gmdldat->gamsdir);
-   if (!has_dirsep) {
-      strcat(buffer, DIRSEP);
+      strcpy(buf, gmdldat->gamsdir);
+      if (!has_dirsep) {
+         strcat(buf, DIRSEP);
+      }
+      strcat(buf, GMS_CONFIG_FILE);
+
+   } else {
+      gevGetStrOpt(gms->gev, gevsubsysFile, buf);
+      trace_backend("[GAMS] Reading user-defined configuration file '%s'\n", buf)
    }
    strcat(buffer, GMS_CONFIG_FILE);
 
    /* This is required to get any solver */
-   if (cfgReadConfig(gms->cfg, buffer)) {
-      error("[GAMS] ERROR: could not read configuration file %s\n", buffer);
+   if (cfgReadConfig(gms->cfg, buf)) {
+      error("[GAMS] ERROR: could not read %s configuration file '%s'\n",
+            isDefaultSubsys ? "default" : "user-defined", buf);
       return Error_GamsCallFailed;
    }
 
