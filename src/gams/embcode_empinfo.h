@@ -3,7 +3,8 @@
 
 #include "compat.h"
 
-#define EMBCODE_GMDOUT_FNAME "embrhp_gdx.dat"
+#define EMBCODE_GMDOUT_FNAME_NOEXT "embrhp_gdx"
+#define EMBCODE_GMDOUT_FNAME       EMBCODE_GMDOUT_FNAME_NOEXT ".dat"
 
 int embcode_process_empinfo(void *gmdobj, const char *scrdir, const char *fname) NONNULL;
 

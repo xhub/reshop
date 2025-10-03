@@ -75,8 +75,7 @@ int rmfn(const char *pathname)
 {
    if (nftw(pathname, _rmelt, FOPEN_MAX, FTW_DEPTH | FTW_PHYS) == -1) {
       perror("nftw");
-      error("%s :: remove of the path %s failed!\n", __func__,
-               pathname);
+      error("[system] ERROR: removal of the path '%s' failed!\n", pathname);
       return Error_SystemError;
    }
 

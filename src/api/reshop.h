@@ -87,6 +87,12 @@ enum rhp_option_type {
    RhpOptString,                 /**< String option   */
 };
 
+/** @brief Printing flags */
+enum rhp_print_flags {
+   RhpPrintUseColors    = 1,     /**< use ANSI colors  */
+   RhpPrintNoStdOutErr  = 2,     /**< print does not go to default stdout/stderr */
+};
+
 /** @brief Custom print function */
 typedef void (*rhp_print_fn)(void *data, unsigned mode, const char *buf);
 /** @brief Custom flush function */
@@ -738,7 +744,7 @@ int rhp_postprocess(struct rhp_mdl *mdl_solver);
 
 RHP_PUBLIB
 void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
-                      bool use_asciicolors);
+                      unsigned flags);
 RHP_PUBLIB
 void rhp_set_printopsdefault(void);
 
@@ -866,6 +872,8 @@ RHP_PUBLIB
 void rhp_print_banner(void);
 RHP_PUBLIB
 const char* rhp_version(void);
+RHP_PUBLIB
+void rhp_set_userinfo(const char *userinfo);
 RHP_PUBLIB
 void rhp_show_ccftrace(unsigned char boolval);
 RHP_PUBLIB

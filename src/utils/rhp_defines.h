@@ -2,12 +2,13 @@
 #define DEFINES_H
 
 #include <stdio.h>
+#include <inttypes.h>
 
 // Unsigned int types.
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
-typedef unsigned long long u64;
+typedef uint64_t u64;
 
 // Signed int types.
 typedef signed char s8;

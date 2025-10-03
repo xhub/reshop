@@ -57,7 +57,7 @@ void handle_fatal_error(int code, const char* msg)
       longjmp(external_jmp_buf, code);
 
    } else { 
-      fatal_error("%s\n", msg);
+      fatal_error("\n%s\nReSHOP will now forward the signal\n", msg);
       int rc = raise(code);
       /* coredump if error here */
       if (rc) {

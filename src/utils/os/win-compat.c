@@ -2,12 +2,12 @@
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winbase.h>
 #include <dbghelp.h>
 #include <rpc.h>
 
 #ifdef _MSC_VER
 #pragma comment(lib, "rpcrt4.lib")
-#pragma comment(lib, "dbghelp.lib")
 #endif
 
 // for malloc
@@ -15,40 +15,86 @@
 #include <stdio.h>
 
 #include "asprintf.h"
+#include "crash_reporter.h"
 #include "option_priv.h"
 #include "macros.h"
 #include "printout.h"
 #include "reshop.h"
 #include "win-compat.h"
+#include "win-dbghelp.h"
 
-#ifndef GAMS_BUILD
+typedef struct {
+    DWORD code;
+    const char *name;
+} ExceptionCodeName;
+
+static ExceptionCodeName exceptionNames[] = {
+    { EXCEPTION_ACCESS_VIOLATION,        "EXCEPTION_ACCESS_VIOLATION" },
+    { EXCEPTION_ARRAY_BOUNDS_EXCEEDED,   "EXCEPTION_ARRAY_BOUNDS_EXCEEDED" },
+    { EXCEPTION_BREAKPOINT,              "EXCEPTION_BREAKPOINT" },
+    { EXCEPTION_DATATYPE_MISALIGNMENT,   "EXCEPTION_DATATYPE_MISALIGNMENT" },
+    { EXCEPTION_FLT_DENORMAL_OPERAND,    "EXCEPTION_FLT_DENORMAL_OPERAND" },
+    { EXCEPTION_FLT_DIVIDE_BY_ZERO,      "EXCEPTION_FLT_DIVIDE_BY_ZERO" },
+    { EXCEPTION_FLT_INEXACT_RESULT,      "EXCEPTION_FLT_INEXACT_RESULT" },
+    { EXCEPTION_FLT_INVALID_OPERATION,   "EXCEPTION_FLT_INVALID_OPERATION" },
+    { EXCEPTION_FLT_OVERFLOW,            "EXCEPTION_FLT_OVERFLOW" },
+    { EXCEPTION_FLT_STACK_CHECK,         "EXCEPTION_FLT_STACK_CHECK" },
+    { EXCEPTION_FLT_UNDERFLOW,           "EXCEPTION_FLT_UNDERFLOW" },
+    { EXCEPTION_ILLEGAL_INSTRUCTION,     "EXCEPTION_ILLEGAL_INSTRUCTION" },
+    { EXCEPTION_IN_PAGE_ERROR,           "EXCEPTION_IN_PAGE_ERROR" },
+    { EXCEPTION_INT_DIVIDE_BY_ZERO,      "EXCEPTION_INT_DIVIDE_BY_ZERO" },
+    { EXCEPTION_INT_OVERFLOW,            "EXCEPTION_INT_OVERFLOW" },
+    { EXCEPTION_INVALID_DISPOSITION,     "EXCEPTION_INVALID_DISPOSITION" },
+    { EXCEPTION_NONCONTINUABLE_EXCEPTION,"EXCEPTION_NONCONTINUABLE_EXCEPTION" },
+    { EXCEPTION_PRIV_INSTRUCTION,        "EXCEPTION_PRIV_INSTRUCTION" },
+    { EXCEPTION_SINGLE_STEP,             "EXCEPTION_SINGLE_STEP" },
+    { EXCEPTION_STACK_OVERFLOW,          "EXCEPTION_STACK_OVERFLOW" },
+};
+
+static const char* GetExceptionName(DWORD code) {
+    for (size_t i = 0; i < sizeof(exceptionNames)/sizeof(exceptionNames[0]); i++) {
+        if (exceptionNames[i].code == code) {
+            return exceptionNames[i].name;
+      }
+    }
+
+    return "Unknown Exception Code";
+}
 
 static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
 {
    fatal_error("\nReSHOP caught an exception and will terminate. Please report this issue with the following information\n");
 
    char buf[256];
-   char *codemsg;
    DWORD code = pExceptionInfo[0].ExceptionRecord->ExceptionCode;
+
+   fatal_error("\nException code is %0lX '%s'\n", code, GetExceptionName(code));
 
    unsigned len = FormatMessageA(
       FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE,
       NULL, code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buf, sizeof(buf), NULL);
 
-   if (len > 0) { codemsg = buf; } else { codemsg = "UNKNOWN ERROR"; }
-
-   fatal_error("\nException code is %0lX '%s'", code, codemsg);
+   if (len > 0) { 
+      fatal_error("System error message is: %s\n", buf);
+   }
 
    if (pExceptionInfo) {
       fatal_error("\n--- Stack Trace ---\n");
 
-      HANDLE process = GetCurrentProcess();
       HANDLE thread = GetCurrentThread();
       CONTEXT context;
       memcpy(&context, pExceptionInfo->ContextRecord, sizeof(CONTEXT));
 
       // Initialize the symbol handler
-      SymInitialize(process, NULL, TRUE);
+      const DbgHelpFptr *fptrs = dbghelp_get_fptrs();
+      if (!fptrs) { return EXCEPTION_CONTINUE_SEARCH; }
+
+      HANDLE process = dbghelp_get_process();
+      if (!process) { return EXCEPTION_CONTINUE_SEARCH; }
+
+      DWORD symOptions = fptrs->pSymGetOptions();
+      symOptions |= SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
+      fptrs->pSymSetOptions(symOptions);
 
       STACKFRAME64 stack_frame;
       memset(&stack_frame, 0, sizeof(STACKFRAME64));
@@ -87,16 +133,19 @@ static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
 #endif
 
       PSYMBOL_INFO symbol_info = (PSYMBOL_INFO)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+      IMAGEHLP_LINE64 line;
+      line.SizeOfStruct    = sizeof(IMAGEHLP_LINE64);
       unsigned i = 0;
-      while (StackWalk64(
+
+      while (fptrs->pStackWalk64(
           machine_type,
           process,
           thread,
           &stack_frame,
           &context,
           NULL,
-          SymFunctionTableAccess64,
-          SymGetModuleBase64,
+          fptrs->pSymFunctionTableAccess64,
+          fptrs->pSymGetModuleBase64,
           NULL
       )) {
           // Get the function name and offset
@@ -108,11 +157,37 @@ static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
             break;
          }
 
-          if (SymFromAddr(process, stack_frame.AddrPC.Offset, &displacement, symbol_info)) {
-              fatal_error("%u %s+0x%llX\n", i, symbol_info->Name, displacement);
-          } else {
-              fatal_error("%u  Address: 0x%llx (Symbol not found)\n", i, stack_frame.AddrPC.Offset);
-          }
+          if (fptrs->pSymFromAddr(process, stack_frame.AddrPC.Offset, &displacement, symbol_info)) {
+
+            if (fptrs->pSymGetLineFromAddr64(process, stack_frame.AddrPC.Offset, 0, &line)) {
+               fatal_error("%u %s (%s:%lu)\n", i, symbol_info->Name, line.FileName, (unsigned long)line.LineNumber);
+            } else {
+               fatal_error("%u %s+0x%llX\n", i, symbol_info->Name, displacement);
+            }
+
+          } else { /* Could not get the symbol */
+
+            char* lpMsgBuf;
+            DWORD dw = GetLastError();
+
+            DWORD szMsg = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                                         FORMAT_MESSAGE_FROM_SYSTEM |
+                                         FORMAT_MESSAGE_IGNORE_INSERTS,
+                                         NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                         (char*)&lpMsgBuf, 0, NULL);
+            if (szMsg > 0) {
+
+               if (lpMsgBuf[szMsg-1] == '\n') { lpMsgBuf[szMsg-2] = '\0'; } /* \r\n */
+
+               fatal_error("%u 0x%llX (%s)\n", i, stack_frame.AddrPC.Offset, lpMsgBuf);
+               LocalFree(lpMsgBuf);
+
+            } else {
+
+               fatal_error("%u 0x%llX (UNKNOWN ERROR)\n", i, stack_frame.AddrPC.Offset);
+
+            }
+         }
 
           // Break out of the loop if the stack walk is complete
           if (stack_frame.AddrFrame.Offset == 0 || stack_frame.AddrReturn.Offset == 0 ||
@@ -123,31 +198,28 @@ static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
       }
 
       free(symbol_info);
-       SymCleanup(process);
-   } else {
-      fatal_error("\n no exception information ...");
-   }
 
-    // Open a file to write the minidump to.
-    HANDLE hFile = CreateFileA(
-        "reshop-minidump.dmp",
-        GENERIC_WRITE,
-        0,
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
 
-    if (hFile != INVALID_HANDLE_VALUE) {
-        // Define the information to be included in the minidump.
-        MINIDUMP_EXCEPTION_INFORMATION mei;
-        mei.ThreadId = GetCurrentThreadId();
-        mei.ExceptionPointers = pExceptionInfo;
-        mei.ClientPointers = FALSE;
+      // Open a file to write the minidump to.
+      HANDLE hFile = CreateFileA(
+         "reshop-minidump.dmp",
+         GENERIC_WRITE,
+         0,
+         NULL,
+         CREATE_ALWAYS,
+         FILE_ATTRIBUTE_NORMAL,
+         NULL
+      );
 
-        // Write the minidump to the file.
-        MiniDumpWriteDump(
+      if (hFile != INVALID_HANDLE_VALUE) {
+         // Define the information to be included in the minidump.
+         MINIDUMP_EXCEPTION_INFORMATION mei;
+         mei.ThreadId = GetCurrentThreadId();
+         mei.ExceptionPointers = pExceptionInfo;
+         mei.ClientPointers = FALSE;
+
+         // Write the minidump to the file.
+         fptrs->pMiniDumpWriteDump(
             GetCurrentProcess(),
             GetCurrentProcessId(),
             hFile,
@@ -155,20 +227,26 @@ static LONG WINAPI UnhandledExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
             &mei,
             NULL,
             NULL
-        );
-        CloseHandle(hFile);
+         );
+
+         CloseHandle(hFile);
 
         fatal_error("\nA minidump was saved to: %s\n", "reshop-minidump.dmp");
-    } else {
-        fatal_error("\nFailed to create minidump file. Error code: %lu\n", GetLastError());
-    }
+
+      } else {
+         fatal_error("\nFailed to create minidump file. Error code: %lu\n", GetLastError());
+      }
+
+   } else {
+      fatal_error("\n no exception information ...");
+   }
+
+   crash_handler(code);
 
     // Terminate the process. Returning EXCEPTION_EXECUTE_HANDLER
     // will prevent the default Windows crash dialog from appearing.
     return EXCEPTION_CONTINUE_SEARCH;
 }
-
-#endif
 
 //static int __stdcall
 BOOL APIENTRY
@@ -179,9 +257,7 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
    switch (fdwReason) {
    case DLL_PROCESS_ATTACH:
 
-#ifndef GAMS_BUILD
       SetUnhandledExceptionFilter(UnhandledExceptionHandler);
-#endif
 
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */
@@ -207,6 +283,7 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
       cleanup_opcode_diff();
       cleanup_path();
       cleanup_gams();
+      cleanup_dbghelp_fptrs();
       debug("[OS] Call to DllMain with DLL_PROCESS_DETACH successful\n");
 //      cleanup_snan_funcs();
    }

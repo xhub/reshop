@@ -38,6 +38,8 @@ typedef struct mp_descr MpDescr;
 
 typedef struct M_ArenaLink M_ArenaLink;
 
+
+struct rhp_gams_handles;
 struct option;
 
 #endif

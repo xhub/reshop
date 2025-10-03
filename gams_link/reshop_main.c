@@ -172,7 +172,18 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
 
    /* From now on we can use the GAMS log. */
    /* (data, printfn, flushgams, use_asciicolor)*/
-   rhp_set_printops(jh, printgams, flushgams, false);
+   int logoption = gevGetIntOpt(jh->eh, gevLogOption);
+   unsigned flags = 0;
+   if (logoption < 3) {
+      flags |= RhpPrintNoStdOutErr;
+   }
+
+   rhp_set_printops(jh, printgams, flushgams, flags);
+
+   /* Set some basic info */
+   char userinfo[64];
+   (void)snprintf(userinfo, sizeof(userinfo), "GAMS %d", gevGetIntOpt(jh->eh, gevGamsVersion));
+   rhp_set_userinfo(userinfo);
 
    /* Get the sysdir to load additional libraries */
    gevGetStrOpt(jh->eh, gevNameSysDir, sysdir);

@@ -144,6 +144,7 @@ __asm__(".symver fmod,fmod@GLIBC_2.2.5");
 
 /* libc 2.38 */
 __asm__(".symver __isoc23_strtol,strtol@GLIBC_2.2.5");
+__asm__(".symver __isoc23_sscanf,sscanf@GLIBC_2.2.5");
 #endif
 
 

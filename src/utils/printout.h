@@ -33,6 +33,7 @@ static inline int error_runtime(void)
 
 #define logger(lvl, format, ...) printout(lvl, format, __VA_ARGS__)
 #define debug(...)               printout(PO_DEBUG, __VA_ARGS__)
+#define info(...)                printout(PO_INFO, __VA_ARGS__)
 
 #define chk_potrace(PO_VAL, ...) if (RHP_UNLIKELY(O_Output & (PO_VAL))) { printout(PO_VAL, __VA_ARGS__); }
 

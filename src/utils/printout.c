@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "crash_reporter.h"
+
 #ifdef _WIN32
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -14,7 +16,7 @@
 
 #include <winsock2.h>
 #ifndef INVALID_SOCKET
-#error "INVALID_SOCKET must be defined for valid()"
+#error "INVALID_SOCKET must be defined for valid_fd()"
 #endif
 
 #define valid_fd(x) ((x) != INVALID_SOCKET)
@@ -195,29 +197,65 @@ static void rhp_backtrace(void) {};
 
 static void rhp_backtrace(void)
 {
-     unsigned       i;
-     void         * stack[ 100 ];
-     unsigned short frames;
-     SYMBOL_INFO  * symbol;
-     HANDLE         process;
+   unsigned       i;
+   void         * stack[ 100 ];
+   unsigned short frames;
+   SYMBOL_INFO  * symbol;
+   HANDLE         process;
 
-     process = GetCurrentProcess();
+   process = GetCurrentProcess();
 
-     SymInitialize (process, NULL, TRUE);
+   SymInitialize (process, NULL, TRUE);
+   DWORD symOptions = SymGetOptions();
+   symOptions |= SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
+   SymSetOptions(symOptions);
 
-     frames               = CaptureStackBackTrace(0, 100, stack, NULL);
-     symbol               = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1 );
-     symbol->MaxNameLen   = 255;
-     symbol->SizeOfStruct = sizeof( SYMBOL_INFO );
+   frames               = CaptureStackBackTrace(0, 100, stack, NULL);
+   symbol               = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1 );
+   symbol->MaxNameLen   = 255;
+   symbol->SizeOfStruct = sizeof( SYMBOL_INFO );
+   IMAGEHLP_LINE64 line;
+   line.SizeOfStruct    = sizeof(IMAGEHLP_LINE64);
 
-     for (i = 0; i < frames; i++)
-     {
-         SymFromAddr( process, ( DWORD64 )( stack[ i ] ), 0, symbol );
 
-         fatal_error("%u %s+0x%0llX\n", frames - i - 1, symbol->Name, symbol->Address );
-     }
+   for (i = 0; i < frames; i++) {
 
-     free(symbol);
+      if (!SymFromAddr( process, ( DWORD64 )( stack[ i ] ), 0, symbol )) {
+         char* lpMsgBuf;
+         DWORD dw = GetLastError();
+
+         DWORD szMsg = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                                      FORMAT_MESSAGE_FROM_SYSTEM |
+                                      FORMAT_MESSAGE_IGNORE_INSERTS,
+                                      NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                      (char*)&lpMsgBuf, 0, NULL);
+
+         if (szMsg > 0) {
+
+            if (lpMsgBuf[szMsg-1] == '\n') { lpMsgBuf[szMsg-2] = '\0'; } /* \r\n */
+
+            fatal_error("%u 0x%p (%s)\n", frames-i-1, stack[i], lpMsgBuf);
+            LocalFree(lpMsgBuf);
+
+         } else {
+
+            fatal_error("%u 0x%p (UNKNOWN ERROR)\n", frames-i-1, stack[i]);
+
+         }
+ 
+      } else {
+
+         /* Try to get the line number */
+         if (SymGetLineFromAddr64(process, (DWORD64)stack[i], 0, &line)) {
+            fatal_error("%u %s (%s:%lu)\n", frames-i-1, symbol->Name, line.FileName, (unsigned long)line.LineNumber);
+         } else {
+            fatal_error("%u %s+0x%0llX\n", frames-i-1, symbol->Name, symbol->Address );
+         }
+      }
+   }
+
+   free(symbol);
+   SymCleanup(process);
 }
 
 #endif /*  __linux__  */
@@ -246,13 +284,15 @@ static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* ctx)
    fatal_error(nb);
 #endif
 
+   fatal_error("\n--- Backtrace info ---\n");
+
    /* Now save this to the registered logger, if it is not the default one */
    char **strings = backtrace_symbols(array, size);
 
    if (strings) {
 
       for (int i = 0; i < size; ++i) {
-         fatal_error("%s\n", strings[i]);
+         fatal_error("%d %s\n", i, strings[i]);
       }
 
       free(strings);
@@ -263,7 +303,9 @@ static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* ctx)
 
    fatal_error("\n\nPlease open a bug report with the above information.\n");
 
-   handle_fatal_error(sigcode, "ReSHOP caught a signal");
+   crash_handler(sigcode);
+
+   handle_fatal_error(sigcode, "\nReSHOP caught a fatal signal.");
 }
 
 static CONSTRUCTOR_ATTR void register_signals(void)
@@ -318,7 +360,7 @@ struct printout_ops {
    void (*flush)(void *data);       /**< flush function      */
    rhp_print_fn print;              /**< print function */
    bool use_asciicolors;            /**< If true, uses ascii colors */
-   bool user_defined;               /**< Is it user-defined? */
+   bool nostdouterr;                /**< Does not print on stdout/stderr */
 };
 
 static void print_stdoutput(void *data, unsigned mode, const char *buf);
@@ -330,7 +372,7 @@ static const struct printout_ops printops_default = {
    .flush = flush_stdoutput,
    .print = print_stdoutput,
    .use_asciicolors = true,
-   .user_defined = false,
+   .nostdouterr = false,
 
 };
 
@@ -339,7 +381,7 @@ static tlsvar struct printout_ops print_ops = {
    .flush = flush_stdoutput,
    .print = print_stdoutput,
    .use_asciicolors = true,
-   .user_defined = false,
+   .nostdouterr = false,
 };
 
 static tlsvar rhpfd_t log_fd =
@@ -351,7 +393,7 @@ static tlsvar rhpfd_t log_fd =
 
 static NONNULL void print_fd(rhpfd_t fd, unsigned mode, const char *buf)
 {
-   assert (valid_fd(fd));
+   assert(valid_fd(fd));
 
    u8 lvl;
    unsigned mode_verbosity = (mode & 0xFc);
@@ -573,18 +615,18 @@ static void print_stdoutput(UNUSED void *data, unsigned mode, const char *buf)
  *
  * @ingroup publicAPI
  *
- * @param data              user-defined environment
- * @param print             the print function
- * @param flush             the flush function
- * @param use_asciicolors   if false, remove any ASCII color from the messages
+ * @param data      user-defined environment
+ * @param print     the print function
+ * @param flush     the flush function
+ * @param flags     flags to control behavior (see enum rhp_print_flags)
  */
 void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
-                      bool use_asciicolors)
+                      unsigned flags)
 {
    print_ops.data = data;
    print_ops.flush = flush;
    print_ops.print = print;
-   print_ops.user_defined = true;
+   print_ops.nostdouterr = flags & RhpPrintNoStdOutErr;
 
    const char *force_colors = mygetenv("RHP_COLORS");
 
@@ -595,7 +637,7 @@ void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
    }
    myfreeenvval(force_colors);
 
-   print_ops.use_asciicolors = use_asciicolors;
+   print_ops.use_asciicolors = flags & RhpPrintUseColors;
 }
 
 /**
@@ -607,7 +649,7 @@ void rhp_set_printopsdefault(void)
    print_ops.data = printops_default.data;
    print_ops.print = printops_default.print;
    print_ops.use_asciicolors = printops_default.use_asciicolors;
-   print_ops.user_defined = printops_default.user_defined;
+   print_ops.nostdouterr = printops_default.nostdouterr;
 }
 
 /**
@@ -653,7 +695,7 @@ void fatal_error(const char *format, ...)
 
    print_ops.print(print_ops.data, PO_ERROR | PO_ALLDEST, buf);
 
-   if (print_ops.user_defined) {
+   if (print_ops.nostdouterr) {
       (void)fputs(buf, stderr);
    } 
 

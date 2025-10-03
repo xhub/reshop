@@ -863,9 +863,9 @@ typedef struct rhp_mdl {
 
       rhp_mdl(const char *gms_controlfile) {
          struct rhp_mdl *mdl;
-         int rc = rhp_gms_newfromcntr (gms_controlfile, &mdl);
+         int rc = rhp_gms_newfromcntr(gms_controlfile, &mdl);
          if (!mdl) {
-            SWIG_exception(SWIG_RuntimeError, "Couldn't create model");
+            SWIG_exception(SWIG_RuntimeError, "Couldn't create model from control file");
          }
 
          if (rc) {

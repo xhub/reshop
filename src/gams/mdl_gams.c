@@ -1,9 +1,8 @@
-#include "gams_logging.h"
-#include "gams_macros.h"
 #include "reshop_config.h"
 #include "asprintf.h"
-#include "reshop_gams_common.h"
+
 #include <fcntl.h>
+#include <stdio.h>
 
 /* For IO related things  */
 #ifdef _WIN32
@@ -15,26 +14,38 @@
 #define open _open
 #define close _close
 
+#ifdef _MSC_VER
+#define ftello _ftelli64
+#endif
+
 #else
 
 #include <unistd.h>
 
 #endif
+
 #include "checks.h"
 #include "container.h"
 #include "ctrdat_gams.h"
 #include "fs_func.h"
+#include "gams_logging.h"
+#include "gams_macros.h"
 #include "gams_rosetta.h"
 #include "macros.h"
 #include "mdl.h"
 #include "mdl_gams.h"
 #include "printout.h"
+#include "reshop_gams_common.h"
+#include "reshop-gams.h"
 #include "rhp_fwd.h"
 #include "tlsdef.h"
 #include "win-compat.h"
 
 static tlsvar char *gamsdir = NULL;
 static tlsvar char *gamscntr = NULL;
+
+/** this is used in the crash reporter */
+static tlsvar struct rhp_gams_handles gams_handles = {0};
 
 #ifndef CLEANUP_FNS_HAVE_DECL
 static
@@ -45,7 +56,6 @@ void DESTRUCTOR_ATTR cleanup_gams(void)
   FREE(gamscntr);
    gams_unload_libs();
 }
-
 
 static int ensure_matrixfile(const char *path)
 {
@@ -72,7 +82,7 @@ static int ensure_matrixfile(const char *path)
       }
    }
 
-   FREE(filename);
+   free(filename);
 
    return OK;
 
@@ -483,4 +493,46 @@ int gmdl_loadrhpoptions(Model *mdl)
    optFree(&r.oh);
 
    return OK;
+}
+
+/**
+ * @brief Return an indicator whether the crash handler should continue
+ *
+ * The main idea is that a SL=2 solve enables us to send the problem
+ *
+ * @return the error code
+ */
+bool gmdl_check_solvelink_crash_report(void)
+{
+   if (!gams_handles.eh) { return true; }
+
+   char matrix_fname[GMS_SSSIZE];
+
+   gevGetStrOpt(gams_handles.eh, gevNameMatrix, matrix_fname);
+
+   if (!file_readable_silent(matrix_fname)) { return false; }
+
+   FILE* file_handle = fopen(matrix_fname, "rb");
+   if (!file_handle) { return false; }
+
+    // 1. Get file size.
+   bool res = ((fseek(file_handle, 0, SEEK_END) != 0) ||
+      (ftello(file_handle) > 0));
+
+   (void)fclose(file_handle);
+
+   return res;
+}
+
+gevHandle_t gmdl_get_src_gev(void)
+{
+   return gams_handles.eh;
+}
+
+void gmdl_setgamshandles(struct rhp_gams_handles *ghandles)
+{
+   gams_handles.eh = ghandles->eh;
+   gams_handles.gh = ghandles->gh;
+   gams_handles.dh = ghandles->dh;
+   gams_handles.ch = ghandles->ch;
 }

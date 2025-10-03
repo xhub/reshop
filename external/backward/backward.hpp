@@ -44,6 +44,7 @@
 #endif
 #endif
 
+
 // You can define one of the following (or leave it to the auto-detection):
 //
 // #define BACKWARD_SYSTEM_LINUX
@@ -92,6 +93,19 @@
 #include <vector>
 #include <exception>
 #include <iterator>
+
+/* edit starts --xhub */
+#ifdef __linux__
+
+#include <sys/prctl.h>
+#define RHP_TRACE_ME() prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, 0, 0, 0);
+
+#else
+
+#define RHP_TRACE_ME() 
+
+#endif
+/* edit ends --xhub */
 
 #if defined(BACKWARD_SYSTEM_LINUX)
 
@@ -4351,11 +4365,16 @@ private:
   sig_handler(int signo, siginfo_t *info, void *_ctx) {
     handleSignal(signo, info, _ctx);
 
+   (void)fprintf(stderr, "PID: %d", getpid()); /*NOLINT(bugprone-unused-return-value,cert-err33-c)*/ \
+   RHP_TRACE_ME();
+   int c = getchar(); //NOLINT(bugprone-unused-return-value,cert-err33-c)
+
     // try to forward the signal.
     raise(info->si_signo);
 
+
     // terminate the process immediately.
-    puts("watf? exit");
+    (void)fprintf(stderr, "Exiting ... %d", c);
     _exit(EXIT_FAILURE);
   }
 };

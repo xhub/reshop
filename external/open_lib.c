@@ -88,6 +88,15 @@ void *open_library_nofail(const char* lib_name, int flags)
    return open_library_priv(lib_name, flags, false);
 }
 
+void close_library(void *handle)
+{
+#ifdef _WIN32
+   FreeLibrary(handle);
+#else
+   dlclose(handle);
+#endif
+}
+
 void* get_function_address(void* handle, const char* func)
 {
   void* ptr;

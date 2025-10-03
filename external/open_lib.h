@@ -44,6 +44,13 @@ void* open_library(const char* lib_name, int flags);
 void* open_library_nofail(const char* lib_name, int flags);
 
 /**
+ *  @brief close a previously opened dynamic library
+ *
+ *  @param handle  handle
+ */
+void close_library(void *handle);
+
+/**
  *  @brief get the address of a function in an already opened lib
  *
  *  @param handle  plugin handle to the library

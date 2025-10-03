@@ -4,6 +4,7 @@
 #include "ovf_options.h"
 #include "printout.h"
 #include "reshop.h"
+#include "reshop_priv.h"
 #include "rhp_options.h"
 #include "rhpgui_launcher.h"
 #include "status.h"
@@ -84,6 +85,20 @@ void rhp_print_banner(void)
 const char* rhp_version(void)
 {
   return rhp_git_hash;
+}
+
+/**
+ * @brief Set some user or initial backend info
+ *
+ * This is mostly used for debug and crash reporting
+ *
+ * @ingroup publicAPI
+ */
+void rhp_set_userinfo(const char *userinfo)
+{
+   if (userinfo) {
+      set_userinfo(userinfo);
+   }
 }
 
 

@@ -396,6 +396,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
       if (WITH_BACKWARD)
          # We rely on libbackward being copied
+
          set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/test")
       endif()
    endif()

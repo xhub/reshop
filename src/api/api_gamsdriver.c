@@ -183,6 +183,8 @@ int rhp_gms_fillgmshandles(Model *mdl, struct rhp_gams_handles *gmsh)
 
    S_CHECK(check_gmshandles(gmsh));
 
+  gmdl_setgamshandles(gmsh);
+
    gms->gmo = gmsh->gh;
    gms->gev = gmsh->eh;
    gms->dct = gmsh->dh;

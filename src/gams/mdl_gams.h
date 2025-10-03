@@ -51,4 +51,8 @@ int gmdl_ensuresimpleprob(Model *mdl) NONNULL;
 void gams_unload_libs(void);
 int gams_load_libs(const char *sysdir) NONNULL;
 
+bool gmdl_check_solvelink_crash_report(void);
+gevHandle_t gmdl_get_src_gev(void);
+void gmdl_setgamshandles(struct rhp_gams_handles *ghandles);
+
 #endif

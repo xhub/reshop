@@ -93,6 +93,11 @@ int new_unique_dirname(char *newdir, unsigned newdir_len)
    return OK;
 }
 
+bool file_readable_silent(const char *fname)
+{
+   return !access(fname, R_OK);
+}
+
 int file_readable(const char *fname)
 {
    if (!access(fname, R_OK)) { return 0; }

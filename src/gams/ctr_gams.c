@@ -173,7 +173,6 @@ static int gcdat_init(GmsContainerData * restrict gms, GmsModelData * restrict g
       gevGetStrOpt(gms->gev, gevsubsysFile, buf);
       trace_backend("[GAMS] Reading user-defined configuration file '%s'\n", buf)
    }
-   strcat(buffer, GMS_CONFIG_FILE);
 
    /* This is required to get any solver */
    if (cfgReadConfig(gms->cfg, buf)) {
