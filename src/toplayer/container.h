@@ -111,6 +111,7 @@ int ctr_var_iterequs(const Container *ctr, rhp_idx vi, void **jacptr,
                       double *jacval, rhp_idx *ei, int *nlflag);
 int ctr_equ_itervars(const Container *ctr, rhp_idx ei, void **jacptr,
                       double *jacval, rhp_idx *vi, int *nlflag);
+int ctr_equ_iscst(const Container *ctr, rhp_idx ei, bool *iscst) NONNULL;
 
 int ctr_ensure_pool(Container *ctr);
 int ctr_borrow_nlpool(Container *ctr, Container *ctr_src);

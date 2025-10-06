@@ -1124,7 +1124,7 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
       }
 
       if (!valid_vi(objvar)) {
-         error("%s :: no valid objvar and no valid objequ\n", __func__);
+         errormsg("[fooc] ERROR: no valid objvar and no valid objequ.\n");
          status = Error_UnExpectedData;
          goto _exit;
       }
@@ -1151,7 +1151,25 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
       goto add_multiplier_terms;
    }
 
+   /* ---------------------------------------------------------------------
+    * It is possible for the objective function to gbe constant. In that case,
+    * we (for now) just warn and set 
+    * ---------------------------------------------------------------------- */
+   bool objequ_cst;
+   S_CHECK(ctr_equ_iscst(ctr_src, objequ, &objequ_cst));
+
+   if (objequ_cst) {
+      if (mp) {
+         info("[fooc] INFO: MP(%s) has a constant objective function.\n", mp_getname(mp));
+      } else {
+         info("[fooc] INFO: %s model '%.*s' #%u has a constant objective function.\n", mdl_fmtargs(mdl_src));
+      }
+
+      goto add_multiplier_terms;
+   }
+
    assert(valid_ei(objequ));
+   unsigned vi_max = mdl_nvars_total(mdl_src);
 
    void *iterator = NULL;
    do {
@@ -1160,6 +1178,8 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
       rhp_idx vi_src;
 
       S_CHECK_EXIT(ctr_equ_itervars(ctr_src, objequ, &iterator, &jacval, &vi_src, &nlflag));
+
+      S_CHECK(vi_inbounds(vi_src, vi_max, __func__));
 
     /* -------------------------------------------------------------------
      * ctr_src is still in the original namespace

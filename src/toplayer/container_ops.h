@@ -62,6 +62,7 @@ typedef struct ctr_ops {
    int (*getvarsmult)(const Container *ctr, Avar *v, double *mult);
    int (*getvarsval)(const Container *ctr, Avar *v, double *vals);
    int (*isequNL)(const Container *ctr, rhp_idx ei, bool *isNL);
+   int (*isequcst)(const Container *ctr, rhp_idx ei, bool *iscst);
    int (*resize)(Container *ctr, unsigned n, unsigned m);
    int (*setequbasis)(Container *ctr, rhp_idx ei, int bstat);
    int (*setequcst)(Container *ctr, rhp_idx ei, double val);

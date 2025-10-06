@@ -1337,10 +1337,10 @@ static int rctr_setequmult(Container *ctr, rhp_idx ei, double multiplier)
    return OK;
 }
 
-static int rctr_setequtype(Container *ctr, rhp_idx eidx, unsigned type, unsigned cone)
+static int rctr_setequtype(Container *ctr, rhp_idx ei, unsigned type, unsigned cone)
 {
-    if (!valid_ei(eidx) || (size_t)eidx >= ((struct ctrdata_rhp *)ctr->data)->total_m) {
-      error("%s :: invalid index %d\n", __func__, eidx);
+    if (!valid_ei(ei) || (size_t)ei >= ((struct ctrdata_rhp *)ctr->data)->total_m) {
+      error("%s :: invalid index %d\n", __func__, ei);
       return Error_IndexOutOfRange;
    }
 
@@ -1353,19 +1353,19 @@ static int rctr_setequtype(Container *ctr, rhp_idx eidx, unsigned type, unsigned
       return Error_InvalidValue;
    }
 
-   ctr->equs[eidx].object = type;
-   ctr->equs[eidx].cone = cone;
+   ctr->equs[ei].object = type;
+   ctr->equs[ei].cone = cone;
 
    return OK;
 }
 
 UNUSED static int _rmdl_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
 {
-   struct ctrdata_rhp *model = (struct ctrdata_rhp *) ctr->data;
-   S_CHECK(vi_inbounds(vi, model->total_n, __func__));
+   struct ctrdata_rhp *cdat = (struct ctrdata_rhp *) ctr->data;
+   S_CHECK(vi_inbounds(vi, cdat->total_n, __func__));
 
    if (valid_ei(ei)) {
-      S_CHECK(ei_inbounds(ei, model->total_m, __func__));
+      S_CHECK(ei_inbounds(ei, cdat->total_m, __func__));
    }
 
    return rctr_setequvarperp(ctr, ei, vi);
@@ -1443,6 +1443,17 @@ static int rctr_equvarcounts(Container *ctr)
    return OK;
 }
 
+static int rctr_isequcst(const Container *ctr, rhp_idx ei, bool *iscst)
+{
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   S_CHECK(ei_inbounds(ei, cdat->total_m, __func__));
+
+   CMatElt *cme = cdat->cmat.equs[ei];
+   *iscst = !cme || cme->type == CMatEltCstEqu;
+
+   return OK;
+}
+
 
 const struct ctr_ops ctr_ops_rhp = {
    .allocdata      = rctr_allocdata,
@@ -1485,6 +1496,7 @@ const struct ctr_ops ctr_ops_rhp = {
    .getvarbasis  = rctr_getvarbasis,
    .getallvarsval     = rctr_getallvarsval,
    .getvartype     = rctr_getvartype,
+   .isequcst       = rctr_isequcst,
    .resize         = rctr_resize,
    .setequval     = rctr_setequval,
    .setequmult     = rctr_setequmult,
@@ -1559,6 +1571,7 @@ const struct ctr_ops ctr_ops_julia = {
    .getallvarsval  = rctr_getallvarsval,
    .getvartype     = rctr_getvartype,
    .resize         = rctr_resize,
+   .isequcst       = rctr_isequcst,
    .setequval      = rctr_setequval,
    .setequmult     = rctr_setequmult,
    .setequname     = rctr_setequname_s,

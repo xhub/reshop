@@ -1070,6 +1070,25 @@ static int gams_setvartype(Container *ctr, rhp_idx vi, unsigned type)
    return Error_NotImplemented;
 }
 
+static int gams_isequcst(const Container *ctr, rhp_idx ei, bool *isCst)
+{
+   /* ---------------------------------------------------------------------
+    * If we have at least a valid variable, then 
+    * ---------------------------------------------------------------------- */
+   void *jacptr = NULL;
+   double jacval;
+   int rowidx = ei, colidx, flag;
+
+   const struct ctrdata_gams *gms = ctr->data;
+
+   gmoGetRowJacInfoOne(gms->gmo, rowidx, &jacptr, &jacval, &colidx, &flag);
+
+   *isCst = colidx < 0;
+
+   return OK;
+}
+
+
 const struct ctr_ops ctr_ops_gams = {
    .allocdata      = gams_allocdata,
    .deallocdata    = gams_deallocdata,
@@ -1109,6 +1128,7 @@ const struct ctr_ops ctr_ops_gams = {
    .getvarbasis    = gams_getvarbasis,
    .getvarub       = gams_getvarub,
    .getallvarsval  = gams_getvarsval,
+   .isequcst       = gams_isequcst,
    .resize         = gams_resize,
    .setequval      = gams_setequval,
    .setequname     = gams_setequname,
