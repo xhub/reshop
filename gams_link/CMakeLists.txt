@@ -47,9 +47,9 @@ else()
 endif()
 
 if (_LIBRESHOP_TYPE STREQUAL "STATIC_LIBRARY")
-   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c")
+   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;reshop_misc.c")
 else()
-   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;"
+   add_executable(${RESHOP_GAMSLINK_EXE} "gmsrhp_ux.c;reshop_misc.c;"
                                       "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgmomcc.c;"
                                       "${CMAKE_SOURCE_DIR}/src/gams/wrapped/xgevmcc.c")
 endif()

@@ -178,7 +178,7 @@ DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
       flags |= RhpPrintNoStdOutErr;
    }
 
-   rhp_set_printops(jh, printgams, flushgams, flags);
+   rhp_set_printops(jh->eh, printgams, flushgams, flags);
 
    /* Set some basic info */
    char userinfo[64];

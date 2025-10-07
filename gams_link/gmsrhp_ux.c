@@ -2,6 +2,7 @@
  * does some inspection on the model instance
  */
 
+#include "reshop_priv.h"
 #if defined(__linux__) && !defined(_GNU_SOURCE)
 
 #  define _GNU_SOURCE 1
@@ -14,7 +15,6 @@
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <windows.h>
 #include <processenv.h>
 
@@ -76,6 +76,7 @@ int main(int argc, char** argv)
    int rc;
    char msg[GMS_SSSIZE];
    gmoHandle_t gmo = NULL;
+   gevHandle_t gev = NULL;
 
    const char *banner_env = mygetenv("RHP_DRIVER_BANNER");
    if (banner_env) {
@@ -101,7 +102,7 @@ int main(int argc, char** argv)
 
    /* Still try to load GMO to set values */
    gmo = rhp_gms_getgmo(mdl);
-   gevHandle_t gev = rhp_gms_getgev(mdl);
+   gev = rhp_gms_getgev(mdl);
    const char *gams_sysdir = rhp_gms_getsysdir(mdl);
 
    if (!gmoGetReadyD(gams_sysdir, msg, sizeof(msg)) ||
@@ -170,10 +171,37 @@ int main(int argc, char** argv)
 // TODO MACOS
 #endif
 
+   if (rhp_syncenv()) {
+      gevStatCon(gev);
+      gevLogStatNoC(gev, "\n\n*** ReSHOP ERROR: Failed to sync with environment variables");
+      gevStatCoff(gev);
+      rc = 1; goto _exit;
+   }
+
+   /* From now on we can use the GAMS log. */
+   /* (data, printfn, flushgams, use_asciicolor)*/
+   int logoption = gevGetIntOpt(gev, gevLogOption);
+   unsigned flags = 0;
+   if (logoption < 3) {
+      flags |= RhpPrintNoStdOutErr;
+   }
+
+   rhp_set_printops(gev, printgams, flushgams, flags);
+
+   /* Set some basic info */
+   char userinfo[64];
+   (void)snprintf(userinfo, sizeof(userinfo), "GAMS %d", gevGetIntOpt(gev, gevGamsVersion));
+   rhp_set_userinfo(userinfo);
+
+   /* Print the reshop banner */
+   rhp_print_banner();
+
    mdl_solver = rhp_newsolvermdl(mdl);
    if (!mdl_solver) {
       if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: couldn't create solver model object\n"); }
+      gevStatCon(gev);
       gevLogStatPChar(gev, msg);
+      gevStatCoff(gev);
       goto _exit;
    }
 
@@ -182,7 +210,9 @@ int main(int argc, char** argv)
    if (rc) {
       if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: EMP transformation failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc); }
+      gevStatCon(gev);
       gevLogStatPChar(gev, msg);
+      gevStatCoff(gev);
       goto _exit;
    }
 
@@ -194,7 +224,9 @@ int main(int argc, char** argv)
    if (rc) {
       if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: solve failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc); }
+      gevStatCon(gev);
       gevLogStatPChar(gev, msg);
+      gevStatCoff(gev);
       goto _exit;
    }
 
@@ -203,7 +235,9 @@ int main(int argc, char** argv)
    if (rc) {
       if (!silent) { (void)snprintf(msg, sizeof msg, "*** ReSHOP ERROR: postprocessing failed! Error message is %s (%d)\n",
                rhp_status_descr(rc), rc); }
+      gevStatCon(gev);
       gevLogStatPChar(gev, msg);
+      gevStatCoff(gev);
       goto _exit;
    }
 
@@ -222,6 +256,11 @@ _exit:
 
    if (gmo) {
       gmoUnloadSolutionLegacy(gmo);
+   }
+
+   /* Without this call, the status file is empty in some instances */
+   if (gev) {
+      gevLogStatFlush(gev);
    }
 
    if (mdl_solver) { rhp_mdl_free(mdl_solver); }

@@ -10,7 +10,7 @@
  */
 void printgams(void* env, unsigned reshop_mode, const char *str)
 {
-   rhpRec_t *jh = (rhpRec_t *)env;
+   gevHandle_t gev = (gevHandle_t)env;
    /* TODO(Xhub) support status and all ...  */
 
    int mode;
@@ -22,29 +22,29 @@ void printgams(void* env, unsigned reshop_mode, const char *str)
 
    switch (mode) {
    case STATUSMASK:
-      gevStatPChar(jh->eh, str);
+      gevStatPChar(gev, str);
       break;
    case ALLMASK: {
       char *newline = strchr(str, '\n');
       bool simple_copy = newline && newline[1] == '\0'; 
       const char *start = simple_copy ? "=C" : "=1\n";
 
-      gevStatPChar(jh->eh, start);
+      gevStatPChar(gev, start);
 
-      gevLogStatPChar(jh->eh, str);
+      gevLogStatPChar(gev, str);
 
       if (!simple_copy) {
          size_t sz = strlen(str);
 
          /* If the string does not end with '\n', add one before "=2" */
          const char *end = (sz >= 1 && str[sz-1] != '\n') ? "\n=2\n" : "=2\n";
-         gevStatPChar(jh->eh, end);
+         gevStatPChar(gev, end);
       }
       break;
    }
    default:
    case LOGMASK:
-      gevLogPChar(jh->eh, str);
+      gevLogPChar(gev, str);
       break;
    }
 
@@ -57,6 +57,6 @@ void printgams(void* env, unsigned reshop_mode, const char *str)
  */
 void flushgams(void* env)
 {
-   rhpRec_t *jh = (rhpRec_t *)env;
-   gevLogStatFlush(jh->eh);
+   gevHandle_t gev = (gevHandle_t)env;
+   gevLogStatFlush(gev);
 }
