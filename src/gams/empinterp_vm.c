@@ -849,6 +849,7 @@ int empvm_run(struct empvm *vm)
          default:
             error("\n[empvm_run] ERROR in %s: unexpected ident type %s\n", opcodes_name(instr),
                   identtype2str(type));
+            status = Error_EMPRuntimeError;
             goto _exit;
          }
 
@@ -889,6 +890,7 @@ int empvm_run(struct empvm *vm)
          default:
             error("\n[empvm_run] ERROR in %s: unexpected ident type %s\n", opcodes_name(instr),
                   identtype2str(type));
+            status = Error_EMPRuntimeError;
             goto _exit;
          }
          vm->locals[slot] = UINT_VAL(len);
@@ -1032,6 +1034,8 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          mpid_t mpid_dual = vm->data.state.mpid_dual;
          if (!mpid_regularmp(mpid_dual)) {
             error("\n[empvm] ERROR: invalid value %s #%u\n", mpid_specialvalue(mpid_dual), mpid_dual);
+            status = Error_EMPRuntimeError;
+            goto _exit;
          }
 
          S_CHECK_EXIT(dualslabel_add(dualslabel, uels, nargs, mpid_dual));
