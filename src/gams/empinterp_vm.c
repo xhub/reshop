@@ -933,7 +933,27 @@ int empvm_run(struct empvm *vm)
 #else
             uel = dctUelIndex(vm->data.dct, uelstr);
 #endif
-            assert(uel > 0);
+
+            if (RHP_UNLIKELY(uel <= 0)) {
+               int offset;
+               error("[empvm] ERROR: %nelement '%s' not found in the model instance, but it "
+                     "is part of the GAMS database.\n", &offset, uelstr);
+               error("%*sThis happened while selecting said element at dim %u for %s %.*s\n",
+                     offset, "", idx+1, ident_fmtargs(&symiter->ident));
+
+               if (gmssym_type == IdentVar) {
+                  error("%*sA potential source is that the record for the above variable "
+                        "is not included in the model instance.\n%*sCheck that it appears in "
+                        "at least one equation.\n", offset, "", offset, "");
+               } else if (gmssym_type == IdentEqu) {
+                  error("%*sA potential source is that the record for the above equation "
+                        "is not included in the model instance.\n%*sCheck the equation "
+                        "definition.\n", offset, "", offset, "");
+                  }
+
+               status = Error_EMPRuntimeError;
+               goto _exit;
+            }
          }
 
          symiter->uels[idx] = uel;
