@@ -14,8 +14,8 @@ ERRMSG(Error_EMPIncorrectSyntax, "EMP syntax error") \
 ERRMSG(Error_EMPRuntimeError, "Runtime error while processing EMP information") \
 ERRMSG(Error_EvaluationFailed, "EvaluationFailed") \
 ERRMSG(Error_FileOpenFailed, "FileOpenFailed") \
-ERRMSG(Error_GamsIncompleteSetupInfo, "GAMS setup info is incomplete") \
 ERRMSG(Error_GamsCallFailed, "GAMS Call Failed") \
+ERRMSG(Error_GamsIncompleteSetupInfo, "GAMS setup info is incomplete") \
 ERRMSG(Error_GamsSolverCallFailed, "GAMS solver call failed") \
 ERRMSG(Error_HDF5_IO, "HDF5 IO") \
 ERRMSG(Error_HDF5_NullPointer, "HDF5 NullPointer") \
@@ -42,21 +42,22 @@ ERRMSG(Error_OperationNotAllowed, "Operation is not allowed") \
 ERRMSG(Error_OptionNotFound, "OptionNotFound") \
 ERRMSG(Error_OvfMissingParam, "Missing parameter in OVF definition") \
 ERRMSG(Error_RuntimeError, "Unexpected runtime error") \
-ERRMSG(Error_SizeTooSmall, "SizeTooSmall") \
 ERRMSG(Error_SizeTooLarge, "A component of the problem data is too large") \
+ERRMSG(Error_SizeTooSmall, "SizeTooSmall") \
 ERRMSG(Error_SolverCreateFailed, "SolverCreateFailed") \
 ERRMSG(Error_SolverError, "Solver error") \
 ERRMSG(Error_SolverInvalidName, "Invalid solver name") \
 ERRMSG(Error_SolverModifyProblemFailed, "SolverModifyProblemFailed") \
-ERRMSG(Error_SymbolicDifferentiation, "SymbolicDifferentiation") \
 ERRMSG(Error_SymbolNotInTheGamsRim, "GAMS symbol not found") \
+ERRMSG(Error_SymbolicDifferentiation, "SymbolicDifferentiation") \
 ERRMSG(Error_SystemError, "System error encountered") \
+ERRMSG(Error_UserInterrupted, "UserInterrupted") \
 ERRMSG(Error_UnExpectedData, "UnExpectedData") \
 ERRMSG(Error_UnsupportedOperation, "UnsupportedOperation") \
 ERRMSG(Error_WrongModelForFunction, "WrongModelForFunction") \
 ERRMSG(Error_WrongNumericalValue, "WrongNumericalValue") \
 ERRMSG(Error_WrongOptionValue, "WrongOptionValue") \
-ERRMSG(Error_WrongParameterValue, "WrongParameterValue")
+ERRMSG(Error_WrongParameterValue, "WrongParameterValue") \
 
 
 #define ERRMSG(id, str) char id[sizeof(str)];

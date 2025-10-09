@@ -22,17 +22,18 @@ typedef enum option_type {
    OptType_Last = OptString,
 } OptType;
 
+/** ReSHOP option */
 struct option {
-   const char *name;
-   const char *description;
-   OptType type;
+   const char *name;         /**< Option name                       */
+   const char *description;  /**< Textual description of the option */
+   OptType type;             /**< Option type                       */
 
    union {
       double d;
       int i;
       bool b;
       const char *s;
-   } value;
+   } value;                  /**< Option value                      */
 };
 
 typedef struct option_set {

@@ -12,19 +12,19 @@ enum rhp_options_enum {
    Options_Display_OvfDag,
    Options_Display_Timings,
    Options_Dump_Scalar_Models,
-   Options_Expensive_Checks,
    Options_EMPInfoFile,
+   Options_Expensive_Checks,
    Options_GUI,
    Options_Output,
    Options_Output_Subsolver_Log,
    Options_Pathlib_Name,
    Options_Png_Viewer,
+   Options_Save_EmpDag,
+   Options_Save_OvfDag,
    Options_SolveSingleOptAs,
    Options_Subsolveropt,
    Options_Time_Limit,
-   Options_Save_EmpDag,
-   Options_Save_OvfDag,
-   Options_Last = Options_Save_OvfDag,
+   Options_Last = Options_Time_Limit,
 };
 
 extern tlsvar struct option rhp_options[];

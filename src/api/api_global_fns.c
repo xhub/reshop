@@ -281,6 +281,83 @@ struct log_opt {
    const char *help;
 };
 
+static const struct log_opt log_opts[] = {
+   {"backend",     rhp_show_backendinfo,    "display backend information"},
+   {"ccf",         rhp_show_ccftrace,       "lists CCF reformulation information"},
+   {"container",   rhp_show_containertrace, "lists algebraic container changes"},
+   {"empdag",      rhp_show_empdagtrace,    "lists EMPDAG actions"},
+   {"empinterp",   rhp_show_empinterptrace, "lists EMP interpreter actions"},
+   {"empparser",   rhp_show_empparsertrace, "lists EMP parser actions"},
+   {"fooc",        rhp_show_fooctrace,      "lists first-order optimality conditions computation information"},
+   {"process",     rhp_show_processtrace,   "lists processing actions"},
+   {"refcnt",      rhp_show_refcnttrace,    "display reference counter information"},
+   {"solreport",   rhp_show_solreporttrace, "display solution/values reporting actions"},
+   {"solver",      rhp_show_solver_log,     "display solver log"},
+   {"timings",     rhp_show_timings,        "display timings information"},
+};
+
+static const char* loglevel_strvals[] = {"all",   "error", "info",   "v",  "vv",  "vvv"};
+static const unsigned loglevel_vals[] = {INT_MAX, PO_ERROR, PO_INFO, PO_V, PO_VV, PO_VVV};
+static const unsigned n_loglevels = ARRAY_SIZE(loglevel_vals);
+
+static const unsigned n_opts = ARRAY_SIZE(log_opts);
+
+static void log_help(void)
+{
+   info("Help for RHP_LOG values:\n\n");
+
+   for (unsigned i = 0; i < n_opts; ++i) {
+      info("\t%-25s %s\n", log_opts[i].name, log_opts[i].help);
+   }
+
+   info("\t%-25s enable all options above\n", "all");
+}
+
+static const char * const envvars_help[][2] = {
+   {"RHP_COLORS", "Use colors when logging"},
+   {"RHP_HELP", "Print this help and quit"},
+   {"RHP_REPORT_CRASH", "Report any crash to the reporting system"},
+};
+
+/* TODO: document as advanced */
+// RHP_GAMSCNTR_FILE
+// RHP_GAMSDIR
+// RHP_SOLVER_BACKEND
+// "RHP_SOLVELINK"
+
+static void env_help(void)
+{
+   info("List of environment variables\n");
+   info("\n- The following ReSHOP options can be set by set environment variables:\n");
+
+   for (unsigned i = 0, len = Options_Last+1; i < len; ++i) {
+      info("\tRHP_");
+      const char *opt_name = rhp_options[i].name;
+      size_t opt_name_len = strlen(opt_name);
+
+      for (unsigned j = 0; j < opt_name_len; ++j) {
+         info("%c", RhpToUpper(*opt_name++));
+      }
+
+      size_t offset = 4 + opt_name_len;
+      if (offset < 25) {
+         int blank = 25 - offset;
+         info("%*s", blank, "");
+      }
+
+      info(" %s\n", rhp_options[i].description);
+   }
+
+   info("\n- Additionally, the following environment variables influence the ReSHOP behavior:\n");
+
+   for (unsigned i = 0, len = ARRAY_SIZE(envvars_help); i <len; ++i) {
+      info("\t%-25s %s\n", envvars_help[i][0], envvars_help[i][1]);
+   }
+
+   info("\n- Finally, logging can be controlled via RHP_LOG:\n");
+   log_help();
+}
+
 /**
  * @brief Synchronize the ReSHOP options and switches with the current environment variable values
  *
@@ -295,26 +372,10 @@ int rhp_syncenv(void)
    size_t optname_maxlen = 512;
    MALLOC_(env_varname, char, optname_maxlen + 5);
 
-   struct log_opt log_opts[] = {
-      {"container",   rhp_show_containertrace, "lists algebraic container changes"},
-      {"ccf",         rhp_show_ccftrace,       "lists CCF reformulation information"},
-      {"empdag",      rhp_show_empdagtrace,    "lists EMPDAG actions"},
-      {"empinterp",   rhp_show_empinterptrace, "lists EMP interpreter actions"},
-      {"empparser",   rhp_show_empparsertrace, "lists EMP parser actions"},
-      {"fooc",        rhp_show_fooctrace,      "lists first-order optimality conditions computation information"},
-      {"process",     rhp_show_processtrace,   "lists processing actions"},
-      {"refcnt",      rhp_show_refcnttrace,    "display reference counter information"},
-      {"timings",     rhp_show_timings,        "display timings information"},
-      {"backend",     rhp_show_backendinfo,    "display backend information"},
-      {"solreport",   rhp_show_solreporttrace, "display solution/values reporting actions"},
-      {"solver",      rhp_show_solver_log,     "display solver log"},
-   };
-
-   const char* loglevel_strvals[] = {"all",   "error", "info",   "v",  "vv",  "vvv"};
-   const unsigned loglevel_vals[] = {INT_MAX, PO_ERROR, PO_INFO, PO_V, PO_VV, PO_VVV};
-   const unsigned n_loglevels = ARRAY_SIZE(loglevel_vals);
-
-   const unsigned n_opts = sizeof(log_opts)/sizeof(log_opts[0]);
+   if (getenv("RHP_HELP")) {
+      env_help();
+      return Error_UserInterrupted;
+   }
 
    const char * restrict env_varval = find_rhpenvvar("LOG", &env_varname, &optname_maxlen);
 
@@ -368,13 +429,9 @@ int rhp_syncenv(void)
 
          /* help */
          if (!strncmp("help", envopt, 4)) {
-            printf("Help for RHP_LOG values:\n\n");
-            for (unsigned i = 0; i < n_opts; ++i) {
-               /* TODO: do we have access to printf here */
-               printf("\t%20s: %s\n", log_opts[i].name, log_opts[i].help);
-            }
-            printf("\t%20s: enable all options above\n", "all");
-            status = Error_WrongOptionValue;
+
+            log_help();
+            status = Error_UserInterrupted;
             goto _exit;
          }
 

@@ -8,7 +8,7 @@
 /**
  * @brief Find the envirronment variable "RHP_<optname>"
  *
- * @param optname                   the option name
+ * @param         optname           the option name
  * @param[in,out] env_varname       the buffer for the envirronment variable
  * @param[in,out] env_varname_max   the max length of env_varname (on both input and output)
  *
