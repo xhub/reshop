@@ -23,6 +23,7 @@ typedef struct ovf_param_def_list {
 
 extern const unsigned ovf_numbers;
 extern const char* const ovf_names[];
+extern const char* const ovf_descr[];
 extern const char* const ovf_synonyms[][2];
 extern const char* const ovf_always_compatible[];
 

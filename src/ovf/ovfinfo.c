@@ -16,8 +16,8 @@
 const char * const ovf_synonyms[][2] = {
    /* Synonym, OVF name */
    { "expectedvalue", "expectation" },
-   { "sumpospart", "sum_pos_part"  },
    { "plus", "sum_pos_part"  },
+   { "sumpospart", "sum_pos_part"  },
    { NULL, NULL },
 };
 
@@ -26,34 +26,40 @@ const char * const ovf_always_compatible[] = {
    NULL,
 };
 
-#undef DECLARE_OVF_FUNCTION
-#define DECLARE_OVF_FUNCTION(X) #X,
+#undef OVF_FUNCTION_OP
+#define OVF_FUNCTION_OP(fn, doc) #fn,
 const char* const ovf_names[] = {
-   DECLARE_OVF
+   OVF_FUNCTIONS
+};
+
+#undef OVF_FUNCTION_OP
+#define OVF_FUNCTION_OP(fn,doc) doc,
+const char* const ovf_descr[] = {
+   OVF_FUNCTIONS
 };
 
 const unsigned ovf_numbers = sizeof(ovf_names)/sizeof(char*);
 
-#undef DECLARE_OVF_FUNCTION
-#define DECLARE_OVF_FUNCTION(X) &OVF_##X##_datagen,
+#undef OVF_FUNCTION_OP
+#define OVF_FUNCTION_OP(fn, doc) &OVF_##fn##_datagen,
 
 const struct ovf_genops* const ovf_datagen[] = {
-   DECLARE_OVF
+   OVF_FUNCTIONS
 };
 
 
-#undef DECLARE_OVF_FUNCTION
-#define DECLARE_OVF_FUNCTION(X) {.p = OVF_##X##_params, .s = &OVF_##X##_params_len},
+#undef OVF_FUNCTION_OP
+#define OVF_FUNCTION_OP(fn, doc) {.p = OVF_##fn##_params, .s = &OVF_##fn##_params_len},
 
 const struct ovf_param_def_list ovf_params[] = {
-   DECLARE_OVF
+   OVF_FUNCTIONS
 };
 
-#undef DECLARE_OVF_FUNCTION
-#define DECLARE_OVF_FUNCTION(X) X##_sense,
+#undef OVF_FUNCTION_OP
+#define OVF_FUNCTION_OP(fn, doc) fn##_sense,
 
 const RhpSense ovf_sense[] = {
-   DECLARE_OVF
+   OVF_FUNCTIONS
 };
 
 
@@ -210,7 +216,7 @@ void ovf_print_usage(void)
    puts("params: list of parameters (number and meaning different for each one)\n");
    puts("\n");
    puts("list of supported OVF function:");
-   for (size_t i = 0; i < sizeof(ovf_names)/sizeof(char*); ++i) {
+   for (size_t i = 0; i < ARRAY_SIZE(ovf_names); ++i) {
       printout(PO_INFO, "%s ", ovf_names[i]);
    }
    puts("\n");

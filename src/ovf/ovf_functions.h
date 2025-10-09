@@ -1,23 +1,27 @@
-#define DECLARE_OVF \
-DECLARE_OVF_FUNCTION(huber) \
-DECLARE_OVF_FUNCTION(l1) \
-DECLARE_OVF_FUNCTION(l2) \
-DECLARE_OVF_FUNCTION(sum_pos_part) \
-DECLARE_OVF_FUNCTION(hinge) \
-DECLARE_OVF_FUNCTION(vapnik) \
-DECLARE_OVF_FUNCTION(soft_hinge) \
-DECLARE_OVF_FUNCTION(hubnik) \
-DECLARE_OVF_FUNCTION(elastic_net) \
-DECLARE_OVF_FUNCTION(huber_scaled) \
-DECLARE_OVF_FUNCTION(soft_hinge_scaled) \
-DECLARE_OVF_FUNCTION(hubnik_scaled) \
-DECLARE_OVF_FUNCTION(cvarup) \
-DECLARE_OVF_FUNCTION(ecvarup) \
-DECLARE_OVF_FUNCTION(ecvarlo) \
-DECLARE_OVF_FUNCTION(cvarlo) \
-DECLARE_OVF_FUNCTION(expectation) \
-DECLARE_OVF_FUNCTION(smax) \
-DECLARE_OVF_FUNCTION(smin) \
+#ifndef OVF_FUNCTIONS_H
+#define OVF_FUNCTIONS_H
+
+/* NOTE: keep this list sorted! */
+#define OVF_FUNCTIONS \
+OVF_FUNCTION_OP(cvarlo, "cvar for the lower tail") \
+OVF_FUNCTION_OP(cvarup, "cvar for the upper tail") \
+OVF_FUNCTION_OP(ecvarlo, "convex combination of expectation and cvar for the lower tail") \
+OVF_FUNCTION_OP(ecvarup, "convex combination of expectation and cvar for the upper tail") \
+OVF_FUNCTION_OP(elastic_net, "elastic net: convex combination of l1 and l2 norms") \
+OVF_FUNCTION_OP(expectation, "expectation (or mean)") \
+OVF_FUNCTION_OP(hinge, "Hinge loss") \
+OVF_FUNCTION_OP(huber, "Huber loss") \
+OVF_FUNCTION_OP(huber_scaled, "Scaled Huber loss") \
+OVF_FUNCTION_OP(hubnik, "Hubnik: Huber and vapnik loss") \
+OVF_FUNCTION_OP(hubnik_scaled, "Scaled Hubnik") \
+OVF_FUNCTION_OP(l1, "l1 norm") \
+OVF_FUNCTION_OP(l2, "l2 norm") \
+OVF_FUNCTION_OP(smax, "Maximum over finite set/collection") \
+OVF_FUNCTION_OP(smin, "Minimum over finite set/collection") \
+OVF_FUNCTION_OP(soft_hinge, "Soft Hinge") \
+OVF_FUNCTION_OP(soft_hinge_scaled, "Scaled soft Hinge") \
+OVF_FUNCTION_OP(sum_pos_part, "Sum of positive part: SUM max{ (.), 0 }") \
+OVF_FUNCTION_OP(vapnik, "Vapnik loss") \
 
 
 #include "ovf_huber.h"
@@ -41,3 +45,5 @@ DECLARE_OVF_FUNCTION(smin) \
 #include "ovf_expectation.h"
 
 #include "ovf_smax_smin.h"
+
+#endif

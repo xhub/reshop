@@ -48,15 +48,17 @@ static const char * ovf_synonyms_token(const char *start, unsigned len)
 static unsigned ovf_errormsgname(void)
 {
    for (size_t i = 0; i < ovf_numbers; ++i) {
-      error("%s\n", ovf_names[i]);
+      error("\t%-20s    %s\n", ovf_names[i], ovf_descr[i]);
    }
 
-   errormsg("List of synonyms (alternative names):\n");
+   errormsg("\nList of synonyms (alternative names):\n");
    size_t i = 0;
    while (ovf_synonyms[i][0]) {
-      error("%s == %s\n", ovf_synonyms[i][0], ovf_synonyms[i][1]);
+      error("\t%-20s    --> %s\n", ovf_synonyms[i][0], ovf_synonyms[i][1]);
       ++i;
    }
+
+   errormsg("\n");
 
    return UINT_MAX;
 }
@@ -69,7 +71,7 @@ unsigned ovf_findbyname(const char *name)
       }
    }
 
-   const char *oldname = name;
+   const char *name_bck = name;
    name = ovf_synonyms_str(name);
    if (name) {
       for (unsigned i = 0; i < ovf_numbers; ++i) {
@@ -79,7 +81,7 @@ unsigned ovf_findbyname(const char *name)
       }
    }
 
-   error("Unknown OVF function '%s'. List of implemented functions:\n", oldname);
+   error("[OVF] Unknown function '%s'. List of implemented functions:\n", name_bck);
 
    return ovf_errormsgname();
 }
@@ -103,7 +105,7 @@ unsigned ovf_findbytoken(const char *start, unsigned len)
       }
    }
 
-   error("Unknown OVF function '%.*s'. List of implemented functions:\n", len, start);
+   error("[OVF] Unknown function '%.*s'. List of implemented functions:\n", len, start);
 
    return ovf_errormsgname();
 }
