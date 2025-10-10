@@ -8,6 +8,7 @@
 #include "rhp_options.h"
 #include "rhpgui_launcher.h"
 #include "status.h"
+#include "string_utils.h"
 
 #ifdef __x86_64__
 #   define RHP_ARCH "amd64"
@@ -34,7 +35,7 @@
 #elif defined(_M_ARM64)
 #   define RHP_ARCH "arm64 (MSVC)"
 #else
-#   error "Unkonwn architecture, please modify the source code"
+#   error "Unknown architecture, please modify the source code"
 #endif
 
 #if defined(_WIN32)
@@ -307,10 +308,10 @@ static void log_help(void)
    info("Help for RHP_LOG values:\n\n");
 
    for (unsigned i = 0; i < n_opts; ++i) {
-      info("\t%-25s %s\n", log_opts[i].name, log_opts[i].help);
+      info("    %-30s %s\n", log_opts[i].name, log_opts[i].help);
    }
 
-   info("\t%-25s enable all options above\n", "all");
+   info("    %-30s enable all options above\n", "all");
 }
 
 static const char * const envvars_help[][2] = {
@@ -325,14 +326,11 @@ static const char * const envvars_help[][2] = {
 // RHP_SOLVER_BACKEND
 // "RHP_SOLVELINK"
 
-static void env_help(void)
+static void print_option_array(unsigned nopts, const struct option opts[VMT(static restrict nopts)])
 {
-   info("List of environment variables\n");
-   info("\n- The following ReSHOP options can be set by set environment variables:\n");
-
-   for (unsigned i = 0, len = Options_Last+1; i < len; ++i) {
-      info("\tRHP_");
-      const char *opt_name = rhp_options[i].name;
+   for (unsigned i = 0; i < nopts; ++i) {
+      info("    RHP_");
+      const char *opt_name =opts[i].name;
       size_t opt_name_len = strlen(opt_name);
 
       for (unsigned j = 0; j < opt_name_len; ++j) {
@@ -340,18 +338,30 @@ static void env_help(void)
       }
 
       size_t offset = 4 + opt_name_len;
-      if (offset < 25) {
-         int blank = 25 - offset;
+      if (offset < 30) {
+         int blank = 30 - offset;
          info("%*s", blank, "");
       }
 
-      info(" %s\n", rhp_options[i].description);
+      info(" %s\n", opts[i].description);
    }
+}
 
-   info("\n- Additionally, the following environment variables influence the ReSHOP behavior:\n");
+static void print_envvar_help(void)
+{
+   info("List of environment variables\n");
+   info("\n- The following ReSHOP options can be set by set environment variables:\n\n");
+
+   print_option_array(Options_Last+1, rhp_options);
+
+   info("\n- The following OVF/CCF options can be set by set environment variables:\n\n");
+
+   print_option_array(Options_Ovf_Last+1, ovf_options);
+
+   info("\n- Additionally, the following environment variables influence the ReSHOP behavior:\n\n");
 
    for (unsigned i = 0, len = ARRAY_SIZE(envvars_help); i <len; ++i) {
-      info("\t%-25s %s\n", envvars_help[i][0], envvars_help[i][1]);
+      info("    %-30s %s\n", envvars_help[i][0], envvars_help[i][1]);
    }
 
    info("\n- Finally, logging can be controlled via RHP_LOG:\n");
@@ -373,7 +383,7 @@ int rhp_syncenv(void)
    MALLOC_(env_varname, char, optname_maxlen + 5);
 
    if (getenv("RHP_HELP")) {
-      env_help();
+      print_envvar_help();
       return Error_UserInterrupted;
    }
 
