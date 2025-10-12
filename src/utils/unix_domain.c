@@ -160,8 +160,8 @@ int unix_domain_client_init(const char *sockpath)
       return Error_SystemError;
    }
 
-   debug("[IPC] Succesfully connected to %s: gui_fd=" FDP "; data_fd=" FDP "\n",
-         sockpath, gui_fd, data_fd);
+   pr_debug("[IPC] Succesfully connected to %s: gui_fd=" FDP "; data_fd=" FDP "\n",
+            sockpath, gui_fd, data_fd);
 
    return OK;
 }

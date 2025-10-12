@@ -50,7 +50,7 @@ int nltree_addlvars(Container *ctr, rhp_idx ei, double* vals, Avar *v, double co
 
    double lcoeff = coeff;
    NlNode **addr, *node;
-   S_CHECK(nltree_find_add_node(tree, &addr, ctr->pool, &lcoeff));
+   S_CHECK(nltree_find_add_node(tree, &addr, ctr->nlpool, &lcoeff));
    unsigned offset;
    S_CHECK(nltree_ensure_add_node(tree, addr, v->size, &offset));
 
@@ -131,7 +131,7 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
 
    /* Prep the tree and get the address of the node in addr  */
    double lcoeff = coeff;
-   S_CHECK(nltree_find_add_node(e->tree, &addr, ctr->pool, &lcoeff));
+   S_CHECK(nltree_find_add_node(e->tree, &addr, ctr->nlpool, &lcoeff));
 
    NlNode *check_node = *addr;
 
@@ -224,7 +224,7 @@ int rctr_equ_add_quadratic(Container *ctr, Equ *e, SpMat* mat, Avar *v, double c
             /* ---------------------------------------------------------------
              * Multiply by the coefficient and create the ADD node for sum x_i^2
              * ---------------------------------------------------------------*/
-            S_CHECK(nltree_mul_cst_add_node(e->tree, &addr, ctr->pool, vals[i]*coeff,
+            S_CHECK(nltree_mul_cst_add_node(e->tree, &addr, ctr->nlpool, vals[i]*coeff,
                                             v->size, &offset));
 
             node = *addr;
@@ -656,7 +656,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
                   /*  Needed because of nlnode_copy */
                   S_CHECK(nltree_reset_var_list(tree));
 
-                  S_CHECK(nltree_find_add_node(tree, &addr, ctr->pool, &nlcoeff));
+                  S_CHECK(nltree_find_add_node(tree, &addr, ctr->nlpool, &nlcoeff));
                   S_CHECK(nlnode_child_getoffset(tree, *addr, &offset));
 
                   S_CHECK(nlnode_reserve(tree, *addr, n_c));
@@ -681,7 +681,7 @@ int rctr_equ_add_dot_prod_cst(Container *ctr, Equ *e, const double *c, unsigned 
                /* Add B_i * ( ... )  */
                /* TODO(xhub) we may end up in a ADD->ADD situation, be careful
                 * here*/
-               S_CHECK(nltree_mul_cst(tree, &laddr, ctr->pool, mcoeff*nlcoeff));
+               S_CHECK(nltree_mul_cst(tree, &laddr, ctr->nlpool, mcoeff*nlcoeff));
 
                /* ----------------------------------------------------------
                 * Copy the expression tree
@@ -878,7 +878,7 @@ int equ_add_dot_prod_cst_x(Container *ctr, NlTree *tree, NlNode *node, unsigned 
                /* TODO(xhub) we may end up in a ADD->ADD situation, be careful
                 * here
                 * TODO(Xhub) clarify -coeff*/
-               S_CHECK(nltree_mul_cst(tree, &addr, ctr->pool, -coeff));
+               S_CHECK(nltree_mul_cst(tree, &addr, ctr->nlpool, -coeff));
 
                /* \TODO(xhub) optimize w.r.t. umin */
                /* Fill in Fnl_i  */

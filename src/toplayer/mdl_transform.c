@@ -140,7 +140,7 @@ static NONNULL int mdl_analyze_emp_for_fooc(Model *mdl, Model *mdl_fooc)
 
          mpid_t mpid_vi = mp->id;
 
-         FoocMpInfo *fooc = &empdag->fooc;
+         FoocMpInfo * restrict fooc = &empdag->transformations.fooc;
          assert(fooc->vi.len == fooc->src.len);
 
          for (unsigned  i = 0, len = fooc->src.len; i < len ; ++i) {
@@ -257,9 +257,13 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
    /* TODO: this should not be necessary */
    Model *mdl_rhp_for_fooc;
    bool release_mdl_rhp_for_fooc = false;
+   char *mcpmdl_name = NULL;
+
    if (mdl->backend == RhpBackendGamsGmo) {
       A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RhpBackendReSHOP));
-      S_CHECK(mdl_setname(mdl_rhp_for_fooc, "RHP mdl for FOOC"));
+      IO_PRINT(asprintf(&mcpmdl_name, "%s_RHP4FOOC", mdl_getname(mdl)));
+      S_CHECK(mdl_setname(mdl_rhp_for_fooc, mcpmdl_name));
+      free(mcpmdl_name);
 
       S_CHECK(rmdl_initfromfullmdl(mdl_rhp_for_fooc, mdl));
       release_mdl_rhp_for_fooc = true;
@@ -272,7 +276,10 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
 
    Model *mdl_mcp;
    A_CHECK(mdl_mcp, rhp_mdl_new(RhpBackendReSHOP));
-   S_CHECK(mdl_setname(mdl_mcp, "MCP"));
+
+   IO_PRINT(asprintf(&mcpmdl_name, "FOOC_%s", mdl_getname(mdl)));
+   S_CHECK(mdl_setname(mdl_mcp, mcpmdl_name));
+   free(mcpmdl_name);
 
    S_CHECK(mdl_create_fooc(mdl_rhp_for_fooc, mdl_mcp))
 
@@ -323,9 +330,13 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
 
    /* TODO: this should not be necessary */
    Model *mdl_rhp_for_fooc;
+   char *mcpmdl_name;
+
    if (mdl->backend == RhpBackendGamsGmo) {
       A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RhpBackendReSHOP));
-      S_CHECK(mdl_setname(mdl_rhp_for_fooc, "RHP mdl for FOOC"));
+      IO_PRINT(asprintf(&mcpmdl_name, "%s_RHP4MPEC", mdl_getname(mdl)));
+      S_CHECK(mdl_setname(mdl_rhp_for_fooc, mcpmdl_name));
+      free(mcpmdl_name);
 
       S_CHECK(rmdl_initfromfullmdl(mdl_rhp_for_fooc, mdl));
       S_CHECK(mdl_analyze_modeltype(mdl_rhp_for_fooc));
@@ -340,7 +351,9 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
 
    Model *mdl_mpec;
    A_CHECK(mdl_mpec, rhp_mdl_new(RhpBackendReSHOP));
-   S_CHECK(mdl_setname(mdl_mpec, "MPEC"));
+   IO_PRINT(asprintf(&mcpmdl_name, "MPEC_%s", mdl_getname(mdl)));
+   S_CHECK(mdl_setname(mdl_mpec, mcpmdl_name));
+   free(mcpmdl_name);
 
   /* ----------------------------------------------------------------------
    * We prepare the model, including fops for the lower level part
@@ -374,7 +387,7 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
    /* TODO: what happens if v_upper is not in the model? */
    if (mpequs.len > 0) {
       Aequ e_upper;
-      aequ_setlist(&e_upper, mpequs.len, mpequs.arr);
+      aequ_aslist(&e_upper, mpequs.len, mpequs.arr);
       S_CHECK(rmdl_appendequs(mdl_mpec, &e_upper));
    }
 

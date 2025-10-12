@@ -120,10 +120,10 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
       return Error_RuntimeError;
    }
 
-   if (ctr->pool) { pool_release(ctr->pool); }
+   if (ctr->nlpool) { pool_release(ctr->nlpool); }
 
    if (size == 0) {
-      A_CHECK(ctr->pool, pool_new_gams());
+      A_CHECK(ctr->nlpool, pool_new_gams());
       return OK;
    }
 
@@ -134,17 +134,17 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
 
    /* TODO: this should disappear */
    if (fabs(gms_pool[0] - 1.) > DBL_EPSILON) {
-      ctr->pool = NULL;
+      ctr->nlpool = NULL;
       return OK;
    }
 
-   A_CHECK(ctr->pool, pool_new());
+   A_CHECK(ctr->nlpool, pool_new());
 
-   ctr->pool->data = gms_pool;
-   ctr->pool->len = size;
-   ctr->pool->max = size;
-   ctr->pool->own = false;
-   ctr->pool->type = ctr->backend;
+   ctr->nlpool->data = gms_pool;
+   ctr->nlpool->len = size;
+   ctr->nlpool->max = size;
+   ctr->nlpool->own = false;
+   ctr->nlpool->type = ctr->backend;
 
    for (int i = 0; i < size; ++i) {
 

@@ -179,9 +179,9 @@ int setup_equvarnames(struct equ_inh_names * equnames, FoocData *fooc_dat,
    S_CHECK(rhp_idx_reserve(&equnames->cons_src, n_cons));
 
    Aequ e, e_src;
-   aequ_setcompact(&e, n_cons, fooc_dat->ei_cons_start);
+   aequ_ascompact(&e, n_cons, fooc_dat->ei_cons_start);
    S_CHECK(aequ_extendandown(&cdat_mcp->equname_inherited.e, &e));
-   aequ_setandownlist(&e_src, n_cons, equnames->cons_src.arr);
+   aequ_asownlist(&e_src, n_cons, equnames->cons_src.arr);
    S_CHECK(aequ_extendandown(&cdat_mcp->equname_inherited.e_src, &e_src));
  
 
@@ -354,7 +354,7 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, FoocData *fooc_dat
     }
 
       if (valid_ei(objequ)) {
-         aequ_setcompact(&fooc_dat->objequs, 1, objequ);
+         aequ_ascompact(&fooc_dat->objequs, 1, objequ);
       } else if (!valid_vi(objvar) && sense != RhpFeasibility) {
          error("[fooc] ERROR in %s model '%.*s' #%u: sense is %s, but neither "
                "an objective variable nor an objective equation have been given\n",
@@ -386,7 +386,7 @@ static int fill_objequs_and_get_vifuncs(const Model *mdl_src, FoocData *fooc_dat
 
    rhp_idx *objequs_list;
    MALLOC_(objequs_list, rhp_idx, mps_len);
-   aequ_setandownlist(&fooc_dat->objequs, UINT_MAX, objequs_list);
+   aequ_asownlist(&fooc_dat->objequs, UINT_MAX, objequs_list);
 
    unsigned nb_objequs = 0;
    MALLOC_(mps2objequs, rhp_idx, 2 * mps_len);
@@ -728,7 +728,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
    if (n_vifuncs > 0) {
       MALLOC_(vifuncs_list, rhp_idx, n_vifuncs);
       Aequ vifuncs;
-      aequ_setandownlist(&vifuncs, n_vifuncs, vifuncs_list);
+      aequ_asownlist(&vifuncs, n_vifuncs, vifuncs_list);
       S_CHECK(aequ_extendandown(ctr_src->func2eval, &vifuncs));
    }
 
@@ -1160,9 +1160,9 @@ static int fooc_mcp_primal_opt(Model *restrict mdl_mcp,
 
    if (objequ_cst) {
       if (mp) {
-         info("[fooc] INFO: MP(%s) has a constant objective function.\n", mp_getname(mp));
+         pr_info("FOOC: MP(%s) has a constant objective function.\n", mp_getname(mp));
       } else {
-         info("[fooc] INFO: %s model '%.*s' #%u has a constant objective function.\n", mdl_fmtargs(mdl_src));
+         pr_info("FOOC: %s model '%.*s' #%u has a constant objective function.\n", mdl_fmtargs(mdl_src));
       }
 
       goto add_multiplier_terms;
@@ -1496,6 +1496,7 @@ int fooc_mcp(Model *mdl_mcp)
 
    Fops *fops = mdl_src->ctr.fops;
    if (fops) {
+
       switch (fops->type) {
       case FopsEmpDagSubDag: {
          daguid_t uid_root = fops_subdag_getrootuid(fops);
@@ -1514,6 +1515,7 @@ int fooc_mcp(Model *mdl_mcp)
       }
       default: ;
       }
+
    }
 
    if (fooc_dat.mps.len == 0 && empdag->mps.len > 0) {
@@ -1782,8 +1784,8 @@ int fooc_mcp(Model *mdl_mcp)
       for (size_t i = 0; i < mps_len; ++i) {
          if (cons_size == 0) {
             assert(n_lincons == 0);
-            aequ_setcompact(&cons_nl_blk->e[i], 0, IdxInvalid);
-            aequ_setcompact(&cons_lin_blk->e[i], 0, IdxInvalid);
+            aequ_ascompact(&cons_nl_blk->e[i], 0, IdxInvalid);
+            aequ_ascompact(&cons_lin_blk->e[i], 0, IdxInvalid);
             continue;
          }
 
@@ -1812,8 +1814,8 @@ int fooc_mcp(Model *mdl_mcp)
             }
          }
 
-         aequ_setlist(&cons_nl_blk->e[i], n_nl_mp, nl_list_mp);
-         aequ_setlist(&cons_lin_blk->e[i], n_lin_mp, lin_list_mp);
+         aequ_aslist(&cons_nl_blk->e[i], n_nl_mp, nl_list_mp);
+         aequ_aslist(&cons_lin_blk->e[i], n_lin_mp, lin_list_mp);
          nl_list_mp = &nl_list_mp[n_nl_mp];
          lin_list_mp = &lin_list_mp[n_lin_mp];
       }
@@ -1868,8 +1870,8 @@ int fooc_mcp(Model *mdl_mcp)
          }
       }
    } else { /* No HOP structure  */
-      aequ_setcompact(&fooc_dat.cons_nl, cons_size - n_lincons, fooc_dat.ei_cons_start);
-      aequ_setcompact(&fooc_dat.cons_lin, fooc_dat.info->n_lincons, fooc_dat.ei_lincons_start);
+      aequ_ascompact(&fooc_dat.cons_nl, cons_size - n_lincons, fooc_dat.ei_cons_start);
+      aequ_ascompact(&fooc_dat.cons_lin, fooc_dat.info->n_lincons, fooc_dat.ei_lincons_start);
 
       if (objequs->size > 0) {
 

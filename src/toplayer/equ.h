@@ -194,14 +194,14 @@ static NONNULL inline bool aequ_contains(const Aequ *e, rhp_idx ei)
    return false;
 }
 
-static inline NONNULL void aequ_setcompact(Aequ *e, unsigned size, rhp_idx start)
+static inline NONNULL void aequ_ascompact(Aequ *e, unsigned size, rhp_idx start)
 {
    e->type = EquVar_Compact;
    e->size = size;
    e->start = start;
 }
 
-static inline NONNULL void aequ_setlist(Aequ *e, unsigned size, rhp_idx *list)
+static inline NONNULL void aequ_aslist(Aequ *e, unsigned size, rhp_idx *list)
 {
    e->type = EquVar_List;
    e->own = false;
@@ -210,7 +210,7 @@ static inline NONNULL void aequ_setlist(Aequ *e, unsigned size, rhp_idx *list)
 }
 
 OWNERSHIP_TAKES(3)
-static inline NONNULL void aequ_setandownlist(Aequ *e, unsigned size, rhp_idx *list)
+static inline NONNULL void aequ_asownlist(Aequ *e, unsigned size, rhp_idx *list)
 {
    e->own = true;
    e->type = EquVar_List;
@@ -219,7 +219,7 @@ static inline NONNULL void aequ_setandownlist(Aequ *e, unsigned size, rhp_idx *l
 }
 
 OWNERSHIP_TAKES(3)
-static inline NONNULL void aequ_setandownsortedlist(Aequ *e, unsigned size, rhp_idx *list)
+static inline NONNULL void aequ_asownsortedlist(Aequ *e, unsigned size, rhp_idx *list)
 {
    e->own = true;
    e->type = EquVar_SortedList;

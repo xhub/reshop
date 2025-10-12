@@ -84,7 +84,7 @@ int rhp_equ_addquadabsolute(Model *mdl, rhp_idx ei, size_t nnz, unsigned *i,
 
    /* Prep the tree and get the address of the node in addr  */
    double lcoeff = coeff;
-   S_CHECK(nltree_find_add_node(e->tree, &addr, mdl->ctr.pool, &lcoeff));
+   S_CHECK(nltree_find_add_node(e->tree, &addr, mdl->ctr.nlpool, &lcoeff));
 
    NlNode *check_node = *addr;
 
@@ -147,7 +147,7 @@ int rhp_equ_addquadrelative(Model *mdl, rhp_idx ei, Avar *v_row,
 
    /* Prep the tree and get the address of the node in addr  */
    double lcoeff = coeff;
-   S_CHECK(nltree_find_add_node(e->tree, &addr, mdl->ctr.pool, &lcoeff));
+   S_CHECK(nltree_find_add_node(e->tree, &addr, mdl->ctr.nlpool, &lcoeff));
 
    NlNode *check_node = *addr;
 
@@ -199,7 +199,7 @@ int rhp_equ_addbilin(Model *mdl, rhp_idx ei, Avar *v1, Avar *v2, double coeff)
 
    /* Prep the tree and get the address of the node in addr  */
    double lcoeff = coeff;
-   S_CHECK(nltree_find_add_node(e->tree, &addr, mdl->ctr.pool, &lcoeff));
+   S_CHECK(nltree_find_add_node(e->tree, &addr, mdl->ctr.nlpool, &lcoeff));
 
    NlNode *check_node = *addr;
 
@@ -209,7 +209,7 @@ int rhp_equ_addbilin(Model *mdl, rhp_idx ei, Avar *v1, Avar *v2, double coeff)
 
    unsigned child_idx;
    S_CHECK(nlnode_findfreechild(e->tree, *addr, 1, &child_idx));
-   S_CHECK(nltree_mul_cst_add_node(e->tree, &addr, mdl->ctr.pool, lcoeff, v1->size, &child_idx));
+   S_CHECK(nltree_mul_cst_add_node(e->tree, &addr, mdl->ctr.nlpool, lcoeff, v1->size, &child_idx));
 
    /* ----------------------------------------------------------------------
     * Add the bilinear part
@@ -1345,7 +1345,7 @@ int rhp_add_equations(Model *mdl, unsigned size, Aequ *eout)
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_aequ_nonnull(eout, __func__));
 
-   aequ_setcompact(eout, size, rctr_totalm(&mdl->ctr));
+   aequ_ascompact(eout, size, rctr_totalm(&mdl->ctr));
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;
@@ -1425,7 +1425,7 @@ int rhp_add_cons(Model *mdl, unsigned size, unsigned type, Aequ *eout)
 
    S_CHECK(rctr_reserve_equs(&mdl->ctr, size));
 
-   aequ_setcompact(eout, size, rctr_totalm(&mdl->ctr));
+   aequ_ascompact(eout, size, rctr_totalm(&mdl->ctr));
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;
@@ -1530,7 +1530,7 @@ int rhp_add_funcs(Model *mdl, unsigned size, Aequ *eout)
    S_CHECK(chk_rmdl(mdl, __func__));
    S_CHECK(chk_aequ_nonnull(eout, __func__));
 
-   aequ_setcompact(eout, size, rctr_totalm(&mdl->ctr));
+   aequ_ascompact(eout, size, rctr_totalm(&mdl->ctr));
 
    for (size_t i = 0; i < size; ++i) {
       rhp_idx ei;

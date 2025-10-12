@@ -29,15 +29,15 @@
 #endif
 
 
-struct sort_obj {
-  size_t mp_id;
+struct mpid_sort {
+  size_t mpid;
   rhp_idx vi;
   void *obj;
 };
 
 
 #define SORT_NAME rhpobj
-#define SORT_TYPE struct sort_obj
+#define SORT_TYPE struct mpid_sort
 #define SORT_CMP(x, y) ((x).vi - (y).vi)
 #include "sort.h"
 
@@ -73,7 +73,7 @@ int ovf_transform(Model *mdl)
    /* TODO(xhub) low this could be avoided if we create this in a better way  */
    size_t n_ovfs = 0;
    OvfDef **ovfs = NULL;
-   struct sort_obj *ovf_objs = NULL;
+   struct mpid_sort *ovf_objs = NULL;
    rhp_idx *ovf_vidxs = NULL;
    struct rhp_graph_gen **ovf_nodes = NULL;
    struct rhp_graph_child *node_children = NULL;
@@ -81,15 +81,15 @@ int ovf_transform(Model *mdl)
 
    /*  TODO(xhub) that's a lot of MALLOCs */
    MALLOC_EXIT(ovfs, OvfDef *, ovfinfo->num_ovf);
-   CALLOC_EXIT(ovf_objs, struct sort_obj, ovfinfo->num_ovf);
+   CALLOC_EXIT(ovf_objs, struct mpid_sort, ovfinfo->num_ovf);
    MALLOC_EXIT(ovf_vidxs, rhp_idx, ovfinfo->num_ovf);
    MALLOC_EXIT(ovf_nodes, struct rhp_graph_gen *, ovfinfo->num_ovf);
    MALLOC_EXIT(node_children, struct rhp_graph_child, ovfinfo->num_ovf);
    MALLOC_EXIT(node_children_ovf_stored, bool, ovfinfo->num_ovf);
 
    while (ovf) {
-      struct sort_obj *o = &ovf_objs[n_ovfs];
-      o->mp_id = n_ovfs;          /* Set counter for this OVF */
+      struct mpid_sort *o = &ovf_objs[n_ovfs];
+      o->mpid = n_ovfs;          /* Set counter for this OVF */
       o->vi = ovf->vi_ovf;     /* Store the OVF vidx       */
       o->obj = rhp_graph_gen_alloc(ovf);
       ovf_nodes[n_ovfs] = o->obj;

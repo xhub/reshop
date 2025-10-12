@@ -129,6 +129,9 @@ static int ccflib_instantiate_mp(EmpDag *empdag, mpid_t mpid, DfsData *dfsdat,
    mp_ovf->type = MpTypeOpt;
    mpopt_init(&mp_ovf->opt);
 
+   /* Add MP to the list of new ones */
+   S_CHECK(mpidarray_add(&empdag->mps_newly_created, mpid));
+
    /* ---------------------------------------------------------------------
     * If the dual subdag already has elements, add the child here.
     * Otherwise, add it to the Nash problem
@@ -822,13 +825,13 @@ int ccflib_equil(Model *mdl)
 {
    EmpDag *empdag = &mdl->empinfo.empdag;
    const EmpDag *empdag_up = empdag->empdag_up;
-   mpid_t *saddle_path_start_mps = empdag_up->saddle_path_starts.arr;
+   mpid_t *saddle_path_start_mps = empdag_up->minimaxi.saddle_path_starts.arr;
 
   /* ----------------------------------------------------------------------
    * Iterate over the saddle paths and reformulate
    * ---------------------------------------------------------------------- */
 
-   for (unsigned i = 0, len = empdag_up->saddle_path_starts.len; i < len; ++i) {
+   for (unsigned i = 0, len = empdag_up->minimaxi.saddle_path_starts.len; i < len; ++i) {
 
       mpid_t mpid = saddle_path_start_mps[i];
       assert(mpid < empdag_up->mps.len);

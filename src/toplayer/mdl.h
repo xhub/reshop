@@ -31,6 +31,7 @@ typedef enum mdl_status {
    MdlFinalized             = 0x4,
    MdlContainerInstantiable = 0x8,
    MdlInstantiable          = MdlContainerInstantiable,
+   MdlPreSolve              = 0x1,  /**< Model is generated during the presolve stage */
 } MdlStatus;
 
 /* ----------------------------------------------------------------------
@@ -291,7 +292,7 @@ NONNULL static inline void mdl_resettype(Model *mdl)
  *
  * @return      the pool pointer
  */
-static inline NlPool *mdl_getpool(Model *mdl) { return mdl->ctr.pool; }
+static inline NlPool *mdl_getpool(Model *mdl) { return mdl->ctr.nlpool; }
 
 /* ----------------------------------------------------------------------
  * Memory management

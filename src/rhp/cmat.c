@@ -243,18 +243,18 @@ int cmat_cst_equ(CMat *cmat, rhp_idx ei)
       return Error_RuntimeError;
    }
 
-   CMatElt *me;
-   A_CHECK(me, arenaL_alloc(&cmat->arena, sizeof(CMatElt)));
+   CMatElt *cme;
+   A_CHECK(cme, arenaL_alloc(&cmat->arena, sizeof(CMatElt)));
 
-   me->value       = SNAN;
-   me->type        = CMatEltCstEqu;
-   me->next_var    = NULL;
-   me->next_equ    = NULL;
-   me->prev_equ    = NULL;
-   me->ei          = ei;
-   me->vi          = IdxNA;
+   cme->value       = SNAN;
+   cme->type        = CMatEltCstEqu;
+   cme->next_var    = NULL;
+   cme->next_equ    = NULL;
+   cme->prev_equ    = NULL;
+   cme->ei          = ei;
+   cme->vi          = IdxNA;
 
-   cmat->equs[ei] = me;
+   cmat->equs[ei] = cme;
 
    return OK;
 }
@@ -1036,6 +1036,11 @@ int cmat_rm_equ(Container *ctr, rhp_idx ei)
    assert(cme->ei == ei);
    S_CHECK(push_on_deleted(cdat, cme));
 
+   /* Nothing to do here */
+   if (cme->type == CMatEltCstEqu) {
+      return OK;
+   }
+
    /* Remove the equation from the model*/
    while (cme) {
 
@@ -1158,6 +1163,11 @@ int cmat_copy_equ(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
       error("[container] ERROR: cannot copy '%s' into non-empty equation #%u\n",
             ctr_printequname(ctr, ei_src), ei_dst);
       return Error_RuntimeError;
+   }
+
+   if (cme_src->type == CMatEltCstEqu) {
+      S_CHECK(cmat_cst_equ(&cdat->cmat, ei_dst));
+      return OK;
    }
 
    /* Add all the variables from that equation  */

@@ -54,9 +54,9 @@ void pool_release(NlPool* pool)
    if (pool->cnt == 0) {
       if (pool->data && pool->own) {
          FREE(pool->data);
-         pool->data = NULL;
       }
-      FREE(pool);
+
+      free(pool);
    }
 }
 
@@ -152,8 +152,22 @@ NlPool* pool_get(NlPool* p)
    return p;
 }
 
+/**
+ * @brief Allocate a new data array to own it and copy the values
+ *
+ * @param pool the nonlinear pool values
+ * @param size the size of the new data array
+ *
+ * @return     the error code
+ */
 int pool_copy_and_own_data(NlPool* pool, size_t size)
 {
+   if (size < pool->len) {
+      error("[NlPool] ERROR: requested new size %zu is smaller than current content data "
+            "%zu. Please file a bug report\n", size, pool->len);
+      return Error_BugPleaseReport;
+   }
+
    double *data;
    MALLOC_(data, double, size);
    memcpy(data, pool->data, pool->len*sizeof(double));

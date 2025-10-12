@@ -16,11 +16,14 @@ enum rhp_options_enum {
    Options_Expensive_Checks,
    Options_GUI,
    Options_Output,
+   Options_Output_Presolve_Log,
    Options_Output_Subsolver_Log,
    Options_Pathlib_Name,
    Options_Png_Viewer,
+   Options_Presolve,
    Options_Save_EmpDag,
    Options_Save_OvfDag,
+   Options_SolveLink,
    Options_SolveSingleOptAs,
    Options_Subsolveropt,
    Options_Time_Limit,
@@ -34,6 +37,8 @@ extern tlsvar struct option rhp_options[];
    rhp_options[Options_Output].value.i
 #define O_Output_Subsolver_Log \
    rhp_options[Options_Output_Subsolver_Log].value.b
+#define O_Output_Presolve_Log \
+   rhp_options[Options_Output_Presolve_Log].value.b
 #define O_Subsolveropt \
    rhp_options[Options_Subsolveropt].value.i
 

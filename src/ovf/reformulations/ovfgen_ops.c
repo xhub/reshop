@@ -140,12 +140,14 @@ int ovfgen_get_set_0(OvfDef *ovf, SpMat *A_0, double **b_0, double **shift_u)
    return OK;
 }
 
-void ovfgen_get_ppty(OvfDef *ovf, struct ovf_ppty *ovf_ppty)
+void ovfgen_get_ppty(OvfDef *ovf, OvfPpty *ovf_ppty)
 {
    if (ovf->generator->M || ovf->generator->D) {
       ovf_ppty->quad = true;
+      ovf_ppty->probtype = MdlType_qcp;
    } else {
       ovf_ppty->quad = false;
+      ovf_ppty->probtype = MdlType_lp;
    }
 
    ovf_ppty->sense = ovf->sense;

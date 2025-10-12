@@ -188,14 +188,12 @@ NONNULL void empinterp_free(Interpreter *interp)
    }
 
    FREE(interp->regentry);
-   interp->regentry = NULL;
 
    linklabel2arc_freeall(&interp->linklabel2arc);
    linklabels2arcs_freeall(&interp->linklabels2arcs);
    dual_label_freeall(&interp->dual_label);
    dualslabel_arr_freeall(&interp->dualslabels);
 
-   assert(interp->health != PARSER_OK || !gmsindices_isactive(&interp->gmsindices));
 }
 
 /**
@@ -600,7 +598,7 @@ int empinterp_process(Model *mdl, const char *empinfo_fname, const char *gmd_fna
    }
 
    mdl_settype(mdl, MdlType_emp);
-   mdl->empinfo.empdag.has_resolved_arcs = false; /* disable check in mp_finalize */
+   mdl->empinfo.empdag.arcs_fully_resolved = false; /* disable check in mp_finalize */
 
    /* TODO(xhub) do we want to continue or error if we have an error */
 
@@ -671,14 +669,14 @@ int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
 
    if (type == IdentNotFound) {
       Token *tok = interp->peekisactive ? &interp->peek : &interp->cur;
-      error("[empinterp] ERROR line %u: ident '%.*s' is unknown\n",
+      error("[empinterp] ERROR on line %u: ident '%.*s' is unknown\n",
             tok->linenr, emptok_getstrlen(tok), emptok_getstrstart(tok));
       status = Error_EMPIncorrectInput;
       goto _exit;
    }
 
    status = Error_EMPIncorrectSyntax;
-   error("[empinterp] ERROR line %u: ident '%.*s' has type '%s', but expected any of ",
+   error("[empinterp] ERROR on line %u: ident '%.*s' has type '%s', but expected any of ",
          interp->linenr, emptok_getstrlen(&interp->cur),
          emptok_getstrstart(&interp->cur), identtype2str(type));
 
@@ -735,7 +733,7 @@ int empinterp_finalize(Interpreter *interp)
 
    S_CHECK(empinterp_set_empdag_root(interp));
 
-   interp->mdl->empinfo.empdag.has_resolved_arcs = true;
+   interp->mdl->empinfo.empdag.arcs_fully_resolved = true;
 
   /* ----------------------------------------------------------------------
    * Step 3: Finalize the container

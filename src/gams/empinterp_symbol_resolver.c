@@ -208,7 +208,7 @@ int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
          if (toktype == TOK_GMS_VAR) {
             avar_setcompact(data->payload.v, size, idx);
          } else { /* toktype == TOK_GMS_EQU */
-            aequ_setcompact(data->payload.e, size, idx);
+            aequ_ascompact(data->payload.e, size, idx);
          }
 
          trace_empinterp("[empinterp] Read %u entries for compact symbol, starting at %u\n", size, idx);
@@ -227,7 +227,7 @@ int dct_read_equvar(dctHandle_t dct, GmsResolveData * restrict data)
          if (toktype == TOK_GMS_VAR) {
             avar_setlist(data->payload.v, i, idxs);
          } else { /* toktype == TOK_GMS_EQU */
-            aequ_setlist(data->payload.e, i, idxs);
+            aequ_aslist(data->payload.e, i, idxs);
          }
 
          trace_empinterp("[empinterp] Read %u entries for symbol\n", i);
@@ -561,9 +561,9 @@ int gmd_read(gmdHandle_t gmd, GmsResolveData * restrict data,
       break;
    case TOK_GMS_EQU:
       if (single_record) {
-         aequ_setcompact(data->payload.e, 1, data->itmp);
+         aequ_ascompact(data->payload.e, 1, data->itmp);
       } else {
-         aequ_setlist(data->payload.e, data->nrecs, data->iscratch->data);
+         aequ_aslist(data->payload.e, data->nrecs, data->iscratch->data);
       }
    default: ;
    }

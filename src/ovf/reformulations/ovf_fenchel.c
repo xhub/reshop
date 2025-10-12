@@ -255,7 +255,6 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
        * TODO: move this call
        * ------------------------------------------------------------------- */
       S_CHECK(cmat_sync_lequ(ctr, e));
-
    }
 
    if (O_Ovf_Init_New_Variables) {
@@ -263,7 +262,7 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
       Avar ovfvar;
       avar_setcompact(&ovfvar, 1, vi_ovf);
       Aequ ovf_objequ;
-      aequ_setcompact(&ovf_objequ, 1, ei_objfn);
+      aequ_ascompact(&ovf_objequ, 1, ei_objfn);
 
       for (unsigned i = 0; i < fdat.nargs; ++i) {
          if (!valid_ei(equ_idx[i])) {

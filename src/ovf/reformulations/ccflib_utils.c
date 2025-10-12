@@ -26,7 +26,6 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    S_CHECK(ops->create_uvar(ovfd, &mdl->ctr, y_name, &instancedat->y));
    Avar *y = &instancedat->y;
 
-
    S_CHECK(rctr_reserve_equs(&mdl->ctr, 1));
 
    rhp_idx objequ = IdxNA;
@@ -64,16 +63,21 @@ int mp_ccflib_instantiate(MathPrgm *mp_instance, MathPrgm *mp_ccflib,
    unsigned nargs_maps;
    S_CHECK_EXIT(ops->get_nargs(ovfd, &nargs_maps));
 
-
    S_CHECK_EXIT(ops->get_affine_transformation(ovfd, &instancedat->B, &instancedat->b));
 
    if (nargs_maps > 0) {
       CcflibPrimalDualData ccfdat = {.mp_primal = mp_ccflib, .mpid_dual = MpId_NA};
       OvfOpsData ovfd_mp = {.ccfdat = &ccfdat};
       S_CHECK_EXIT(reformulation_equil_compute_inner_product(OvfType_Ccflib, ovfd_mp, mdl,
-                                                        &instancedat->B, instancedat->b,
-                                                        &objequ, y, NULL));
+                                                             &instancedat->B, instancedat->b,
+                                                             &objequ, y, NULL));
    }
+
+
+   OvfPpty ovfppty;
+   ops->get_ppty(ovfd, &ovfppty);
+
+   mp_instance->probtype = ovfppty.probtype;
 
 _exit:
    rhpmat_free(&A);

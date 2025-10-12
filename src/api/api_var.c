@@ -64,7 +64,7 @@ int rhp_avar_set_list(Avar *v, unsigned size, rhp_idx *vis)
    S_CHECK(chk_arg_nonnull(v, 1, __func__));
    S_CHECK(chk_arg_nonnull(vis, 3, __func__));
 
-   return avar_set_list(v, size, vis);
+   return avar_aslist(v, size, vis);
 }
 
 /** @brief Get the list associated with a variable container

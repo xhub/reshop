@@ -122,16 +122,16 @@ static int add_dualize_operation(EmpDag *empdag, mpid_t mpid_primal, mpid_t mpid
    switch (dualdat->scheme) {
    case FenchelScheme:
       if (nodal_dom) {
-         S_CHECK(mpidarray_addsorted(&empdag->fenchel_dual_nodal, mpid_dual));
+         S_CHECK(mpidarray_addsorted(&empdag->transformations.fenchel_dual_nodal, mpid_dual));
       } else {
-         S_CHECK(mpidarray_addsorted(&empdag->fenchel_dual_subdag, mpid_dual));
+         S_CHECK(mpidarray_addsorted(&empdag->transformations.fenchel_dual_subdag, mpid_dual));
       }
       break;
    case EpiScheme:
       if (nodal_dom) {
-         S_CHECK(mpidarray_addsorted(&empdag->epi_dual_nodal, mpid_dual));
+         S_CHECK(mpidarray_addsorted(&empdag->transformations.epi_dual_nodal, mpid_dual));
       } else {
-         S_CHECK(mpidarray_addsorted(&empdag->epi_dual_subdag, mpid_dual));
+         S_CHECK(mpidarray_addsorted(&empdag->transformations.epi_dual_subdag, mpid_dual));
       }
       break;
    default:
@@ -192,9 +192,8 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
 {
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
 
-   trace_empdag("[empinterp] Adding edge of type %s from %s to %s\n",
-                linktype2str(arcdat->type), empdag_getname(empdag, uid_parent),
-                empdag_getname(empdag, uid_child));
+   trace_empdag("[empinterp] Adding %s arc from %s to %s\n", linktype2str(arcdat->type),
+                empdag_getname(empdag, uid_parent), empdag_getname(empdag, uid_child));
 
    LinkType linktype = arcdat->type;
    EmpDagLink link = { .type = linktype };
@@ -295,8 +294,8 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
          return err_wrong_node_type(interp, uid_parent, arcdat, errmsg);
       }
 
-      S_CHECK(mpidarray_add(&empdag->fooc.src, mpid_src));
-      S_CHECK(mpidarray_add(&empdag->fooc.vi, mpid_vi));
+      S_CHECK(mpidarray_add(&empdag->transformations.fooc.src, mpid_src));
+      S_CHECK(mpidarray_add(&empdag->transformations.fooc.vi, mpid_vi));
 
       S_CHECK(mp_operator_kkt(mp_src));
 
@@ -309,7 +308,7 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
    }
 
    default:
-      TO_IMPLEMENT("VF edge Type not implemented");
+      TO_IMPLEMENT("VF arc Type not implemented");
    }
 
 
@@ -362,7 +361,8 @@ static int dag_resolve_arc_labels(Interpreter *interp)
       }
 
       if (!found) {
-         error("[empinterp] ERROR: no problem with name '%.*s' is defined\n", label_len, label);
+         error("[empinterp] ERROR: unknown symbol named '%.*s'. This could be a missing or"
+               "misspelled equation, variable, or EMPDAG label.\n", label_len, label);
          num_err++;
          status = Error_EMPIncorrectInput;
       }
@@ -374,19 +374,19 @@ static int dag_resolve_arc_labels(Interpreter *interp)
    }
 
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
+
       LinkLabels *link = labels2resolve->arr[i];
       int * restrict child = link->uels_var;
       uint8_t num_vars = link->nvaridxs;
       uint8_t dim = link->dim;
-      daguid_t daguid_src = link->daguid_parent;
-      assert(daguid_src != EMPDAG_UID_NONE);
+      daguid_t daguid_src = link->daguid_parent; assert(daguid_src != EMPDAG_UID_NONE);
 
       unsigned nrecs = link->nrecs;
 
       /* FIXME: URG: This looks broken */
       if (uidisMP(daguid_src)) {
          UIntArray *Carcs = &empdag->mps.Carcs[uid2id(daguid_src)];
-         /* Reserve the space for the edges */
+         /* Reserve the space for the arcs */
          S_CHECK(rhp_uint_reserve(Carcs, nrecs));
       }
 
@@ -458,32 +458,34 @@ static int dag_resolve_arc_label(Interpreter *interp)
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
       LinkLabel *dagl = label2resolve->arr[i];
 
-      const char *basename = dagl->label;
-      uint16_t basename_len = dagl->label_len;
+      const char *label = dagl->label;
+      uint16_t label_len = dagl->label_len;
       bool found = false;
 
       for (unsigned j = 0; j < dagreg_len; ++j) {
          const DagRegisterEntry *entry = dagregister->list[j];
-         if (entry->label_len == basename_len &&
-            !strncasecmp(basename, entry->label, basename_len)) {
+         if (entry->label_len == label_len &&
+            !strncasecmp(label, entry->label, label_len)) {
             found = true;
             break;
          }
       }
 
       if (!found) {
-         error("[empinterp] ERROR: no problem with name '%.*s' is defined\n", basename_len, basename);
+         error("[empinterp] ERROR: unknown symbol named '%.*s'. This could be a missing "
+               "or misspelled equation, variable, or EMPDAG label.\n", label_len, label);
          num_err++;
          status = Error_EMPIncorrectInput;
       }
    }
 
    if (status != OK) {
-      error("[empinterp] %u fatal error%s while resolving labels, exiting\n", num_err, num_err > 1 ? "s" : "");
+      error("\n[empinterp] %u fatal error%s, exiting\n", num_err, num_err > 1 ? "s" : "");
       return status;
    }
 
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
+
       LinkLabel *link = label2resolve->arr[i]; assert(link);
       uint8_t dim = link->dim;
       daguid_t uid_parent = link->daguid_parent;
@@ -494,25 +496,26 @@ static int dag_resolve_arc_label(Interpreter *interp)
 
       memcpy(arcdat.labeldat.uels, link->uels, dim*sizeof(int));
 
-         daguid_t uid_child = dagregister_find(dagregister, &arcdat.labeldat);
+      daguid_t uid_child = dagregister_find(dagregister, &arcdat.labeldat);
 
-         if (uid_child == UINT_MAX) {
-            errormsg("[empinterp] ERROR: could not resolve the label \"");
-            labeldat_print(&arcdat.labeldat, interp->dct, PO_ERROR);
-            errormsg("\"\n");
-            num_err++;
-            continue;
-            
-         }
+      if (uid_child == UINT_MAX) {
+
+         errormsg("[empinterp] ERROR: could not resolve the label \"");
+         labeldat_print(&arcdat.labeldat, interp->dct, PO_ERROR);
+         errormsg("\"\n");
+         num_err++;
+         continue;
+
+      }
 
       arcdat.basic_dat.cst = link->coeff;
       arcdat.basic_dat.vi = link->vi;
-         
-         S_CHECK(addarc(interp, uid_parent, uid_child, &arcdat));
-      }
+
+      S_CHECK(addarc(interp, uid_parent, uid_child, &arcdat));
+   }
 
    if (num_err > 0) {
-      error("[empinterp] during the labels resolution, %u errors were encountered!\n", num_err);
+      error("\n[empinterp] during the labels resolution, %u errors were encountered!\n", num_err);
       return Error_EMPIncorrectInput;
    }
 

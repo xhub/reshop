@@ -10,9 +10,9 @@
 struct option_list;
 
 enum ovf_options_enum {
-   Options_Ovf_Reformulation = 0,
-   Options_Ovf_Init_New_Variables,
-   Options_Ovf_Last = Options_Ovf_Init_New_Variables,
+   Options_Ovf_Init_New_Variables = 0,
+   Options_Ovf_Reformulation,
+   Options_Ovf_Last               = Options_Ovf_Reformulation,
 };
 
 enum ovf_scheme {
@@ -20,7 +20,7 @@ enum ovf_scheme {
    OVF_Equilibrium,
    OVF_Fenchel,
    OVF_Conjugate,
-   OVF_Scheme_Last = OVF_Conjugate,
+   OVF_Scheme_Last  = OVF_Conjugate,
 };
 
 extern tlsvar struct option ovf_options[];

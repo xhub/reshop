@@ -11,7 +11,6 @@
 #include "empdag_mp.h"
 #include "empdag_mpe.h"
 #include "mathprgm.h"
-#include "mathprgm_priv.h"
 #include "mdl.h"
 #include "nltree.h"
 #include "rhp_model.h"
@@ -147,7 +146,7 @@ __extension__ typedef enum ENUM_U8 {
 typedef struct copy_expr_single {
    rhp_idx ei;
    double coeff_path;
-   NlNode *nlnode;
+   NlNode **nlnode_addr;
 } CopyExprSingleDat;
 
 typedef struct copy_expr_multiple {
@@ -160,7 +159,7 @@ typedef struct copy_expr_multiple {
 #define RHP_ARRAY_PREFIX copyexprs
 #define RHP_ARRAY_TYPE copy_expr_multiple
 #define RHP_ELT_TYPE struct copy_expr_single
-#define RHP_ELT_INVALID ((CopyExprSingleDat){.ei = IdxNA, .coeff_path = SNAN, .nlnode = NULL})
+#define RHP_ELT_INVALID ((CopyExprSingleDat){.ei = IdxNA, .coeff_path = SNAN, .nlnode_addr = NULL})
 #include "array_generic.inc"
 
 typedef struct {
@@ -200,7 +199,7 @@ NONNULL static inline int arcVFdata2copyexprdat(CopyExprDat *cpydat)
       assert(isfinite(rarc->basic_dat.cst));
       cpydat->single.ei = rarc->basic_dat.ei;
       cpydat->single.coeff_path = rarc->basic_dat.cst;
-      
+ 
       cpydat->type = CopyExprSingle;
       break;
 
@@ -212,7 +211,7 @@ NONNULL static inline int arcVFdata2copyexprdat(CopyExprDat *cpydat)
 
       for (unsigned i = 0; i < len; ++i) {
             bdats->arr[i] = (CopyExprSingleDat){.ei = arr[i].ei, .coeff_path = arr[i].cst };
-            bdats->arr[i].nlnode = NULL;
+            bdats->arr[i].nlnode_addr = NULL;
       }
 
       cpydat->type = CopyExprMultiple;
@@ -235,7 +234,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
 
    case CopyExprNone:
       cpydat_child->single.ei = arcdat->ei;
-      cpydat_child->single.nlnode = NULL;
+      cpydat_child->single.nlnode_addr = NULL;
       cpydat_child->single.coeff_path = arcdat->cst;
       return OK;
 
@@ -245,16 +244,16 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
       double coeff_path;
       rhp_idx vi = arcdat->vi, ei = arcdat->ei, ei_dst;
       Equ *e;
-      NlNode *nlnode;
+      NlNode **nlnode_addr;
 
       /* If the VF is in the objective of the parent MP, then use the current path equation */
       if (mdl->ctr.equmeta[ei].role == EquObjective) {
         ei_dst = cpydat_single->ei;
-        nlnode = cpydat_single->nlnode;
+        nlnode_addr = cpydat_single->nlnode_addr;
         coeff_path = arcdat->cst * cpydat_single->coeff_path;
      } else {
         ei_dst = ei;
-        nlnode = NULL;
+        nlnode_addr = NULL;
         coeff_path = arcdat->cst;
      }
 
@@ -276,11 +275,18 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
       * If we already have an NLnode, then we just copy the eobj there
       * ---------------------------------------------------------------------- */
 
-      if (nlnode) {
+      if (nlnode_addr) {
 
          assert(dtree && dtree->root);
 
-         S_CHECK(nltree_ensure_add_node_inplace(dtree, &nlnode, s, &offset));
+         S_CHECK(nltree_ensure_add_node_inplace(dtree, nlnode_addr, s, &offset));
+
+         NlNode *nlnode = *nlnode_addr;
+         if (!nlnode) {
+            errormsg("[empdag/contraction] ERROR: couldn't get a nlnode\n");
+            return Error_RuntimeError;
+         }
+
          NlNode **addr = &nlnode->children[offset];
 
         /* ----------------------------------------------------------------------
@@ -294,7 +300,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
          }
 
          /* Save node as starting point for future */
-         cpydat_child->single.nlnode = *addr;
+         cpydat_child->single.nlnode_addr = addr;
 
          S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, 1.));
 
@@ -340,7 +346,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
          }
 
          S_CHECK(rctr_nltree_copy_map(ctr, dtree, addr, eobj, objvar, 1.));
-         cpydat_child->single.nlnode = *addr;
+         cpydat_child->single.nlnode_addr = addr;
 
          /* The constant is already propagated through the tree */
          cpydat_child->single.coeff_path = 1.;
@@ -358,6 +364,7 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
          }
 
          /* Propagate the constant */
+         cpydat_child->single.nlnode_addr = NULL;
          cpydat_child->single.coeff_path = coeff_path;
       }
       break;
@@ -391,7 +398,7 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm * restrict mp_child,
 
   /* ----------------------------------------------------------------------
    * If objequ does not exists, which happens when we have a trivial MP with
-   * just a sum of valFn, just skip
+   * just a sum of valFn, just skip.
    * ---------------------------------------------------------------------- */
 
    if (objequ == IdxNA) {
@@ -578,12 +585,18 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       rhp_idx objvar_big = mp_getobjvar(mp_big);
       rhp_idx objequ_big = mp_getobjequ(mp_big);
 
+      if (valid_vi(objvar_big)) {
+         vmeta[objvar_big].mp_id = mpid_big;
+      }
+
+      if (valid_ei(objequ_big)) {
+         emeta[objequ_big].mp_id = mpid_big;
+      }
+
       if (valid_vi(objvar_big) && valid_ei(objequ_big)) {
          // HACK: investigate is something cleaner can be done ...
          // This is needed since the replacement of the objequ in
          // rmdl_equ_dup_except wil update the MP owning the objequ ...
-         emeta[objequ_big].mp_id = mpid_big;
-         vmeta[objvar_big].mp_id = mpid_big;
 
          S_CHECK(rmdl_mp_objequ2objfun(mdl, mp_big, objvar_big, objequ_big));
       }
@@ -642,6 +655,7 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
 
             trace_empdag("[empdag/contract] Adding MP(%s) to the list of nodes to visit.\n",
                          empdag_getmpname(empdag, mpid_child));
+
             mpidarray_add(VFdag_mpids, mpid_child);
 
             cpy_expr.arr[cpy_expr.len++] = cpydat_child_template;

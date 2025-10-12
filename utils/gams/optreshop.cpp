@@ -7,6 +7,9 @@
   * @author Olivier Huber
  */
 
+#include <cstdarg>
+#include <cstdlib>
+#include <iostream>
 #include <limits>
 #include <string>
 
@@ -19,9 +22,6 @@ extern "C" {
 #include "rhp_options.h"
 #include "status.h"
 #include "option_priv.h"
-
-#include <cstdarg>
-#include <cstdlib>
 
 
 void printstr(unsigned mode, const char *str);
@@ -120,7 +120,10 @@ int main(int argc, char** argv)
       case OptInteger: {
 
          int min, max;
-         if (optint_getrange(opt, &min, &max) != OK) { exit(EXIT_FAILURE); }
+         if (optint_getrange(opt, &min, &max) != OK) { 
+               std::cerr << "ERROR: fail to get range for option '" << opt->name << "'\n";
+               exit(EXIT_FAILURE);
+            }
 
          gmsopt.collect(opt->name, opt->description, defaultlongdescr,
             opt->value.i, min, max).advanced = false;

@@ -616,7 +616,7 @@ static void _print_node(const NlNode* node, FILE* f, const Container *ctr)
    switch (op) {
    case NlNode_Cst:
       (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
-               ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
+               ctr ? ctr->nlpool->data[CIDX_R(node->value)] : NAN);
       nodestyle[0] = 0;
       break;
 
@@ -636,7 +636,7 @@ static void _print_node(const NlNode* node, FILE* f, const Container *ctr)
    case NlNode_Mul:
       if (node->oparg == NLNODE_OPARG_FMA) {
          (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
-                  ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
+                  ctr ? ctr->nlpool->data[CIDX_R(node->value)] : NAN);
          (void)snprintf(nodestyle, 255, ",color=%s", nlTreeStyle_MulOp);
          break;
       }
@@ -648,7 +648,7 @@ static void _print_node(const NlNode* node, FILE* f, const Container *ctr)
       switch (node->oparg) {
       case NLNODE_OPARG_CST:
          (void)snprintf(oparg, sizeof(oparg), "%u\\n%.2g", node->value,
-                  ctr ? ctr->pool->data[CIDX_R(node->value)] : NAN);
+                  ctr ? ctr->nlpool->data[CIDX_R(node->value)] : NAN);
          nodestyle[0] = 0;
          goto print;
       case NLNODE_OPARG_VAR:
@@ -1390,7 +1390,7 @@ int rctr_nltree_var(Container *ctr, NlTree* tree, NlNode ***node, rhp_idx vi, do
    assert(valid_vi(vi));
    assert(tree && node && *node && !(**node));
 
-   S_CHECK(nltree_mul_cst(tree, node, ctr->pool, coeff));
+   S_CHECK(nltree_mul_cst(tree, node, ctr->nlpool, coeff));
 
    A_CHECK(lnode, nlnode_alloc_nochild(tree));
    (**node) = lnode;
@@ -1534,7 +1534,7 @@ int nltree_add_var_tree(Container *ctr, NlTree *tree, rhp_idx vi, double val)
    NlNode **addr;
 
    double lval = val;
-   S_CHECK(nltree_find_add_node(tree, &addr, ctr->pool, &lval));
+   S_CHECK(nltree_find_add_node(tree, &addr, ctr->nlpool, &lval));
 
    unsigned offset;
    S_CHECK(nltree_ensure_add_node(tree, addr, 1, &offset));
@@ -1657,7 +1657,7 @@ int rctr_equ_add_nlexpr(Container *ctr, rhp_idx ei, NlNode *node, double cst)
 
    NlTree *tree = ctr->equs[ei].tree;
 
-   S_CHECK(nltree_add_nlexpr(tree, node, ctr->pool, cst));
+   S_CHECK(nltree_add_nlexpr(tree, node, ctr->nlpool, cst));
 
    /* update the container matrix */
    Avar v;
@@ -1747,7 +1747,7 @@ int rctr_nltree_copy_to(Container *ctr, NlTree *tree, NlNode **dstnode, NlNode *
 
          NlNode **add_node = dstnode;
          if (isfinite(cst)) {
-            S_CHECK(nltree_mul_cst_add_node(tree, &add_node, ctr->pool, cst,
+            S_CHECK(nltree_mul_cst_add_node(tree, &add_node, ctr->nlpool, cst,
                                              nchildren, &offset));
          } else {
             S_CHECK(nltree_ensure_add_node(tree, add_node, nchildren, &offset));
@@ -1797,7 +1797,7 @@ int rctr_equ_add_nlexpr_full(Container *ctr, NlTree *tree, const NlNode *node,
    NlNode *lnode;
    unsigned children_from_node, offset = 0;
 
-   S_CHECK(nltree_add_expr_common(tree, node, ctr->pool, &lnode,
+   S_CHECK(nltree_add_expr_common(tree, node, ctr->nlpool, &lnode,
                                   &children_from_node, &offset, coeff));
 
    /* ----------------------------------------------------------------------
@@ -1933,7 +1933,7 @@ static int _check_math_error1(unsigned fn_code, double x1)
 #define GETVALUE_DEF(NODE, VAL) \
   static inline int GETVALUE_NAME(NODE, const Container * restrict ctr, VAL)
 
-#define POOL_VAL(IDX) ctr->pool->data[CIDX_R(IDX)]
+#define POOL_VAL(IDX) ctr->nlpool->data[CIDX_R(IDX)]
 #define VAR_VAL(IDX) ctr->vars[VIDX_R(IDX)].value
 #define GET_VALUE(NODE, VAL) GETVALUE_NAME(NODE, ctr, VAL)
 #define EVAL(NODE, VAL) EVAL_NAME(NODE, ctr, VAL)

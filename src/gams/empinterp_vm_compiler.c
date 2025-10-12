@@ -936,7 +936,7 @@ static int gmssymiter_chk_dim(GmsIndicesData *indices, IdentData *ident,
                                      unsigned linenr)
 {
    if (indices->nargs != ident->dim) {
-      error("[empcompiler] ERROR line %u: token '%.*s' has dimension %u but %u "
+      error("[empcompiler] ERROR on line %u: token '%.*s' has dimension %u but %u "
             "indices were given.\n", linenr, ident->lexeme.len,
             ident->lexeme.start, ident->dim, indices->nargs);
       return Error_EMPIncorrectInput;
@@ -1226,7 +1226,7 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
    }
 
    if (toktype != TOK_COMMA) {
-      error("[empcompiler] ERROR line %u: 2 arguments are required for GAMS logical operator 'sameas'. "
+      error("[empcompiler] ERROR on line %u: 2 arguments are required for GAMS logical operator 'sameas'. "
             "While looking for the ',', got '%.*s' of type '%s'.\n", interp->linenr, emptok_getstrlen(&interp->cur),
              emptok_getstrstart(&interp->cur), toktype2str(toktype));
       return Error_EMPIncorrectSyntax;
@@ -1236,7 +1236,7 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
    PARSER_EXPECTS(interp, "a GAMS set or UEL", TOK_IDENT, TOK_SINGLE_QUOTE, TOK_DOUBLE_QUOTE);
 
    if (uel_idx >= 0 && toktype != TOK_IDENT) {
-      error("[empcompiler] ERROR line %u: GAMS logical operator 'sameas' can only have 1 UEL as argument.\n", interp->linenr);
+      error("[empcompiler] ERROR on line %u: GAMS logical operator 'sameas' can only have 1 UEL as argument.\n", interp->linenr);
       return Error_EMPIncorrectSyntax;
    }
 
@@ -1334,7 +1334,7 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
    *
    * ---------------------------------------------------------------------- */
    if (depth == UINT16_MAX) {
-      error("[empfinfo] ERROR line %u: maximum depth of %u reached while parsing "
+      error("[empfinfo] ERROR on line %u: maximum depth of %u reached while parsing "
             "conditional expression", interp->linenr, UINT16_MAX);
       return Error_EMPIncorrectInput;
    }
@@ -1905,7 +1905,7 @@ static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
 
    do {
       if (nargs == GMS_MAX_INDEX_DIM) {
-         error("[empinterp] ERROR line %u: while parsing the sets to loop over, "
+         error("[empinterp] ERROR on line %u: while parsing the sets to loop over, "
                "more than %u were parsed.\n", interp->linenr, GMS_MAX_INDEX_DIM);
          return Error_EMPIncorrectSyntax;
       }
@@ -2189,7 +2189,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    switch (toktype) {
    case TOK_GMS_VAR:
       if (has_var) {
-         error("[empinterp] ERROR line %u: only one variable is allowed in a %s "
+         error("[empinterp] ERROR on line %u: only one variable is allowed in a %s "
                "statement\n", interp->linenr, toktype2str(TOK_SUM));
          return Error_EMPIncorrectInput;
          }
@@ -2197,7 +2197,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
       break;
    case TOK_GMS_PARAM:
       if (has_param) {
-         error("[empinterp] ERROR line %u: only one parameter is allowed in a %s "
+         error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
                "statement\n", interp->linenr, toktype2str(TOK_SUM));
          return Error_EMPIncorrectInput;
          }
@@ -2214,7 +2214,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
           * We expect the identifier to be a label, followed by a valfn
           * ---------------------------------------------------------------------- */
           if (has_valfn) {
-             error("[empinterp] ERROR line %u: only one value function (valFn) is allowed in a %s "
+             error("[empinterp] ERROR on line %u: only one value function (valFn) is allowed in a %s "
                    "statement\n", interp->linenr, toktype2str(TOK_SUM));
              return Error_EMPIncorrectInput;
           }
@@ -2277,7 +2277,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
           } else {
 
           if (has_param) {
-             error("[empinterp] ERROR line %u: only one parameter is allowed in a %s "
+             error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
                    "statement\n", interp->linenr, toktype2str(TOK_SUM));
              return Error_EMPIncorrectInput;
           }
@@ -3058,7 +3058,7 @@ static int c_ovf_setparam(Interpreter* restrict interp, UNUSED void *ovfdef_data
          }
 
       } else {
-         error("[empcompiler] ERROR line %u: mandatory parameter '%s' not found (OVF '%s')\n",
+         error("[empcompiler] ERROR on line %u: mandatory parameter '%s' not found (OVF '%s')\n",
                interp->linenr, pdef->name, ovfdecl->name);
          return Error_NotFound;
       }
@@ -3227,7 +3227,7 @@ static int c_read_param(Interpreter* restrict interp, unsigned *p,
                               tape, &gmsfilter_gidx));
 
    if (loopiters.size != 1) {
-      error("[empcompiler] ERROR line %u: OVF parameter can only have one set as indices, got %u\n",
+      error("[empcompiler] ERROR on line %u: OVF parameter can only have one set as indices, got %u\n",
             interp->linenr, loopiters.size);
       return Error_EMPIncorrectSyntax;
    }

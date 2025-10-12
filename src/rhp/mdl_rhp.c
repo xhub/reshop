@@ -151,8 +151,8 @@ int rmdl_initctrfromfull(Model *mdl, Model *mdl_up)
    memcpy(ctr->vars, ctr_up->vars, nvars_up * sizeof(Var));
    memcpy(ctr->equs, ctr_up->equs, nequs_up * sizeof(Equ));
 
-   aequ_setcompact(&cdat->equ_inherited.e, nequs_up, 0);
-   aequ_setcompact(&cdat->equ_inherited.e_src, nequs_up, 0);
+   aequ_ascompact(&cdat->equ_inherited.e, nequs_up, 0);
+   aequ_ascompact(&cdat->equ_inherited.e_src, nequs_up, 0);
 
    avar_setcompact(&cdat->var_inherited.v, nvars_up, 0);
    avar_setcompact(&cdat->var_inherited.v_src, nvars_up, 0);
@@ -457,9 +457,9 @@ int rmdl_appendequs(Model *mdl, const Aequ *e)
    unsigned n_addedequs = ei_new-n_curequs;
 
    Aequ e_, e_src;
-   aequ_setcompact(&e_, n_addedequs, n_curequs);
+   aequ_ascompact(&e_, n_addedequs, n_curequs);
    S_CHECK(aequ_extendandown(&cdat->equname_inherited.e, &e_));
-   aequ_setandownlist(&e_src, n_addedequs, rev_rosetta_newequs);
+   aequ_asownlist(&e_src, n_addedequs, rev_rosetta_newequs);
    S_CHECK(aequ_extendandown(&cdat->equname_inherited.e_src, &e_src));
 
     /* ---------------------------------------------------------------------

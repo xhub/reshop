@@ -312,7 +312,7 @@ static inline int empinterp_ops_dispatch(Interpreter *interp, unsigned *p,
    case InterpreterOpsImm: return fn_imm(interp, p);
    case InterpreterOpsCompiler: return fn_vm(interp, p);
    case InterpreterOpsEmb: return fn_emb(interp, p);
-   default: error("[empinterp] ERROR line %u: dispatch not implemented for ops"
+   default: error("[empinterp] ERROR on line %u: dispatch not implemented for ops"
                   "type %d", interp->linenr, interp->ops->type);
       return Error_NotImplemented;
    }

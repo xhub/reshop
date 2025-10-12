@@ -153,14 +153,14 @@ static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
          uels[i] = 0;
          break;
       case IdentSet: {
-         error("[empinterp] ERROR line %u: %s ident '%.*s' found at position %u. "
+         error("[empinterp] ERROR on line %u: %s ident '%.*s' found at position %u. "
                "Subset selection is not implemented yet!\n", ident->lexeme.linenr,
                ident_fmtargs(ident), i);
          return Error_NotImplemented;
          }
          break;
       default:
-         error("[empinterp] ERROR line %u: while resolving symbol '%.*s', "
+         error("[empinterp] ERROR on line %u: while resolving symbol '%.*s', "
                "unsupported ident '%.*s' of type %s at the %u location\n",
                interp->linenr, tok_fmtargs(&interp->cur),
                lexeme_fmtargs(ident->lexeme), identtype2str(ident->type), i);
@@ -437,7 +437,7 @@ static int imm_ovf_setparam(Interpreter* restrict interp, void *ovfdef_data, uns
             S_CHECK(param->def->default_val(param, nargs));
          }
       } else {
-         error("[empinterp] ERROR line %u: mandatory parameter '%s' not found (OVF '%s')\n",
+         error("[empinterp] ERROR on line %u: mandatory parameter '%s' not found (OVF '%s')\n",
          interp->linenr, param->def->name, ovfdef->name);
          return Error_NotFound;
       }
@@ -594,7 +594,7 @@ static int imm_read_elt_vector(Interpreter *interp, const char *identstr,
    const Lequ * vec = &container->list[idx];
    
    if (gmsindices->nargs != 1) {
-      error("[empinterp] ERROR line %u: GAMS indices for symbol '%s' has dimension %u, expected 1\n", 
+      error("[empinterp] ERROR on line %u: GAMS indices for symbol '%s' has dimension %u, expected 1\n", 
             interp->linenr, identstr, gmsindices->nargs);
       return Error_EMPRuntimeError;
    }
@@ -602,7 +602,7 @@ static int imm_read_elt_vector(Interpreter *interp, const char *identstr,
    IdentData *id = &gmsindices->idents[0];
 
    if (id->type != IdentUEL) {
-      error("[empinterp] ERROR line %u: GAMS indices for symbol '%s' has dimension %u, expected 1\n", 
+      error("[empinterp] ERROR on line %u: GAMS indices for symbol '%s' has dimension %u, expected 1\n", 
             interp->linenr, identstr, gmsindices->nargs);
       return Error_EMPRuntimeError;
    }
@@ -617,7 +617,7 @@ static int imm_read_elt_vector(Interpreter *interp, const char *identstr,
       }
    }
 
-   error("[empinterp] ERROR line %u: could not find UEL '%*s' #%u in vector '%s'\n",
+   error("[empinterp] ERROR on line %u: could not find UEL '%*s' #%u in vector '%s'\n",
          interp->linenr, id->lexeme.len, id->lexeme.start, uel, identstr);
 
    return Error_EMPIncorrectInput;

@@ -149,7 +149,7 @@ int reformulation_equil_setup_dual_mp(MathPrgm* mp_ovf, rhp_idx objequ, rhp_idx 
 _exit:
 
    rhpmat_free(&A);
-   FREE(s);
+   free(s);
 
    return status;
 }

@@ -16,6 +16,7 @@
 #include "gams_macros.h"
 #include "gams_rosetta.h"
 #include "gams_utils.h"
+#include "get_uuid_random.h"
 #include "instr.h"
 #include "lequ.h"
 #include "macros.h"
@@ -558,6 +559,10 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
 
    bool flip_marginal = gmoSense(gmo) == gmoObj_Max;
 
+   if (probtype == MdlType_lp || probtype == MdlType_qcp) {
+      gmoUseQSet(gmo, 1);
+   }
+
    /* -----------------------------------------------------------------------
     * Start the allocation. This needs to be early enough so that we can free
     * it in the _exit.
@@ -916,10 +921,10 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
        DPRINT("Equation %d: isNL = %s\n", j, NLequs[j] ? "true" : "false");
    }
 
-   S_CHECK_EXIT(chk_nlpool(ctr_src->pool, mdl_src));
+   S_CHECK_EXIT(chk_nlpool(ctr_src->nlpool, mdl_src));
 
-   double *nlpool = ctr_src->pool->data;
-   int nlpool_len = (int)ctr_src->pool->len;
+   double *nlpool = ctr_src->nlpool->data;
+   int nlpool_len = (int)ctr_src->nlpool->len;
 
    /* ----------------------------------------------------------------------
     * Add the opcode to the GMO
@@ -1010,8 +1015,9 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
       if (inject_objvar) {
          objvar_gmo = ctr_gms->n-1;
 
-         /* TODO: ensure uniqueness ...*/
-         strcat(buffer, "reshop_objvar");
+         (void)snprintf(buffer, sizeof(buffer), "reshop_objvar-%s", gen_random_uuidv4());
+         gams_fix_equvar_names(buffer); /* Need to convert -  to _ from UUIDv4 */
+
          /* dct, symName, symTyp, symDim, userInfo, symTxt  */
          dctAddSymbol(dct, buffer, dctvarSymType, 0, 0, "");
          dctAddSymbolData(dct, NULL);

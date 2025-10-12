@@ -31,7 +31,7 @@ int nltree_get_add_node(Model* mdl, rhp_idx ei, unsigned n_children,
    }
 
    NlTree *tree = e->tree;
-   S_CHECK(nltree_find_add_node(tree, &add_node, ctr->pool, coeff));
+   S_CHECK(nltree_find_add_node(tree, &add_node, ctr->nlpool, coeff));
  
    return nltree_ensure_add_node(tree, add_node, n_children, offset);
 }

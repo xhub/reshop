@@ -132,7 +132,7 @@ const char *linktype2str(LinkType type)
 
 int runtime_error(unsigned linenr)
 {
-   error("[empinterp] ERROR line %u: unexpected runtime error\n", linenr);
+   error("[empinterp] ERROR on line %u: unexpected runtime error\n", linenr);
    return Error_RuntimeError;
 }
 
@@ -195,24 +195,24 @@ int Varc_dual(Model *mdl, unsigned linenr, daguid_t uid_parent, daguid_t uid_chi
               double coeff)
 {
    if (!valid_uid(uid_child)) {
-      error("[empinterp] ERROR line %u: expecting a valid child daguid\n", linenr);
+      error("[empinterp] ERROR on line %u: expecting a valid child daguid\n", linenr);
       return Error_EMPRuntimeError;
    }
 
    if (!uidisMP(uid_child)) {
-      error("[empinterp] ERROR line %u: expecting the child daguid to be an MP\n",
+      error("[empinterp] ERROR on line %u: expecting the child daguid to be an MP\n",
             linenr);
       return Error_EMPRuntimeError;
    }
 
    if (!valid_uid(uid_parent)) {
-      error("[empinterp] ERROR line %u: expecting a valid parent daguid\n",
+      error("[empinterp] ERROR on line %u: expecting a valid parent daguid\n",
             linenr);
       return Error_EMPRuntimeError;
    }
 
    if (!uidisMP(uid_parent)) {
-      error("[empinterp] ERROR line %u: expecting the parent daguid to be an MP\n",
+      error("[empinterp] ERROR on line %u: expecting the parent daguid to be an MP\n",
             linenr);
       return Error_EMPRuntimeError;
    }

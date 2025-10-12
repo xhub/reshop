@@ -11,6 +11,7 @@
 #include <unistd.h>
 #endif
 
+#include "get_uuid_random.h"
 #include "macros.h"
 #include "mathprgm.h"
 #include "mdl.h"
@@ -18,93 +19,13 @@
 #include "rhp_ipc.h"
 #include "tlsdef.h"
 
-tlsvar char uuidstr[37]; // uuid for socket path
 tlsvar char sockpath[108]; //socket path
 
 
-#if defined(_WIN32) // Windows
-#define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
-#include <windows.h>
-#include <objbase.h>
-
-// For AF_UNIX
-#include <winsock2.h>
-#include <afunix.h>
-#include <io.h>
-
-#include <basetsd.h>
-typedef SSIZE_T ssize_t;
-
-static int gen_uuid(void)
-{
-   unsigned i = 0;
-   UUID uuid;
-   switch (UuidCreate(&uuid)) {
-   case RPC_S_OK:
-   case RPC_S_UUID_LOCAL_ONLY:
-      break;
-   default:
-      goto _err;
-   }
-
-   RPC_CSTR str;
-
-   if (UuidToStringA(&uuid, &str) != RPC_S_OK) { goto _err; }
-
-   for (; i < sizeof(uuidstr) && str[i] != '\0'; ++i) {
-      uuidstr[i] = (char)str[i];
-   }
-
-   if (i >= sizeof(uuidstr)) {
-      error("[OS] ERROR: UUID '%s' is too long, max length is %zu. Please file bug report\n",
-            str, sizeof(uuidstr));
-      RpcStringFree(&str);
-      return -1;
-   }
-
-   uuidstr[i] = '\0';
-
-   RpcStringFree(&str);
-
-_err:
-   errormsg("[OS] ERROR: failed to generate a UUID\n");
-   return -1;
-}
-
-#elif defined(__linux__) || defined(__APPLE__) // Linux and macOS
-
-/* This needs at least Sierra (10.12) on MacOs and glibc 2.25 / Linux 3.17 */
-#include <sys/random.h>
-
-static int gen_uuid(void)
-{
-    uint8_t uuid[16];
-
-    if (getentropy(uuid, sizeof(uuid)) != 0) {
-        return -1;
-    }
-
-    // Adjust the UUID to conform to RFC 4122
-    uuid[6] = (uuid[6] & 0x0F) | 0x40; // Version 4
-    uuid[8] = (uuid[8] & 0x3F) | 0x80; // Variant 1
-
-    // Format the UUID as a string
-    snprintf(uuidstr, sizeof(uuidstr),
-             "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-             uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7],
-             uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
-
-   return 0;
-}
-
-#else
-#error "Unsupported platform"
-#endif
-
 const char* ipc_unix_domain_init(void)
 {
-   if (gen_uuid()) {
+   const char *uuidstr = gen_random_uuidv4();
+   if (!uuidstr) {
       errormsg("Error generating UUID\n");
       return NULL;
    }

@@ -123,7 +123,9 @@ int optint_getrange(struct option *opt, int *min, int *max)
       return Error_RuntimeError;
    }
 
-   if (!strcasecmp(opt->name, "output") || !strcasecmp(opt->name, "time_limit")) {
+   if (!strcasecmp(opt->name, "output")
+    || !strcasecmp(opt->name, "time_limit")
+    || !strcasecmp(opt->name, "solvelink")) {
       return posint(min, max);
    }
 

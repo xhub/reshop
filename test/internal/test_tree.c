@@ -308,18 +308,18 @@ int main(int argc, char **argv)
          if (!equs) { status = EXIT_FAILURE; goto _exit; };
 
          struct nltree_pool pool = {equs->pool, equs->pool_len, equs->pool_len, RhpBackendGamsGmo, 1, true };
-         if (ctr->pool) {
-            pool_release(ctr->pool);
+         if (ctr->nlpool) {
+            pool_release(ctr->nlpool);
          }
 
-         ctr->pool = &pool;
+         ctr->nlpool = &pool;
          for (size_t j = 0; j < equs->nb_equs; ++j) {
             size_t start = equs->indx_start[j];
             int _status = run_ex2(ctr, &equs->instrs[start], &equs->args[start]);
             if (_status != OK) { status = _status; }
          }
          gams_opcodes_file_dealloc(equs);
-         ctr->pool = NULL;
+         ctr->nlpool = NULL;
       }
    }
 

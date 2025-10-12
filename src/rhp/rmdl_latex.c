@@ -207,7 +207,7 @@ static inline NONNULL int _printequname(const Container *ctr, rhp_idx i, FILE *f
 #define VAR_POST(node, ctr, f) 
 
 #define CST_PRE(node, ctr, f) \
-   S_CHECK(pprint_f(ctr->pool->data[CIDX_R(node->value)], f, false));
+   S_CHECK(pprint_f(ctr->nlpool->data[CIDX_R(node->value)], f, false));
 #define CST_IN(node, ctr, f) 
 #define CST_POST(node, ctr, f) 
 
@@ -644,22 +644,23 @@ int rmdl_export_latex(Model *mdl, const char *phase_name)
 int mdl_export_gms(Model *mdl, const char *phase_name)
 {
    int status = OK;
-  const char * do_export = mygetenv("RHP_EXPORT_GMS");
-  if (!do_export) return OK;
-   myfreeenvval(do_export);
-  
-  Model *mdl_gams;
-  A_CHECK(mdl_gams, mdl_new(RhpBackendGamsGmo));
+   const char * do_export = mygetenv("RHP_EXPORT_GMS");
+   if (!do_export) return OK;
 
-  S_CHECK_EXIT(gmdl_set_gamsdata_from_env(mdl_gams));
-  S_CHECK_EXIT(mdl_setsolvername(mdl_gams, "CONVERT"));
-  S_CHECK_EXIT(rhp_process(mdl, mdl_gams));
-  S_CHECK_EXIT(rhp_solve(mdl_gams));
-  S_CHECK_EXIT(rhp_postprocess(mdl_gams));
+   myfreeenvval(do_export);
+
+   Model *mdl_gams;
+   A_CHECK(mdl_gams, mdl_new(RhpBackendGamsGmo));
+
+   S_CHECK_EXIT(gmdl_set_gamsdata_from_env(mdl_gams));
+   S_CHECK_EXIT(mdl_setsolvername(mdl_gams, "CONVERT"));
+   S_CHECK_EXIT(rhp_process(mdl, mdl_gams));
+   S_CHECK_EXIT(rhp_solve(mdl_gams));
+   S_CHECK_EXIT(rhp_postprocess(mdl_gams));
 
 _exit:
    mdl_release(mdl_gams);
 
-  return status;
+   return status;
 }
 

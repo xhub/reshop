@@ -305,13 +305,13 @@ static const unsigned n_opts = ARRAY_SIZE(log_opts);
 
 static void log_help(void)
 {
-   info("Help for RHP_LOG values:\n\n");
+   pr_info("Help for RHP_LOG values:\n\n");
 
    for (unsigned i = 0; i < n_opts; ++i) {
-      info("    %-30s %s\n", log_opts[i].name, log_opts[i].help);
+      pr_info("    %-30s %s\n", log_opts[i].name, log_opts[i].help);
    }
 
-   info("    %-30s enable all options above\n", "all");
+   pr_info("    %-30s enable all options above\n", "all");
 }
 
 static const char * const envvars_help[][2] = {
@@ -329,42 +329,42 @@ static const char * const envvars_help[][2] = {
 static void print_option_array(unsigned nopts, const struct option opts[VMT(static restrict nopts)])
 {
    for (unsigned i = 0; i < nopts; ++i) {
-      info("    RHP_");
+      pr_info("    RHP_");
       const char *opt_name =opts[i].name;
       size_t opt_name_len = strlen(opt_name);
 
       for (unsigned j = 0; j < opt_name_len; ++j) {
-         info("%c", RhpToUpper(*opt_name++));
+         pr_info("%c", RhpToUpper(*opt_name++));
       }
 
       size_t offset = 4 + opt_name_len;
       if (offset < 30) {
          int blank = 30 - offset;
-         info("%*s", blank, "");
+         pr_info("%*s", blank, "");
       }
 
-      info(" %s\n", opts[i].description);
+      pr_info(" %s\n", opts[i].description);
    }
 }
 
 static void print_envvar_help(void)
 {
-   info("List of environment variables\n");
-   info("\n- The following ReSHOP options can be set by set environment variables:\n\n");
+   pr_info("List of environment variables\n");
+   pr_info("\n- The following ReSHOP options can be set by set environment variables:\n\n");
 
    print_option_array(Options_Last+1, rhp_options);
 
-   info("\n- The following OVF/CCF options can be set by set environment variables:\n\n");
+   pr_info("\n- The following OVF/CCF options can be set by set environment variables:\n\n");
 
    print_option_array(Options_Ovf_Last+1, ovf_options);
 
-   info("\n- Additionally, the following environment variables influence the ReSHOP behavior:\n\n");
+   pr_info("\n- Additionally, the following environment variables influence the ReSHOP behavior:\n\n");
 
    for (unsigned i = 0, len = ARRAY_SIZE(envvars_help); i <len; ++i) {
-      info("    %-30s %s\n", envvars_help[i][0], envvars_help[i][1]);
+      pr_info("    %-30s %s\n", envvars_help[i][0], envvars_help[i][1]);
    }
 
-   info("\n- Finally, logging can be controlled via RHP_LOG:\n");
+   pr_info("\n- Finally, logging can be controlled via RHP_LOG:\n");
    log_help();
 }
 

@@ -129,6 +129,21 @@ typedef struct {
    Lequ **lequs;
 } MpObjFnAdditionalMapping;
 
+/** minimax reformulation data*/
+typedef struct {
+   MpIdArray mps2reformulate;     /**< Array of MPs involved in minimax */
+   MpIdArray saddle_path_starts;  /**< Array of saddle-point paths      */
+} MiniMaxiData;
+
+/**< EMPDAG transformations */
+typedef struct {
+   MpIdArray fenchel_dual_nodal;  /**< Fenchel dual for a given node          */
+   MpIdArray fenchel_dual_subdag; /**< Fenchel dual for a given subtree       */
+   MpIdArray epi_dual_nodal;      /**< Epigraphical dual for a given node     */
+   MpIdArray epi_dual_subdag;     /**< Epigraphical dual for a given subtree  */
+   FoocMpInfo fooc;               /**< FOOC (VI or KKT)                       */
+} EmpDagTransformations;
+
 /** @brief Main EMP DAG structure */
 typedef struct empdag {
    EmpDagType type;
@@ -136,35 +151,32 @@ typedef struct empdag {
    EmpDagFeatures features;
    EmpDagNodeStats node_stats;
    EmpDagEdgeStats arc_stats;
-   bool finalized;
-   bool has_resolved_arcs;
+   bool finalized;                        /**< Has the EMPDAG been finalized       */
+   bool arcs_fully_resolved;              /**< True if all arcs in the EMPDAG are present */
 
-   DagMpArray mps;
-   DagNashArray nashs;
-   DagUidArray roots;
+   DagMpArray mps;                        /**< MP nodes                            */
+   DagNashArray nashs;                    /**< Nash nodes                          */
+   DagUidArray roots;                     /**< Roots of the EMPDAG                 */
 
-   daguid_t uid_root;
+   MpIdArray mps_newly_created;           /**< Newly created MPs                   */
 
-   MpIdArray mps2reformulate;
-   MpIdArray saddle_path_starts;
-   MpIdArray mps2instantiate;
+   daguid_t uid_root;                     /**< Root of the EMPDAG (must be unique) */
 
-   MpIdArray fenchel_dual_nodal;
-   MpIdArray fenchel_dual_subdag;
-   MpIdArray epi_dual_nodal;
-   MpIdArray epi_dual_subdag;
-   FoocMpInfo fooc;
+   MpIdArray mps2instantiate;             /**< List of MPs to instanciate          */
+
+   MiniMaxiData minimaxi;                 /**< Minimaxi data */
+   EmpDagTransformations transformations; /**< User-specified transformations      */
+
    MpObjFnInfo objfn;
    MpObjFnAdditionalMapping objfn_maps;
-
 
    struct {
       RhpSense sense;
       rhp_idx objequ;
       rhp_idx objvar;
-   } simple_data;                /**< Data structure for simple case  */
+   } simple_data;                         /**< Data structure for simple case  */
 
-   Model *mdl;
+   Model *mdl;                     /**< Back pointer to the Model  */
    struct empdag *empdag_next;     /**< UNUSED */
    const struct empdag *empdag_up; /**< UNUSED */
 } EmpDag;
@@ -475,16 +487,16 @@ static inline int empdag_getnashbyuid(const EmpDag *empdag, unsigned uid,
 }
 
 static inline bool empdag_has_adversarial_mps(const EmpDag *empdag) {
-   return empdag->mps2reformulate.len > 0;
+   return empdag->minimaxi.mps2reformulate.len > 0;
 }
 
 static inline bool empdag_needs_transformations(const EmpDag *empdag) {
-   return (empdag->fenchel_dual_nodal.len  > 0 ||
-           empdag->fenchel_dual_subdag.len > 0 ||
-           empdag->epi_dual_nodal.len      > 0 ||
-           empdag->epi_dual_subdag.len     > 0)
+   return (empdag->transformations.fenchel_dual_nodal.len  > 0 ||
+           empdag->transformations.fenchel_dual_subdag.len > 0 ||
+           empdag->transformations.epi_dual_nodal.len      > 0 ||
+           empdag->transformations.epi_dual_subdag.len     > 0)
 
-          || empdag->mps2reformulate.len > 0
+          || empdag->minimaxi.mps2reformulate.len > 0
           || empdag->mps2instantiate.len > 0
           || empdag->objfn_maps.mps.len > 0;
 }

@@ -83,8 +83,8 @@ int new_unique_dirname(char *newdir, unsigned newdir_len)
       ++i;
       if (i == UINT_MAX) {
          newdir[len1] = '\0';
-         error("%s :: No unique new directoryname based on %s could be created."
-               " Check that the parent directly exists, or delete the existing "
+         error("%s ERROR: No unique new directoryname based on '%s' could be created."
+               " Check that the parent directory exists, or delete the existing "
                "directories in the parent one\n", __func__, newdir);
          return Error_SystemError;
       }
@@ -103,9 +103,9 @@ int file_readable(const char *fname)
    if (!access(fname, R_OK)) { return 0; }
 
    if (!access(fname, F_OK)) {
-      error("ERROR! Cannot read (permission issue) file '%s'\n", fname);
+      error("ERROR: Cannot read (permission issue) file '%s'\n", fname);
    } else {
-      error("ERROR! File '%s' does not exists\n", fname);
+      error("ERROR: File '%s' does not exists\n", fname);
    }
 
    return Error_FileOpenFailed;

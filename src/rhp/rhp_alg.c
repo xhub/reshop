@@ -9,6 +9,7 @@
 #include "ctrdat_rhp.h"
 #include "empinfo.h"
 #include "equvar_helpers.h"
+#include "mathprgm.h"
 #include "nltree.h"
 #include "filter_ops.h"
 #include "macros.h"
@@ -402,61 +403,276 @@ int rctr_compress_equs(const Container *ctr_src, Container *ctr_dst)
 }
 #endif
 
-/** 
- *  @brief Perform the presolve for an optimization problem
- *
- *  This function solves all the optimization problems that were stored as
- *  subproblems. Those are usually used to initialize variables values
- *
- *  @param mdl     the model
- *  @param backend the backend to use 
- *
- *  @return     the error code
- */
-int rmdl_presolve(Model *mdl, unsigned backend)
+static int nlpool_inject_varvals(Container *ctr)
 {
-   unsigned offset_pool;
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+
+   NlPool * restrict pool = ctr->nlpool;
+   unsigned pool_len = pool->len;
+
+
+   /* ----------------------------------------------------------------------
+    * Ensure that the pool is large enough to hold the values of all variables.
+    * ---------------------------------------------------------------------- */
+
+   if (pool_len + cdat->total_n > pool->max) {
+      unsigned new_max = pool_len + cdat->total_n;
+
+      if (pool->own) {
+         pool->max = new_max;
+         REALLOC_(pool->data, double, pool->max);
+      } else {
+         S_CHECK(pool_copy_and_own_data(pool, new_max));
+      }
+   }
+
+   pool->len += cdat->total_n;
+   double *pool_data = pool->data;
+
+   Var *vars = ctr->vars;
+   for (unsigned vi = 0, i = pool_len, len = cdat->total_n; vi < len; ++vi, ++i) {
+      pool_data[i] = vars[vi].value;
+   }
+
+   return OK;
+}
+
+NONNULL static int
+presolve_submodel_solve(Model *mdl, Model *mdl_subsolver, double * restrict nlpool_data,
+                        unsigned pool_varvals_start)
+{
+   /* TODO: add option for selection subsolver */
+
+   mdl_subsolver->ctr.n = mdl_subsolver->ctr.m = 0;
+   mdl_subsolver->status = MdlPreSolve;
+   mdl_subsolver->ctr.status = 0;
+
+   Container * restrict ctr = &mdl->ctr;
+   Container * restrict ctr_subsolver = &mdl_subsolver->ctr;
+
+   S_CHECK(mdl_export(mdl, mdl_subsolver));
+
+   /* TODO(Xhub) URG add option for displaying that  */
+#if defined(DEBUG)
+   strncpy(ctr_solver->data, "CONVERTD", GMS_SSSIZE-1);
+   S_CHECK_EXIT(ctr_callsolver(&mdl_solver));
+   mdl_setsolvername(mdl_solver, "");
+#endif
+
+   S_CHECK(mdl_solve(mdl_subsolver));
+   /* Phase 1: report the values from the solver to the RHP */
+   /* TODO(xhub) optimize and iterate over the valid equations */
+
+   int status = OK;
+
+   /* We read those here, since they may not exist at the beginning  */
+   rhp_idx * restrict rosetta_vars = ctr->rosetta_vars;
+   rhp_idx * restrict rosetta_equs = ctr->rosetta_equs;
+
+
+   struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
+   size_t arrsize = MAX(ctr_subsolver->n, ctr_subsolver->m);
+   A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, 2*arrsize*sizeof(double)));
+
+   double * restrict vals = (double*)working_mem.ptr;
+   double * restrict mults = &vals[arrsize];
+
+   S_CHECK_EXIT(ctr_getallvarsval(ctr_subsolver, vals));
+   S_CHECK_EXIT(ctr_getallvarsmult(ctr_subsolver, mults));
+
+   unsigned nvars = ctr_nvars_total(ctr);
+
+   for (unsigned k = 0, l = 0; k < nvars; ++k) {
+
+      if (valid_vi(rosetta_vars[k])) {
+         /* Update the values in the container */
+         Var * restrict vdst = &ctr->vars[k];
+         vdst->value = vals[l];
+         vdst->multiplier = mults[l];
+
+         /* Update the values in the pool */
+         nlpool_data[pool_varvals_start+k] = vdst->value;
+
+         /*  TODO(xhub) URG why is this commented?/ */
+         //               update_neg(neg_var_vals, -ctr_solver->vars[l].level)
+
+         ++l;
+      }
+   }
+
+   S_CHECK_EXIT(ctr_getallequsval(ctr_subsolver, vals));
+   S_CHECK_EXIT(ctr_getallequsmult(ctr_subsolver, mults));
+
+   unsigned nequs = ctr_nequs_total(ctr);
+
+   for (unsigned k = 0, l = 0; k < nequs; ++k) {
+
+      if (valid_ei(rosetta_equs[k])) {
+         /* Update the values in the container */
+         /*  TODO(xhub) is the level useful? */
+         Equ * restrict edst = &ctr->equs[k];
+         edst->value = vals[l];
+         edst->multiplier = mults[l];
+         ++l;
+      }
+   }
+
+_exit:
+
+   /* TODO(Xhub) this doesn't look good, but now we hardcheck this.
+    * Find a way to improve this. If we solve multiple time a subset
+    * of a model, we might want to not allocate all the time*/
+   FREE(ctr->rosetta_vars);
+   FREE(ctr->rosetta_equs);
+
+   /* mdl_export links mdl and mdl_solver */
+   mdl_release(mdl);
+   mdl_subsolver->mdl_up = NULL;
+
+   return status;
+}
+
+static int rmdl_presolve_auxmdl(Model *mdl, BackendType backend, unsigned *p_pool_varvals_start)
+{
+   int status = OK;
    Container *ctr = &mdl->ctr;
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
-   unsigned nb = 0;
+   S_CHECK(ctr_ensure_pool(ctr));
+   unsigned pool_varvals_start = ctr->nlpool->len;
+   *p_pool_varvals_start = pool_varvals_start;
+
+   /* Ensure that the pool size is large enough to hold the values of all variables. */
+   S_CHECK(nlpool_inject_varvals(ctr));
+
+   double * restrict nlpool_data = ctr->nlpool->data;
+
+  /* ----------------------------------------------------------------------
+   * We need to copy this information as it will get overwritten when the
+   * stage number is increased in rmdl_prepare_export()
+   * ---------------------------------------------------------------------- */
+
+   struct auxmdl *stages_auxmdl;
+   unsigned cur_stage = cdat->current_stage;
+   MALLOC_(stages_auxmdl, struct auxmdl, cur_stage+1);
+   memcpy(stages_auxmdl, cdat->stage_auxmdl, (cur_stage+1) * sizeof(struct auxmdl));
+
+   Model *mdl_subsolver = mdl_new(backend);
+   const char *mdl_name = mdl_getname(mdl);
+
+   for (unsigned s = 0; s <= cur_stage; ++s) {
+      struct auxmdl *s_subctr = &stages_auxmdl[cur_stage - s];
+
+      /* -------------------------------------------------------------------
+       * Descending order
+       * ------------------------------------------------------------------- */
+
+      for (unsigned i = 0, j = s_subctr->len-1; i < s_subctr->len; ++i, --j) {
+         struct filter_subset* fs = s_subctr->filter_subset[j];
+         S_CHECK_EXIT(filter_subset_activate(fs, mdl, pool_varvals_start));
+
+         char *name;
+         IO_PRINT_EXIT(asprintf(&name, "%s_s%u_i%u", mdl_name, s, i));
+         S_CHECK_EXIT(mdl_setname(mdl_subsolver, name));
+         free(name);
+
+         trace_process("[presolve] Presolving model stage %5u iter %5u\n", s, i);
+
+         S_CHECK_EXIT(presolve_submodel_solve(mdl, mdl_subsolver, nlpool_data,
+                                              pool_varvals_start))
+
+      }
+   }
+
+   free(stages_auxmdl);
+
+_exit:
+   mdl_release(mdl_subsolver);
+
+   return status;
+}
+
+static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varvals_start)
+{
+   Container *ctr = &mdl->ctr;
+
+   if (pool_varvals_start == UINT_MAX) {
+      S_CHECK(ctr_ensure_pool(ctr));
+      pool_varvals_start = ctr->nlpool->len;
+
+      /* Ensure that the pool size is large enough to hold the values of all variables. */
+      S_CHECK(nlpool_inject_varvals(ctr));
+
+   }
+
+   double * restrict nlpool_data = ctr->nlpool->data;
+
+   Model *mdl_subsolver = mdl_new(backend);
+   const char *mdl_name = mdl_getname(mdl);
+
+   EmpDag *empdag = &mdl->empinfo.empdag;
+   MathPrgm ** restrict mpsarr = empdag->mps.arr;
+
+   mpid_t * restrict mpidarr = empdag->mps_newly_created.arr;
+   for (unsigned i = 0, len = empdag->mps_newly_created.len; i < len; ++i) {
+
+      mpid_t mpid = mpidarr[i];    assert(mpid < empdag->mps.len);
+      MathPrgm *mp = mpsarr[mpid]; assert(mp);
+
+      FilterSubset *fs = filter_subset_new_from_mp(mp);
+      if (!fs) {
+         error("[presolve] ERROR: could not create filter subset for MP(%s)\n",
+               mp_getname(mp));
+         return Error_RuntimeError;
+      }
+
+      S_CHECK(filter_subset_activate(fs, mdl, pool_varvals_start));
+
+      char *name;
+      IO_PRINT(asprintf(&name, "%s_mp%u", mdl_name, i));
+      S_CHECK(mdl_setname(mdl_subsolver, name));
+      free(name);
+
+      trace_process("[presolve] Presolving MP(%s)\n", empdag_getmpname(empdag, mpid));
+      S_CHECK(presolve_submodel_solve(mdl, mdl_subsolver, nlpool_data, pool_varvals_start));
+
+   }
+
+   return OK;
+}
+
+
+/** @brief Perform the presolve for an optimization problem
+ *
+ *  This function solves all the optimization problems that were stored as
+ *  subproblems. Those are usually used to initialize variables and equation values.
+ *
+ *  @param mdl      the model
+ *  @param backend  the backend to use 
+ *
+ *  @return         the error code
+ */
+int rmdl_presolve(Model *mdl, BackendType backend)
+{
+   int status = OK;
+   unsigned nauxmdl = 0, nmps_init;
+   Container *ctr = &mdl->ctr;
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+
    for (unsigned s = 0, cur_stage = cdat->current_stage; s <= cur_stage; ++s) {
       struct auxmdl *s_subctr = &cdat->stage_auxmdl[cur_stage - s];
 
-      nb += s_subctr->len;
+      nauxmdl += s_subctr->len;
    }
 
-   if (nb == 0) {
+   EmpDag *empdag = &mdl->empinfo.empdag;
+   nmps_init = empdag->mps_newly_created.len;
+
+   if (nauxmdl == 0 && nmps_init == 0) {
       return OK;
    }
 
    double start = get_walltime();
-
-   S_CHECK(ctr_ensure_pool(ctr));
-
-   offset_pool = ctr->pool->len;
-
-   /* ----------------------------------------------------------------------
-    * Ensure that the pool size is large enough to hold the values of all variables.
-    * ---------------------------------------------------------------------- */
-
-   if (ctr->pool->len + cdat->total_n > ctr->pool->max) {
-      unsigned new_max = ctr->pool->len + cdat->total_n;
-
-      if (ctr->pool->own) {
-         ctr->pool->max = new_max;
-         REALLOC_(ctr->pool->data, double, ctr->pool->max);
-      } else {
-         S_CHECK(pool_copy_and_own_data(ctr->pool, new_max));
-      }
-   }
-
-   ctr->pool->len += cdat->total_n;
-   double *pool_data = ctr->pool->data;
-
-   for (unsigned vi = 0, i = offset_pool; vi < (unsigned)cdat->total_n; ++vi, ++i) {
-      pool_data[i] = ctr->vars[vi].value;
-   }
 
    /* ----------------------------------------------------------------------
     * HACK: save existing "model" data before solving auxiliary models
@@ -475,118 +691,30 @@ int rmdl_presolve(Model *mdl, unsigned backend)
       cpy_fops = true;
    }
 
+   unsigned pool_varvals_start = UINT_MAX;
 
-   int status = OK;
-   Model *mdl_solver = mdl_new(backend);
-   Container *ctr_solver = &mdl_solver->ctr;
-
-   const char *mdl_name = mdl_getname(mdl);
-
-  /* ----------------------------------------------------------------------
-   * We need to copy this information as it will get overwritten when the
-   * stage number is increased in rmdl_prepare_export()
-   * ---------------------------------------------------------------------- */
-
-   struct auxmdl *stages_auxmdl;
-   unsigned cur_stage = cdat->current_stage;
-   MALLOC_(stages_auxmdl, struct auxmdl, cur_stage+1);
-   memcpy(stages_auxmdl, cdat->stage_auxmdl, (cur_stage+1) * sizeof(struct auxmdl));
-
-   for (unsigned s = 0; s <= cur_stage; ++s) {
-      struct auxmdl *s_subctr = &stages_auxmdl[cur_stage - s];
-
-      /* -------------------------------------------------------------------
-       * Descending order
-       * ------------------------------------------------------------------- */
-
-      for (unsigned i = 0, j = s_subctr->len-1; i < s_subctr->len; ++i, --j) {
-         struct filter_subset* fs = s_subctr->filter_subset[j];
-         S_CHECK_EXIT(filter_subset_activate(fs, mdl, offset_pool));
-
-         char *name;
-         IO_PRINT_EXIT(asprintf(&name, "%s_s%u_i%u", mdl_name, s, i));
-         S_CHECK_EXIT(mdl_setname(mdl_solver, name));
-         FREE(name);
-         /* TODO: add option for selection subsolver */
-
-         mdl_solver->ctr.n = mdl_solver->ctr.m = 0;
-         mdl_solver->status = 0;
-         mdl_solver->ctr.status = 0;
-
-         trace_process("[model] Presolving model stage %5u iter %5u\n",s, i);
-         S_CHECK_EXIT(mdl_export(mdl, mdl_solver));
-
-         /* TODO(Xhub) URG add option for displaying that  */
-#if defined(DEBUG)
-         strncpy(ctr_solver->data, "CONVERTD", GMS_SSSIZE-1);
-         S_CHECK_EXIT(ctr_callsolver(&mdl_solver));
-         mdl_setsolvername(mdl_solver, "");
-#endif
-         
-         S_CHECK_EXIT(mdl_solve(mdl_solver));
-         /* Phase 1: report the values from the solver to the RHP */
-         /* TODO(xhub) optimize and iterate over the valid equations */
-
-         /* We read those here, since they may not exist at the beginning  */
-         rhp_idx *rosetta_vars = ctr->rosetta_vars;
-         rhp_idx *rosetta_equs = ctr->rosetta_equs;
-
-
-         struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = ctr};
-         size_t arrsize = MAX(ctr_solver->n, ctr_solver->m);
-         A_CHECK(working_mem.ptr, ctr_getmem_old(ctr, 2*arrsize*sizeof(double)));
-
-         double * restrict vals = (double*)working_mem.ptr;
-         double * restrict mults = &vals[arrsize];
-
-         S_CHECK_EXIT(ctr_getallvarsval(ctr_solver, vals));
-         S_CHECK_EXIT(ctr_getallvarsmult(ctr_solver, mults));
-
-         for (unsigned k = 0, l = 0; k < (unsigned)cdat->total_n; ++k) {
-
-            if (valid_vi(rosetta_vars[k])) {
-               /* Update the values in the container */
-               Var * restrict vdst = &ctr->vars[k];
-               vdst->value = vals[l];
-               vdst->multiplier = mults[l];
-
-               /* Update the values in the pool */
-               ctr->pool->data[offset_pool+k] = vdst->value;
-
-               /*  TODO(xhub) URG why is this commented?/ */
-//               update_neg(neg_var_vals, -ctr_solver->vars[l].level)
-
-               ++l;
-            }
-         }
-
-         S_CHECK_EXIT(ctr_getallequsval(ctr_solver, vals));
-         S_CHECK_EXIT(ctr_getallequsmult(ctr_solver, mults));
-
-         for (unsigned k = 0, l = 0; k < (unsigned)cdat->total_m; ++k) {
-            if (valid_ei(rosetta_equs[k])) {
-               /* Update the values in the container */
-               /*  TODO(xhub) is the level useful? */
-               Equ * restrict edst = &ctr->equs[k];
-               edst->value = vals[l];
-               edst->multiplier = mults[l];
-               ++l;
-            }
-         }
-
-         /* TODO(Xhub) this doesn't look good, but now we hardcheck this.
-          * Find a way to improve this. If we solve multiple time a subset
-          * of a model, we might want to not allocate all the time*/
-         FREE(ctr->rosetta_vars);
-         FREE(ctr->rosetta_equs);
-
-         /* mdl_export links mdl and mdl_solver */
-         mdl_release(mdl);
-         mdl_solver->mdl_up = NULL;
-      }
+   if (!optvalb(mdl, Options_Output_Presolve_Log)) {
+      pr_info("Presolve: No solver output. Use option '%s' to change this.\n",
+              rhp_options[Options_Output_Presolve_Log].name);
    }
 
-   FREE(stages_auxmdl);
+   if (nauxmdl > 0) {
+      S_CHECK_EXIT(rmdl_presolve_auxmdl(mdl, backend, &pool_varvals_start));
+   }
+
+   if (nmps_init > 0) {
+      pr_info("Presolve: Solving %u newly created MP%s to set equations and variables "
+              "values\n", nmps_init, nmps_init > 1 ? "s" : "");
+      S_CHECK_EXIT(rmdl_presolve_mp(mdl, backend, pool_varvals_start));
+   }
+
+_exit:
+   if (cpy_fops) {
+      memcpy(ctr->fops, &fops_orig, sizeof(Fops));
+   } else {
+      ctr->fops->freedata(ctr->fops->data);
+      FREE(ctr->fops);
+   }
 
    /* ----------------------------------------------------------------------
     * restore the model
@@ -594,16 +722,6 @@ int rmdl_presolve(Model *mdl, unsigned backend)
 
    memcpy(&mdl->empinfo.empdag, &empdag_orig, sizeof(EmpDag));
    S_CHECK(mdl_settype(mdl, mdltype));
-
-_exit:
-   if (cpy_fops) {
-      memcpy(ctr->fops, &fops_orig, sizeof(Fops));
-   } else {
-      ctr->fops->type = FopsEmpty;
-      ctr->fops->data = NULL;
-   }
-
-   mdl_release(mdl_solver);
 
    trace_process("[model] End of presolving for %s model '%.*s' #%u\n", mdl_fmtargs(mdl));
    mdl->timings->solve.presolve_wall = get_walltime() - start;

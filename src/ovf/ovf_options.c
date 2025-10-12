@@ -15,10 +15,12 @@ tlsvar struct option_set ovf_optset = {
    .opts         = NULL,
 };
 
+// clang-format off
 tlsvar struct option ovf_options[] = {
-   [Options_Ovf_Reformulation]      = { "ovf_reformulation",      "scheme for reformulating OVF variables",                            OptChoice,  { .i = OVF_Equilibrium } },
-   [Options_Ovf_Init_New_Variables] = { "ovf_init_new_variables", "initialize the new variables introduced during OVF transformation", OptBoolean, { .b = false   } },
+   [Options_Ovf_Init_New_Variables] = { "ovf_init_new_variables", "initialize the new variables introduced during OVF/CCF reformulation", OptBoolean, { .b = false   } },
+   [Options_Ovf_Reformulation]      = { "ovf_reformulation",      "scheme for reformulating OVF variables and CCF MPs",                   OptChoice,  { .i = OVF_Equilibrium } },
 };
+// clang-format on
 
 RESHOP_STATIC_ASSERT(ARRAY_SIZE(ovf_options) == Options_Ovf_Last+1, "Sync issue for ovf_options")
 

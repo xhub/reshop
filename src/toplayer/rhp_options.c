@@ -17,23 +17,26 @@
 
 // clang-format off
 tlsvar struct option rhp_options[] = {
-   [Options_Display_EmpDag]        = { "display_empdag",      "Display EMPDAG as png",                     OptBoolean, { .b = false} },
-   [Options_Display_Equations]     = { "display_equations",   "Display Equations as png",                  OptString,  { .s = ""} },
-   [Options_Display_OvfDag]        = { "display_ovfdag",      "Display OVFDAG as png",                     OptBoolean, { .b = false} },
-   [Options_Display_Timings]       = { "display_timings",     "Display timing information",                OptBoolean, { .b = false} },
-   [Options_Dump_Scalar_Models]    = { "dump_scalar_model",   "Dump every scalar model via convert",       OptBoolean, { .b = false } },
-   [Options_Expensive_Checks]      = { "expensive_checks",    "Perform time consuming consistency checks", OptBoolean, { .b = false} },
-   [Options_EMPInfoFile]           = { "EMPInfoFile",         "EMPinfo file to use",                       OptString,  { .s = "empinfo.dat" } },
-   [Options_GUI]                   = { "gui",                 "Start GUI",                                 OptBoolean, { .b = false } },
-   [Options_Output]                = { "output",              "Output level",                              OptInteger, { .i = PO_INFO } },
-   [Options_Output_Subsolver_Log]  = { "output_subsolver_log","whether to output subsolver logs",          OptBoolean, { .b = false } },
-   [Options_Pathlib_Name]          = { "pathlib_name",        "path of the PATH library",                  OptString,  { .s = "" } },
-   [Options_Png_Viewer]            = { "png_viewer",          "Executable to display png",                 OptString,  { .s = "" } },
-   [Options_SolveSingleOptAs]      = { "solve_single_opt_as", "How to solve an empdag with a single MP",   OptChoice,  { .i = Opt_SolveSingleOptAsOpt} },
-   [Options_Subsolveropt]          = { "subsolveropt",        "Subsolver option file number",              OptInteger, { .i = 0     } },
-   [Options_Time_Limit]            = { "time_limit",          "Maximum running time in seconds",           OptInteger, { .i = 3600 } },
-   [Options_Save_EmpDag]           = { "save_empdag",         "Save EMPDAG as png",                        OptBoolean, { .b = false} },
-   [Options_Save_OvfDag]           = { "save_ovfdag",         "Save OVFDAG as png",                        OptBoolean, { .b = false} },
+   [Options_Display_EmpDag]        = { "display_empdag",      "Display EMPDAG as png",                                  OptBoolean, { .b = false} },
+   [Options_Display_Equations]     = { "display_equations",   "Display Equations as png",                               OptString,  { .s = ""} },
+   [Options_Display_OvfDag]        = { "display_ovfdag",      "Display OVFDAG as png",                                  OptBoolean, { .b = false} },
+   [Options_Display_Timings]       = { "display_timings",     "Display timing information",                             OptBoolean, { .b = false} },
+   [Options_Dump_Scalar_Models]    = { "dump_scalar_model",   "Dump every scalar model via convert",                    OptBoolean, { .b = false } },
+   [Options_Expensive_Checks]      = { "expensive_checks",    "Perform time consuming consistency checks",              OptBoolean, { .b = false} },
+   [Options_EMPInfoFile]           = { "EMPInfoFile",         "EMPinfo file to use",                                    OptString,  { .s = "empinfo.dat" } },
+   [Options_GUI]                   = { "gui",                 "Start GUI",                                              OptBoolean, { .b = false } },
+   [Options_Output]                = { "output",              "Output level",                                           OptInteger, { .i = PO_INFO } },
+   [Options_Output_Presolve_Log]   = { "output_presolve_log" ,"during presolve, whether to output subsolver log",       OptBoolean, { .b = false } },
+   [Options_Output_Subsolver_Log]  = { "output_subsolver_log","whether to output subsolver log",                        OptBoolean, { .b = false } },
+   [Options_Pathlib_Name]          = { "pathlib_name",        "path of the PATH library",                               OptString,  { .s = "" } },
+   [Options_Png_Viewer]            = { "png_viewer",          "Executable to display png",                              OptString,  { .s = "" } },
+   [Options_Presolve]              = { "presolve",            "Compute initial values for new variables and equations", OptBoolean, { .b = true} },
+   [Options_SolveLink]             = { "solvelink",           "Solvelink for calling subsolver",                        OptInteger, { .i = 5} },
+   [Options_SolveSingleOptAs]      = { "solve_single_opt_as", "How to solve an empdag with a single MP",                OptChoice,  { .i = Opt_SolveSingleOptAsOpt} },
+   [Options_Subsolveropt]          = { "subsolveropt",        "Subsolver option file number",                           OptInteger, { .i = 0     } },
+   [Options_Time_Limit]            = { "time_limit",          "Maximum running time in seconds",                        OptInteger, { .i = 3600 } },
+   [Options_Save_EmpDag]           = { "save_empdag",         "Save EMPDAG as png",                                     OptBoolean, { .b = false} },
+   [Options_Save_OvfDag]           = { "save_ovfdag",         "Save OVFDAG as png",                                     OptBoolean, { .b = false} },
 };
 // clang-format on
 
@@ -147,7 +150,7 @@ int optvali(const Model *mdl, enum rhp_options_enum opt)
    }
 
    char *s = env_var;
-   while (*s) { *s = toupper((unsigned char)*s); s++; }
+   while (*s) { *s = RhpToUpper(*s); s++; }
 
    const char *env = mygetenv(env_var);
    FREE(env_var);
@@ -164,13 +167,13 @@ int optvali(const Model *mdl, enum rhp_options_enum opt)
       if (res >= INT_MAX) {
          error("%s ERROR: environment value %ld for option '%s' greater than %d",
                __func__, res, rhp_options[opt].name, INT_MAX-1);
-         return Error_InvalidValue;
+         return INT_MAX;
       }
 
       if (res <= INT_MIN) {
          error("%s ERROR: environment value %ld for option '%s' smaller than %d",
                __func__, res, rhp_options[opt].name, INT_MIN+1);
-         return Error_InvalidValue;
+         return INT_MIN;
       }
 
       int i = (int)res;

@@ -18,19 +18,12 @@
 #include "printout.h"
 #include "var.h"
 
-typedef struct filter_deactivated {
-   IdxArray vars;
-   IdxArray equs;
-   Avar v;
-   Aequ e;
-} FilterDeactivated;
-
 typedef struct {
-   unsigned offset_vars_pool;      /**< Start in the pool for the var values  */
+   unsigned varvals_start;  /**< Start in the pool for the var values    */
    unsigned size;           /**< current number of pointer stored        */
    unsigned max;            /**< maximum size of the arrays              */
-   unsigned *pool_idx;       /**< array of pointers to the pool index     */
-   rhp_idx *vis;           /**< variable indices                        */
+   unsigned *pool_idx;      /**< array of pointers to the pool index     */
+   rhp_idx *vis;            /**< variable indices                        */
    NlPool *pool;
 } NlPoolVars;
 
@@ -45,16 +38,25 @@ typedef struct filter_subset {
    rhp_idx *vars_permutation;      /**< Optional variable permutation         */
 } FilterSubset;
 
+typedef struct filter_deactivated {
+   IdxArray vars;
+   IdxArray equs;
+   Avar v;
+   Aequ e;
+} DeactivatedEqusVars;
+
+/** filter based on active equations and variables */
 typedef struct filter_active {
-   FilterDeactivated deactivated;  /**< Deactivated                           */
-   Container *ctr;                 /**< Container                             */
-   rhp_idx *vars_permutation;      /**< Optional variable permutation         */
+   DeactivatedEqusVars deactivated;  /**< Deactivated                         */
+   Container *ctr;                   /**< Container                           */
+   rhp_idx *vars_permutation;        /**< Optional variable permutation       */
 } FilterActive;
 
+/** filter based on a subset of the EMPDAG */
 typedef struct {
-   daguid_t subdag_root;
-   Fops *parent;
-   FilterSubset *fs;
+   daguid_t subdag_root;  /**< root of the subdag                             */
+   Fops *fops_parent;     /**< parent Fops                                    */
+   FilterSubset *fs;      /**< */
 } FilterEmpDagSubDag;
 
 typedef struct {
@@ -62,7 +64,7 @@ typedef struct {
    IdxArray *mp_equs;
    IdxArray *mp_vars;
    Container *ctr;
-   Fops *parent;
+   Fops *fops_parent;
 } FilterEmpDagSingleMp;
 
 typedef struct {
@@ -85,30 +87,30 @@ const char *fopstype2str(FopsType type)
 
 int fops_deactivate_equ(void *data, rhp_idx ei)
 {
-   FilterDeactivated *deactivated = &((FilterActive *)data)->deactivated;
+   DeactivatedEqusVars *deactivated = &((FilterActive *)data)->deactivated;
 
    return rhp_idx_addsorted(&deactivated->equs, ei);
 }
 
 int fops_deactivate_var(void *data, rhp_idx vi)
 {
-   FilterDeactivated *deactivated = &((FilterActive *)data)->deactivated;
+   DeactivatedEqusVars *deactivated = &((FilterActive *)data)->deactivated;
    return rhp_idx_addsorted(&deactivated->vars, vi);
 }
 
-static inline bool deactivated_var(FilterDeactivated *dat, rhp_idx vi)
+static inline bool deactivated_var(DeactivatedEqusVars *dat, rhp_idx vi)
 {
    return (dat->vars.len > 0 && UINT_MAX > rhp_idx_findsorted(&dat->vars, vi))
            || avar_contains(&dat->v, vi);
 }
 
-static inline bool deactivated_equ(FilterDeactivated *dat, rhp_idx ei)
+static inline bool deactivated_equ(DeactivatedEqusVars *dat, rhp_idx ei)
 {
    return (dat->equs.len > 0 && UINT_MAX > rhp_idx_findsorted(&dat->equs, ei))
            || aequ_contains(&dat->e, ei);
 }
 
-static void filter_deactivated_init(FilterDeactivated *deact)
+static void filter_deactivated_init(DeactivatedEqusVars *deact)
 {
    rhp_idx_init(&deact->vars);
    rhp_idx_init(&deact->equs);
@@ -120,7 +122,7 @@ static void filter_active_freedata(void *data)
 {
    if (!data) { return; }
    FilterActive *dat = (FilterActive *)data;
-   FilterDeactivated *deactivated = &dat->deactivated;
+   DeactivatedEqusVars *deactivated = &dat->deactivated;
    avar_empty(&deactivated->v);
    aequ_empty(&deactivated->e);
    rhp_idx_empty(&deactivated->vars);
@@ -132,7 +134,7 @@ static void filter_active_freedata(void *data)
 UNUSED static unsigned filter_active_deactivatedequslen(void *data)
 {
    FilterActive *dat = (FilterActive *)data;
-   FilterDeactivated *deactivated = &dat->deactivated;
+   DeactivatedEqusVars *deactivated = &dat->deactivated;
 
    return deactivated->equs.len + aequ_size(&deactivated->e);
 }
@@ -458,7 +460,7 @@ static int filter_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
     *   that takes a variable as argument to one that takes a constant
     * ---------------------------------------------------------------------- */
 
-   int offset_pool = (int)datpool->offset_vars_pool;
+   int offset_pool = (int)datpool->varvals_start;
    for (unsigned i = 0; i < len; ++i) {
 
       if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
@@ -521,12 +523,54 @@ static void filter_subset_freedata(void* data)
    filter_subset_release(fs);
 }
 
+static void filter_subset_init(FilterSubset *fs)
+{
+   fs->nlpoolvars.varvals_start = UINT_MAX;
+   fs->nlpoolvars.size = 0;
+   fs->nlpoolvars.max = 0;
+   fs->nlpoolvars.pool_idx = NULL;
+   fs->nlpoolvars.vis = NULL;
+
+  /* Optional data */
+   fs->vars_permutation = NULL;
+}
+
+FilterSubset* filter_subset_new_from_mp(MathPrgm* mp)
+{
+   FilterSubset *fs;
+   CALLOC_NULL(fs, FilterSubset, 1);
+
+   filter_subset_init(fs);
+
+   SN_CHECK_EXIT(avar_aslist(&fs->vars, mp->vars.len, mp->vars.arr));
+   aequ_aslist(&fs->equs, mp->equs.len, mp->equs.arr);
+
+   fs->descr.objequ  = mp_getobjequ(mp);
+   fs->descr.objvar  = mp_getobjvar(mp);
+   fs->descr.sense   = mp_getsense(mp);
+   fs->descr.mdltype = mp_getprobtype(mp);
+
+   return fs;
+
+_exit:
+   /* Calling filter_subset_release here makes GCC whiney ...*/
+   aequ_empty(&fs->equs);
+   avar_empty(&fs->vars);
+   FREE(fs->nlpoolvars.pool_idx);
+   FREE(fs->nlpoolvars.vis);
+   free(fs);
+
+   return NULL;
+
+}
+
 FilterSubset* filter_subset_new(unsigned vlen, Avar vars[VMT(vlen)], unsigned elen,
                                 Aequ equs[VMT(elen)], struct mp_descr* mp_d)
 {
    FilterSubset *fs;
-
    CALLOC_NULL(fs, FilterSubset, 1);
+
+   filter_subset_init(fs);
 
    SN_CHECK_EXIT(avar_setblock(&fs->vars, vlen));
    SN_CHECK_EXIT(aequ_setblock(&fs->equs,  elen));
@@ -543,17 +587,7 @@ FilterSubset* filter_subset_new(unsigned vlen, Avar vars[VMT(vlen)], unsigned el
       SN_CHECK_EXIT(aequ_extendandown(&fs->equs, e));
    }
 
-   fs->nlpoolvars.offset_vars_pool = UINT_MAX;
-
-   fs->nlpoolvars.size = 0;
-   fs->nlpoolvars.max = 0;
-   fs->nlpoolvars.pool_idx = NULL;
-   fs->nlpoolvars.vis = NULL;
-
-   memcpy(&fs->descr, mp_d, sizeof(struct mp_descr));
-
-   /* Optional data */
-   fs->vars_permutation = NULL;
+    memcpy(&fs->descr, mp_d, sizeof(struct mp_descr));
 
    return fs;
 
@@ -563,7 +597,7 @@ _exit:
    avar_empty(&fs->vars);
    FREE(fs->nlpoolvars.pool_idx);
    FREE(fs->nlpoolvars.vis);
-   FREE(fs);
+   free(fs);
 
    return NULL;
 }
@@ -607,7 +641,7 @@ void filter_subset_release(FilterSubset *fs)
    FREE(fs);
 }
 
-int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned offset_pool)
+int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned pool_varvals_start)
 {
    if (!mdl_is_rhp(mdl)) {
       TO_IMPLEMENT("FilterSubset with GAMS model");
@@ -615,7 +649,7 @@ int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned offset_pool)
 
    Container *ctr = &mdl->ctr;
    fs->ctr_src = &mdl->ctr;
-   fs->nlpoolvars.offset_vars_pool = offset_pool;
+   fs->nlpoolvars.varvals_start = pool_varvals_start;
 
    Fops fops;
    fops_subset_init(&fops, fs);
@@ -720,7 +754,7 @@ static int dfs_equvar(EmpDag *empdag, daguid_t uid, struct avar_list *vars,
 
       IdxArray mpequs = mp->equs;
       Aequ e;
-      aequ_setlist(&e, mpequs.len, mpequs.arr);
+      aequ_aslist(&e, mpequs.len, mpequs.arr);
       S_CHECK(aequ_list_add(equs, e));
 
    } else {
@@ -768,7 +802,7 @@ static int dfs_equ(EmpDag *empdag, daguid_t uid, struct aequ_list *equs)
 
       IdxArray mpequs = mp->equs;
       Aequ e;
-      aequ_setlist(&e, mpequs.len, mpequs.arr);
+      aequ_aslist(&e, mpequs.len, mpequs.arr);
       S_CHECK(aequ_list_add(equs, e));
 
    } else {
@@ -828,14 +862,14 @@ static bool subdag_keep_equ(void *data, rhp_idx ei)
 static bool subdag_keep_var_parentfops(void *data, rhp_idx vi)
 {
    FilterEmpDagSubDag *dat = data;
-   Fops *fops_up = dat->parent;
+   Fops *fops_up = dat->fops_parent;
    return filter_subset_var(dat->fs, vi) && fops_up->keep_var(fops_up->data, vi);
 }
 
 static bool subdag_keep_equ_parentfops(void *data, rhp_idx ei)
 {
    FilterEmpDagSubDag *dat = data;
-   Fops *fops_up = dat->parent;
+   Fops *fops_up = dat->fops_parent;
    return filter_subset_equ(dat->fs, ei) && fops_up->keep_equ(fops_up->data, ei);
 }
 
@@ -846,6 +880,7 @@ static int subdag_transform_gamsopcode(void *data, rhp_idx ei, unsigned len,
    FilterEmpDagSubDag *dat = data;
    return filter_subset_gamsopcode(&dat->fs, ei, len, instrs, args);
 }
+
 Fops* fops_subdag_new(Model *mdl, daguid_t uid)
 {
    int status = OK;
@@ -870,19 +905,19 @@ Fops* fops_subdag_new(Model *mdl, daguid_t uid)
    A_CHECK_EXIT(fs, filter_subset_new(vars.len, vars.list, equs.len, equs.list, &mp_d));
 
    fs->ctr_src = &mdl->ctr;
-   fs->nlpoolvars.offset_vars_pool = UINT_MAX;
+   fs->nlpoolvars.varvals_start = UINT_MAX;
 
    FilterEmpDagSubDag *dat;
    MALLOC_EXIT(dat, FilterEmpDagSubDag, 1);
    fops->data = dat;
 
    dat->fs = fs;
-   dat->parent = mdl->ctr.fops;
+   dat->fops_parent = mdl->ctr.fops;
    dat->subdag_root = uid;
 
    fops->freedata = subdag_freedata;
    fops->get_sizes = &subdag_get_sizes;
-   if (dat->parent) {
+   if (dat->fops_parent) {
       fops->keep_var = &subdag_keep_var_parentfops;
       fops->keep_equ = &subdag_keep_equ_parentfops;
    } else {
@@ -895,7 +930,7 @@ Fops* fops_subdag_new(Model *mdl, daguid_t uid)
 _exit:
    avar_list_free(&vars);
    aequ_list_free(&equs);
-   
+
    if (status != OK) {
       free(fops);
       return NULL;
@@ -903,6 +938,7 @@ _exit:
 
    return fops;
 }
+
 static void subdag_active_get_sizes(void *data, size_t* n, size_t* m)
 {
    FilterEmpDagSubDag *dat = data;
@@ -941,21 +977,21 @@ Fops* fops_subdag_activevars_new(Model *mdl, daguid_t uid)
    A_CHECK_EXIT(fs, filter_subset_new(0, NULL, equs.len, equs.list, &mp_d));
 
    fs->ctr_src = &mdl->ctr;
-   fs->nlpoolvars.offset_vars_pool = UINT_MAX;
+   fs->nlpoolvars.varvals_start = UINT_MAX;
 
    FilterEmpDagSubDag *dat;
    MALLOC_EXIT(dat, FilterEmpDagSubDag, 1);
    fops->data = dat;
 
    dat->fs = fs;
-   dat->parent = mdl->ctr.fops;
+   dat->fops_parent = mdl->ctr.fops;
    dat->subdag_root = uid;
 
    fops->freedata = &subdag_freedata;
    fops->get_sizes = &subdag_active_get_sizes;
    fops->keep_var = &subdag_active_keep_var;
 
-   if (dat->parent) {
+   if (dat->fops_parent) {
       fops->keep_equ = &subdag_keep_equ_parentfops;
    } else {
       fops->keep_equ = &subdag_keep_equ;
@@ -1032,8 +1068,8 @@ daguid_t fops_subdag_getrootuid(Fops *fops)
 Fops* fops_getparent(Fops *fops)
 {
    switch (fops->type) {
-   case FopsEmpDagSubDag: return ((FilterEmpDagSubDag*)fops->data)->parent;
-   case FopsEmpDagSingleMp: return ((FilterEmpDagSingleMp*)fops->data)->parent;
+   case FopsEmpDagSubDag: return ((FilterEmpDagSubDag*)fops->data)->fops_parent;
+   case FopsEmpDagSingleMp: return ((FilterEmpDagSingleMp*)fops->data)->fops_parent;
    case FopsEmpDagNash: return ((FilterEmpDagNash*)fops->data)->parent;
    default: return NULL;
    }

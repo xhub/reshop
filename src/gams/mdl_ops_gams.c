@@ -13,6 +13,7 @@
 
 #endif
 
+
 #include "container.h"
 #include "ctr_gams.h"
 #include "ctrdat_gams.h"
@@ -33,14 +34,14 @@
 #include "mdl_priv.h"
 #include "mdl_rhp.h"
 #include "mdl_transform.h"
+#include "printout.h"
 #include "reshop_error_handling.h"
 #include "rhp_options.h"
 #include "rmdl_options.h"
+#include "string_utils.h"
 #include "timings.h"
 #include "toplayer_utils.h"
 #include "var.h"
-#include "printout.h"
-
 #include "gevmcc.h"
 #include "gmomcc.h"
 
@@ -209,7 +210,7 @@ static void gams_deallocdata(Model *mdl)
             error("%s :: scrdir %s was not deleted\n", __func__, buffer);
          }
 
-         debug("[GAMS] deleted directory '%s'\n", buffer);
+         pr_debug("[GAMS] deleted directory '%s'\n", buffer);
 
          mdldat->delete_scratch = false;
       }
@@ -447,7 +448,7 @@ static int gams_solve(Model *mdl)
       }
 
       for (unsigned i = 0; mdldat->solvername[i] != '\0'; i++) {
-         mdldat->solvername[i] = tolower(mdldat->solvername[i]);
+         mdldat->solvername[i] = RhpToLower(mdldat->solvername[i]);
       }
    }
 
@@ -475,14 +476,11 @@ static int gams_solve(Model *mdl)
        *  - gevSolverQuiet      : no output
        * ------------------------------------------------------------------ */
 
-      const char *subsolver_log = mygetenv("RHP_OUTPUT_SUBSOLVER_LOG");
-      if (O_Output_Subsolver_Log || subsolver_log) {
-         solverlog = gevSolverSameStreams;
-
+      if (mdl->status & MdlPreSolve) {
+         solverlog = optvalb(mdl, Options_Output_Presolve_Log) ? gevSolverSameStreams : gevSolverQuiet;
       } else {
-         solverlog = gevSolverQuiet;
+         solverlog = optvalb(mdl, Options_Output_Subsolver_Log) ? gevSolverSameStreams : gevSolverQuiet;
       }
-      myfreeenvval(subsolver_log);
 
       /* ------------------------------------------------------------------
        * Set the subsolver's option file name and its number.
@@ -534,17 +532,7 @@ static int gams_solve(Model *mdl)
          break;
       }
 
-      const char *solvelink_env = mygetenv("RHP_SOLVELINK");
-      if (solvelink_env) {
-         errno = 0;
-         char *endptr;
-         long val = strtol(solvelink_env, &endptr, 10);
-         if (errno == 0 && val < INT_MAX && val > 0) {
-            solvelink = (int)val;
-         }
-      }
-      myfreeenvval(subsolver_log);
-
+      solvelink = optvali(mdl, Options_SolveLink);
 
       trace_backend("[GAMS] Solving %s model '%.*s' #%u with solver='%s', "
                   "gamsdir='%s', gamscntr='%s', sl=%d\n", mdl_fmtargs(mdl),
@@ -557,7 +545,7 @@ static int gams_solve(Model *mdl)
                             "",                      /* name of control file   */
                             mdldat->solvername,      /* name of solver         */
                             solvelink,              /*  solvelink option       */
-                            solverlog,               /* log option             */
+                            solverlog,              /* log option             */
                             NULL,                   /* log file name          */
                             NULL,                   /* status file name       */
                             //mdldat->logname,            /* log file name          */
@@ -571,8 +559,7 @@ static int gams_solve(Model *mdl)
                             buf);                    /* message                */
 
          if (rc) {
-            error("[GAMS] ERROR: gevCallSolver() failed with " "message: %s\n",
-                  buf);
+            error("[GAMS] ERROR: gevCallSolver() failed with message: %s\n", buf);
             return Error_GamsSolverCallFailed;
          }
 

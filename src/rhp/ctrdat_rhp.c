@@ -596,10 +596,10 @@ int cdat_varname_start(RhpContainerData* cdat, char *name)
   return vnames_list_start(l, cdat->total_n, name);
 }
 
-int cdat_varname_end(RhpContainerData* ctrdat)
+int cdat_varname_end(RhpContainerData* cdat)
 {
   struct vnames *vnames;
-  A_CHECK(vnames, vnames_getregular(&ctrdat->var_names.v))
+  A_CHECK(vnames, vnames_getregular(&cdat->var_names.v))
   struct vnames_list *l;
   A_CHECK(l, vnames->list);
 
@@ -608,7 +608,7 @@ int cdat_varname_end(RhpContainerData* ctrdat)
       return Error_Inconsistency;
    }
 
-   rhp_idx end_idx = ctrdat->total_n-1;
+   rhp_idx end_idx = cdat->total_n-1;
    vnames->end = end_idx;
    vnames_list_stop(l, end_idx);
 
@@ -662,9 +662,9 @@ int cdat_equname_end(RhpContainerData* cdat)
    return OK;
 }
 
-int cdat_add_subctr(RhpContainerData* ctrdat, struct filter_subset* fs)
+int cdat_add_subctr(RhpContainerData* cdat, struct filter_subset* fs)
 {
-   struct auxmdl *s_subctr = &ctrdat->stage_auxmdl[ctrdat->current_stage];
+   struct auxmdl *s_subctr = &cdat->stage_auxmdl[cdat->current_stage];
 
    if (s_subctr->len >= s_subctr->max) {
       s_subctr->max = MAX(2*s_subctr->max, s_subctr->len+1);

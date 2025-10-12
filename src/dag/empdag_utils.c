@@ -268,7 +268,8 @@ int empdag_export(Model *mdl)
 
    if (optvalb(mdl, Options_Display_EmpDag) || optvalb(mdl, Options_Save_EmpDag)) {
       if (mdl_ensure_exportdir(mdl) != OK) {
-         error("[empdag] ERROR: could not create an export directory for %s model '%*s' #%u\n", mdl_fmtargs(mdl));
+         error("[empdag] ERROR: could not create an export directory for %s model '%*s' #%u\n",
+               mdl_fmtargs(mdl));
          return Error_SystemError;
       }
 

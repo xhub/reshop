@@ -72,8 +72,8 @@ static int rctr_notimpl3char_(const Container *ctr, const char *name, int *value
 /* \TODO(xhub) implement an estimate of the number of equation needed */
 static int rctr_allocdata(Container *ctr)
 {
-   if (!ctr->pool) {
-      A_CHECK(ctr->pool, pool_new_gams());
+   if (!ctr->nlpool) {
+      A_CHECK(ctr->nlpool, pool_new_gams());
    }
 
    return cdat_init(ctr, ctr->n, ctr->m);

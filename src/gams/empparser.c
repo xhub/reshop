@@ -1241,7 +1241,7 @@ static const char *opkwtype2str(OperatorKeywordType type)
 
 static int opkwtypemismatch(Token *tok, const OperatorKeyword *opkw, OperatorKeywordType type)
 {
-   error("[empinterp] ERROR line %u: type mismatch. The keyword '%s' for the "
+   error("[empinterp] ERROR on line %u: type mismatch. The keyword '%s' for the "
          "operator '%s' expects a %s, got a %s\n", tok->linenr,
          opkw->name, toktype2str(tok->type), opkwtype2str(opkw->type),
          opkwtype2str(type));
@@ -1253,7 +1253,7 @@ static int opkwstr_notfound(Token *tok, const OperatorKeyword *opkw, UNUSED Oper
                             Token *tok_kwstr)
 {
    int offset;
-   error("[empinterp] ERROR line %u: %nThe keyword '%s' for the "
+   error("[empinterp] ERROR on line %u: %nThe keyword '%s' for the "
          "operator '%s' cannot take the value '%.*s'.\n", tok->linenr, &offset,
          opkw->name, toktype2str(tok->type), tok_kwstr->len, tok_kwstr->start);
 
@@ -1280,7 +1280,7 @@ int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
    unsigned pos = *p;
 
    if (eof || buf[pos] != '(') {
-      error("[empparser] ERROR line %u: expecting '(' after operator '%s', got ", interp->linenr, toktype2str(tok->type));
+      error("[empparser] ERROR on line %u: expecting '(' after operator '%s', got ", interp->linenr, toktype2str(tok->type));
       if (eof) {
          errormsg("EOL\n");
       } else {
@@ -1313,7 +1313,7 @@ int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
 
    if (!opkw) {
       int offset;
-      error("[empinterp] ERROR line %u: %nthe operator '%s' has no keyword named '%.*s'\n.",
+      error("[empinterp] ERROR on line %u: %nthe operator '%s' has no keyword named '%.*s'\n.",
             interp->linenr, &offset, toktype2str(tok->type), kwnamelen, kwnamestart);
       return Error_EMPIncorrectInput;
    }
@@ -1362,7 +1362,7 @@ int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
       }
       break;
    default:
-      error("[empinterp] ERROR line %u: unexpected token type %s for the keyword "
+      error("[empinterp] ERROR on line %u: unexpected token type %s for the keyword "
             "%.*s of operator '%s'", interp->linenr, toktype2str(toktype),
             kwnamelen, kwnamestart, toktype2str(tok->type));
       return Error_EMPIncorrectInput;
@@ -1378,7 +1378,7 @@ int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
 
 //_closing:
    if (buf[pos] != ')') {
-      error("[empparser] ERROR line %u: expecting ')' after operator '%s', got '%c'\n",
+      error("[empparser] ERROR on line %u: expecting ')' after operator '%s', got '%c'\n",
             interp->linenr, toktype2str(tok->type), buf[pos]);
 
       return Error_EMPIncorrectSyntax;
@@ -1390,12 +1390,12 @@ int parse_operator_kw_args(Interpreter * restrict interp, unsigned * restrict p,
    return OK;
 
 _err_missing_equal:
-   error("[empparser] ERROR line %u: while parsing keywords of the operator '%s'"
+   error("[empparser] ERROR on line %u: while parsing keywords of the operator '%s'"
          ", missing '='\n", interp->linenr, toktype2str(tok->type));
    return Error_EMPIncorrectSyntax;
 
 _err_missing_rparent:
-   error("[empparser] ERROR line %u: while parsing keywords of the operator '%s'"
+   error("[empparser] ERROR on line %u: while parsing keywords of the operator '%s'"
          ", missing closing ')'\n", interp->linenr, toktype2str(tok->type));
    return Error_EMPIncorrectSyntax;
 }
@@ -1431,7 +1431,7 @@ static int chk_wildcard_vars_allowed(Interpreter *interp)
    mpid_t mpid = interp->finalize.mp_owns_remaining_vars;
    if (!mpid_regularmp(mpid)) { return OK; }
 
-   error("[empinterp] ERROR line %u: MP(%s) is already owning the variables not "
+   error("[empinterp] ERROR on line %u: MP(%s) is already owning the variables not "
          "explicitly assigned. It is ill-defined to have more than 1 such MP\n",
          interp->linenr, empdag_getmpname(&interp->mdl->empinfo.empdag, mpid));
 
@@ -1445,7 +1445,7 @@ static int chk_wildcard_equs_allowed(Interpreter *interp)
    mpid_t mpid = interp->finalize.mp_owns_remaining_equs;
    if (!mpid_regularmp(mpid)) { return OK; }
 
-   error("[empinterp] ERROR line %u: MP(%s) is already owning the equations not "
+   error("[empinterp] ERROR on line %u: MP(%s) is already owning the equations not "
          "explicitly assigned. It is ill-defined to have more than 1 such MP\n",
          interp->linenr, empdag_getmpname(&interp->mdl->empinfo.empdag, mpid));
 
@@ -2028,13 +2028,13 @@ UNUSED static int _chk_labelbasename(Token *tok, Model *mdl)
 static int chk_compat_gmsindices_condition(GmsIndicesData *gmsindices, unsigned linenr)
 {
    if (gmsindices->nargs == 0) {
-      error("[empparser] ERROR line %u: a condition was given, but no GAMS indices",
+      error("[empparser] ERROR on line %u: a condition was given, but no GAMS indices",
             linenr);
       return Error_EMPIncorrectSyntax;
    }
 
    if (gmsindices->num_sets == 0 || gmsindices->num_localsets) {
-      error("[empparser] ERROR line %u: a condition was given, but all GAMS indices"
+      error("[empparser] ERROR on line %u: a condition was given, but all GAMS indices"
             " are fixed.\n", linenr);
       return Error_EMPIncorrectSyntax;
    }
@@ -2060,17 +2060,17 @@ NONNULL static inline int assign_uels(int * restrict uels,
          break;
 
       case IdentSymbolSlice:
-         error("[empinterp] ERROR line %u: ':' not allowed in label\n", linenr);
+         error("[empinterp] ERROR on line %u: ':' not allowed in label\n", linenr);
          return Error_EMPIncorrectSyntax;
 
       case IdentUniversalSet:
-         error("[empinterp] ERROR line %u: '*' not allowed in label\n", linenr);
+         error("[empinterp] ERROR on line %u: '*' not allowed in label\n", linenr);
          return Error_EMPIncorrectSyntax;
 
       case IdentLoopIterator:
       case IdentSet:
       case IdentLocalSet:
-         error("[empinterp] ERROR line %u: %s '%.*s' not allowed in label\n",
+         error("[empinterp] ERROR on line %u: %s '%.*s' not allowed in label\n",
                linenr, identtype2str(idxident->type), idxident->lexeme.len,
                idxident->lexeme.start);
          return Error_EMPIncorrectSyntax;
@@ -2138,7 +2138,7 @@ static int imm_add_linklabel(Interpreter * restrict interp, LinkType linktype,
    unsigned dagreg_len = dagreg->len;
 
    if (dagreg_len == 0) {
-      error("[empinterp] ERROR line %u: while parsing the label '%.*s', no label"
+      error("[empinterp] ERROR on line %u: while parsing the label '%.*s', no label"
             " have been registered in the EMPDAG\n", interp->linenr,
             identname_len, identname);
       return Error_EMPRuntimeError;
@@ -2180,7 +2180,7 @@ int imm_add_duallabel(Interpreter * restrict interp, MathPrgm *mp,
    unsigned dagreg_len = dagreg->len;
 
    if (dagreg_len == 0) {
-      error("[empinterp] ERROR line %u: while parsing the label '%.*s', no label"
+      error("[empinterp] ERROR on line %u: while parsing the label '%.*s', no label"
             " have been registered in the EMPDAG\n", interp->linenr,
             identname_len, identname);
       return Error_EMPRuntimeError;
@@ -2262,7 +2262,7 @@ static int vm_set_dagroot(Interpreter * interp, unsigned * restrict p,
                           const char* identname, unsigned identname_len,
                           GmsIndicesData* gmsindices)
 {
-      error("[empinterp] ERROR line %u: the argument to the DAG keyword must be a unique"
+      error("[empinterp] ERROR on line %u: the argument to the DAG keyword must be a unique"
             "label and its specification should only involve UELs.\n", interp->linenr);
       return Error_EMPIncorrectSyntax;
 }
@@ -2631,7 +2631,7 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
                   lequ_find(vec, set->arr[i], &scratch->data[i], &pos);
 
                   if (pos == UINT_MAX) {
-                     error("[empinterp] ERROR line %u: UEL %d is not in parameter %s\n",
+                     error("[empinterp] ERROR on line %u: UEL %d is not in parameter %s\n",
                            interp->linenr, set->arr[i], identstr);
                      return Error_EMPIncorrectInput;
                   }
@@ -2657,7 +2657,7 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
                ovfargtype = ARG_TYPE_SCALAR;
 
                if (pos == UINT_MAX) {
-                  error("[empinterp] ERROR line %u: UEL %d is not in parameter %s\n",
+                  error("[empinterp] ERROR on line %u: UEL %d is not in parameter %s\n",
                         interp->linenr, uelidx, identstr);
                   return Error_EMPIncorrectInput;
                }
@@ -2669,7 +2669,7 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
          } else {
 
             if (size_vector != UINT_MAX && vec->len != size_vector) {
-               error("[empinterp] ERROR line %u: for OVF parameter '%s', "
+               error("[empinterp] ERROR on line %u: for OVF parameter '%s', "
                      "expecting the vector '%s' to have length %u, got %u instead.\n",
                      interp->linenr, pdef->name, identstr, size_vector, vec->len);
                status = Error_EMPIncorrectInput;
@@ -2713,7 +2713,7 @@ static int parse_dual_operator(Interpreter *interp, unsigned *p)
    S_CHECK(advance(interp, p, &toktype));
 
    if (toktype != TOK_LPAREN) {
-      error("[empparser] ERROR line %u: expecting '(' after the dual keyword as "
+      error("[empparser] ERROR on line %u: expecting '(' after the dual keyword as "
             "it is an operator\n", interp->linenr);
       return Error_EMPIncorrectSyntax;
    }
@@ -2819,7 +2819,7 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p, bool force_si
       TokenType toktype_peek;
       S_CHECK(peek(interp, &p2, &toktype_peek));
       if (toktype_peek == TOK_CONDITION) {
-         error("[empinterp] ERROR line %u: single node label selection via conditional "
+         error("[empinterp] ERROR on line %u: single node label selection via conditional "
                "is not implemented yet. Please report this to help implemented it\n",
                interp->linenr);
          return Error_NotImplemented;
@@ -2829,7 +2829,7 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p, bool force_si
 
    if (toktype == TOK_OBJFN) {
       if (has_dual) {
-         error("[empinterp] ERROR line %u: the keywords dual and objfn cannot be used together\n",
+         error("[empinterp] ERROR on line %u: the keywords dual and objfn cannot be used together\n",
                interp->linenr);
          return Error_EMPIncorrectInput;
       }
@@ -2998,7 +2998,7 @@ static int interp_ovf_gmsparamcheck(UNUSED Interpreter* restrict interp,
       if (pdef->allow_matrix) { return OK; }
       break;
    default:
-      error("[empinterp] ERROR line %u: unsupported parameter dimension %u\n", interp->linenr, pdim);
+      error("[empinterp] ERROR on line %u: unsupported parameter dimension %u\n", interp->linenr, pdim);
       return Error_EMPIncorrectInput;
    }
 
@@ -3057,13 +3057,13 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
 //                          TOK_SINGLE_QUOTE, TOK_DOUBLE_QUOTE));
 //
 //   if (quote_is_single && toktype != TOK_SINGLE_QUOTE) {
-//      error("[empparser] ERROR line %u: expecting ' as closing quote\n",
+//      error("[empparser] ERROR on line %u: expecting ' as closing quote\n",
 //            interp->linenr);
 //      return Error_EMPIncorrectSyntax;
 //   }
 //
 //   if (!quote_is_single && toktype != TOK_DOUBLE_QUOTE) {
-//      error("[empparser] ERROR line %u: expecting \" as closing quote\n",
+//      error("[empparser] ERROR on line %u: expecting \" as closing quote\n",
 //            interp->linenr);
 //      return Error_EMPIncorrectSyntax;
 //   }
@@ -3214,7 +3214,7 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
          S_CHECK(parse_ovfparamvec(interp, p, ovfdef, pdef, &type, &payload));
          break;
       default:
-         error("[empparser] ERROR line %u: unsupported token type %s in CCF keyword argument.\n", interp->linenr,
+         error("[empparser] ERROR on line %u: unsupported token type %s in CCF keyword argument.\n", interp->linenr,
                toktype2str(toktype));
          return Error_EMPRuntimeError;
       }
@@ -3239,12 +3239,12 @@ _finalize:
    return OK;
 
 _err_EOF_fname:
-   error("[empparser] ERROR line %u: while parsing the CCF name got end-of-file",
+   error("[empparser] ERROR on line %u: while parsing the CCF name got end-of-file",
          interp->linenr);
    return Error_EMPIncorrectSyntax;
 
 _err_missing_equal:
-   errormsg("[empparser] ERROR line %u: while parsing CCF arguments, expecting '='\n");
+   errormsg("[empparser] ERROR on line %u: while parsing CCF arguments, expecting '='\n");
    return Error_EMPIncorrectSyntax;
 }
 
@@ -3711,7 +3711,7 @@ _advance:
    }
 
    if (is_empty) {
-      error("[empinterp] ERROR line %u: empty VI declaration\n", interp->linenr);
+      error("[empinterp] ERROR on line %u: empty VI declaration\n", interp->linenr);
       status = Error_EMPIncorrectSyntax;
       goto _exit;
    }
@@ -3987,7 +3987,7 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
                const Lequ * vec = &interp->globals.vectors.list[idx];
 
                if (vec->len != size_vector) {
-                  error("[empinterp] ERROR line %u: for OVF parameter '%s', "
+                  error("[empinterp] ERROR on line %u: for OVF parameter '%s', "
                         "expecting the vector '%s' to have length %u, got %u instead.\n",
                         interp->linenr, pdef->name, identstr, size_vector, vec->len);
                   status = Error_EMPIncorrectInput;
@@ -4260,7 +4260,7 @@ static int _parse_gmsopt(Interpreter* restrict interp, unsigned * restrict p,
    }
 
    if (idx == UINT_MAX) {
-      error("[empinterp] ERROR line %u: only '%%gams.scrdir%%', '%%gams.workdir%%' "
+      error("[empinterp] ERROR on line %u: only '%%gams.scrdir%%', '%%gams.workdir%%' "
                "and '%%sysenv.XXX%%' are supported GAMS option\n", interp->linenr);
       return Error_EMPIncorrectSyntax;
    }
@@ -4329,7 +4329,7 @@ static int _parse_gmsopt(Interpreter* restrict interp, unsigned * restrict p,
       const char *env = mygetenv(envvar);
 
       if (!env) {
-         error("[empinterp] ERROR line %u: environment variable '%s' undefined",
+         error("[empinterp] ERROR on line %u: environment variable '%s' undefined",
                interp->linenr, envvar);
          FREE(envvar);
          return Error_EMPRuntimeError;
@@ -4447,7 +4447,7 @@ int parse_load(Interpreter* restrict interp, unsigned * restrict p)
    int status = OK;
    GdxReader *gdxreader = gdx_reader_last(interp);
    if (!gdxreader) {
-      error("[empparser] ERROR line %u: load statement before any GDXIN one.\n",
+      error("[empparser] ERROR on line %u: load statement before any GDXIN one.\n",
             interp->linenr);
       return Error_EMPIncorrectInput;
    }
@@ -4490,7 +4490,7 @@ int parse_load(Interpreter* restrict interp, unsigned * restrict p)
          char buf[GMS_SSSIZE];
          gdxSymbolInfo(gdxreader->gdxh, symidx_, buf, &symdim, &symtype);
          if (symtype == GMS_DT_EQU || symtype == GMS_DT_VAR) {
-            error("[empinterp] ERROR line %u: trying to read a gdx symbol as '%s', "
+            error("[empinterp] ERROR on line %u: trying to read a gdx symbol as '%s', "
                   "which has type '%s' in the model. This is not supported for "
                   "'%s' or '%s'. Choose another name.\n", interp->linenr, symname,
                   gmsGdxTypeText[symtype], gmsGdxTypeText[GMS_DT_EQU],
@@ -4592,12 +4592,12 @@ int parse_load(Interpreter* restrict interp, unsigned * restrict p)
          break;
       }
       case dt_equ:
-         error("[empinterp] ERROR line %u: symbol '%s' is an equation in gdx '%s'\n",
+         error("[empinterp] ERROR on line %u: symbol '%s' is an equation in gdx '%s'\n",
                interp->linenr, symnamegdx, gdxreader->fname);
          status = Error_EMPRuntimeError;
          goto _exit;
       case dt_var:
-         error("[empinterp] ERROR line %u: symbol '%s' is a variable in gdx '%s'\n",
+         error("[empinterp] ERROR on line %u: symbol '%s' is a variable in gdx '%s'\n",
                interp->linenr, symnamegdx, gdxreader->fname);
          status = Error_EMPRuntimeError;
          goto _exit;
@@ -4906,7 +4906,7 @@ int dualequ_start_error(TokenType toktype, Interpreter *interp)
 
    } else {
 
-      error("[empinterp] ERROR line %u: empty dualequ declaration\n",
+      error("[empinterp] ERROR on line %u: empty dualequ declaration\n",
             interp->linenr);
 
    }
@@ -5150,7 +5150,7 @@ static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * res
       unsigned nequs = ctr_nequs(ctr);
 
       if (v->size != e->size) {
-         error("[empinterp] ERROR line %u: the deffn/implicit keyword expects the "
+         error("[empinterp] ERROR on line %u: the deffn/implicit keyword expects the "
                "variable and equation to be of the same size. Here we have %u "
                "vs %u\n", interp->linenr, v->size, e->size);
          return Error_EMPIncorrectInput;
@@ -5161,14 +5161,14 @@ static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * res
          rhp_idx ei = aequ_fget(e, i);
 
          if (!chk_vi_(vi, nvars)) {
-            error("[empinterp] ERROR line %u: the index %u of variable "
+            error("[empinterp] ERROR on line %u: the index %u of variable "
                   "%.*s is outside of the range [0,%u). Position is %u.\n",
                   interp->linenr, vi, tok_fmtargs(&interp->pre), nvars, i);
             return Error_EMPRuntimeError;
          }
 
          if (!chk_ei_(ei, nequs)) {
-            error("[empinterp] ERROR line %u: the index %u of equation %.*s "
+            error("[empinterp] ERROR on line %u: the index %u of equation %.*s "
                   "is outside of the range [0,%u). Position is %u\n",
                   interp->linenr, ei, tok_fmtargs(&interp->cur), nequs, i);
             return Error_EMPRuntimeError;
@@ -5178,7 +5178,7 @@ static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * res
          double dummy;
          int nlflag;
          if (!ctr_equ_findvar(ctr, ei, vi, &dummy, &nlflag)) {
-            error("[empinterp] ERROR line %u: while processing a deffn/implicit statement"
+            error("[empinterp] ERROR on line %u: while processing a deffn/implicit statement"
                   "the variable '%s' is not present in equation '%s'\n",
                   interp->linenr, ctr_printvarname(ctr, vi),
                   ctr_printequname(ctr, ei));
@@ -5186,7 +5186,7 @@ static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * res
          }
 
          if (nlflag && noNL) {
-            error("[empinterp] ERROR line %u: while processing a deffn/implicit statement. "
+            error("[empinterp] ERROR on line %u: while processing a deffn/implicit statement. "
                   "The variable '%s' in equation '%s' appears nonlinearly."
                   "This is now allowed\n", interp->linenr, ctr_printvarname(ctr, vi),
                   ctr_printequname(ctr, ei));

@@ -136,8 +136,8 @@ static inline int mp_addequchk(MathPrgm *mp, rhp_idx ei)
    }
 
    mp->mdl->ctr.equmeta[ei].mp_id = mp->id;
-   MP_DEBUG("MP(%s) owns equ '%s'\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id),
-            ctr_printequname(&mp->mdl->ctr, ei));
+   MP_DEBUG("MP(%s) #%u owns equ '%s'\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id),
+            mp->id, ctr_printequname(&mp->mdl->ctr, ei));
 
    rc = rhp_idx_addsorted(&mp->equs, ei);
    if (rc == Error_DuplicateValue) {
@@ -346,7 +346,7 @@ void mp_free(MathPrgm *mp)
       return;
    }
 
-   trace_refcnt("[MP] Freeing MP(%s)\n", mp_getname(mp));
+   trace_refcnt("[MP] Freeing MP(%s) #%u\n", mp_getname(mp), mp->id);
 
    if (mp->type == MpTypeCcflib) {
       ovfdef_free(mp->ccflib.ccf);
@@ -504,8 +504,8 @@ int mp_setobjvar(MathPrgm *mp, rhp_idx objvar)
             /* TODO: rethink that design */
             VarMeta *vmeta = &mp->mdl->ctr.varmeta[objvar_old];
             if (vmeta->type != VarObjective) {
-               error("[MP] ERROR: in MP(%s), old objective variable was not "
-                     "marked as such.\n", mp_getname(mp));
+               error("[MP] ERROR: in MP(%s) #%u, old objective variable was not marked as"
+                     " such.\n", mp_getname(mp), mp->id);
                return Error_RuntimeError;
             }
             vmeta->type = VarPrimal;
@@ -778,7 +778,7 @@ int mp_finalize(MathPrgm *mp)
       return OK;
    }
 
-   MP_DEBUG("Finalizing MP '%s'\n", empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
+   MP_DEBUG("Finalizing MP(%s) #%u.\n", mp_getname(mp), mp->id);
 
    switch (mp->type) {
    case MpTypeCcflib:
@@ -802,7 +802,7 @@ int mp_finalize(MathPrgm *mp)
       EmpDag *empdag = &mp->mdl->empinfo.empdag;
 
       /* If the EMPDAG has not being finalized, we need to delay here */
-      if (!empdag->has_resolved_arcs) { return OK; }
+      if (!empdag->arcs_fully_resolved) { return OK; }
 
       if (empdag->mps.Varcs->len == 0) {
 
@@ -827,7 +827,7 @@ int mp_finalize(MathPrgm *mp)
    if (!valid_ei(mp->opt.objequ)) {
       if (!valid_vi(objvar)) {
          const EmpDag *empdag = &mp->mdl->empinfo.empdag;
-         if (!empdag->has_resolved_arcs) { return OK; }
+         if (!empdag->arcs_fully_resolved) { return OK; }
 
          if (!empdag_mp_hasobjfn_modifiers(empdag, mp->id)) {
             mp_err_noobjdata(mp);
@@ -1106,14 +1106,14 @@ int mp_rm_var(MathPrgm *mp, rhp_idx vi) {
 }
 
 /**
- * @brief Remove a constraint from the MP
+ * @brief Remove an equation from the MP
  *
  * @param mp   the MP
  * @param ei   the equation to remove
  *
  * @return     the error code
  */
-int mp_rm_cons(MathPrgm *mp, rhp_idx ei)
+int mp_rm_equ(MathPrgm *mp, rhp_idx ei)
 {
 
    if (!valid_ei(ei)) {
@@ -1149,9 +1149,8 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    EmpDag *empdag = &mdl->empinfo.empdag;
 
    if (mp->type != MpTypeDual) {
-      error("[MP] ERROR: calling %s on MP(%s) of type %s, should be %s",
-            __func__, empdag_getmpname(empdag, mp->id),
-            mptype2str(mp->type), mptype2str(MpTypeDual));
+      error("[MP] ERROR: calling %s on MP(%s) of type %s, should be %s\n", __func__,
+            empdag_getmpname(empdag, mp->id), mptype2str(mp->type), mptype2str(MpTypeDual));
       return Error_RuntimeError;
    }
 
@@ -1171,11 +1170,10 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    OvfOpsData ovfd = { .ccfdat = &ccfdat };
 
    mp->type = MpTypeOpt;
-
    mp->sense = mp_primal->sense == RhpMin ? RhpMax : RhpMin;
+   mp->status = MpStatusUnset;
 
    mpopt_init(&mp->opt);
-   mp->status = MpStatusUnset;
 
    OvfDef *ccf = mp_primal->ccflib.ccf;
    if (ccf->args->size == 0 && ccf->num_empdag_children > 0) {
@@ -1183,6 +1181,9 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    } else {
       S_CHECK(ovf_fenchel(mdl, OvfType_Ccflib_Dual, ovfd));
    }
+
+   /* Add MP to the list of new ones */
+   S_CHECK(mpidarray_add(&empdag->mps_newly_created, mp->id));
 
    return mp_finalize(mp);
 }
@@ -1287,6 +1288,9 @@ int mp_instantiate(MathPrgm *mp)
    OvfOpsData ovfd = {.ccfdat = &ccfdat};
 
    CcflibInstanceData instancedat = {.ops = &ccflib_ops, .ovfd = ovfd};
+
+   /* Add MP to the list of new ones */
+   S_CHECK(mpidarray_add(&empdag->mps_newly_created, mp->id));
 
    return mp_ccflib_instantiate(mp_instance, mp, &instancedat);
 }

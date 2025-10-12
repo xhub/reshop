@@ -2,6 +2,7 @@
 #include <limits.h>
 
 #include "mdl_data.h"
+#include "macros.h"
 #include "printout.h"
 #include "reshop.h"
 
@@ -27,9 +28,9 @@ DEFSTR(MdlProbType_vi,"vi") \
 DEFSTR(MdlProbType_emp,"emp") \
 DEFSTR(MdlProbType_cns,"cns") \
 
-static const size_t backendnamelen = sizeof(mdl_backendnames)/sizeof(char*);
-RESHOP_STATIC_ASSERT(sizeof(mdl_backendnames)/sizeof(char*) == (RhpBackendAmpl+1),
-      "Inconsistency in model backends")
+static const size_t backendnamelen = ARRAY_SIZE(mdl_backendnames);
+RESHOP_STATIC_ASSERT(ARRAY_SIZE(mdl_backendnames) == (RhpBackendAmpl+1),
+                     "Inconsistency in model backends")
 
 #define DEFSTR(id, str) char id[sizeof(str)];
 
@@ -55,14 +56,15 @@ static const unsigned mdltypesnames_offsets[] = {
 DEFINE_STR()
 };
 
-const unsigned mdltypeslen = sizeof(mdltypesnames_offsets)/sizeof(unsigned);
+const unsigned mdltypeslen = ARRAY_SIZE(mdltypesnames_offsets);
 
-RESHOP_STATIC_ASSERT(sizeof(mdltypesnames_offsets)/sizeof(unsigned) == (MdlType_last+1),
-      "Inconsistency in problem types")
+RESHOP_STATIC_ASSERT(ARRAY_SIZE(mdltypesnames_offsets) == (MdlType_last+1),
+                     "Inconsistency in problem types")
+
 
 const char* mdltype_name(ModelType type)
 {
-   if (type >= mdltypeslen) { return "unknown problem type"; }   
+   if (type >= mdltypeslen) { return "unknown problem type"; }
 
    return mdltypesnames.dummystr + mdltypesnames_offsets[type];
 }

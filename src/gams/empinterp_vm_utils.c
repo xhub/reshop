@@ -96,7 +96,7 @@ int vmval_is_arcobj(VmValueArray * vmvals, unsigned idx)
 int error_ident_origin_dct(const IdentData * restrict ident, const char* fn)
 {
    const Lexeme *lexeme = &ident->lexeme;
-   error("[empinterp] ERROR line %u: function %s() was called for ident '%.*s' resolved in the DCT."
+   error("[empinterp] ERROR on line %u: function %s() was called for ident '%.*s' resolved in the DCT."
          "Please report this bug.\n", lexeme->linenr, fn, lexeme->len, lexeme->start);
    return Error_EMPRuntimeError;
 }

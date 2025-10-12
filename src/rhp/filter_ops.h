@@ -42,8 +42,9 @@ void filter_subset_release(FilterSubset *fs);
 FilterSubset* filter_subset_new(unsigned vlen, Avar vars[VMT(vlen)], unsigned elen,
                                   Aequ equs[VMT(elen)], struct mp_descr* mp_d)
                                   MALLOC_ATTR(filter_subset_release,1) NONNULL_AT(5);
+FilterSubset* filter_subset_new_from_mp(MathPrgm* mp) NONNULL;
 
-int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned offset_pool ) NONNULL;
+int filter_subset_activate(FilterSubset *fs, Model *mdl, unsigned pool_varvals_start) NONNULL;
 
 int fops_subdag_init(Fops *fops, Model *mdl, daguid_t uid) NONNULL;
 int fops_setvarpermutation(Fops *fops, rhp_idx *vperm) NONNULL;

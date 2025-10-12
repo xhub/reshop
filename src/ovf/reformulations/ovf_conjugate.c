@@ -172,7 +172,7 @@ static int _add_gen_type(struct gen_data * restrict dat, rhp_idx vi, enum cone c
             /* TODO(xhub) this should be in a dedicated function  */
             NlNode *mul_node = NULL;
             NlNode **addr = &mul_node;
-            S_CHECK(nltree_mul_cst(trees[j], &addr, ctr->pool, v));
+            S_CHECK(nltree_mul_cst(trees[j], &addr, ctr->nlpool, v));
 
             if (mul_node) {
                mul_node->children[0] = trees[j]->root;
@@ -622,7 +622,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 
          if (eqtree && eqtree->root) {
 
-            S_CHECK_EXIT(nltree_add_nlexpr(tree, eqtree->root, ctr->pool, coeffp));
+            S_CHECK_EXIT(nltree_add_nlexpr(tree, eqtree->root, ctr->nlpool, coeffp));
 
          }
       }
@@ -681,7 +681,7 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
       avar_setcompact(&ovf_vars, nb_vars, start_new_vars);
       avar_setcompact(&ovfvar, 1, ovf_vidx);
       Aequ ovf_equs;
-      aequ_setcompact(&ovf_equs, nb_equs, start_new_equ);
+      aequ_ascompact(&ovf_equs, nb_equs, start_new_equ);
 
       for (unsigned i = 0; i < n_args; ++i) {
          if (!valid_ei(equ_idx[i])) {

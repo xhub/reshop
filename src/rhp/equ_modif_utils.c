@@ -57,7 +57,7 @@ int rctr_nltree_add_quad_coo_abs(Container *ctr, Equ * e, NlNode **addr,
        * ---------------------------------------------------------------*/
 
       if (v1 == v2) {
-         S_CHECK(nltree_mul_cst(e->tree, &addr, ctr->pool, val));
+         S_CHECK(nltree_mul_cst(e->tree, &addr, ctr->nlpool, val));
          S_CHECK(rctr_nltree_add_sqr(ctr, e->tree, &addr, v1));
          assert(node->children[cur_idx]);
          S_CHECK(nlnode_print_now(node->children[cur_idx]));
@@ -134,7 +134,7 @@ int rctr_nltree_add_quad_coo_rel(Container *ctr, Equ * e, NlNode **addr,
        * ---------------------------------------------------------------*/
 
       if (v1 == v2) {
-         S_CHECK(nltree_mul_cst(e->tree, &addr, ctr->pool, val));
+         S_CHECK(nltree_mul_cst(e->tree, &addr, ctr->nlpool, val));
          S_CHECK(rctr_nltree_add_sqr(ctr, e->tree, &addr, v1));
          assert(node->children[cur_idx]);
          S_CHECK(nlnode_print_now(node->children[cur_idx]));

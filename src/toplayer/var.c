@@ -399,7 +399,7 @@ unsigned avar_findidx(const Avar* v, rhp_idx vi)
  *
  * @return      the error code
  */
-int avar_set_list(Avar *v, unsigned size, rhp_idx vis[VMT(static size)])
+int avar_aslist(Avar *v, unsigned size, rhp_idx vis[VMT(static size)])
 {
    v->type = EquVar_List;
    v->own = false;
@@ -438,7 +438,7 @@ void avar_free(Avar* v)
    }
 }
 
-int avar_subset(Avar* v, rhp_idx *idx, unsigned len, Avar *v_subset)
+int avar_subset(Avar* v, const rhp_idx *idx, unsigned len, Avar *v_subset)
 {
    assert(v_subset);
 

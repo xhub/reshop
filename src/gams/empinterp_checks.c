@@ -175,7 +175,7 @@ int mp_sanity_check(Interpreter *interp)
 int old_style_check(Interpreter *interp)
 {
    if (_has_dag(interp)) {
-      error("[empinterp] ERROR line %u: old style empinfo and EMPDAG are mutually "
+      error("[empinterp] ERROR on line %u: old style empinfo and EMPDAG are mutually "
             "exclusive", interp->linenr);
       return Error_EMPIncorrectSyntax;
    }

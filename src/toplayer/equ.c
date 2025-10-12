@@ -174,7 +174,7 @@ void aequ_empty(Aequ *e)
   switch (e->type) {
   case EquVar_List:
   case EquVar_SortedList:
-    if (e->own) FREE(e->list);
+    if (e->own) free(e->list);
     e->list = NULL;
     e->size = 0;
     break;

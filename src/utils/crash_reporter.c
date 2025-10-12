@@ -1246,7 +1246,7 @@ UNUSED static void send_crash_report_via_curl(const char *json_report, u8 uuid[1
       /* Looks like we might have a GCC bug with %s argument */
       const char *response = curlDat.response ? curlDat.response : "NULL";
       if (httpcode == 201) {
-         info("\n[INFO] Crash report sent successfully. Response was: '%s'\n", response);
+         error("\n[INFO] Crash report sent successfully. Response was: '%s'\n", response);
       } else {
          fatal_error("\n[ERROR] Crash report was not sent successfully: the response code was %ld (should be 201). "
                      "The server response was:\n'%s'\n", httpcode, response);

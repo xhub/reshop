@@ -1229,8 +1229,9 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             val1 = INT_VAL(AS_LOOPVAR(val1));
          }
          push(vm, BOOL_VAL(val1 == val2));
-      break;
+         break;
       }
+
       case OP_GREATER:  BINARY_CMP(vm, BOOL_VAL,   >);  break;
       case OP_LESS:     BINARY_CMP(vm, BOOL_VAL,   <);  break;
       case OP_ADD:      BINARY_OP(vm,  +);              break;
@@ -1242,44 +1243,53 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          push(vm, BOOL_VAL(! AS_BOOL(pop(vm))));
          break;
       }
+
       case OP_NEGATE:
          push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
          break;
+
       case OP_JUMP: {
          uint16_t offset = READ_SHORT(vm);
          vm->code.ip += offset;
          break;
       }
+
       case OP_JUMP_IF_TRUE: {
          uint16_t offset = READ_SHORT(vm);
          if (AS_BOOL(pop(vm))) vm->code.ip += offset;
          break;
       }
+
       case OP_JUMP_IF_FALSE: {
          uint16_t offset = READ_SHORT(vm);
          if (!AS_BOOL(pop(vm))) vm->code.ip += offset;
          break;
       }
+
       case OP_JUMP_IF_TRUE_NOPOP: {
          uint16_t offset = READ_SHORT(vm);
          if (AS_BOOL(vmpeek(vm, 0))) vm->code.ip += offset;
          break;
       }
+
       case OP_JUMP_IF_FALSE_NOPOP: {
          uint16_t offset = READ_SHORT(vm);
          if (!AS_BOOL(vmpeek(vm, 0))) vm->code.ip += offset;
          break;
       }
+
       case OP_JUMP_BACK: {
          uint16_t offset = READ_SHORT(vm);
          vm->code.ip -= offset;
          break;
       }
+
       case OP_JUMP_BACK_IF_FALSE: {
          uint16_t offset = READ_SHORT(vm);
          if (!AS_BOOL(pop(vm))) vm->code.ip -= offset;
          break;
       }
+
       case OP_GMS_SYMBOL_READ_SIMPLE: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          VmGmsSymIterator *symiter;
@@ -1293,6 +1303,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          break;
       }
+
       case OP_GMS_SYMBOL_READ_EXTEND: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          VmGmsSymIterator *symiter;
@@ -1306,16 +1317,19 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
          break;
       }
+
       case OP_GMS_EQUVAR_READ_INIT: {
          uint8_t identtype = READ_BYTE(vm);
          S_CHECK_EXIT(gms_extend_init(&vm->data, identtype));
          break;
       }
+
       case OP_GMS_EQUVAR_READ_SYNC: {
          uint8_t identtype = READ_BYTE(vm);
          S_CHECK_EXIT(gms_equvar_sync(&vm->data, identtype));
          break;
       }
+
       case OP_GMS_MEMBERSHIP_TEST: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          VmGmsSymIterator *symiter;
@@ -1334,6 +1348,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          push(vm, BOOL_VAL(res));
          break;
       }
+
       case OP_EMPAPI_CALL: {
          uint8_t api_idx = READ_BYTE(vm);
          assert(api_idx < empapis_len);
@@ -1341,7 +1356,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          const empapi fn = callobj.fn;
          ptrdiff_t argc = callobj.argc;
          assert(argc <= vm->stack_top - vm->stack);
-         DEBUGVMRUN("%s with %td stack args", empapis_names[api_idx], argc);
+         DEBUGVMRUN("%s with %td stack args\n", empapis_names[api_idx], argc);
 
          int rc = fn(&vm->data, argc, vm->stack_top - argc);
          if (rc != OK) {
@@ -1355,6 +1370,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          if (argc > 1) stack_mvback(vm, argc-1);
          break;
       }
+
       case OP_NEW_OBJ: {
          uint8_t newobj_call_idx = READ_BYTE(vm);
          assert(newobj_call_idx < empnewobjs_len);
@@ -1363,7 +1379,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          const empnewobj fn = callobj.fn;
          ptrdiff_t argc = callobj.argc;
          assert(argc <= vm->stack_top - vm->stack);
-         DEBUGVMRUN("%s with %td stack args", empnewobjs_names[newobj_call_idx],
+         DEBUGVMRUN("%s with %td stack args\n", empnewobjs_names[newobj_call_idx],
                     argc);
 
          void *o = fn(&vm->data, argc, vm->stack_top - argc);
@@ -1475,7 +1491,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             if (valid_vi(vi)) {DEBUGVMRUN(" vi = %s", mdl_printvarname(vm->data.mdl, vi));}
             if (isfinite(coeff) && coeff != 1.) {DEBUGVMRUN(" c = %e", coeff);}
             });
-         
+ 
          break;
       }
 

@@ -47,7 +47,7 @@ static void dealloc_(Container *ctr)
    FREE(ctr->varmeta);
    FREE(ctr->equmeta);
 
-   pool_release(ctr->pool);
+   pool_release(ctr->nlpool);
 
    aequ_empty(&ctr->transformations.flipped_equs);
    aequ_free(ctr->func2eval);
@@ -126,7 +126,7 @@ int ctr_init(Container *ctr, BackendType backend)
    ctr->backend = backend;
 
    /* Pool might be initialized depending on the backend */
-   ctr->pool = NULL;
+   ctr->nlpool = NULL;
 
    SN_CHECK_EXIT(ctr->ops->allocdata(ctr));
 
@@ -455,18 +455,18 @@ void ctr_relmem_recursive_old(Container *ctr)
 
 double ctr_poolval(Container *ctr, unsigned idx)
 {
-   if (!ctr->pool) {
+   if (!ctr->nlpool) {
       error("%s :: no pool in container!\n", __func__);
       return INFINITY;
    }
 
-   if (idx >= ctr->pool->len) {
+   if (idx >= ctr->nlpool->len) {
       error("%s :: requesting pool index %d when the size of the "
-                         "pool is %zu\n", __func__, idx, ctr->pool->len);
+                         "pool is %zu\n", __func__, idx, ctr->nlpool->len);
       return -INFINITY;
    }
 
-   return ctr->pool->data[idx];
+   return ctr->nlpool->data[idx];
 }
 
 /**
@@ -822,16 +822,16 @@ int ctr_prepare_export(Container *ctr_src, Container *ctr_dst)
  */
 int ctr_borrow_nlpool(Container *ctr, Container *ctr_src)
 {
-   if (ctr->pool) {
-      pool_release(ctr->pool);
+   if (ctr->nlpool) {
+      pool_release(ctr->nlpool);
    }
 
-   NlPool *p = pool_get(ctr_src->pool);
+   NlPool *p = pool_get(ctr_src->nlpool);
 
    if (!p) {
-      A_CHECK(ctr->pool, pool_new_gams());
+      A_CHECK(ctr->nlpool, pool_new_gams());
    } else {
-      ctr->pool = p;
+      ctr->nlpool = p;
    }
 
    ctr->status |= CtrHasNlPool;
@@ -849,8 +849,8 @@ int ctr_borrow_nlpool(Container *ctr, Container *ctr_src)
 int ctr_ensure_pool(Container *ctr)
 {
 
-   if (!ctr->pool) {
-      A_CHECK(ctr->pool, pool_new_gams());
+   if (!ctr->nlpool) {
+      A_CHECK(ctr->nlpool, pool_new_gams());
    }
 
    return OK;

@@ -23,13 +23,14 @@ static int rmdl_empdag_minimax_reformulate(Model *mdl)
       return Error_NullPointer;
    }
 
-   const MpIdArray * restrict mps2reform = &empdag->empdag_up->mps2reformulate;
+   const MpIdArray * restrict mps2reform = &empdag->empdag_up->minimaxi.mps2reformulate;
 
    S_CHECK(rmdl_incstage(mdl));
 
    empdag->finalized = false;
 
-   trace_process("[process] EMPDAG: there are %u MP to reformulate\n", mps2reform->len);
+   pr_info("EMPDAG: %u MP%s will be reformulated.\n", mps2reform->len,
+           mps2reform->len > 1 ? "s" : "");
 
    if (O_Ovf_Reformulation == OVF_Equilibrium) {
       trace_processmsg("[process] EMPDAG: using Equilibrium reformulation\n");
@@ -62,7 +63,7 @@ static int rmdl_empdag_minimax_reformulate(Model *mdl)
             S_CHECK(ovf_conjugate(mdl, OvfType_Ccflib, ovfd));
             break;
          default:
-            error("\r%s :: unsupported case %s\n", __func__,
+            error("\r[process] ERROR: unsupported case %s for minimax reformulation\n",
                      ovf_getreformulationstr(reformulation));
             return Error_NotImplemented;
       }
@@ -89,8 +90,8 @@ int rmdl_empdag_transform(Model *mdl_reform)
    * Instantiate MP created via the dual() operator
    * ---------------------------------------------------------------------- */
 
-   unsigned len = empdag_up->fenchel_dual_nodal.len;
-   const mpid_t * restrict mpid_arr = empdag_up->fenchel_dual_nodal.arr;
+   unsigned len = empdag_up->transformations.fenchel_dual_nodal.len;
+   const mpid_t * restrict mpid_arr = empdag_up->transformations.fenchel_dual_nodal.arr;
 
    for (unsigned i = 0; i < len; ++i) {
 

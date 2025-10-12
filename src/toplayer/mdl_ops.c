@@ -12,7 +12,7 @@
 
 #define errmc(...) \
    if (!banner_metacheck_printed) { \
-      errormsg("\n\n[empdag] ERROR! While checking the validity of the equations " \
+      errormsg("\n\n[empdag] ERROR: While checking the validity of the equations " \
                "and variables, the following fatal issues were found:\n\n"); \
       banner_metacheck_printed = true; \
    } \

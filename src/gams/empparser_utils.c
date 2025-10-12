@@ -29,7 +29,7 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
 
       if (toktype == TOK_UNSET) {
          const Token *tok = &interp->peek;
-         error("[empinterp] ERROR line %u: %c%.*s%c is not a UEL. "
+         error("[empinterp] ERROR on line %u: %c%.*s%c is not a UEL. "
                "All UELs in the empinfo must come from GAMS!\n", interp->linenr,
                quote, tok->len, tok->start, quote);
          return Error_EMPIncorrectSyntax;
@@ -137,7 +137,7 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
 
    do {
       if (nargs == GMS_MAX_INDEX_DIM) {
-         error("[empinterp] ERROR line %u: while parsing the arguments to the "
+         error("[empinterp] ERROR on line %u: while parsing the arguments to the "
                "token '%.*s', more than %u were parsed.\n", interp->linenr,
                emptok_getstrlen(&interp->pre), emptok_getstrstart(&interp->pre),
                GMS_MAX_INDEX_DIM);
@@ -196,7 +196,7 @@ int parse_labeldefindices(Interpreter * restrict interp, unsigned * restrict p,
 
    do {
       if (nargs == GMS_MAX_INDEX_DIM) {
-         error("[empinterp] ERROR line %u: while parsing the arguments to the "
+         error("[empinterp] ERROR on line %u: while parsing the arguments to the "
                "token '%.*s', more than %u were parsed.\n", interp->linenr,
                emptok_getstrlen(&interp->pre), emptok_getstrstart(&interp->pre),
                GMS_MAX_INDEX_DIM);

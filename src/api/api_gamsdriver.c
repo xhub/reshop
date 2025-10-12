@@ -127,7 +127,7 @@ int rhp_gms_readempinfo(Model *mdl, const char *fname)
          return Error_FileOpenFailed;
       }
 
-      debug("[GAMS] No EMPinfo file named '%s' found\n", empinfofile);
+      pr_debug("[GAMS] No EMPinfo file named '%s' found\n", empinfofile);
 
       return OK;
    }

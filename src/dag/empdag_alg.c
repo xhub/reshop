@@ -20,10 +20,7 @@
 #include "timings.h"
 #include "toplayer_utils.h"
 
-
-typedef unsigned nidx_t;
-
-
+typedef u32 nidx_t;
 
 enum EmpDagPpty {
   EmpDagPptyNone          = 0,
@@ -39,7 +36,6 @@ enum {
    DagErrLen = 4,
 };
 
-
 // TODO cleanup 
 //static const enum EmpDagPpty EmpDagPptyHasCtrl =
 //                       EmpDagPptyHasMpCtrl | EmpDagPptyHasEquilCtrl;
@@ -49,14 +45,13 @@ struct empdag_info {
   enum EmpDagPpty children;
 };
 
-struct sort_obj {
-  mpid_t mp_id;
+struct mpid_sort {
+  mpid_t mpid;
   rhp_idx vi;
 };
 
-
 #define SORT_NAME empdag_sort
-#define SORT_TYPE struct sort_obj
+#define SORT_TYPE struct mpid_sort
 #define SORT_CMP(x, y) ((x).vi - (y).vi)
 #include "sort.h"
 
@@ -93,7 +88,7 @@ DEFINE_STR()
 };
 #undef ERRSTR
 
-static const unsigned char n_empdag_errs = sizeof(empdag_errs_offset)/sizeof(empdag_errs_offset[0]);
+static const unsigned char n_empdag_errs = ARRAY_SIZE(empdag_errs_offset);
 
 static inline const char* empdag_errstr(int rc)
 {
@@ -149,10 +144,10 @@ typedef struct empdag_dfs {
    unsigned num_nodes;
    unsigned max_depth;
    DfsState * restrict nodes_stat;
-   unsigned * restrict preorder;
-   unsigned * restrict postorder;
-   unsigned * restrict topo_order;
-   unsigned * restrict topo_order_revidx;
+   unsigned * restrict preorder;          /**< Nodal timestamp in preorder fashion */
+   unsigned * restrict postorder;         /**< Nodal timestamp postorder fashion */
+   unsigned * restrict topo_order;        /**< EMPDAG topological order */
+   unsigned * restrict topo_order_revidx; /**< EMPDAG reverse topological order */
    DagMpPpty * restrict mp_ppty;
    DagNashPpty * restrict nash_ppty;
    bool * restrict processed_vi;
@@ -1749,39 +1744,67 @@ _hack_skip_analysis_dual: ;
    }
 
    /* ---------------------------------------------------------------------
-    * If there are adversarial MPS, sort them according to the topo order and
+    * If there are adversarial MPs, sort them according to the topo order and
     * save the list to process in the EMPDAG.
     * --------------------------------------------------------------------- */
 
    if (num_adversarial > 0) {
 
-      unsigned * restrict mps_id = dfsdata.adversarial_mps.arr;
-      struct sort_obj * restrict mps2reformulate;
-      CALLOC_(mps2reformulate, struct sort_obj, num_adversarial);
+      mpid_t * restrict mps_id = dfsdata.adversarial_mps.arr;
+      struct mpid_sort * restrict mpid2sort;
+      CALLOC_(mpid2sort, struct mpid_sort, num_adversarial);
 
       for (unsigned i = 0; i < num_adversarial; ++i) {
-         unsigned mp_id = mps_id[i];
-         mps2reformulate[i].mp_id = mp_id;
-         assert(dfsdata.topo_order_revidx[mp_id] <= INT_MAX);
-         mps2reformulate[i].vi = (int)dfsdata.topo_order_revidx[mp_id];
+         mpid_t mpid = mps_id[i];
+         mpid2sort[i].mpid = mpid;
+         assert(dfsdata.topo_order_revidx[mpid] <= INT_MAX);
+         mpid2sort[i].vi = (rhp_idx)dfsdata.topo_order_revidx[mpid];
       }
 
-      empdag_sort_tim_sort(mps2reformulate, num_adversarial);
+      empdag_sort_tim_sort(mpid2sort, num_adversarial);
 
-      mpidarray_reserve(&empdag->mps2reformulate, num_adversarial);
-      unsigned * restrict mps2r = empdag->mps2reformulate.arr;
+      S_CHECK(mpidarray_reserve(&empdag->minimaxi.mps2reformulate, num_adversarial));
+      unsigned * restrict mps2r = empdag->minimaxi.mps2reformulate.arr;
 
 
       for (unsigned i = 0; i < num_adversarial; ++i) {
-         mps2r[i] = mps2reformulate[i].mp_id;
+         mps2r[i] = mpid2sort[i].mpid;
       }
 
-      empdag->mps2reformulate.len = num_adversarial;
+      empdag->minimaxi.mps2reformulate.len = num_adversarial;
 
       /* Save the saddle_path_starts */
-      memcpy(&empdag->saddle_path_starts, &dfsdata.saddle_path_starts, sizeof(UIntArray));
+      memcpy(&empdag->minimaxi.saddle_path_starts, &dfsdata.saddle_path_starts, sizeof(UIntArray));
 
-      FREE(mps2reformulate);
+      free(mpid2sort);
+   }
+
+   /* ---------------------------------------------------------------------
+    * If there were  MPs, sort them according to the topo order and
+    * save the list to process in the EMPDAG.
+    * --------------------------------------------------------------------- */
+
+   if (empdag->mps_newly_created.len > 0) {
+
+      unsigned num_mps_newly_created = empdag->mps_newly_created.len;
+      mpid_t * restrict mps_id = empdag->mps_newly_created.arr;
+      struct mpid_sort * restrict mpid2sort;
+      CALLOC_(mpid2sort, struct mpid_sort, num_mps_newly_created);
+
+      for (unsigned i = 0; i < num_mps_newly_created; ++i) {
+         mpid_t mpid = mps_id[i];
+         mpid2sort[i].mpid = mpid;
+         assert(dfsdata.topo_order_revidx[mpid] <= INT_MAX);
+         mpid2sort[i].vi = (rhp_idx)dfsdata.topo_order_revidx[mpid];
+      }
+
+      empdag_sort_tim_sort(mpid2sort, num_mps_newly_created);
+
+      for (unsigned i = 0; i < num_mps_newly_created; ++i) {
+         mps_id[i] = mpid2sort[i].mpid;
+      }
+
+      free(mpid2sort);
    }
 
    empdag->features.istree = dfsdata.isTree;

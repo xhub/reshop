@@ -122,7 +122,7 @@ Avar* avar_newlistcopy(unsigned size, rhp_idx *vis) NONNULL MALLOC_ATTR(avar_fre
 Avar* avar_newblock(unsigned block_size) MALLOC_ATTR(avar_free,1);
 
 int avar_get(const Avar *v, unsigned i, rhp_idx *vidx) NONNULL;
-int avar_set_list(Avar *v, unsigned size, rhp_idx list[VMT(static size)]) NONNULL;
+int avar_aslist(Avar *v, unsigned size, rhp_idx vis[VMT(static size)]) NONNULL;
 unsigned avar_size(const Avar *v);
 
 void avar_init(Avar* v) NONNULL;
@@ -131,7 +131,7 @@ void avar_empty(Avar *v) NONNULL;
 void avar_reset(Avar *v) NONNULL;
 int avar_extend(Avar *v, const Avar *w) NONNULL;
 unsigned avar_findidx(const Avar* v, rhp_idx vidx) NONNULL;
-int avar_subset(Avar* v, rhp_idx *idx, unsigned len, Avar *v_subset) NONNULL;
+int avar_subset(Avar* v, const rhp_idx *idx, unsigned len, Avar *v_subset) NONNULL;
 rhp_idx avar_block_get(const struct avar_block *b, unsigned i);
 bool avar_block_contains(const struct avar_block *b, rhp_idx vi);
 int avar_setblock(Avar *v, unsigned block_size) NONNULL;

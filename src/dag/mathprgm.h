@@ -139,7 +139,7 @@ int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei) NONNULL;
 
 int mp_trim_memory(MathPrgm *mp) NONNULL;
 int mp_setobjcoef(MathPrgm *mp, double coef) NONNULL;
-int mp_rm_cons(MathPrgm *mp, rhp_idx ei) NONNULL;
+int mp_rm_equ(MathPrgm *mp, rhp_idx ei) NONNULL;
 int mp_rm_var(MathPrgm *mp, rhp_idx vi) NONNULL;
 
 int mp_instantiate_fenchel_dual(MathPrgm *mp) NONNULL;

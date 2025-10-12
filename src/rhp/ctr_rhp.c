@@ -360,10 +360,10 @@ int rctr_evalfuncat(Container *ctr, Equ *e, const double * restrict x,
    S_CHECK(rctr_getnl(ctr, e));
 
    if (e->tree && e->tree->root) {
-      assert(ctr->pool && ctr->pool->data);
+      assert(ctr->nlpool && ctr->nlpool->data);
       double nlval;
       /* I sense some umin fishyness --xhub */
-      S_CHECK(nltree_evalat(e->tree, x, ctr->pool->data, &nlval));
+      S_CHECK(nltree_evalat(e->tree, x, ctr->nlpool->data, &nlval));
       val += nlval;
       if (!isfinite(nlval)) {
         err = true;
@@ -538,7 +538,7 @@ int rctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
    if (valid_ei(ei)) {
 
       if (ctr->equs[ei].object != Mapping) {
-         debug("%s ERROR: equ '%s' is of type %s, should be %s\n", __func__,
+         pr_debug("%s ERROR: equ '%s' is of type %s, should be %s\n", __func__,
                ctr_printequname(ctr, ei), equtype_name(ctr->equs[ei].object),
                equtype_name(Mapping));
       }
@@ -584,7 +584,7 @@ unsigned rctr_poolidx(Container *ctr, double val)
 
    if (ctr_ensure_pool(ctr) != OK) return UINT_MAX;
 
-   return pool_getidx(ctr->pool, val);
+   return pool_getidx(ctr->nlpool, val);
 }
 
 /**

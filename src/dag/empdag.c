@@ -127,16 +127,17 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    empdag->type = EmpDag_Unset;
    empdag->stage = EmpDagStage_Unset;
    empdag->finalized = false;
-   empdag->has_resolved_arcs = true;  /* Set by false at the start of the empinterp */
+   empdag->arcs_fully_resolved = true;  /* Set by false at the start of the empinterp */
    empdag->features.istree = false;
 
    memset(&empdag->node_stats, 0, sizeof (empdag->node_stats));
    memset(&empdag->arc_stats, 0, sizeof (empdag->arc_stats));
 
    daguidarray_init(&empdag->roots);
-   mpidarray_init(&empdag->mps2reformulate);
+   mpidarray_init(&empdag->minimaxi.mps2reformulate);
+   mpidarray_init(&empdag->minimaxi.saddle_path_starts);
    mpidarray_init(&empdag->mps2instantiate);
-   mpidarray_init(&empdag->saddle_path_starts);
+   mpidarray_init(&empdag->mps_newly_created);
 
    dagmp_array_init(&empdag->mps);
    dagnash_array_init(&empdag->nashs);
@@ -150,12 +151,12 @@ void empdag_init(EmpDag *empdag, Model *mdl)
    empdag->simple_data.objequ = IdxNA;
    empdag->simple_data.objvar = IdxNA;
 
-   mpidarray_init(&empdag->fenchel_dual_nodal);
-   mpidarray_init(&empdag->fenchel_dual_subdag);
-   mpidarray_init(&empdag->epi_dual_nodal);
-   mpidarray_init(&empdag->epi_dual_subdag);
-   mpidarray_init(&empdag->fooc.src);
-   mpidarray_init(&empdag->fooc.vi);
+   mpidarray_init(&empdag->transformations.fenchel_dual_nodal);
+   mpidarray_init(&empdag->transformations.fenchel_dual_subdag);
+   mpidarray_init(&empdag->transformations.epi_dual_nodal);
+   mpidarray_init(&empdag->transformations.epi_dual_subdag);
+   mpidarray_init(&empdag->transformations.fooc.src);
+   mpidarray_init(&empdag->transformations.fooc.vi);
    mpidarray_init(&empdag->objfn.src);
    mpidarray_init(&empdag->objfn.dst);
    mpidarray_init(&empdag->objfn_maps.mps);
@@ -320,8 +321,8 @@ int empdag_fini(EmpDag *empdag)
 
    if (mp_len == 0) { return OK; }
 
-   printout(PO_INFO, "\nEmpdag for %s model '%.*s' #%u has type %s\n",
-            mdl_fmtargs(empdag->mdl), empdag_typename(empdag->type));
+   pr_info("\nEMPDAG for %s model '%.*s' #%u has type %s\n", mdl_fmtargs(empdag->mdl),
+           empdag_typename(empdag->type));
 
    unsigned n_opt = 0, n_vi = 0, n_ccflib = 0, n_hidden = 0, n_dual = 0, n_fooc = 0, n_mps = 0;
 
@@ -385,16 +386,17 @@ void empdag_rel(EmpDag *empdag)
 {
 
    daguidarray_empty(&empdag->roots);
-   mpidarray_empty(&empdag->mps2reformulate);
+   mpidarray_empty(&empdag->minimaxi.mps2reformulate);
+   mpidarray_empty(&empdag->minimaxi.saddle_path_starts);
    mpidarray_empty(&empdag->mps2instantiate);
-   mpidarray_empty(&empdag->saddle_path_starts);
+   mpidarray_empty(&empdag->mps_newly_created);
 
-   mpidarray_empty(&empdag->fenchel_dual_nodal);
-   mpidarray_empty(&empdag->fenchel_dual_subdag);
-   mpidarray_empty(&empdag->epi_dual_nodal);
-   mpidarray_empty(&empdag->epi_dual_subdag);
-   mpidarray_empty(&empdag->fooc.src);
-   mpidarray_empty(&empdag->fooc.vi);
+   mpidarray_empty(&empdag->transformations.fenchel_dual_nodal);
+   mpidarray_empty(&empdag->transformations.fenchel_dual_subdag);
+   mpidarray_empty(&empdag->transformations.epi_dual_nodal);
+   mpidarray_empty(&empdag->transformations.epi_dual_subdag);
+   mpidarray_empty(&empdag->transformations.fooc.src);
+   mpidarray_empty(&empdag->transformations.fooc.vi);
    mpidarray_empty(&empdag->objfn.src);
    mpidarray_empty(&empdag->objfn.dst);
 
@@ -605,8 +607,8 @@ int empdag_dup(EmpDag * restrict empdag, const EmpDag * restrict empdag_up, Mode
    S_CHECK(daguidarray_copy(&empdag->roots, &empdag_up->roots));
 
    /* HACK: remove this */
-   S_CHECK(mpidarray_copy(&empdag->fooc.vi, &empdag_up->fooc.vi));
-   S_CHECK(mpidarray_copy(&empdag->fooc.src, &empdag_up->fooc.src));
+   S_CHECK(mpidarray_copy(&empdag->transformations.fooc.vi, &empdag_up->transformations.fooc.vi));
+   S_CHECK(mpidarray_copy(&empdag->transformations.fooc.src, &empdag_up->transformations.fooc.src));
 
    return OK;
 }

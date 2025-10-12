@@ -251,8 +251,10 @@ Model *mdl_borrow(Model *mdl)
 
 void mdl_release(Model *mdl)
 {
-   if (mdl && (mdl)->refcnt > 0) {
-      (mdl)->refcnt--;
+   if (!mdl) { return; }
+
+   if (mdl->refcnt > 0) {
+      mdl->refcnt--;
 
       printout(PO_TRACE_REFCNT, "[refcnt] %s model %.*s #%u: %1u -> %1u",
                mdl_fmtargs(mdl), mdl->refcnt+1, mdl->refcnt);
@@ -264,7 +266,7 @@ void mdl_release(Model *mdl)
          printstr(PO_TRACE_REFCNT, "\n");
       }
 
-   } else if (mdl) {
+   } else {
       error("[ERROR] %s model '%*.s' #%u: refcnt is 0.\n", mdl_fmtargs(mdl));
   }
 }
@@ -415,13 +417,13 @@ int mdl_getobjequs(const Model *mdl, Aequ *eout)
       }
     }
 
-    aequ_setandownlist(eout, size, list);
+    aequ_asownlist(eout, size, list);
   } else {
     rhp_idx ei;
     S_CHECK(mdl_getobjequ(mdl, &ei));
 
       if (valid_ei(ei)) {
-         aequ_setcompact(eout, 1, ei);
+         aequ_ascompact(eout, 1, ei);
       } else {
          aequ_reset(eout);
       }

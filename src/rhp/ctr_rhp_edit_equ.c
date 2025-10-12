@@ -833,7 +833,7 @@ int rctr_equ_addmulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
       S_CHECK(nltree_bootstrap(dst, est, est));
       add_node = &dst->tree->root;
    } else {
-      S_CHECK(nltree_find_add_node(dst->tree, &add_node, ctr->pool, &coeff));
+      S_CHECK(nltree_find_add_node(dst->tree, &add_node, ctr->nlpool, &coeff));
    }
 
    assert(add_node);
@@ -996,7 +996,7 @@ int rctr_nltree_copy_map_old(Container *ctr, NlTree *tree, NlNode **node, Equ *e
 
       /* Add coeff * ( ... )  */
       /* TODO(xhub) we may end up in a ADD->ADD situation, be careful here */
-      S_CHECK(nltree_mul_cst(tree, &addr, ctr->pool, coeff));
+      S_CHECK(nltree_mul_cst(tree, &addr, ctr->nlpool, coeff));
 
       /* \TODO(xhub) optimize w.r.t. umin */
       /* Fill in Fnl_i  */
@@ -1081,7 +1081,7 @@ int rctr_nltree_copy_map(Container *ctr, NlTree *tree, NlNode **node, Equ *esrc,
 
       /* Add coeff * ( ... )  */
       /* TODO(xhub) we may end up in a ADD->ADD situation, be careful here */
-      S_CHECK(nltree_mul_cst(tree, &addr, ctr->pool, coeff));
+      S_CHECK(nltree_mul_cst(tree, &addr, ctr->nlpool, coeff));
 
       /* \TODO(xhub) optimize w.r.t. umin */
       /* Fill in Fnl_i  */

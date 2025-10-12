@@ -698,7 +698,7 @@ int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl)
 
    /* All the equations have been added  */
    cdat_equname_end(cdat);
-   aequ_setcompact(&fdat->dual.cons, cdat->total_m - ei_cons_start, ei_cons_start);
+   aequ_ascompact(&fdat->dual.cons, cdat->total_m - ei_cons_start, ei_cons_start);
 
    return OK;
 }

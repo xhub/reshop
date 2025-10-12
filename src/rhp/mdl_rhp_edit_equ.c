@@ -29,11 +29,11 @@ int rmdl_equ_rm(Model *mdl, rhp_idx ei)
    assert(mdl_is_rhp(mdl));
 
    Container *ctr = &mdl->ctr;
-   RhpContainerData *ctrdat = (RhpContainerData *)ctr->data;
+   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
-   S_CHECK(ei_inbounds(ei,  ctrdat->total_m, __func__));
+   S_CHECK(ei_inbounds(ei, cdat->total_m, __func__));
 
-   if (!ctrdat->cmat.equs[ei]) {
+   if (!cdat->cmat.equs[ei]) {
       error("[container] ERROR: equation %s is not active, cannot delete it\n",
             ctr_printequname(ctr, ei));
       return Error_NullPointer;
@@ -60,13 +60,13 @@ int rmdl_equ_rm(Model *mdl, rhp_idx ei)
          IdxArray *mpequs = &mp->equs;
          int rc = rhp_idx_rmsorted(mpequs, ei);
          if (rc) {
-            error("Failed to remove equation %s from MP(%s)",
-                  ctr_printequname(ctr, ei),
+            error("Failed to remove equation %s from MP(%s)", ctr_printequname(ctr, ei),
                   empdag_getmpname(&mdl->empinfo.empdag, mpid));
             return Error_RuntimeError;
          }
 
       }
+
       emeta->ppty |= EquPptyIsDeleted;
    }
 
@@ -119,11 +119,24 @@ int rmdl_dup_equ(Model *mdl, rhp_idx *ei)
    /* Update the rosetta info  */
    cdat->equ_rosetta[ei_src].res.equ = ei_new;
 
-   /* Update the model info  */
-   rhp_idx objequ;
-   rmdl_getobjequ_nochk(mdl, &objequ);
-   if (objequ == ei_src) {
-      rmdl_setobjfun(mdl, ei_new);
+   /* -------------------------------------------------------------------
+    * Keep the EMP tree consistent: add the new equation to the MP
+    * ------------------------------------------------------------------- */
+
+   MathPrgm *mp = mdl_getmpforequ(mdl, ei_src);
+   if (mp) {
+      if (mp_getobjequ(mp) == ei_src) {
+         S_CHECK(mp_setobjequ(mp, ei_new));
+      } else {
+         S_CHECK(mp_addconstraint(mp, ei_new));
+      }
+   } else {
+      /* Update the model info  */
+      rhp_idx objequ;
+      rmdl_getobjequ_nochk(mdl, &objequ);
+      if (objequ == ei_src) {
+         rmdl_setobjfun(mdl, ei_new);
+      }
    }
 
    *ei = ei_new;

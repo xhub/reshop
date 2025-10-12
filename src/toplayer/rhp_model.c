@@ -89,22 +89,8 @@ int rmdl_get_equation_modifiable(Model* mdl, rhp_idx ei, Equ **e)
       }
 
       S_CHECK(rmdl_dup_equ(mdl, &ei_new));
-      DPRINT("%s :: dup equation '%s': %d -> %d\n", __func__,
-             mdl_printequname(mdl, ei), ei, ei_new);
+      DPRINT("%s: dup equ '%s': %d -> %d\n", __func__, mdl_printequname(mdl, ei), ei, ei_new);
 
-      /* -------------------------------------------------------------------
-       * Keep the EMP tree consistent: add the new equation to the MP
-       * ------------------------------------------------------------------- */
-
-      MathPrgm *mp = mdl_getmpforequ(mdl, ei);
-      if (mp) {
-         if (mp_getobjequ(mp) == ei) {
-            S_CHECK(mp_setobjequ(mp, ei_new));
-         } else {
-            S_CHECK(mp_rm_cons(mp, ei));
-            S_CHECK(mp_addconstraint(mp, ei_new));
-         }
-      }
    } 
 
    *e = &ctr->equs[ei_new];
