@@ -12,14 +12,6 @@ tlsvar char uuidv4str[37]; // uuid for socket path
 #include <windows.h>
 #include <objbase.h>
 
-// For AF_UNIX
-#include <winsock2.h>
-#include <afunix.h>
-#include <io.h>
-
-#include <basetsd.h>
-typedef SSIZE_T ssize_t;
-
 const char* gen_random_uuidv4(void)
 {
    unsigned i = 0;

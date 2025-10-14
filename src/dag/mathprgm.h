@@ -108,7 +108,6 @@ int mp_addvipairs(MathPrgm *mp, Aequ *e, Avar *v);
 int mp_finalize(MathPrgm *mp) NONNULL;
 rhp_idx mp_getobjequ(const MathPrgm *mp);
 rhp_idx mp_getobjvar(const MathPrgm *mp);
-ModelType mp_getprobtype(const MathPrgm *mp) NONNULL;
 RhpSense mp_getsense(const MathPrgm *mp) NONNULL;
 void mp_print(MathPrgm *mp);
 int mp_setobjequ(MathPrgm *mp, rhp_idx objequ);
@@ -159,6 +158,11 @@ const char* mptype2str(unsigned type);
 NONNULL static inline MpType mp_gettype(const MathPrgm *mp)
 {
   return mp->type;
+}
+
+NONNULL static inline ModelType mp_getprobtype(const MathPrgm *mp)
+{
+   return mp->probtype;
 }
 
 NONNULL static inline const char* mp_getname(const MathPrgm * mp)

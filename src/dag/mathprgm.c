@@ -938,10 +938,6 @@ void mp_err_noobjdata(const MathPrgm *mp)
 }
 
 
-inline ModelType mp_getprobtype(const MathPrgm *mp) {
-   return mp->probtype;
-}
-
 const char *mp_gettypestr(const MathPrgm *mp) {
    return mptype2str(mp->type);
 }

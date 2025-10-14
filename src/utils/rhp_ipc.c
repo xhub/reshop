@@ -21,6 +21,16 @@
 
 tlsvar char sockpath[108]; //socket path
 
+#ifdef _WIN32
+#include <basetsd.h>
+typedef SSIZE_T ssize_t;
+
+// For AF_UNIX
+#include <winsock2.h>
+#include <afunix.h>
+#include <io.h>
+
+#endif
 
 const char* ipc_unix_domain_init(void)
 {
