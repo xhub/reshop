@@ -65,7 +65,7 @@ test-leg:
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
 
-    - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
+    - EMPSLV=reshop bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
@@ -188,8 +188,8 @@ test-dac:
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
 
-    # Run tests with regular reshop
-    - EMPSLV=reshop RHP_SOLVELINK=2 bash test/gams/test.sh
+    # Run tests with ASAN reshop
+    - EMPSLV=reshop bash test/gams/test.sh
     - runtest emplib  goempgo failures_emp.gms
     - runtest testlib quality failures_qa.gms
 
