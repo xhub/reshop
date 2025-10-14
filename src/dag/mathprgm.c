@@ -21,6 +21,7 @@
 #include "mdl.h"
 #include "ctrdat_rhp.h"
 #include "ovf_common.h"
+#include "ovfgen_ops.h"
 #include "ovfinfo.h"
 #include "ovf_fenchel.h"
 #include "printout.h"
@@ -382,8 +383,7 @@ int mp_from_ccflib(MathPrgm *mp, unsigned ccflib_idx)
 int mp_setprobtype(MathPrgm *mp, unsigned probtype)
 {
    if (probtype >= mdltypeslen) {
-      error( "%s :: MP type %u is above the limit %u\n", __func__,
-            probtype, mdltypeslen - 1);
+      error("[MP] ERROR: model type %u is above the limit %u\n", probtype, mdltypeslen-1);
       return Error_InvalidValue;
    }
 
@@ -1173,13 +1173,21 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    mp->sense = mp_primal->sense == RhpMin ? RhpMax : RhpMin;
    mp->status = MpStatusUnset;
 
+   
+
    mpopt_init(&mp->opt);
 
    OvfDef *ccf = mp_primal->ccflib.ccf;
+   OvfPpty ovf_ppty;
+   ovfgen_get_ppty(ccf, &ovf_ppty);
+
+
    if (ccf->args->size == 0 && ccf->num_empdag_children > 0) {
       S_CHECK(ccflib_dualize_fenchel_empdag(mdl, &ccfdat));
+      mp->probtype = ovf_ppty.probtype;
    } else {
       S_CHECK(ovf_fenchel(mdl, OvfType_Ccflib_Dual, ovfd));
+      mp->probtype = MdlType_nlp; /* HACK */
    }
 
    /* Add MP to the list of new ones */
@@ -1278,6 +1286,9 @@ int mp_instantiate(MathPrgm *mp)
    IO_PRINT(asprintf(&name, "%s_instance", mp_getname(mp)));
    /* TODO: NAMING */
    A_CHECK(mp->ccflib.mp_instance, empdag_newmpnamed(empdag, sense, name));
+
+   trace_process("[process] Instantiating MP(%s) into MP(%s) with OVF %s\n", mp_getname(mp),
+                 name, ovf_def->name);
    free(name);
 
    MathPrgm *mp_instance = mp->ccflib.mp_instance;
@@ -1290,7 +1301,7 @@ int mp_instantiate(MathPrgm *mp)
    CcflibInstanceData instancedat = {.ops = &ccflib_ops, .ovfd = ovfd};
 
    /* Add MP to the list of new ones */
-   S_CHECK(mpidarray_add(&empdag->mps_newly_created, mp->id));
+   S_CHECK(mpidarray_add(&empdag->mps_newly_created, mp_instance->id));
 
    return mp_ccflib_instantiate(mp_instance, mp, &instancedat);
 }

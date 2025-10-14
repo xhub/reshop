@@ -401,10 +401,10 @@ int ccflib_equil_setup_dual_objequ(DfsData *dfsdat, MathPrgm *mp, SpMat *B,
 
    S_CHECK(nltree_get_add_node(mdl, objequ, ccflib_size, &add_node, &offset, &coeff));
 
-   dfsdat->dual_objequ_dat.equ = &mdl->ctr.equs[objequ];
-   dfsdat->dual_objequ_dat.node = NULL;
+   dfsdat->dual_objequ_dat.ei_dst = objequ;
+   dfsdat->dual_objequ_dat.nlnode_addr = NULL;
 
-   NlTree *tree = dfsdat->dual_objequ_dat.equ->tree;
+   NlTree *tree = mdl->ctr.equs[objequ].tree;
 
    rhp_idx y_start = mp->vars.arr[0];
 
@@ -462,7 +462,7 @@ static int dual_copy_primal_objequ_to_nlnode(CopyExprData *dualobjequdat, Model 
     * For the quadratic case, it will also create issue.
     * --------------------------------------------------------------------- */
 
-   if (!dualobjequdat->node && objequ->lequ->len == 0 &&
+   if (!dualobjequdat->nlnode_addr && objequ->lequ->len == 0 &&
        (!objequ->tree || objequ->tree->root)) {
          error("[ccflib/equil] ERROR: constant objequ '%s' is not yet "
                "supported\n", ctr_printequname(&mdl->ctr, objequ->idx));
@@ -471,7 +471,8 @@ static int dual_copy_primal_objequ_to_nlnode(CopyExprData *dualobjequdat, Model 
 
    // TODO: to support for primal -> primal node path, an idea is to ensure 
    // an ADD node so that the objequ of grand-children can be copied here as well
-   S_CHECK(rctr_nltree_copy_map_old(&mdl->ctr, dualobjequdat->equ->tree, dualobjequdat->node,
+   Container *ctr = &mdl->ctr;
+   S_CHECK(rctr_nltree_copy_map_old(ctr, ctr->equs[dualobjequdat->ei_dst].tree, dualobjequdat->nlnode_addr,
                                     objequ, objvar, NAN));
 
    return OK;
@@ -505,7 +506,7 @@ static int ccflib_equil_dfs_primal(mpid_t mpid_primal, DfsData *dfsdat, DagMpArr
    // TODO: Get some info about the chidlren beforehand. This would help with
    // supporting primal -> primal subpath
  
-   if (dfsdat->dual_objequ_dat.node) {
+   if (dfsdat->dual_objequ_dat.nlnode_addr) {
       rhp_idx objequ = mp_getobjequ(mp);
       if (!valid_ei(objequ)) {
          error("[reformulation:ccflib] ERROR: invalid objequ for MP '%s'",
@@ -677,7 +678,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
    unsigned n_args = n_arcs + n_maps;
    CALLOC_(child_nlnodes, NlNode**, n_args);
    S_CHECK_EXIT(ccflib_equil_setup_dual_objequ(dfsdat, mp_dual, &dualdat.B, mps_old, child_nlnodes));
-   rhp_idx objei_dual = dfsdat->dual_objequ_dat.equ->idx;
+   rhp_idx objei_dual = dfsdat->dual_objequ_dat.ei_dst;
    assert(valid_ei(objei_dual));
 
    /* workspace similar to y */
@@ -736,7 +737,7 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
           * - we copy its objective function, times (B_i)^T, into the objequ
           * --------------------------------------------------------------- */
 
-         dfsdat->dual_objequ_dat.node = child_nlnodes[i];
+         dfsdat->dual_objequ_dat.nlnode_addr = child_nlnodes[i];
 
          /* ---------------------------------------------------------------
           * Substitute the edgeVF between primal parent and dual with a
@@ -794,7 +795,8 @@ static int ccflib_equil_dfs_dual(mpid_t mpid_dual, DfsData *dfsdat, DagMpArray *
    }
 
 
-   S_CHECK_EXIT(cmat_sync_lequ(&mdl->ctr, dfsdat->dual_objequ_dat.equ));
+   Container *ctr = &mdl->ctr;
+   S_CHECK_EXIT(cmat_sync_lequ(ctr, &ctr->equs[dfsdat->dual_objequ_dat.ei_dst]));
 
    /* Add <b, y> to the equation of the primal parent node and the objequ of
     * the dual node.
@@ -841,8 +843,8 @@ int ccflib_equil(Model *mdl)
       DfsData dfsdat = {.mpid_primal = MpId_NA, .mpid_dual = MpId_NA, 
                         .vi_dual = IdxNA, .empdag = empdag, .mdl = mdl};
 
-      dfsdat.dual_objequ_dat.equ = NULL;
-      dfsdat.dual_objequ_dat.node = NULL;
+      dfsdat.dual_objequ_dat.ei_dst = IdxNA;
+      dfsdat.dual_objequ_dat.nlnode_addr = NULL;
       arcVF_empty(&dfsdat.arcVFprimal);
       arcVFb_init(&dfsdat.arcVFdual, IdxNA);
 

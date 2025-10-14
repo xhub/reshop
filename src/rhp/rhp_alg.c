@@ -557,7 +557,7 @@ static int rmdl_presolve_auxmdl(Model *mdl, BackendType backend, unsigned *p_poo
    MALLOC_(stages_auxmdl, struct auxmdl, cur_stage+1);
    memcpy(stages_auxmdl, cdat->stage_auxmdl, (cur_stage+1) * sizeof(struct auxmdl));
 
-   Model *mdl_subsolver = mdl_new(backend);
+   Model *mdl_subsolver = NULL;
    const char *mdl_name = mdl_getname(mdl);
 
    for (unsigned s = 0; s <= cur_stage; ++s) {
@@ -571,6 +571,7 @@ static int rmdl_presolve_auxmdl(Model *mdl, BackendType backend, unsigned *p_poo
          struct filter_subset* fs = s_subctr->filter_subset[j];
          S_CHECK_EXIT(filter_subset_activate(fs, mdl, pool_varvals_start));
 
+         mdl_subsolver = mdl_new(backend);
          char *name;
          IO_PRINT_EXIT(asprintf(&name, "%s_s%u_i%u", mdl_name, s, i));
          S_CHECK_EXIT(mdl_setname(mdl_subsolver, name));
@@ -581,6 +582,8 @@ static int rmdl_presolve_auxmdl(Model *mdl, BackendType backend, unsigned *p_poo
          S_CHECK_EXIT(presolve_submodel_solve(mdl, mdl_subsolver, nlpool_data,
                                               pool_varvals_start))
 
+         mdl_release(mdl_subsolver);
+         mdl_subsolver = NULL;
       }
    }
 
@@ -594,7 +597,9 @@ _exit:
 
 static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varvals_start)
 {
+   int status = OK;
    Container *ctr = &mdl->ctr;
+   char *mdlname = NULL;
 
    if (pool_varvals_start == UINT_MAX) {
       S_CHECK(ctr_ensure_pool(ctr));
@@ -607,11 +612,12 @@ static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varva
 
    double * restrict nlpool_data = ctr->nlpool->data;
 
-   Model *mdl_subsolver = mdl_new(backend);
+   Model *mdl_subsolver = NULL;
    const char *mdl_name = mdl_getname(mdl);
 
    EmpDag *empdag = &mdl->empinfo.empdag;
    MathPrgm ** restrict mpsarr = empdag->mps.arr;
+   FilterSubset *fs = NULL;
 
    mpid_t * restrict mpidarr = empdag->mps_newly_created.arr;
    for (unsigned i = 0, len = empdag->mps_newly_created.len; i < len; ++i) {
@@ -619,26 +625,41 @@ static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varva
       mpid_t mpid = mpidarr[i];    assert(mpid < empdag->mps.len);
       MathPrgm *mp = mpsarr[mpid]; assert(mp);
 
-      FilterSubset *fs = filter_subset_new_from_mp(mp);
+      trace_process("[presolve] Init new variables and equations in MP(%s)\n", mp_getname(mp));
+
+      /* We need to avoid a double free for the last submodule */
+      if (fs) {
+         filter_subset_release(fs);
+      }
+
+      fs = filter_subset_new_from_mp(mp);
       if (!fs) {
          error("[presolve] ERROR: could not create filter subset for MP(%s)\n",
                mp_getname(mp));
-         return Error_RuntimeError;
+         status = Error_RuntimeError;
+         goto _exit;
       }
 
-      S_CHECK(filter_subset_activate(fs, mdl, pool_varvals_start));
+      S_CHECK_EXIT(filter_subset_activate(fs, mdl, pool_varvals_start));
 
-      char *name;
-      IO_PRINT(asprintf(&name, "%s_mp%u", mdl_name, i));
-      S_CHECK(mdl_setname(mdl_subsolver, name));
-      free(name);
+      mdl_subsolver = mdl_new(backend);
+
+      IO_PRINT_EXIT(asprintf(&mdlname, "%s_mp%u", mdl_name, i));
+      S_CHECK_EXIT(mdl_setname(mdl_subsolver, mdlname));
+      FREE(mdlname);
 
       trace_process("[presolve] Presolving MP(%s)\n", empdag_getmpname(empdag, mpid));
-      S_CHECK(presolve_submodel_solve(mdl, mdl_subsolver, nlpool_data, pool_varvals_start));
+      S_CHECK_EXIT(presolve_submodel_solve(mdl, mdl_subsolver, nlpool_data, pool_varvals_start));
 
+      mdl_release(mdl_subsolver);
+      mdl_subsolver = NULL;
    }
 
-   return OK;
+_exit:
+   mdl_release(mdl_subsolver);
+   free(mdlname);
+
+   return status;
 }
 
 

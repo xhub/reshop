@@ -222,6 +222,10 @@ int gmd_boolean_test(void *gmdh, VmGmsSymIterator *filter, bool *res)
 
    assert(*res == (symiterptr != NULL));
 
+   if (symiterptr) {
+      gmdFreeSymbolIterator(gmd, symiterptr);
+   }
+
    return OK;
 }
 

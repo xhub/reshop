@@ -116,7 +116,7 @@ typedef struct ctrdata_rhp {
    struct v_inh var_inherited;     /**< Inherited variables                  */
    struct e_inh equname_inherited; /**< Inherited equations names            */
 
-   unsigned char current_stage;     /**< Index for the current model
+   unsigned current_stage;          /**< Index for the current model
                                          transformation                      */
    bool objequ_val_eq_objvar;       /**< Flag to trigger the addition        */
    bool borrow_inherited;           /**< True if inherited data is borrowed  */

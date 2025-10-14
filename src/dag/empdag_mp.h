@@ -124,14 +124,23 @@ static inline int dagmp_array_copy(DagMpArray * restrict dat,
       return OK;
    }
 
-   dat->len = size;
-   dat->max = size;
+   if (dat->max == 0) {
+      MALLOC_(dat->arr, MathPrgm*, size);
+      MALLOC_(dat->names, const char*, size);
+      MALLOC_(dat->Carcs, UIntArray, size);
+      MALLOC_(dat->Varcs, VarcArray, size);
+      MALLOC_(dat->rarcs, UIntArray, size);
+      dat->max = size;
+   } else if (dat->max < dat_src->len) {
+      REALLOC_(dat->arr, MathPrgm*, size);
+      REALLOC_(dat->names, const char*, size);
+      REALLOC_(dat->Carcs, UIntArray, size);
+      REALLOC_(dat->Varcs, VarcArray, size);
+      REALLOC_(dat->rarcs, UIntArray, size);
+      dat->max = size;
+   }
 
-   MALLOC_(dat->arr, MathPrgm*, size);
-   MALLOC_(dat->names, const char*, size);
-   MALLOC_(dat->Carcs, UIntArray, size);
-   MALLOC_(dat->Varcs, VarcArray, size);
-   MALLOC_(dat->rarcs, UIntArray, size);
+   dat->len = size;
 
    for (unsigned i = 0; i < size; i++) {
 

@@ -39,7 +39,7 @@ int rhp_reformulate(Model *mdl_user, Model **mdl_reformulated)
                     mdl_fmtargs(mdl_user),
                     mdl_user->ctr.transformations.flipped_equs.size);
 
-      A_CHECK(mdl_reform, rhp_mdl_new(RhpBackendReSHOP));
+      A_CHECK(mdl_reform, mdl_new(RhpBackendReSHOP));
       S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_user));
 
       empinfo = &mdl_reform->empinfo;
@@ -60,7 +60,7 @@ int rhp_reformulate(Model *mdl_user, Model **mdl_reformulated)
          trace_process("[process] %s model %.*s #%u: Copying model for OVF/CCF "
                        "reformulations.\n", mdl_fmtargs(mdl_user));
 
-         A_CHECK(mdl_reform, rhp_mdl_new(RhpBackendReSHOP));
+         A_CHECK(mdl_reform, mdl_new(RhpBackendReSHOP));
          S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_user));
 
       }
@@ -81,7 +81,7 @@ int rhp_reformulate(Model *mdl_user, Model **mdl_reformulated)
          trace_process("[process] %s model %.*s #%u: Copying model for EMPDAG "
                        "reformulations.\n", mdl_fmtargs(mdl_user));
 
-         A_CHECK(mdl_reform, rhp_mdl_new(RhpBackendReSHOP));
+         A_CHECK(mdl_reform, mdl_new(RhpBackendReSHOP));
          S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_user));
 
       }

@@ -314,6 +314,8 @@ int ccflib_dualize_fenchel_empdag(Model *mdl, CcflibPrimalDualData *ccfprimaldua
    S_CHECK_EXIT(empdag_getmpbyid(empdag, mpid_dual, &mp_dual));
    S_CHECK_EXIT(mp_setobjequ(mp_dual, fdat.dual.ei_objfn));
 
+   mp_setprobtype(mp_dual, fdat.primal.is_quad ? MdlType_qcp : MdlType_lp);
+
 _exit:
    fdat_empty(&fdat);
 

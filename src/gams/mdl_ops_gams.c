@@ -540,6 +540,8 @@ static int gams_solve(Model *mdl)
 
       int status_jmp = RESHOP_SETJMP_INTERNAL_START;
       if (status_jmp == OK) {
+
+         void *jobhandle;
          rc = gevCallSolver(gms->gev,
                             gms->gmo,
                             "",                      /* name of control file   */
@@ -555,7 +557,7 @@ static int gams_solve(Model *mdl)
                             GMS_SV_NAINT,            /* domain violation limit */
                             GMS_SV_NA,               /* optcr                  */
                             GMS_SV_NA,               /* optca                  */
-                            NULL,                    /* handle to solver job   */
+                            &jobhandle,              /* handle to solver job   */
                             buf);                    /* message                */
 
          if (rc) {

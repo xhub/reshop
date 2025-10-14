@@ -1251,12 +1251,6 @@ static int rmdl_solreport(Model *mdl)
 
 static int rmdl_solve(Model *mdl)
 {
-   const char *subsolver_log = mygetenv("RHP_OUTPUT_SUBSOLVER_LOG");
-   if (subsolver_log) {
-      O_Output_Subsolver_Log = 1;
-   }
-   myfreeenvval(subsolver_log);
-
    ModelType type = mdl->commondata.mdltype;
 
   switch (type) {

@@ -267,9 +267,9 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
 #endif
       option_init();
       rhp_syncenv();
-      debug("[OS] DllMain called with DLL_PROCESS_ATTACH\n");
+      //pr_debug("[OS] DllMain called with DLL_PROCESS_ATTACH\n");
       logging_syncenv();
-      debug("[OS] Call to DllMain with DLL_PROCESS_ATTACH successful\n");
+      //pr_debug("[OS] Call to DllMain with DLL_PROCESS_ATTACH successful\n");
 
       break;
 
@@ -284,7 +284,7 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
       cleanup_path();
       cleanup_gams();
       cleanup_dbghelp_fptrs();
-      debug("[OS] Call to DllMain with DLL_PROCESS_DETACH successful\n");
+      //pr_debug("[OS] Call to DllMain with DLL_PROCESS_DETACH successful\n");
 //      cleanup_snan_funcs();
    }
    return TRUE;

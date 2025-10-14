@@ -749,7 +749,6 @@ int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl)
    /* Add 0.5 <s, Js> */
    if (fdat->primal.is_quad) {
       S_CHECK(rctr_equ_add_quadratic(ctr, e_objfn, &fdat->J, &fdat->dual.vars.s, 1.));
-
    }
 
    return OK;

@@ -387,6 +387,16 @@ int rhp_syncenv(void)
       return Error_UserInterrupted;
    }
 
+#ifndef _WIN32
+   /* RHP_NODEV=0 is equivalent to RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 */
+   const char *nodev = mygetenv("RHP_NODEV");
+   if (nodev) {
+      setenv("RHP_NO_STOP", "1", 1);
+      setenv("RHP_NO_BACKTRACE", "1", 1);
+   }
+   myfreeenvval(nodev);
+#endif
+
    const char * restrict env_varval = find_rhpenvvar("LOG", &env_varname, &optname_maxlen);
 
    /* If RHP_LOG is defined, then try to parse its value as "val1:val2" */
@@ -435,6 +445,7 @@ int rhp_syncenv(void)
          if (!strncmp("all", envopt, 3)) {
             for (unsigned i = 0; i < n_opts; ++i) { log_opts[i].fn(val); }
             O_Output |= PO_MAX_VERBOSITY | PO_ALLDEST;
+            goto _continue;
          }
 
          /* help */
@@ -445,21 +456,16 @@ int rhp_syncenv(void)
             goto _exit;
          }
 
+         error("\nERROR: wrong value '%s' for RHP_LOG environment variable\n", envopt);
+         log_help();
+         status = Error_RuntimeError;
+         goto _exit;
+
 _continue:
          if (env_varval[len] == ':') { len++; }
          else { break; }
       }
     }
-
-#ifndef _WIN32
-   /* RHP_NODEV=0 is equivalent to RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 */
-   const char *nodev = mygetenv("RHP_NODEV");
-   if (nodev) {
-      setenv("RHP_NO_STOP", "1", 1);
-      setenv("RHP_NO_BACKTRACE", "1", 1);
-   }
-   myfreeenvval(nodev);
-#endif
 
 
 _exit:

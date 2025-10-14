@@ -634,9 +634,9 @@ int rmdl_incstage(Model *mdl)
 {
    RhpContainerData *cdat = (RhpContainerData *)mdl->ctr.data;
 
-   if (cdat->current_stage == UCHAR_MAX) {
-      error("%s :: maximum number of stages %d reached!\n",
-                         __func__, cdat->current_stage);
+   if (cdat->current_stage == UINT_MAX) {
+      error("[model] ERROR: maximum number of stages %d reached!\n",
+                          cdat->current_stage);
       return Error_RuntimeError;
    }
 

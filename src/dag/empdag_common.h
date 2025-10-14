@@ -82,14 +82,14 @@ const char* arcVFType2str(ArcVFType type);
 
 /** Basic data structure to copy an expression in an equation */
 typedef struct {
-   Equ *equ;        /**< Equation where to inject the expression */
+   rhp_idx ei_dst;        /**< Equation where to inject the expression */
    union {
       ArcVFBasicData basic_dat;
       ArcVFMultipleBasicData basics_dat;
       ArcVFEquData equ_dat;
       ArcVFLequData lequ_dat;
    };
-   NlNode **node;  /**< Node where to inject the data. */
+   NlNode **nlnode_addr;  /**< Node where to inject the data. */
 } CopyExprData;
 
 

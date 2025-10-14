@@ -72,7 +72,7 @@ DEFINE_STR()
 #undef DEFSTR
 #undef DEFINE_STR
 
-static const unsigned modelstatlen = sizeof(modelstatnames_offsets)/sizeof(modelstatnames_offsets[0]);
+static const unsigned modelstatlen = ARRAY_SIZE(modelstatnames_offsets);
 
 
 /** @brief Get the textual description of a model status
@@ -129,8 +129,7 @@ static const unsigned solvestatnames_offsets[] = {
 DEFINE_STR()
 };
 
-static const unsigned solvestatlen = sizeof(solvestatnames_offsets)/sizeof(solvestatnames_offsets[0]);
-
+static const unsigned solvestatlen = ARRAY_SIZE(solvestatnames_offsets);
 
 /** @brief Get the textual description of a solve status
  *

@@ -314,7 +314,7 @@ int resolve_tokasident(Interpreter *interp, IdentData *ident)
    if (interp->gmd) {
       S_CHECK(gmd_search_ident(interp, ident));
 
-      if (ident->type != IdentNotFound) { return OK; }
+      if (ident->type != IdentNotFound) { goto _exit; }
    }
 
    /* TODO: Params */

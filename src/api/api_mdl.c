@@ -142,5 +142,5 @@ Model *rhp_newsolvermdl(Model *mdl)
    }
    myfreeenvval(backend_env);
 
-   return rhp_mdl_new(mdl_type);
+   return mdl_new(mdl_type);
 }

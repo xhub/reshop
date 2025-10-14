@@ -254,13 +254,15 @@ static int mdl_create_fooc(Model *mdl, Model *mdl_mcp)
  */
 int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
 {
+   int status = OK;
+
    /* TODO: this should not be necessary */
-   Model *mdl_rhp_for_fooc;
+   Model *mdl_rhp_for_fooc = NULL, *mdl_mcp = NULL;
    bool release_mdl_rhp_for_fooc = false;
    char *mcpmdl_name = NULL;
 
    if (mdl->backend == RhpBackendGamsGmo) {
-      A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RhpBackendReSHOP));
+      A_CHECK(mdl_rhp_for_fooc, mdl_new(RhpBackendReSHOP));
       IO_PRINT(asprintf(&mcpmdl_name, "%s_RHP4FOOC", mdl_getname(mdl)));
       S_CHECK(mdl_setname(mdl_rhp_for_fooc, mcpmdl_name));
       free(mcpmdl_name);
@@ -274,16 +276,15 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
       return backend_throw_notimplemented_error(mdl->backend, __func__);
    }
 
-   Model *mdl_mcp;
-   A_CHECK(mdl_mcp, rhp_mdl_new(RhpBackendReSHOP));
+   A_CHECK_EXIT(mdl_mcp, mdl_new(RhpBackendReSHOP));
 
-   IO_PRINT(asprintf(&mcpmdl_name, "FOOC_%s", mdl_getname(mdl)));
-   S_CHECK(mdl_setname(mdl_mcp, mcpmdl_name));
+   IO_PRINT_EXIT(asprintf(&mcpmdl_name, "FOOC_%s", mdl_getname(mdl)));
+   S_CHECK_EXIT(mdl_setname(mdl_mcp, mcpmdl_name));
    free(mcpmdl_name);
 
-   S_CHECK(mdl_create_fooc(mdl_rhp_for_fooc, mdl_mcp))
+   S_CHECK_EXIT(mdl_create_fooc(mdl_rhp_for_fooc, mdl_mcp))
 
-   S_CHECK(rmdl_export_latex(mdl_mcp, "mcp"));
+   S_CHECK_EXIT(rmdl_export_latex(mdl_mcp, "mcp"));
 
    *mdl_target = mdl_mcp;
 
@@ -292,6 +293,18 @@ int mdl_transform_tomcp(Model *mdl, Model **mdl_target)
    }
 
    return OK;
+
+_exit:
+
+   if (release_mdl_rhp_for_fooc) {
+      mdl_release(mdl_rhp_for_fooc);
+   }
+
+   mdl_release(mdl_mcp);
+
+   *mdl_target = NULL;
+
+   return status;
 }
 
 /**
@@ -333,7 +346,7 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
    char *mcpmdl_name;
 
    if (mdl->backend == RhpBackendGamsGmo) {
-      A_CHECK(mdl_rhp_for_fooc, rhp_mdl_new(RhpBackendReSHOP));
+      A_CHECK(mdl_rhp_for_fooc, mdl_new(RhpBackendReSHOP));
       IO_PRINT(asprintf(&mcpmdl_name, "%s_RHP4MPEC", mdl_getname(mdl)));
       S_CHECK(mdl_setname(mdl_rhp_for_fooc, mcpmdl_name));
       free(mcpmdl_name);
@@ -350,7 +363,7 @@ static int mdl_transform_tompmcc(Model *mdl, Model **mdl_target)
    }
 
    Model *mdl_mpec;
-   A_CHECK(mdl_mpec, rhp_mdl_new(RhpBackendReSHOP));
+   A_CHECK(mdl_mpec, mdl_new(RhpBackendReSHOP));
    IO_PRINT(asprintf(&mcpmdl_name, "MPEC_%s", mdl_getname(mdl)));
    S_CHECK(mdl_setname(mdl_mpec, mcpmdl_name));
    free(mcpmdl_name);
@@ -451,6 +464,7 @@ int mdl_transform_emp_togamsmdltype(Model *mdl_src, Model **mdl_target)
 
       int singleopt_solmethod = optvali(mdl_src, Options_SolveSingleOptAs);
       switch (singleopt_solmethod) {
+
       case Opt_SolveSingleOptAsOpt:
          if (empdag->features.hasVFpath) {
             S_CHECK(rmdl_contract_along_Vpaths(mdl_src, mdl_target));

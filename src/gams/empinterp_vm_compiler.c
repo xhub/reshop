@@ -1109,7 +1109,7 @@ static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
    TokenType toktype;
 
    trace_empparser("[empcompiler] membership test with type '%s' and dimension %u\n",
-                  identtype2str(ident_gmsarray.type), ident_gmsarray.dim);
+                   identtype2str(ident_gmsarray.type), ident_gmsarray.dim);
 
    /* WARNING: This operates on the current token */
    /* TODO: why not store the gmsindices on the stack */

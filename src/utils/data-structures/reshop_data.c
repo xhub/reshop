@@ -174,8 +174,11 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
    if (dat->len > dat->max) {
       dat->max = MAX(2*dat->max, dat->len+1);
       REALLOC_(dat->arr, int, dat->max);
-      MEMORY_POISON(dat->arr + dat->len, dat->max-dat->len);
+      MEMORY_POISON(&dat->arr[dat->len], (dat->max - dat->len)*sizeof(int));
    }
+
+   MEMORY_UNDEF(&dat->arr[dlen], slen*sizeof(int));
+   MEMORY_UNPOISON(&dat->arr[dlen], slen*sizeof(int));
 
    int * restrict sarr = dat_src->arr, * restrict darr = dat->arr;
 
@@ -184,10 +187,15 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
    /* This is the index of the last element in dat->arr that has been written to */
    unsigned darr_lastelt = dlen;
 
-   //printf("DEBUG: slen = %3u; dlen = %3u\n", slen, dlen);
-   //rhp_int_print(dat, PO_INFO);
-   //rhp_int_print(dat_src, PO_INFO);
+//#define RESHOP_DATA_DEBUG
 
+#ifdef RESHOP_DATA_DEBUG
+   printf("DEBUG: slen = %3u; dlen = %3u\n", slen, dlen);
+   dat->len = dlen;
+   rhp_int_print(dat, PO_INFO);
+   dat->len += slen;
+   rhp_int_print(dat_src, PO_INFO);
+#endif
 
    if (sfirst <= dfirst) {
       if (send <= dfirst) {
@@ -208,15 +216,25 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       sarr = &sarr[idx];
       darr = &darr[idx];
 
-      //printf("DEBUG: slen = %3u; dlen = %3u; idx = %3u\n", slen, dlen, idx);
+#ifdef RESHOP_DATA_DEBUG
+      printf("DEBUG: slen = %3u; dlen = %3u; idx = %3u\n", slen, dlen, idx);
+#endif
    } 
 
-   //rhp_int_print(dat, PO_INFO);
-
+   /* ---------------------------------------------------------------------
+    * If the end of the source is past the end of the destination, a subset
+    * of the source can be copied.
+    * ---------------------------------------------------------------------- */
    if (send >= dend) {
+
+      /* Easy case: copy the whole source at the end of the destination */
       if (sfirst >= dend) {
+
          memcpy(&darr[dlen], sarr, slen*sizeof(int));
 
+#ifdef RESHOP_DATA_DEBUG
+         rhp_int_print(dat, PO_INFO);
+#endif
          assert(chk_sorted_intarray(dat->arr, dat->len));
 
          return OK;
@@ -270,6 +288,9 @@ int rhp_int_extend_sorted(IntArray * restrict dat,
       assert(darr_lastelt + (darr-dat->arr) <= dat->len);
    }
 
+#ifdef RESHOP_DATA_DEBUG
+   rhp_int_print(dat, PO_INFO);
+#endif
 
    assert(chk_sorted_intarray(dat->arr, dat->len));
 

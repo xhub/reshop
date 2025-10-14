@@ -39,11 +39,12 @@ int rmdl_get_editable_mdl(Model *mdl, Model **mdl_dst, const char *name)
       mdl_unsetmetachecked(mdl);
       mdl_unsetchecked(mdl);
       mdl_unsetfinalized(mdl);
+
       return OK;
    }
 
-   Model *mdl_dst_ = rhp_mdl_new(RhpBackendReSHOP);
-   S_CHECK(mdl_setname(mdl_dst_, strdup(name)));
+   Model *mdl_dst_ = mdl_new(RhpBackendReSHOP);
+   S_CHECK(mdl_setname(mdl_dst_, name));
 
    S_CHECK(rmdl_initctrfromfull(mdl_dst_, mdl));
 
