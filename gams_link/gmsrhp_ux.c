@@ -70,6 +70,70 @@ static void myfreeenvval(const char *envval)
 #   define UNUSED
 #endif
 
+#ifdef __linux__
+#define ENVVAR_DST "LD_LIBRARY_PATH"
+#elif defined(__APPLE__)
+#define ENVVAR_DST "DYLD_FALLBACK_LIBRARY_PATH"
+#endif
+
+#ifdef ENVVAR_DST
+static int inject_ldpath(const char *envvar_dst, const char *gams_sysdir)
+{
+   if (getenv("RHP_GAMSDIR_LDPATH")) {
+      const char *ld_library_path_cur = getenv(envvar_dst);
+      char *ld_library_path = NULL;
+      size_t len_sysdir = strlen(gams_sysdir);
+
+      if (ld_library_path_cur) {
+         size_t len_cur = strlen(ld_library_path_cur);
+         ld_library_path = malloc(sizeof(char) * (len_cur + 2 + len_sysdir));
+         if (!ld_library_path) {
+            (void)fprintf(stderr, "ERROR: could not allocate memory\n");
+            return 1;
+         }
+
+         strcpy(ld_library_path, ld_library_path_cur);
+         strcat(ld_library_path, ":");
+         strcat(ld_library_path, gams_sysdir);
+
+         setenv("envvar_dst", ld_library_path, 1);
+      } else {
+         setenv("envvar_dst", gams_sysdir, 1);
+      }
+
+   }
+
+   const char *ldpath = getenv("RHP_LDPATH");
+   if (ldpath) {
+      const char *ld_library_path_cur = getenv(envvar_dst);
+      char *ld_library_path = NULL;
+      size_t ldpath_len = strlen(ldpath);
+
+      if (ld_library_path_cur) {
+         size_t len_cur = strlen(ld_library_path_cur);
+         ld_library_path = malloc(sizeof(char) * (len_cur + 2 + ldpath_len));
+         if (!ld_library_path) {
+            (void)fprintf(stderr, "ERROR: could not allocate memory\n");
+            return 1;
+         }
+
+         strcpy(ld_library_path, ld_library_path_cur);
+         strcat(ld_library_path, ":");
+         strcat(ld_library_path, ldpath);
+
+         setenv("envvar_dst", ld_library_path, 1);
+      } else {
+         setenv("envvar_dst", ldpath, 1);
+      }
+
+      free(ld_library_path);
+
+   }
+
+   return 0;
+}
+#endif
+
 int main(int argc, char** argv)
 {
    struct rhp_mdl *mdl = NULL, *mdl_solver = NULL;
@@ -117,58 +181,10 @@ int main(int argc, char** argv)
       goto _exit;
    }
 
-#ifdef __linux__
-   if (getenv("RHP_GAMSDIR_LDPATH")) {
-      const char *ld_library_path_cur = getenv("LD_LIBRARY_PATH");
-      char *ld_library_path = NULL;
-      size_t len_sysdir = strlen(gams_sysdir);
-
-      if (ld_library_path_cur) {
-         size_t len_cur = strlen(ld_library_path_cur);
-         ld_library_path = malloc(sizeof(char) * (len_cur + 2 + len_sysdir));
-         if (!ld_library_path) {
-            (void)fprintf(stderr, "ERROR: could not allocate memory\n");
-            goto _exit;
-         }
-
-         strcpy(ld_library_path, ld_library_path_cur);
-         strcat(ld_library_path, ":");
-         strcat(ld_library_path, gams_sysdir);
-
-         setenv("LD_LIBRARY_PATH", ld_library_path, 1);
-      } else {
-         setenv("LD_LIBRARY_PATH", gams_sysdir, 1);
-      }
-
+#ifdef ENVVAR_DST
+   if (inject_ldpath(ENVVAR_DST, gams_sysdir)) {
+      goto _exit;
    }
-
-   const char *ldpath = getenv("RHP_LDPATH");
-   if (ldpath) {
-      const char *ld_library_path_cur = getenv("LD_LIBRARY_PATH");
-      char *ld_library_path = NULL;
-      size_t ldpath_len = strlen(ldpath);
-
-      if (ld_library_path_cur) {
-         size_t len_cur = strlen(ld_library_path_cur);
-         ld_library_path = malloc(sizeof(char) * (len_cur + 2 + ldpath_len));
-         if (!ld_library_path) {
-            (void)fprintf(stderr, "ERROR: could not allocate memory\n");
-            goto _exit;
-         }
-
-         strcpy(ld_library_path, ld_library_path_cur);
-         strcat(ld_library_path, ":");
-         strcat(ld_library_path, ldpath);
-
-         setenv("LD_LIBRARY_PATH", ld_library_path, 1);
-      } else {
-         setenv("LD_LIBRARY_PATH", ldpath, 1);
-      }
-
-      free(ld_library_path);
-
-   }
-// TODO MACOS
 #endif
 
    if (rhp_syncenv()) {
