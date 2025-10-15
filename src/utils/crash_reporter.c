@@ -1034,6 +1034,8 @@ static const char *create_crash_report_json(CODE_TYPE sigcode)
     backtrace_json
   );
 
+   if (free_backtrace_json) { free((char*)backtrace_json); }
+
   if (len < 0 || !json_buffer) {
     fatal_error("\nERROR: Could not get enough memory for the JSON buffer\n");
     return NULL;
@@ -1616,8 +1618,8 @@ void crash_handler(CODE_TYPE sigcode)
                }
             }
 
-            fatal_error("\nPlease consider opening an issue on github by opening the following "
-                        "URL:\n"
+            fatal_error("\nPlease consider opening an issue on github by opening the "
+                        "following URL:\n"
                         "https://github.com/xhub/reshop/issues/new?title=Crash&"
                         "body=ReSHOP%%20experienced%%20a%%20major%%20failure.%%0A"
                         "Crash%%20report%%20UUID%%20is%%20%s.%%0AReport%%20follows%%0A"
@@ -1633,6 +1635,26 @@ void crash_handler(CODE_TYPE sigcode)
 
             free(url_encoded_report);
          }
+      } else {
+
+         char *url_encoded_report = url_encode(json_report);
+         if (url_encoded_report) {
+            fatal_error("\nPlease consider opening an issue on github by opening the "
+                        "following URL:\n"
+                        "https://github.com/xhub/reshop/issues/new?title=Crash&"
+                        "body=ReSHOP%%20experienced%%20a%%20major%%20failure.%%0A"
+                        "%%0AReport%%20follows%%0A"
+                        "%%60%%60%%60%%0A%s%%0A%%60%%60%%60%%0A&"
+                        "labels=crash,bug\n", url_encoded_report);
+            free(url_encoded_report);
+         } else {
+            fatal_error("\nPlease consider opening an issue on github by opening the "
+                        "following URL:\n"
+                        "https://github.com/xhub/reshop/issues/new?title=Crash&"
+                        "body=ReSHOP%%20experienced%%20a%%20major%%20failure.&"
+                        "labels=crash,bug\n");
+         }
+
       }
 
 
