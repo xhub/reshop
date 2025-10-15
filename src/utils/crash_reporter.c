@@ -309,7 +309,7 @@ static void get_os_info(const char** os_name, const char **os_version, const cha
    *os_version = "unknown version";
 }
 
-static const char* get_backtrace_json(void)
+static const char* get_backtrace_json(bool *free_backtrace_json)
 {
    static tlsvar char json_output_buf[MAX_FRAMES*(MAX_FRAME_LEN+2)+2];
    char frame_info[MAX_FRAME_LEN];
@@ -320,6 +320,9 @@ static const char* get_backtrace_json(void)
    unsigned short nframes;
    SYMBOL_INFO  * symbol;
    HANDLE         process;
+
+   /* We never allocate here */
+   *free_backtrace_json = false;
 
    const DbgHelpFptr *fptrs = dbghelp_get_fptrs();
    if (!fptrs) { return NULL; }
@@ -836,7 +839,7 @@ static const char* construct_backtrace_json_static(int nframes, char* frames[VMT
 }
 
   // Function to get backtrace as a JSON array string
-static const char* get_backtrace_json(bool * free_backtrace_json)
+static const char* get_backtrace_json(bool *free_backtrace_json)
 {
    void *callstack[MAX_FRAMES];
    int nframes = backtrace(callstack, MAX_FRAMES);
