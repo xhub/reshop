@@ -185,6 +185,7 @@ test-dac:
 
     - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
     - export DYLD_FALLBACK_LIBRARY_PATH="$GAMSDIR"
+    - export RHP_LDPATH="$GAMSDIR"
 
     # Test that we indeed call the right executable
     - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
