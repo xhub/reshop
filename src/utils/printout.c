@@ -269,9 +269,8 @@ static void rhp_backtrace(void)
 static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* ctx)
 {
    void *array[90];
-   int size = ARRAY_SIZE(array);
 
-   size = backtrace(array, size);
+   int size = backtrace(array, ARRAY_SIZE(array));
 
 #if (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L)
    psiginfo(info, "\n\nReSHOP experienced a major error");
@@ -283,6 +282,11 @@ static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* ctx)
    snprintf(nb, sizeof nb, "%d\n", sigcode);
    fatal_error(nb);
 #endif
+
+   if (size <= 0) {
+      fatal_error("\nCould not get backtrace via backtrace(): returned value was %d\n", size);
+      goto skip_backtrace;
+   }
 
    fatal_error("\n--- Backtrace info ---\n");
 
@@ -303,6 +307,7 @@ static void _sighdl_backtrace(int sigcode, siginfo_t* info, void* ctx)
 
    fatal_error("\n\nPlease open a bug report with the above information.\n");
 
+skip_backtrace:
    crash_handler(sigcode);
 
    handle_fatal_error(sigcode, "\nReSHOP caught a fatal signal.");

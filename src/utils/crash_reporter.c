@@ -836,15 +836,24 @@ static const char* construct_backtrace_json_static(int nframes, char* frames[VMT
 }
 
   // Function to get backtrace as a JSON array string
-static const char* get_backtrace_json(void)
+static const char* get_backtrace_json(bool * free_backtrace_json)
 {
    void *callstack[MAX_FRAMES];
    int nframes = backtrace(callstack, MAX_FRAMES);
    char **strs = backtrace_symbols(callstack, nframes);
    if (!strs) {
+      *free_backtrace_json = false;
       return "backtrace_symbols() failed!";
    }
 
+   if (nframes <= 0) {
+      *free_backtrace_json = false;
+      return "Couldn't get a backtrace";
+   }
+
+   /* WARNING: the following code is not correct when there is no frame (nframes <= 0)
+    * It results in a heap-buffer-overflow. Hence, the above check on nframe is critical
+    */
    size_t current_len = 1;
 
    for (int i = 0; i < nframes; i++) {
@@ -865,8 +874,11 @@ static const char* get_backtrace_json(void)
    char *json_output = malloc(sizeof(char)*current_len+1);
 
    if (!json_output) {
+      *free_backtrace_json = false;
       return construct_backtrace_json_static(nframes, strs);
    }
+
+   *free_backtrace_json = true;
 
    char * restrict out_str = json_output;
    *out_str++ = '[';
@@ -992,7 +1004,8 @@ static const char *create_crash_report_json(CODE_TYPE sigcode)
 
   // 2. Gather Backtrace
   // NOTE: The backtrace function captures the stack from this call back up.
-  const char *backtrace_json = get_backtrace_json();
+  bool free_backtrace_json;
+  const char *backtrace_json = get_backtrace_json(&free_backtrace_json);
 
   // 3. Format the final JSON string
   int len = asprintf(&json_buffer, 
@@ -1535,6 +1548,13 @@ static bool rerun_continue_answer(void)
    return false;
 }
 
+/**
+ * @brief Crash handler function
+ *
+ * This function tries to create and upload a JSON crash report
+ *
+ * @param sigcode  the signal value
+ */
 void crash_handler(CODE_TYPE sigcode)
 {
 
