@@ -13,8 +13,20 @@
 
 set -euo pipefail                              # Treat unset variables as an error
 
+if [ -n "${RHP_LDPATH:-}" ]; then
+case "$(uname -o)" in
+   "Darwin") export DYLD_FALLBACK_LIBRARY_PATH="$RHP_LDPATH";
+       ;;
+
+   *) ;;
+esac
+
+
+   export 
+fi
+
 for d in "$(dirname "$0")"/*/; do
    if [[ -f "$d"/test.sh ]]; then 
-      bash "$d"/test.sh
+      exec "$d"/test.sh
    fi
 done
