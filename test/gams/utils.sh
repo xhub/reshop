@@ -181,7 +181,8 @@ run_all_gms() {
    # Start tests
    for f in *.gms
    do
-      cp "$f" "$TMPDIR"
+      # Copy gms and potentially other files (gdx)
+      cp "${f/.gms/}".* "$TMPDIR"
       e_subcase "Running $f"
       start_time=$(date +%s)
       cd "$TMPDIR";
