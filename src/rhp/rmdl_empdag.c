@@ -198,9 +198,11 @@ NONNULL static inline int arcVFdata2copyexprdat(CopyExprDat *cpydat)
    case ArcVFBasic:
       assert(isfinite(rarc->basic_dat.cst));
       cpydat->single.ei = rarc->basic_dat.ei;
-      cpydat->single.coeff_path = rarc->basic_dat.cst;
+      cpydat->single.coeff_path = 1.;
  
       cpydat->type = CopyExprSingle;
+      trace_empdag("[empdag/contraction] init data with equation #%u and coeff = %e\n",
+                   cpydat->single.ei, cpydat->single.coeff_path);
       break;
 
    case ArcVFMultipleBasic: {
@@ -236,6 +238,9 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
       cpydat_child->single.ei = arcdat->ei;
       cpydat_child->single.nlnode_addr = NULL;
       cpydat_child->single.coeff_path = arcdat->cst;
+
+      trace_empdag("[empdag/contraction] init data with equation '%s' and coeff = %e\n",
+                   mdl_printequname(mdl, arcdat->ei), cpydat_child->single.coeff_path);
       return OK;
 
    case CopyExprSingle: {
@@ -263,8 +268,9 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
 
       cpydat_child->single.ei = e->idx;
 
-      trace_empdag("[empdag/contraction] copying objective equation '%s' into '%s'\n",
-                   mdl_printequname(mdl, eobj->idx), mdl_printequname2(mdl, e->idx));
+      trace_empdag("[empdag/contraction] copying objective equation '%s' into '%s'\n\tcoeff = %e = %e * %e; nlnode_addr = %p\n",
+                   mdl_printequname(mdl, eobj->idx), mdl_printequname2(mdl, e->idx),
+                   coeff_path, arcdat->cst, cpydat_single->coeff_path, (void*)nlnode_addr);
 
       Container *ctr = &mdl->ctr;
       NlTree *dtree = e->tree;

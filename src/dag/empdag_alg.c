@@ -146,8 +146,8 @@ typedef struct empdag_dfs {
    DfsState * restrict nodes_stat;
    unsigned * restrict preorder;          /**< Nodal timestamp in preorder fashion */
    unsigned * restrict postorder;         /**< Nodal timestamp postorder fashion */
-   unsigned * restrict topo_order;        /**< EMPDAG topological order */
-   unsigned * restrict topo_order_revidx; /**< EMPDAG reverse topological order */
+   unsigned * restrict topo_order;        /**< EMPDAG topological order (tidx -> nidx)*/
+   unsigned * restrict topo_order_nidx2tidx; /**< EMPDAG topological order for each node (nidx -> tidx)*/
    DagMpPpty * restrict mp_ppty;
    DagNashPpty * restrict nash_ppty;
    bool * restrict processed_vi;
@@ -389,7 +389,7 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    CALLOC_(dfsdata->preorder, unsigned, num_nodes);
    CALLOC_(dfsdata->postorder, unsigned, num_nodes);
    CALLOC_(dfsdata->topo_order, unsigned, num_nodes);
-   CALLOC_(dfsdata->topo_order_revidx, unsigned, num_nodes);
+   CALLOC_(dfsdata->topo_order_nidx2tidx, unsigned, num_nodes);
    MALLOC_(dfsdata->mp_ppty, DagMpPpty, num_mps);
    MALLOC_(dfsdata->nash_ppty, DagNashPpty, num_nash);
 
@@ -411,7 +411,7 @@ void dfsdata_free(EmpDagDfsData *dfsdata)
    FREE(dfsdata->preorder);
    FREE(dfsdata->postorder);
    FREE(dfsdata->topo_order);
-   FREE(dfsdata->topo_order_revidx);
+   FREE(dfsdata->topo_order_nidx2tidx);
    FREE(dfsdata->mp_ppty);
    FREE(dfsdata->nash_ppty);
    FREE(dfsdata->processed_vi);
@@ -697,7 +697,7 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
     * Post order: set the topo order
     * --------------------------------------------------------------------- */
 
-   dfsdata->topo_order_revidx[node_idx] = dfsdata->num_visited;
+   dfsdata->topo_order_nidx2tidx[node_idx] = dfsdata->num_visited;
    dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
 
    dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
@@ -779,7 +779,7 @@ int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
       S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, node_idx));
    }
 
-   dfsdata->topo_order_revidx[node_idx] = dfsdata->num_visited;
+   dfsdata->topo_order_nidx2tidx[node_idx] = dfsdata->num_visited;
    dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
 
    dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
@@ -845,7 +845,7 @@ int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathd
    pathdata_child.pathtype = DfsPathCtrl;
    S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, node_idx));
 
-   dfsdata->topo_order_revidx[node_idx] = dfsdata->num_visited;
+   dfsdata->topo_order_nidx2tidx[node_idx] = dfsdata->num_visited;
    dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
 
    dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
@@ -905,7 +905,7 @@ int dfs_nash(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata
       }
    }
 
-   dfsdata->topo_order_revidx[node_idx] = dfsdata->num_visited;
+   dfsdata->topo_order_nidx2tidx[node_idx] = dfsdata->num_visited;
    dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
 
    dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
@@ -1757,8 +1757,8 @@ _hack_skip_analysis_dual: ;
       for (unsigned i = 0; i < num_adversarial; ++i) {
          mpid_t mpid = mps_id[i];
          mpid2sort[i].mpid = mpid;
-         assert(dfsdata.topo_order_revidx[mpid] <= INT_MAX);
-         mpid2sort[i].vi = (rhp_idx)dfsdata.topo_order_revidx[mpid];
+         assert(dfsdata.topo_order_nidx2tidx[mpid] <= INT_MAX);
+         mpid2sort[i].vi = (rhp_idx)dfsdata.topo_order_nidx2tidx[mpid];
       }
 
       empdag_sort_tim_sort(mpid2sort, num_adversarial);
@@ -1794,8 +1794,8 @@ _hack_skip_analysis_dual: ;
       for (unsigned i = 0; i < num_mps_newly_created; ++i) {
          mpid_t mpid = mps_id[i];
          mpid2sort[i].mpid = mpid;
-         assert(dfsdata.topo_order_revidx[mpid] <= INT_MAX);
-         mpid2sort[i].vi = (rhp_idx)dfsdata.topo_order_revidx[mpid];
+         assert(dfsdata.topo_order_nidx2tidx[mpid] <= INT_MAX);
+         mpid2sort[i].vi = (rhp_idx)dfsdata.topo_order_nidx2tidx[mpid];
       }
 
       empdag_sort_tim_sort(mpid2sort, num_mps_newly_created);
