@@ -27,6 +27,6 @@ fi
 
 for d in "$(dirname "$0")"/*/; do
    if [[ -f "$d"/test.sh ]]; then 
-      exec "$d"/test.sh
+      bash "$d"/test.sh
    fi
 done
