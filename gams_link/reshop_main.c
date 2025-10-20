@@ -13,12 +13,13 @@
 #define GMS_CONFIG_FILE "gmscmpun.txt"
 #endif
 
-#define GAMSSOLVER_ID rhp
-/* TODO: support modifyproblem */
-//#define GAMSSOLVER_HAVEMODIFYPROBLEM
-#include "GamsEntryPoints_tpl.c"
-
-#define EPNAME(FNAME) GAMSSOLVER_CONCAT(GAMSSOLVER_ID, FNAME)
+#ifdef _WIN32
+# define DllExport __declspec(dllexport)
+#elif defined(__GNUC__)
+# define DllExport __attribute__((__visibility__("default")))
+#else
+# define DllExport
+#endif
 
 #ifndef _WIN32
 __attribute__((constructor))
@@ -80,10 +81,11 @@ BOOL WINAPI DllMain( HINSTANCE hInst, DWORD reason, LPVOID reserved)
 /** @brief Create a RESHOP object.
  *
  *  @param Cptr        RESHOP object is stored to jh
- *  @param msgbuf    message buffer to which error string is printed
- *  @param msgbuflen length of the message buffer
+ *  @param msgBuf    message buffer to which error string is printed
+ *  @param msgBufLen length of the message buffer
  */
-DllExport int STDCALL EPNAME(Create)(void **Cptr, char *msgBuf, int msgBufLen)
+DllExport int rhpCreate(void **Cptr, char *msgBuf, int msgBufLen);
+int rhpCreate(void **Cptr, char *msgBuf, int msgBufLen)
 {
    rhpRec_t **jh = (rhpRec_t **)Cptr;
    msgBuf[0] = '\0';
@@ -101,7 +103,8 @@ DllExport int STDCALL EPNAME(Create)(void **Cptr, char *msgBuf, int msgBufLen)
  *
  *  @param Cptr    the ReSHOP object we are to destroy
  */
-DllExport void STDCALL EPNAME(Free)( void** Cptr)
+DllExport void rhpFree(void** Cptr);
+void rhpFree(void** Cptr)
 {
    if (!Cptr || !*Cptr) { return; }
 
@@ -133,12 +136,12 @@ DllExport void STDCALL EPNAME(Free)( void** Cptr)
  *
  *  @param Cptr ReSHOP object
  *  @param gh   GMO object RESHOP is to use
- *  @param oh   option object RESHOP is to use
  *
  *  @return status 0 if successful
  *                 1 otherwise
  */
-DllExport int STDCALL EPNAME(ReadyAPI)(void* Cptr, gmoHandle_t gh)
+DllExport int rhpReadyAPI(void* Cptr, gmoHandle_t gh);
+int rhpReadyAPI(void* Cptr, gmoHandle_t gh)
 {
    char msg[GMS_SSSIZE], sysdir[GMS_SSSIZE];
    int rc = 0;
@@ -367,7 +370,8 @@ _exit:
    return rc;
 }
 
-DllExport int STDCALL GAMSSOLVER_CONCAT(GAMSSOLVER_ID,CallSolver)(void* Cptr)
+DllExport int rhpCallSolver(void* Cptr);
+int rhpCallSolver(void* Cptr)
 {
    rhpRec_t *jh = (rhpRec_t *)Cptr;
    int rc;
@@ -453,3 +457,5 @@ _exit:
 
    return rc;
 }
+
+/* TODO: support modifyproblem */
