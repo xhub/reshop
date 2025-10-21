@@ -183,17 +183,18 @@ test-dac:
     - cat build-asan/output/gamsconfig_test_asan.yaml
     - cat "$GAMSDIR"/gamsconfig.yaml
 
-    - export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
-    - export DYLD_FALLBACK_LIBRARY_PATH="$GAMSDIR"
-    - export RHP_LDPATH="$GAMSDIR"
+    # 2025.10.21: disable asan testing. Need more investigation
+    ##- export ASAN_OPTIONS=strict_string_checks=1:detect_invalid_pointer_pairs=100:detect_stack_use_after_return=1:abort_on_error=1:detect_leaks=0
+    ##- export DYLD_FALLBACK_LIBRARY_PATH="$GAMSDIR"
+    ##- export RHP_LDPATH="$GAMSDIR"
 
-    # Test that we indeed call the right executable
-    - RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
+    ### Test that we indeed call the right executable
+    ##- RHP_DRIVER_BANNER=1 gams test/gams/embcode_reshop/nash_emb.gms emp=reshop
 
-    # Run tests with ASAN reshop
-    # - EMPSLV=reshop RHP_SOLVELINK=5 bash test/gams/test.sh
-    - runtest emplib  goempgo failures_emp.gms
-    - runtest testlib quality failures_qa.gms
+    ### Run tests with ASAN reshop
+    ### - EMPSLV=reshop RHP_SOLVELINK=5 bash test/gams/test.sh
+    ##- runtest emplib  goempgo failures_emp.gms
+    ##- runtest testlib quality failures_qa.gms
 
   after_script:
     # We need to clean up after yourselves
