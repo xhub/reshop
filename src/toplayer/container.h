@@ -244,6 +244,18 @@ static inline bool ctr_is_rhp(const Container *ctr)
    }
 }
 
+/**
+ * @brief Return true when the container has metadata
+ *
+ * @param ctr  the container
+ *
+ * @return     true if the container has metadata
+ */
+static inline bool ctr_hasmetadata(const Container *ctr)
+{
+   return ctr->equmeta && ctr->varmeta;
+}
+
 static inline NlPool *ctr_getpool(Container *ctr) { return ctr->nlpool; }
 
 bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid) NONNULL;

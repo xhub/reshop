@@ -103,12 +103,12 @@ printout(PO_TRACE_EMPINTERP, "[%s] " fmt, opcodes_name(instr), __VA_ARGS__);
  * --------------------------------------------------------------------- */
 #define BINARY_CMP(vm, valueType, op) \
     do { \
-      push(vm, BOOL_VAL(valueType(pop(vm)) op valueType(pop(vm)))); \
+      vmstack_push(vm, BOOL_VAL(valueType(vmstack_pop(vm)) op valueType(vmstack_pop(vm)))); \
     } while (false)
 
 #define BINARY_OP(vm, op) \
     do { \
-      push(vm, NUMBER_VAL(AS_NUMBER((pop(vm)) op AS_NUMBER(pop(vm))))); \
+      vmstack_push(vm, NUMBER_VAL(AS_NUMBER((vmstack_pop(vm)) op AS_NUMBER(vmstack_pop(vm))))); \
     } while (false)
 
 
@@ -372,28 +372,28 @@ NONNULL static int vmdata_consume_scalardata(VmData *data, double *coeff)
 
 
 
-NONNULL static inline void push(struct empvm *vm, VmValue val) {
+NONNULL static inline void vmstack_push(struct empvm *vm, VmValue val) {
    if (O_Output & PO_TRACE_EMPINTERP) {
-      trace_empinterp("pushed     ");
+      trace_empinterp(" --> pushed     ");
       print_vmval_full(val, vm);
    }
    *vm->stack_top = val;
    vm->stack_top++;
 }
 
-NONNULL static inline VmValue pop(struct empvm *vm) {
+NONNULL static inline VmValue vmstack_pop(struct empvm *vm) {
   vm->stack_top--;
   assert(vm->stack_top >= vm->stack);
   DEBUGVMRUN_EXEC(print_vmval_full(*vm->stack_top, vm));
   return *vm->stack_top;
 }
 
-NONNULL static inline void stack_mvback(struct empvm *vm, unsigned nb) {
+NONNULL static inline void vmstack_mvback(struct empvm *vm, unsigned nb) {
   assert(vm->stack_top >= vm->stack+nb);
   vm->stack_top -= nb;
 }
 
-static inline VmValue vmpeek(struct empvm *vm, unsigned distance) {
+static inline VmValue vmstack_peek(struct empvm *vm, unsigned distance) {
   assert(vm->stack_top - vm->stack >= 1 + distance);
   return vm->stack_top[-(ptrdiff_t)(1 + distance)];
 }
@@ -801,25 +801,25 @@ int empvm_run(struct empvm *vm)
       switch (instr) {
       case OP_PUSH_GIDX: {
          VmValue val = read_global(vm);
-         push(vm, val);
+         vmstack_push(vm, val);
          break;
       }
       case OP_PUSH_BYTE: {
          uint8_t val = READ_BYTE(vm);
-         push(vm, UINT_VAL(val));
+         vmstack_push(vm, UINT_VAL(val));
          break;
       }
       case OP_PUSH_LIDX: {
          uint8_t slot = READ_BYTE(vm);
-         push(vm, vm->locals[slot]);
+         vmstack_push(vm, vm->locals[slot]);
          break;
       }
       case OP_PUSH_VMUINT: {
-         push(vm, UINT_VAL(READ_VMUINT(vm)));
+         vmstack_push(vm, UINT_VAL(READ_VMUINT(vm)));
          break;
       }
       case OP_PUSH_VMINT: {
-         push(vm, INT_VAL(READ_VMINT(vm)));
+         vmstack_push(vm, INT_VAL(READ_VMINT(vm)));
          break;
       }
       case OP_UPDATE_LOOPVAR: {
@@ -938,8 +938,9 @@ int empvm_run(struct empvm *vm)
 
             if (RHP_UNLIKELY(uel <= 0)) {
                int offset;
-               error("[empvm] ERROR: %nelement '%s' not found in the model instance, but it "
-                     "is part of the GAMS database.\n", &offset, uelstr);
+               error("\n\n[empvm] ERROR: %nset element '%s' not found in the model instance, "
+                     "but it is part of the GAMS database.\n", &offset, uelstr);
+               offset -= 2;
                error("%*sThis happened while selecting said element at dim %u for %s %.*s\n",
                      offset, "", idx+1, ident_fmtargs(&symiter->ident));
 
@@ -1111,12 +1112,27 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          DEBUGVMRUN("lidx@%u <- %u", lidx, AS_UINT(vm->locals[lidx]));
          break;
       }
+
       case OP_STACKTOP_COPYTO_LOCAL: {
          uint8_t lidx = READ_BYTE(vm);
-         vm->locals[lidx] = vmpeek(vm, 0);
+         vm->locals[lidx] = vmstack_peek(vm, 0);
          DEBUGVMRUN("lidx@%u <- %u", lidx, AS_UINT(vm->locals[lidx]));
          break;
       }
+
+      case OP_STACKTOP_INC: {
+         VmValue stacktop = vmstack_pop(vm);
+         if (IS_INT(stacktop)) {
+            vmstack_push(vm, INT_VAL(AS_INT(stacktop) + 1));
+         } else if (IS_UINT(stacktop)) {
+            vmstack_push(vm, UINT_VAL(AS_UINT(stacktop) + 1));
+         } else {
+            errormsg("\n\n[empvm] ERROR: stack stop is not an (unsigned int)\n");
+            goto _exit;
+         }
+         break;
+      }
+
       case OP_LSET_ADD: {
          GIDX_TYPE gidx = READ_GIDX(vm);
          uint8_t slot = READ_BYTE(vm);
@@ -1215,20 +1231,20 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          vmvec->len++;
          break;
       }
-      case OP_NIL:      push(vm, NULL_VAL);              break;
-      case OP_TRUE:     push(vm, BOOL_VAL(true));       break;
-      case OP_FALSE:    push(vm, BOOL_VAL(false));      break;
-      case OP_POP:      pop(vm);                        break;
+      case OP_NIL:      vmstack_push(vm, NULL_VAL);              break;
+      case OP_TRUE:     vmstack_push(vm, BOOL_VAL(true));       break;
+      case OP_FALSE:    vmstack_push(vm, BOOL_VAL(false));      break;
+      case OP_POP:      vmstack_pop(vm);                        break;
       case OP_EQUAL: {
-         VmValue val1 = pop(vm);
-         VmValue val2 = pop(vm);
+         VmValue val1 = vmstack_pop(vm);
+         VmValue val2 = vmstack_pop(vm);
          if (IS_LOOPVAR(val1)) {
             val1 = INT_VAL(AS_LOOPVAR(val1));
          }
          if (IS_LOOPVAR(val2)) {
             val1 = INT_VAL(AS_LOOPVAR(val1));
          }
-         push(vm, BOOL_VAL(val1 == val2));
+         vmstack_push(vm, BOOL_VAL(val1 == val2));
          break;
       }
 
@@ -1240,12 +1256,12 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
       case OP_DIVIDE:   BINARY_OP(vm,  /);              break;
       case OP_NOT: {
          assert(IS_BOOL(vm->stack_top[-1]));
-         push(vm, BOOL_VAL(! AS_BOOL(pop(vm))));
+         vmstack_push(vm, BOOL_VAL(! AS_BOOL(vmstack_pop(vm))));
          break;
       }
 
       case OP_NEGATE:
-         push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
+         vmstack_push(vm, NUMBER_VAL(-AS_NUMBER(vmstack_pop(vm))));
          break;
 
       case OP_JUMP: {
@@ -1256,25 +1272,25 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
       case OP_JUMP_IF_TRUE: {
          uint16_t offset = READ_SHORT(vm);
-         if (AS_BOOL(pop(vm))) vm->code.ip += offset;
+         if (AS_BOOL(vmstack_pop(vm))) vm->code.ip += offset;
          break;
       }
 
       case OP_JUMP_IF_FALSE: {
          uint16_t offset = READ_SHORT(vm);
-         if (!AS_BOOL(pop(vm))) vm->code.ip += offset;
+         if (!AS_BOOL(vmstack_pop(vm))) vm->code.ip += offset;
          break;
       }
 
       case OP_JUMP_IF_TRUE_NOPOP: {
          uint16_t offset = READ_SHORT(vm);
-         if (AS_BOOL(vmpeek(vm, 0))) vm->code.ip += offset;
+         if (AS_BOOL(vmstack_peek(vm, 0))) vm->code.ip += offset;
          break;
       }
 
       case OP_JUMP_IF_FALSE_NOPOP: {
          uint16_t offset = READ_SHORT(vm);
-         if (!AS_BOOL(vmpeek(vm, 0))) vm->code.ip += offset;
+         if (!AS_BOOL(vmstack_peek(vm, 0))) vm->code.ip += offset;
          break;
       }
 
@@ -1286,7 +1302,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
 
       case OP_JUMP_BACK_IF_FALSE: {
          uint16_t offset = READ_SHORT(vm);
-         if (!AS_BOOL(pop(vm))) vm->code.ip -= offset;
+         if (!AS_BOOL(vmstack_pop(vm))) vm->code.ip -= offset;
          break;
       }
 
@@ -1345,7 +1361,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          DEBUGVMRUN("%s", "  -->  ");
          })
 
-         push(vm, BOOL_VAL(res));
+         vmstack_push(vm, BOOL_VAL(res));
          break;
       }
 
@@ -1367,7 +1383,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          }
          /* By convention, the "top" of the call stack is the object worked on
           * and we keep it here to avoid pushing it later on*/
-         if (argc > 1) stack_mvback(vm, argc-1);
+         if (argc > 1) vmstack_mvback(vm, argc-1);
          break;
       }
 
@@ -1389,8 +1405,8 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             return Error_RuntimeError;
          }
 
-         stack_mvback(vm, argc);
-         push(vm, callobj.obj2vmval(o));
+         vmstack_mvback(vm, argc);
+         vmstack_push(vm, callobj.obj2vmval(o));
 
          if (callobj.get_uid) {
             vm->data.state.uid_parent = callobj.get_uid(o);
@@ -1667,7 +1683,7 @@ _exit:
 
    error("%*s%.*s\n", poffset, "", (int)(end-start), start);
 
-   vm->data.interp->err_shown = true;
+   vm->data.interp->state.err_shown = true;
 
    /* Very important, reset ip, so that free happends at the right place */
    vm->code.ip = vm->instr_start;

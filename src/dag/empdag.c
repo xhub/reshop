@@ -269,7 +269,7 @@ static int empdag_infertype(EmpDag *empdag)
    }
 
    empdag->type = EmpDag_Complex;
-      
+ 
    trace_empdag("[empdag] the EMPDAG of %s model '%.*s' #%u has type %s\n",
                 mdl_fmtargs(empdag->mdl), empdag_typename(empdag->type));
 
@@ -311,11 +311,9 @@ int empdag_fini(EmpDag *empdag)
    * Second Part: check EMPDAG, infer the type
    * ---------------------------------------------------------------------- */
 
-
    S_CHECK(empdag_check(empdag));
 
    S_CHECK(empdag_infertype(empdag));
-
 
    empdag->finalized = true;
 

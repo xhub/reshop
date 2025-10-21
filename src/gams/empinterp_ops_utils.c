@@ -174,7 +174,7 @@ gmd_search_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *i
  */
 int gmd_search_ident(Interpreter * restrict interp, IdentData * restrict ident)
 {
-   struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
+   struct emptok *tok = !interp->state.peekisactive ? &interp->cur : &interp->peek;
    ident_init(ident, tok);
 
    size_t lexeme_len = ident->lexeme.len;

@@ -6,12 +6,12 @@
 #include "empparser.h"
 #include "status.h"
 
-#define PARSER_EXPECTS(_parser, _msg, ...) \
-   S_CHECK(tok_expects(&(_parser)->cur, _msg,      VA_NARG_TYPED(TokenType, __VA_ARGS__), __VA_ARGS__))
-#define PARSER_EXPECTS_EXIT(_parser, _msg, ...) \
-   S_CHECK_EXIT(tok_expects(&(_parser)->cur, _msg, VA_NARG_TYPED(TokenType, __VA_ARGS__), __VA_ARGS__))
-#define PARSER_EXPECTS_PEEK(_parser, _msg, ...) \
-   S_CHECK(tok_expects(&(_parser)->peek, _msg,     VA_NARG_TYPED(TokenType, __VA_ARGS__), __VA_ARGS__))
+#define PARSER_EXPECTS(_interp, _msg, ...) \
+   S_CHECK(tok_expects(&(_interp)->cur, _msg,      VA_NARG_TYPED(TokenType, __VA_ARGS__), __VA_ARGS__))
+#define PARSER_EXPECTS_EXIT(_interp, _msg, ...) \
+   S_CHECK_EXIT(tok_expects(&(_interp)->cur, _msg, VA_NARG_TYPED(TokenType, __VA_ARGS__), __VA_ARGS__))
+#define parser_expects_peek(_interp, _msg, ...) \
+   S_CHECK(tok_expects(&(_interp)->peek, _msg,     VA_NARG_TYPED(TokenType, __VA_ARGS__), __VA_ARGS__))
 
 #define _TOK_GETSTRTMP(_tok, _mdl, _tmpstr) \
   struct ctrmem CTRMEM working_mem = {.ptr = NULL, .ctr = &_mdl->ctr}; \
@@ -39,7 +39,7 @@ int peek(Interpreter *interp, unsigned * restrict p, TokenType *toktype) NONNULL
 int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
                      const char *msg, unsigned argc, ...) NONNULL;
 
-#define RESOLVE_IDENTAS(interp, data, msg, ...) \
+#define resolve_identas(interp, data, msg, ...) \
    resolve_identas_(interp, data, msg, VA_NARG_TYPED(IdentType, __VA_ARGS__), __VA_ARGS__)
 
 

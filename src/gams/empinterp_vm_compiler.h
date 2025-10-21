@@ -9,10 +9,10 @@
 #include "empinterp_fwd.h"
 
 typedef struct {
-   LIDX_TYPE iter_lidx;    /**< LocalVar index for the iterator            */
-   LIDX_TYPE idx_lidx;     /**< LocalVar index for the iterator index      */
-   LIDX_TYPE idxmax_lidx;  /**< localVar index for the max of the iterator index */
-   GIDX_TYPE idxmax_gidx;  /**< Global index for the max of the iterator index */
+   LIDX_TYPE iter_lidx;            /**< LocalVar index for the iterator            */
+   LIDX_TYPE idx_lidx;             /**< LocalVar index for the iterator index      */
+   LIDX_TYPE idxmax_lidx;          /**< localVar index for the max of the iterator index */
+   GIDX_TYPE idxmax_gidx;          /**< Global index for the max of the iterator index */
    unsigned tapepos_at_loopstart;  /**< Position of the loop start in the code */
 } IteratorData;
 

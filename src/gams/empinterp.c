@@ -53,10 +53,10 @@ static void finalization_init(InterpFinalization *finalize)
 
 void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 {
-   interp->health = PARSER_OK;
-   interp->peekisactive = false;
-   interp->read_gms_symbol = true;
-   interp->err_shown = false;
+   interp->state.health = PARSER_OK;
+   interp->state.peekisactive = false;
+   interp->state.read_gms_symbol = true;
+   interp->state.err_shown = false;
    interp->linenr = 1;
    interp->read = 0;
    interp->linestart = NULL;
@@ -85,7 +85,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    emptok_init(&interp->peek, 0);
    emptok_init(&interp->pre, 0);
 
-   parsedkwds_init(&interp->state);
+   parsedkwds_init(&interp->state.parsed_kwds);
    interp->last_kw_info.type = TOK_UNSET;
    interp->last_symbol.type = IdentNotFound;
    finalization_init(&interp->finalize);
@@ -668,7 +668,7 @@ int resolve_identas_(Interpreter * restrict interp, IdentData *ident,
    }
 
    if (type == IdentNotFound) {
-      Token *tok = interp->peekisactive ? &interp->peek : &interp->cur;
+      Token *tok = interp->state.peekisactive ? &interp->peek : &interp->cur;
       error("[empinterp] ERROR on line %u: ident '%.*s' is unknown\n",
             tok->linenr, emptok_getstrlen(tok), emptok_getstrstart(tok));
       status = Error_EMPIncorrectInput;

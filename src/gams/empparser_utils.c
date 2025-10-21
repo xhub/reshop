@@ -42,7 +42,7 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
 
    } else {
       //S_CHECK(advance(interp, p, &toktype));
-      PARSER_EXPECTS_PEEK(interp, "A set or variable is required", TOK_GMS_SET,
+      parser_expects_peek(interp, "A set or variable is required", TOK_GMS_SET,
                           TOK_IDENT, TOK_COLON, TOK_STAR);
    }
 
@@ -82,7 +82,7 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
     * --------------------------------------------------------------------- */
    assert(toktype == TOK_IDENT);
 
-   RESOLVE_IDENTAS(interp, ident, "GAMS index must fulfill these conditions.",
+   resolve_identas(interp, ident, "GAMS index must fulfill these conditions.",
                    IdentLoopIterator, IdentLocalSet, IdentSet);
 
    switch (ident->type) {
@@ -239,7 +239,7 @@ int resolve_tokasident(Interpreter *interp, IdentData *ident)
     * --------------------------------------------------------------------- */
 
    char *identstr = NULL;
-   struct emptok *tok = !interp->peekisactive ? &interp->cur : &interp->peek;
+   struct emptok *tok = !interp->state.peekisactive ? &interp->cur : &interp->peek;
    ident_init(ident, tok);
 
    if (resolve_local(interp->compiler, ident)) {

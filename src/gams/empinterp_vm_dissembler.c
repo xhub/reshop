@@ -66,6 +66,7 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_LOCAL_COPYOBJLEN] = {{OPARG_LIDX}, {OPARG_IDENT_TYPE}, {OPARG_IDENT_IDX}},
    [OP_LOCAL_INC] = {{OPARG_LIDX},},
    [OP_STACKTOP_COPYTO_LOCAL] = {{OPARG_LIDX},},
+   [OP_STACKTOP_INC] = {{OPARG_NONE},},
    [OP_LSET_ADD] = {{OPARG_LSET_IDX},{OPARG_LIDX}},
    [OP_LSET_RESET] = {{OPARG_LSET_IDX},},
    [OP_LVEC_ADD] = {{OPARG_LVEC_IDX},{OPARG_LIDX}},
@@ -129,6 +130,7 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_LOCAL_COPYOBJLEN] = 3,
    [OP_LOCAL_INC] = 1,
    [OP_STACKTOP_COPYTO_LOCAL] = 1,
+   [OP_STACKTOP_INC] = 0,
    [OP_LSET_ADD] = 2,
    [OP_LSET_RESET] = 1,
    [OP_LVEC_ADD] = 2,
@@ -192,6 +194,7 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_LOCAL_COPYTO_LOCAL,"LOCAL_COPYTO_LOCAL") \
  DEFSTR(OP_LOCAL_INC,"LOCAL_INC") \
  DEFSTR(OP_STACKTOP_COPYTO_LOCAL,"STACKTOP_COPYTO_LOCAL") \
+ DEFSTR(OP_STACKTOP_INC,"STACKTOP_INC") \
  DEFSTR(OP_LSET_ADD,"LSET_ADD") \
  DEFSTR(OP_LSET_RESET,"LSET_RESET") \
  DEFSTR(OP_LVEC_ADD,"LVEC_ADD") \
@@ -219,6 +222,8 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_GMS_SYMBOL_READ_SIMPLE,"GMS_SYMBOL_READ_SIMPLE") \
  DEFSTR(OP_GMS_SYMBOL_READ_EXTEND,"GMS_SYMBOL_READ_EXTEND") \
  DEFSTR(OP_GMS_MEMBERSHIP_TEST,"GMS_MEMBERSHIP_TEST") \
+ DEFSTR(OP_GMS_SET_FIRST,"GMS_SET_FIRST") \
+ DEFSTR(OP_GMS_SET_LAST,"GMS_SET_LAST") \
  DEFSTR(OP_CALL_API,"CALL_API") \
  DEFSTR(OP_NEW_OBJ,"NEW_OBJ") \
  DEFSTR(OP_LINKLABELS_INIT,"LINKLABELS_INIT") \
@@ -261,14 +266,14 @@ static const unsigned opnames_offsets[] = {
 DEFINE_STR()
 };
 
-static_assert(sizeof(opnames_offsets)/sizeof(opnames_offsets[0]) == OP_MAXCODE,
+static_assert(ARRAY_SIZE(opnames_offsets) == OP_MAXCODE,
               "Check the sizes of rules and enum emptok_type");
 
 
 
-const char * opcodes_name(enum OpCode op)
+const char * opcodes_name(EmpVmOpCode op)
 {
-   if (op >= OP_MAXCODE) { return "unknown EmpVm opcode"; }   
+   if (op >= OP_MAXCODE) { return "unknown EmpVm opcode"; }
 
    return opnames.dummystr + opnames_offsets[op];
 }
@@ -295,7 +300,8 @@ static void print_globals(EmpVm *vm, unsigned mode)
       VmValue v = vm->globals.arr[i];
       printout(mode, "[%5d] %20s", i, vmval_typename(v));
 
-      if (IS_STR(v)) { printout(mode, "%30s\n", AS_STR(v));
+      if (IS_STR(v)) {
+         printout(mode, "%30s\n", AS_STR(v));
       } else if (IS_REGENTRY(v)) {
          DagRegisterEntry *regentry = AS_REGENTRY(v);
          printout(mode, "%30.*s\n", regentry->label_len, regentry->label);
@@ -313,6 +319,20 @@ static void print_globals(EmpVm *vm, unsigned mode)
       }
 
    }
+}
+
+static void print_u16(unsigned mode, const char *category, u16 gidx)
+{
+   /* Just in case we want to align
+   u8 ndigits;
+   if (gidx < 10)         { ndigits = 1; }
+   else if (gidx < 100)   { ndigits = 2; }
+   else if (gidx < 1000)  { ndigits = 3; }
+   else if (gidx < 10000) { ndigits = 4; }
+   else                   { ndigits = 5; }
+
+   printout(mode, "%*s@%u ", (int)(20-1-ndigits), category, gidx); */
+   printout(mode, "%20s@%-6u ", category, gidx);
 }
 
 int empvm_dissassemble(EmpVm *vm, unsigned mode)
@@ -384,22 +404,22 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
          case OPARG_GSET_IDX:
             val = READ_GIDX(vm);
             VM_CHK(valid_vmidx(val, vm->data.globals->sets.len, "global sets"));
-            printout(mode, "%20u ", val);
+            print_u16(mode, "gsets", val);
             break;
          case OPARG_LSET_IDX:
             val = READ_GIDX(vm);
             VM_CHK(valid_vmidx(val, vm->data.globals->localsets.len, "local sets"));
-            printout(mode, "%20u ", val);
+            print_u16(mode, "lsets", val);
             break;
          case OPARG_UINT_IDX:
             val = READ_GIDX(vm);
             VM_CHK(valid_vmidx(val, vm->uints.len, "VM uints"));
-            printout(mode, "%20u ", val);
+            print_u16(mode, "uints", val);
             break;
          case OPARG_INT_IDX:
             val = READ_GIDX(vm);
-            VM_CHK(valid_vmidx(val, vm->uints.len, "VM int"));
-            printout(mode, "%20d ", val);
+            VM_CHK(valid_vmidx(val, vm->ints.len, "VM ints"));
+            print_u16(mode, "ints", val);
             break;
          case OPARG_APICALL:
             val8 = READ_BYTE(vm);

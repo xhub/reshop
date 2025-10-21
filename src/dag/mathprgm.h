@@ -129,6 +129,9 @@ mpid_t mp_getid(const MathPrgm *mp) NONNULL;
 double mp_getobjjacval(const MathPrgm *mp) NONNULL;
 const char *mp_gettypestr(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumcons(const MathPrgm *mp) NONNULL;
+NONNULL static inline unsigned mp_getnumequs(const MathPrgm *mp) {
+   return mp->equs.len;
+}
 unsigned mp_getnumzerofunc(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumvars(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumoptvars(const MathPrgm *mp) NONNULL;

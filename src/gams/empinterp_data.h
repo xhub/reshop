@@ -33,7 +33,7 @@ typedef enum IdentType {
    IdentLocalScalar,
    IdentLocalVector,
    IdentLocalParam,
-   IdentLoopIterator,
+   IdentLoopIterator,   /**< A set that acts as a "loop" iterator */
    IdentAlias,
    IdentSet,
    IdentMultiSet,
@@ -62,7 +62,7 @@ typedef struct ident_data {
    IdentOrigin origin;  /**< Symbol origin                 */
    uint8_t dim;         /**< Dimension of the symbol       */
    Lexeme lexeme;       /**< Lexeme                        */
-   unsigned idx;        /**< 1-based index                 */
+   unsigned idx;        /**< index                         */
    void *ptr;           /**< Pointer associated with symbol */ 
 } IdentData;
 

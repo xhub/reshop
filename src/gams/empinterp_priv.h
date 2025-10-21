@@ -39,11 +39,11 @@ NONNULL void empinterp_free(Interpreter *interp);
 NONNULL static inline
 int parser_err(Interpreter* interp, const char *msg)
 {
-   if (interp->health & PARSER_PANIC) {
+   if (interp->state.health & PARSER_PANIC) {
       return Error_EMPIncorrectSyntax;
    }
 
-   interp->health |= PARSER_ERROR;
+   interp->state.health |= PARSER_ERROR;
 
    error("[empinterp] Parser error while processing file '%s'\n", interp->empinfo_fname);
    return tok_err(&interp->cur, TOK_UNSET, msg);
@@ -64,9 +64,9 @@ void parser_cpypeek2cur(Interpreter *interp)
 }
 
 NONNULL static inline
-void interp_peekseqstart(Interpreter *interp) { interp->peekisactive = true; }
+void interp_peekseqstart(Interpreter *interp) { interp->state.peekisactive = true; }
 NONNULL static inline
-void  interp_peekseqend(Interpreter *interp) { interp->peekisactive = false; }
+void  interp_peekseqend(Interpreter *interp) { interp->state.peekisactive = false; }
 
 NONNULL static inline
 void  _tok_empty(Token *tok)
@@ -194,94 +194,94 @@ static inline bool gmsindices_needcompmode(GmsIndicesData *indices)
 
 static inline bool _has_bilevel(const Interpreter *interp)
 {
-   return interp->state.has_bilevel;
+   return interp->state.parsed_kwds.has_bilevel;
 }
 
 static inline bool _has_dag(const Interpreter *interp)
 {
-   return interp->state.has_dag_node;
+   return interp->state.parsed_kwds.has_dag_node;
 }
 
 static inline bool _has_dualequ(const Interpreter *interp)
 {
-   return interp->state.has_dualequ;
+   return interp->state.parsed_kwds.has_dualequ;
 }
 
 static inline bool _has_equilibrium(const Interpreter *interp)
 {
-   return interp->state.has_equilibrium;
+   return interp->state.parsed_kwds.has_equilibrium;
 }
 
 static inline bool _has_implicit_Nash(const Interpreter *interp)
 {
-   return interp->state.has_implicit_Nash;
+   return interp->state.parsed_kwds.has_implicit_Nash;
 }
 
 static inline bool _has_single_mp(const Interpreter *interp)
 {
-   return interp->state.has_single_mp;
+   return interp->state.parsed_kwds.has_single_mp;
 }
 
 static inline bool is_simple_Nash(const Interpreter *interp)
 {
-   return interp->state.has_equilibrium || interp->state.has_implicit_Nash;
+   return interp->state.parsed_kwds.has_equilibrium || interp->state.parsed_kwds.has_implicit_Nash;
 }
 
 static inline bool _old_empinfo(const Interpreter *interp)
 {
-   return interp->state.has_equilibrium || interp->state.has_bilevel ||
-           interp->state.has_dualequ;
+   return interp->state.parsed_kwds.has_equilibrium || interp->state.parsed_kwds.has_bilevel ||
+           interp->state.parsed_kwds.has_dualequ;
 }
 
 static inline bool bilevel_once(const Interpreter *interp)
 {
-   return interp->state.has_bilevel || interp->state.bilevel_in_progress;
+   return interp->state.parsed_kwds.has_bilevel || interp->state.parsed_kwds.bilevel_in_progress;
 }
 
 static inline void bilevel_in_progress(Interpreter *interp)
 {
-   interp->state.bilevel_in_progress = true;
+   interp->state.parsed_kwds.bilevel_in_progress = true;
 }
 
 static inline void parsed_bilevel(Interpreter *interp)
 {
-   assert(interp->state.bilevel_in_progress);
-   interp->state.bilevel_in_progress = false;
-   interp->state.has_bilevel = true;
+   assert(interp->state.parsed_kwds.bilevel_in_progress);
+   interp->state.parsed_kwds.bilevel_in_progress = false;
+   interp->state.parsed_kwds.has_bilevel = true;
 }
 
 static inline void parsed_dag_node(Interpreter *interp)
 {
-   interp->state.has_dag_node = true;
+   interp->state.parsed_kwds.has_dag_node = true;
 }
 
 static inline void parsed_dualequ(Interpreter *interp)
 {
-   interp->state.has_dualequ = true;
+   interp->state.parsed_kwds.has_dualequ = true;
 }
 
 static inline void parsed_equilibrium(Interpreter *interp)
 {
-   interp->state.has_equilibrium = true;
+   interp->state.parsed_kwds.has_equilibrium = true;
 }
 
 static inline void parsed_single_mp(Interpreter *interp)
 {
-   interp->state.has_single_mp = true;
+   interp->state.parsed_kwds.has_single_mp = true;
 }
 
 static inline void _single_mp_to_implicit_Nash(Interpreter *interp)
 {
-   assert(interp->state.has_single_mp);
-   interp->state.has_single_mp = false;
-   interp->state.has_implicit_Nash = true;
+   assert(interp->state.parsed_kwds.has_single_mp);
+   interp->state.parsed_kwds.has_single_mp = false;
+   interp->state.parsed_kwds.has_implicit_Nash = true;
 }
 
 static inline bool interp_state_no_parent_seen(Interpreter *interp)
 {
-   InterpParsedKwds pk = interp->state;
-   return !(pk.has_equilibrium || pk.has_implicit_Nash || pk.has_dag_node ||
-            pk.bilevel_in_progress);
+   InterpParsedKwds *pk = &interp->state.parsed_kwds;
+   return !(pk->has_equilibrium || pk->has_implicit_Nash || pk->has_dag_node ||
+            pk->bilevel_in_progress);
 }
 
 static inline bool embmode(Interpreter *interp)

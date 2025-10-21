@@ -237,15 +237,9 @@ void interp_showerr(Interpreter *interp)
     * 5) Print the last line
     * --------------------------------------------------------------------- */
 
-   struct emptok * restrict tok;
+   if (interp->state.err_shown) { return ; }
 
-   if (interp->err_shown) { return ; }
-
-   if (interp->peekisactive) {
-      tok = &interp->peek;
-   } else {
-      tok = &interp->cur;
-   }
+   struct emptok * restrict tok = interp->state.peekisactive ? &interp->peek : &interp->cur;
 
    errormsg("[empparser] The error occurred while parsing the following statement:\n");
 
@@ -1918,9 +1912,13 @@ static inline bool toktype_dagnode_kw(TokenType toktype)
  */
 static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
 {
-   assert(interp->read_gms_symbol);
+   assert(interp->state.read_gms_symbol);
    /* From the current token get all the symbol info */
-   S_CHECK(tok2ident(&interp->cur, &interp->gms_sym_iterator.ident));
+   if (interp->state.peekisactive) {
+      S_CHECK(tok2ident(&interp->peek, &interp->gms_sym_iterator.ident));
+   } else {
+      S_CHECK(tok2ident(&interp->cur, &interp->gms_sym_iterator.ident));
+   }
 
    gmssym_iterator_init(interp);
 
@@ -1980,7 +1978,7 @@ int advance(Interpreter * restrict interp, unsigned * restrict p, TokenType *tok
    FALLTHRU
    case TOK_GMS_EQU:
    case TOK_GMS_VAR:
-      if (interp->read_gms_symbol) {
+      if (interp->state.read_gms_symbol) {
          return read_gms_symbol(interp, p);
       } else {
          return OK;
@@ -2332,9 +2330,10 @@ static int add_edge4label(Interpreter *interp, unsigned *p, imm_fn_label2resolve
    }
 
    bool switch_back_imm = false;
-   if (gmsindices_needcompmode(gmsindices)) {
+   if (compmode(interp) || gmsindices_needcompmode(gmsindices)) {
       S_CHECK(c_switch_to_compmode(interp, &switch_back_imm));
       S_CHECK(vm_fn(interp, p, identname, identname_len, gmsindices));
+
    } else {
 
       /* ---------------------------------------------------------------------
@@ -2456,7 +2455,7 @@ int parse_identasscalar(Interpreter *interp, unsigned *restrict p, double *val)
    IdentData ident;
    TokenType toktype;
 
-   S_CHECK(RESOLVE_IDENTAS(interp, &ident, "a scalar value is expected",
+   S_CHECK(resolve_identas(interp, &ident, "a scalar value is expected",
                            IdentScalar, IdentLocalScalar, IdentVector));
 
    const char *identstr = tok_dupident(&interp->cur);
@@ -2562,10 +2561,10 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
    unsigned param_gidx = UINT_MAX;
    DblScratch *scratch = &interp->cur.dscratch;
 
-   RESOLVE_IDENTAS(interp, &ident, "a GAMS parameter is expected",
-                   IdentScalar, IdentVector, IdentLocalVector);
+   S_CHECK(resolve_identas(interp, &ident, "a GAMS parameter is expected",
+                   IdentScalar, IdentVector, IdentLocalVector));
 
-   const char *identstr = tok_dupident(&interp->cur);
+   char *identstr = tok_dupident(&interp->cur);
    switch (ident.type) {
 
    case IdentScalar: {
@@ -2702,7 +2701,7 @@ static int parse_ident_asgamsparam(Interpreter * interp, unsigned * restrict p,
    }
 
 _exit:
-   FREE(identstr);
+   free(identstr);
 
    return status;
 }
@@ -3553,7 +3552,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
       /* Help the user understant his probable mistake */
       int offset;
       error("[empparser] %nERROR: while parsing '%.*s' MP starting on line %u: "
-            "the GAMS variable '%.*s' appeared a GAMS equation or an EMPDAG labels.\n",
+            "the GAMS variable '%.*s' appears AFTER a GAMS equation or an EMPDAG labels.\n",
             &offset, interp->last_kw_info.len, interp->last_kw_info.start,
             interp->last_kw_info.linenr, tok_fmtargs(&interp->cur));
       error("%*sAll variables associated with an MP must be provided before the "
@@ -3944,21 +3943,22 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
 
       if (first && toktype == TOK_IDENT) {
          IdentData ident;
-         RESOLVE_IDENTAS(interp, &ident, "a parameter is expected",
-                         IdentScalar, IdentVector, IdentLocalVector);
+         S_CHECK(resolve_identas(interp, &ident, "a parameter is expected",
+                                 IdentScalar, IdentVector, IdentLocalVector));
 
          identstr = tok_dupident(&interp->cur);
 
          switch (ident.type) {
+
          case IdentScalar: {
             unsigned idx = namedscalar_findbyname_nocase(&interp->globals.scalars, identstr);
             if (idx == UINT_MAX) {
-               error("[empinterp] unexpected runtime error: couldn't find scalar '%s'\n", identstr);
+               error("[empinterp] ERROR: couldn't find scalar '%s'\n", identstr);
                status = Error_EMPRuntimeError;
                goto _exit;
             }
-            double val_ = interp->globals.scalars.list[idx];
-            assert(isfinite(val_));
+
+            double val_ = interp->globals.scalars.list[idx]; assert(isfinite(val_));
             valp = val_;
             lindx++;
             break;

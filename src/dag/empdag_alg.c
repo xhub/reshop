@@ -1816,7 +1816,7 @@ _exit_analysis_loop:
    dfsdata_free(&dfsdata);
 
    if (num_issues > 0) {
-      error("[empdag:check] analysis yielded %u nodes with issues\n", num_issues);
+      error("\n[empdag:check] analysis yielded %u nodes with issues\n", num_issues);
       status = status == OK ? Error_EMPIncorrectInput : status;
    }
 

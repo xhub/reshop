@@ -39,6 +39,13 @@ NONNULL int parse_operator_kw_args(Interpreter * restrict interp, unsigned * res
                            unsigned op_kws_size, const OperatorKeyword *op_kws, void *dat);
 
 
+/**
+ * @brief Return true if the token type is any of '(', '{' or '['
+ *
+ * @param toktype  the token type
+ *
+ * @return         true if the token type is any of '(', '{' or '['
+ */
 static inline bool tok_isopeningdelimiter(TokenType toktype)
 {
    return (toktype == TOK_LPAREN || toktype == TOK_LBRACK || toktype == TOK_LBRACE);

@@ -393,12 +393,17 @@ typedef struct {
    mpid_t mp_owns_remaining_equs;
 } InterpFinalization;
 
-typedef struct interpreter {
+typedef struct {
    enum parser_health health;
    bool peekisactive;
    bool read_gms_symbol;
-   bool err_shown;               /**< Error message was already shown */
+   bool err_shown;                  /**< Error message was already shown */
+   InterpParsedKwds   parsed_kwds;  /**< Parsed keywords                 */
+} InterpState;
+
+typedef struct interpreter {
    unsigned linenr;              /**< Current line number             */
+   InterpState state;            /**< interpreter state               */
    size_t read;
    const char *linestart;
    const char *linestart_old;
@@ -422,7 +427,6 @@ typedef struct interpreter {
    Token pre;
 
    /* Parser state info */
-   InterpParsedKwds   state;
    KeywordLexemeInfo  last_kw_info;  /**< Last processed keyword                  */
    IdentData          last_symbol;   /**< Last seen symbol (used for UEL indices) */
    InterpFinalization finalize;

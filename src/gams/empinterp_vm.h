@@ -34,7 +34,7 @@
 #include "reshop_data.h"
 #include "var.h"
 
-typedef enum OpCode {
+typedef enum {
    OP_PUSH_GIDX,        // 1 arg: 16 bits offset
    OP_PUSH_BYTE,         // 1 arg: next instr
    OP_PUSH_LIDX,         // 1 arg: lidx
@@ -52,6 +52,7 @@ typedef enum OpCode {
    OP_LOCAL_COPYTO_LOCAL,
    OP_LOCAL_INC,
    OP_STACKTOP_COPYTO_LOCAL,
+   OP_STACKTOP_INC,
    OP_LSET_ADD,
    OP_LSET_RESET,
    OP_LVEC_ADD,
@@ -79,6 +80,8 @@ typedef enum OpCode {
    OP_GMS_SYMBOL_READ_SIMPLE, // 1 arg: a global idx
    OP_GMS_SYMBOL_READ_EXTEND,    // 1 arg: a global idx
    OP_GMS_MEMBERSHIP_TEST,   // 1 arg: a global idx; PUSH a BOOL on the stack
+   OP_GMS_SET_FIRST,         //
+   OP_GMS_SET_LAST,          //
    OP_EMPAPI_CALL,           // 2 args: api_idx in enum EmpApi and argc
    OP_NEW_OBJ,               // 1 arg is in enum EmpNewObj
    OP_LINKLABELS_INIT,
@@ -271,7 +274,7 @@ extern const unsigned empnewobjs_len;
 extern const char * const empapis_names[];
 extern const char * const empnewobjs_names[];
 
-const char* opcodes_name(enum OpCode op);
+const char* opcodes_name(EmpVmOpCode op);
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 #define STACK_MAX   UINT8_COUNT

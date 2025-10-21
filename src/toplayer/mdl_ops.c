@@ -1,6 +1,7 @@
 #include "ctrdat_rhp.h"
 #include "equvar_helpers.h"
 #include "filter_ops.h"
+#include "mathprgm.h"
 #include "mdl.h"
 #include "mdl_data.h"
 #include "mdl_ops.h"
@@ -21,17 +22,15 @@
 
 static void print_equvar_assignement_end(void)
 {
-   errormsg("\n\n[empdag] Fatal ERRORS were found. Remember that every variable "
-            "and equation in the model instance MUST be assigned to exactly one "
-            "MP node, except if\n"
+   errormsg("\n\n[empdag] Fatal ERRORS were found. Every variable and equation in the "
+            "model instance MUST be assigned to exactly one MP node, except if\n"
             "\t - the variable or equation is used to define a mapping via a 'deffn' or "
-            "'implicit' keyword\n"
+            "'implicit' keyword;\n"
             "\t - the variable or equation is shared among MP nodes, in which "
             "case it must be assigned to at least one MP node.\n\n"
             "\t To remove an equation from the model instance, omit if from the "
-            "'model' definition\n\n");
+            "'model' definition.\n\n");
 }
-
 
 int mdl_copysolveoptions(Model *mdl, const Model *mdl_src)
 {
@@ -245,25 +244,105 @@ int mdl_checkmetadata(Model *mdl)
       S_CHECK(mdl_finalize(mdl));
    }
 
-   ModelType probtype;
-   EmpInfo *empinfo = &mdl->empinfo;
-   S_CHECK(mdl_gettype(mdl, &probtype));
+   ModelType mdltype;
+   S_CHECK(mdl_gettype(mdl, &mdltype));
 
-   if (!mdltype_hasmetadata(probtype) || ((probtype == MdlType_emp) &&
-      (empdag_isopt(&empinfo->empdag) || empdag_isempty(&empinfo->empdag)))) {
+   Container *ctr = &mdl->ctr;
+
+   /* We still need to check that all equations and variables are assigned */
+   if (!ctr_hasmetadata(ctr) && (mdltype == MdlType_emp) && empdag_isopt(empdag)) {
+      int status = OK;
+      unsigned n = mdl_nvars(mdl);
+      unsigned m = mdl_nequs(mdl);
+ 
+      mpid_t mpid = uid2id(empdag->uid_root);
+
+      MathPrgm *mp = empdag->mps.arr[mpid];
+      unsigned n_mp = mp_getnumvars(mp);
+      unsigned m_mp = mp_getnumequs(mp);
+
+      if (n > n_mp) {
+
+         int offset;
+         error("\n[model] %nERROR: there are %u unassigned variable%s:\n", &offset, n-n_mp,
+               n-n_mp > 1 ? "s" : "");
+         offset--; /* Because of '\n' */
+
+         const rhp_idx * restrict vis = mp->vars.arr;
+         unsigned lenv = mp->vars.len;
+
+         for (unsigned i = 0, j = 0; i < n; ++i) {
+
+            if (*vis > i) {
+               error("%*s%s\n", offset, "", mdl_printvarname(mdl, i));
+            } else if (++j < lenv) {
+               vis++;
+            } else {
+               for (unsigned k = i+1; k < n; k++) {
+                  error("%*s%s\n", offset, "", mdl_printvarname(mdl, k));
+               }
+               break;
+            }
+         }
+
+         status = Error_EMPIncorrectInput;
+
+      } else if (n < n_mp) {
+         error("\n[model] ERROR: the MP(%s) has more variables %u than there is in the model "
+               ": %u\n", mp_getname(mp), n_mp, n);
+         status = Error_EMPRuntimeError;
+      }
+
+      if (m > m_mp) {
+         int offset;
+         error("\n[model] %nERROR: there are %u unassigned equation%s:\n", &offset, m-m_mp,
+               m-m_mp > 1 ? "s" : "");
+         offset--; /* Because of '\n' */
+
+         const rhp_idx * restrict eis = mp->equs.arr;
+         unsigned lenv = mp->equs.len;
+
+         for (unsigned i = 0, j = 0; i < m; ++i) {
+            if (*eis > i) {
+               error("%*s%s\n", offset, "", mdl_printequname(mdl, i));
+            } else if (++j < lenv) {
+               eis++;
+            } else {
+               for (unsigned k = i+1; k < m; k++) {
+                  error("%*s%s\n", offset, "", mdl_printequname(mdl, k));
+               }
+               break;
+            }
+         }
+
+         status = Error_EMPIncorrectInput;
+
+      } else if (m < m_mp) {
+         error("\n[model] ERROR: the MP(%s) has more equations %u than there is in the model "
+               ": %u\n", mp_getname(mp), m_mp, m);
+         status = Error_EMPRuntimeError;
+      }
+
+      if (status == Error_EMPIncorrectInput) {
+         print_equvar_assignement_end();
+      }
+
+      return status;
+   }
+
+   if (!mdltype_hasmetadata(mdltype) || ((mdltype == MdlType_emp) && (empdag_isempty(empdag)))) {
      return OK;
    }
 
-   Container *ctr = &mdl->ctr;
    if (!ctr->varmeta || !ctr->equmeta) {
       errormsg("[metadata check]  ERROR: varmeta or equmeta is NULL\n");
       return Error_NullPointer;
    }
 
    /* TODO: GITLAB#70 */
-   if (probtype == MdlType_mpec) { return OK; }
+   if (mdltype == MdlType_mpec) { return OK; }
 
-   if (probtype == MdlType_mcp) {
+   if (mdltype == MdlType_mcp) {
       return mdl_chk_mcpmetadata(mdl);
    }
 
@@ -304,7 +383,7 @@ int mdl_checkmetadata(Model *mdl)
       const VarMeta var_md = ctr->varmeta[i];
 
       mpid_t mpid = var_md.mp_id;
-      if (!valid_mpid(mpid)) {
+      if (!valid_mpid(mpid) && var_md.type != VarDefiningMap) {
          errmc("[empdag] ERROR: variable '%s' is not attached to any MP node\n",
                ctr_printvarname(ctr, i));
          num_unattached_vars++;
@@ -450,7 +529,7 @@ int mdl_checkmetadata(Model *mdl)
       const struct equ_meta *equ_md = &ctr->equmeta[i];
 
       mpid_t mpid = equ_md->mp_id;
-      if (!valid_mpid(equ_md->mp_id)) {
+      if (!valid_mpid(equ_md->mp_id) && equ_md->role != EquIsMap) {
          errmc("[empdag] ERROR: equation '%s' is not attached to any MP\n",
                ctr_printequname(ctr, i));
          num_unattached_equs++;
