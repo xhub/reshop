@@ -399,6 +399,7 @@ int rhpCallSolver(void* Cptr)
       gevStatCon(jh->eh);
       gevLogStatNoC(jh->eh, msg);
       gevStatCoff(jh->eh);
+      rhp_printrcmsg(rc, jh->eh);
       return rc; /* Early return */
    }
 
@@ -410,7 +411,8 @@ int rhpCallSolver(void* Cptr)
       gevStatCon(jh->eh);
       gevLogStatNoC(jh->eh, msg);
       gevStatCoff(jh->eh);
-      goto _exit;
+      rhp_printrcmsg(rc, jh->eh);
+      return rc; /* Early return */
    }
 
    mdl_solver = rhp_newsolvermdl(jh->mdl);

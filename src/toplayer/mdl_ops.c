@@ -95,6 +95,7 @@ int mdl_check(Model *mdl)
    case MdlType_none:
       error("[model check] ERROR: %s model '%.*s' #%u has no type set", mdl_fmtargs(mdl));
       return Error_InvalidModel;
+
    case MdlType_lp:
    case MdlType_nlp:
    case MdlType_dnlp:
@@ -104,19 +105,21 @@ int mdl_check(Model *mdl)
    case MdlType_qcp:
    case MdlType_mpec:
       if (!has_optobj) {
-         error("[model check] ERROR: %s model '%.*s' #%u of type %s has neither"
-               " an objective variable or an objective function.\n", mdl_fmtargs(mdl),
+         error("[model check] ERROR: %s model '%.*s' #%u of type %s has neither an "
+               "objective variable or an objective function.\n", mdl_fmtargs(mdl),
                mdltype_name(probtype));
          return Error_InvalidModel;
       }
       break;
+
    case MdlType_emp:
       if (mdl->empinfo.empdag.mps.len == 0) {
          if (!valid_optsense(sense)) {
             int offset;
-            error("[model check] ERROR: %n%s model '%.*s' #%u of type %s has no "
-                  "EMPinfo structure and is not an optimization problem.\n",
-                  &offset, mdl_fmtargs(mdl), mdltype_name(probtype));
+            error("[model check] ERROR: %n%s model '%.*s' #%u of type %s has no EMPinfo "
+                  "structure and is not an optimization problem.\n", &offset,
+                  mdl_fmtargs(mdl), mdltype_name(probtype));
+
             error("%*sSpecify the EMPinfo structure.\n", offset, "");
             return Error_InvalidModel;
 

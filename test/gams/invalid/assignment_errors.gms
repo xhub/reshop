@@ -26,7 +26,7 @@ endEmbeddedCode
 
 solve m using emp;
 
-abort$[m.solveStat <> %SOLVESTAT.SETUP FAILURE%]   'solve failed', m.solveStat;
+abort$[m.solveStat <> %SOLVESTAT.SETUP FAILURE%]       'solve failed', m.solveStat;
 abort$[m.modelStat <> %MODELSTAT.ERROR NO SOLUTION%]   'solve failed', m.modelStat;
 
 * x is not assigned
@@ -37,7 +37,7 @@ endEmbeddedCode
 
 solve m using emp;
 
-abort$[m.solveStat <> %SOLVESTAT.SETUP FAILURE%]   'solve failed', m.solveStat;
+abort$[m.solveStat <> %SOLVESTAT.SETUP FAILURE%]       'solve failed', m.solveStat;
 abort$[m.modelStat <> %MODELSTAT.ERROR NO SOLUTION%]   'solve failed', m.modelStat;
 
 * defobj is not assigned
