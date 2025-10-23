@@ -149,7 +149,7 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
    case SIGNATURE_LOOPVAR: {
       int uel = AS_LOOPVAR(val_);
       char uel_label[GMS_SSSIZE];
-      if (gmdGetUelByIndex(vm->data.gmd, uel, uel_label)) {
+      if (!gmdGetUelByIndex(vm->data.gmd, uel, uel_label)) {
          strcpy(uel_label, "ERROR getting LOOPVAR");
       }
       trace_empinterp("%*s: %5d %s", pad, "LOOPVAR", uel, uel_label);
@@ -254,7 +254,7 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
    case SIGNATURE_LOOPVAR: {
       int uel = AS_LOOPVAR(v);
       char uel_label[GMS_SSSIZE];
-      if (gmdGetUelByIndex(vm->data.gmd, uel, uel_label)) {
+      if (!gmdGetUelByIndex(vm->data.gmd, uel, uel_label)) {
          strcpy(uel_label, "ERROR getting LOOPVAR");
       }
       printout(mode, " '%s' ", uel_label);
@@ -799,30 +799,46 @@ int empvm_run(struct empvm *vm)
       }
 
       switch (instr) {
+
       case OP_PUSH_GIDX: {
          VmValue val = read_global(vm);
          vmstack_push(vm, val);
          break;
       }
+
       case OP_PUSH_BYTE: {
          uint8_t val = READ_BYTE(vm);
          vmstack_push(vm, UINT_VAL(val));
          break;
       }
+
       case OP_PUSH_LIDX: {
          uint8_t slot = READ_BYTE(vm);
          vmstack_push(vm, vm->locals[slot]);
          break;
       }
+
       case OP_PUSH_VMUINT: {
          vmstack_push(vm, UINT_VAL(READ_VMUINT(vm)));
          break;
       }
+
       case OP_PUSH_VMINT: {
          vmstack_push(vm, INT_VAL(READ_VMINT(vm)));
          break;
       }
-      case OP_UPDATE_LOOPVAR: {
+
+      case OP_PUSH_FALSE: {
+         vmstack_push(vm, BOOL_VAL(false));
+         break;
+      }
+
+      case OP_PUSH_TRUE: {
+         vmstack_push(vm, BOOL_VAL(true));
+         break;
+      }
+
+      case OP_LOOPVAR_UPDATE: {
          uint8_t lidx_loopvar = READ_BYTE(vm);
          uint8_t lidx_idxvar = READ_BYTE(vm);
          IdentType type = READ_BYTE(vm);
@@ -860,13 +876,13 @@ int empvm_run(struct empvm *vm)
                     type == IdentSet ? "sets" : "localsets", gidx, lidx_idxvar, idx);
          break;
       }
-      case OP_LOCAL_COPYFROM_GIDX: {
+      case OP_LVAR_COPYFROM_GIDX: {
          uint8_t slot = READ_BYTE(vm);
          vm->locals[slot] = read_global(vm);
          DEBUGVMRUN("lvar@%u = %" PRIu64, slot, vm->locals[slot] & MASK_PAYLOAD_32);
          break;
       }
-      case OP_LOCAL_COPYOBJLEN: {
+      case OP_LVAR_COPYOBJLEN: {
          uint8_t slot = READ_BYTE(vm);
          IdentType type = READ_BYTE(vm);
          GIDX_TYPE gidx = READ_GIDX(vm);
@@ -1099,13 +1115,13 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          break;
       }
 
-      case OP_LOCAL_COPYTO_LOCAL: {
+      case OP_LVAR_COPYTO_LVAR: {
          uint8_t src = READ_BYTE(vm);
          uint8_t dst = READ_BYTE(vm);
          vm->locals[dst] = vm->locals[src];
          break;
       }
-      case OP_LOCAL_INC: {
+      case OP_LVAR_INC: {
          uint8_t lidx = READ_BYTE(vm);
          assert(IS_UINT(vm->locals[lidx]));
          VM_VALUE_INC(vm->locals[lidx]);
@@ -1113,7 +1129,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          break;
       }
 
-      case OP_STACKTOP_COPYTO_LOCAL: {
+      case OP_STACKTOP_COPYTO_LVAR: {
          uint8_t lidx = READ_BYTE(vm);
          vm->locals[lidx] = vmstack_peek(vm, 0);
          DEBUGVMRUN("lidx@%u <- %u", lidx, AS_UINT(vm->locals[lidx]));
@@ -1520,10 +1536,10 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
           * --------------------------------------------------------------- */
 
          if (linklabels->nrecs == 0) {
-            // TODO: is there a memory leak here?
-            // TEST stochastic program with leaf nodes 
+            linklabels_free(linklabels);
             vm->data.linklabels2arcs->len--;
          }
+
          vm->data.state.linklabels = NULL;
          break;
       }

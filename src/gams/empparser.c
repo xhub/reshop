@@ -119,8 +119,10 @@ static const char * const tok_str[] = {
    "GAMS variable",
    "DEFVAR",
    "AND",
+   "NO",
    "NOT",
    "OR",
+   "YES",
    "<",
    ">",
    "(",
@@ -1203,8 +1205,8 @@ int parser_peekasUEL(Interpreter *interp, unsigned * restrict p, char quote,
    if (O_Output & PO_TRACE_EMPPARSER) {
       int offset;
       trace_empparser("[empparser] Token '%.*s'%n", tok->len, tok->start, &offset);
-      trace_empparser("%*s%s", 50-offset, "", toktype2str(tok->type));
-      trace_empparsermsg("   [peek] ");
+      trace_empparser("%*s%s%n", 50-offset, "", toktype2str(tok->type), &offset);
+      trace_empparser("%*s[peek]", MAX(74-offset, 0), "");
       tok_payloadprint(tok, PO_TRACE_EMPPARSER, interp->mdl);
    }
 
@@ -1599,13 +1601,14 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
       }
       break;
 
-   case 'n': /* nash | nlp */
+   case 'n': /* nash, nlp, no, not */
    case 'N':
       if (len >= 3) {
          switch (buf[pos_+1]) {
          case 'a': case 'A': if (len == 4) _chk_kw("sh", &buf[pos_+2], 2, tok, TOK_NASH);
             break;
          case 'o': case 'O': if (len == 3) _chk_kw("t", &buf[pos_+2], 1, tok, TOK_NOT);
+                             if (len == 2) emptok_settype(tok, TOK_NO);
             break;
          case 'l': case 'L': if (len == 3) _chk_kw("p", &buf[pos_+2], 1, tok, TOK_NLP);
             break;
@@ -1647,6 +1650,10 @@ static int tok_alphanum(Token *tok, const char * restrict buf, unsigned *pos,
          break;
       default: ;
       }
+   break;
+   case 'y': /* yes */
+   case 'Y':
+      if (len == 3) _chk_kw("es", &buf[pos_+1], 2, tok, TOK_YES);
       break;
 
    default: ;
@@ -1801,11 +1808,11 @@ static int lexer(Interpreter *interp, enum ParseMode mode, unsigned *p)
 
 _exit:
    if (O_Output & PO_TRACE_EMPPARSER) {
-      int offset;
-      trace_empparser("[empparser] Token '%.*s'%n", tok->len, &buf[p_], &offset);
-      trace_empparser("%*s%s", 50-offset, "", toktype2str(tok->type));
+      int offset1, offset2;
+      trace_empparser("[empparser] Token '%.*s'%n", tok->len, &buf[p_], &offset1);
+      trace_empparser("%*s%s%n", 50-offset1, "", toktype2str(tok->type), &offset2);
       if (mode == ParsePeek) {
-         trace_empparsermsg("   [peek] ");
+         trace_empparser("%*s[peek]", MAX(74-(offset1+offset2), 0), "");
       }
       tok_payloadprint(tok, PO_TRACE_EMPPARSER, interp->mdl);
    }
@@ -1973,6 +1980,8 @@ int advance(Interpreter * restrict interp, unsigned * restrict p, TokenType *tok
    switch (toktype_) {
    // HACK: GG #10
    case TOK_GMS_SET:
+      if (!embmode(interp)) { return runtime_error(interp->linenr); }
+      return OK;
    case TOK_GMS_PARAM:
       if (!embmode(interp)) { return runtime_error(interp->linenr); }
    FALLTHRU
@@ -2786,16 +2795,10 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p, bool force_si
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
 
-   //GDB_STOP()
-
    if (toktype == TOK_LPAREN) {
       S_CHECK(parse_gmsindices(interp, p, &interp->gmsindices));
       S_CHECK(advance(interp, p, &toktype));
    }
-
-//   else {
-//      gmsindices_init(&interp->gmsindices);
-//   }
 
    S_CHECK(parser_expect(interp, "operator or attribute expected after node label", TOK_DOT));
 
@@ -2813,15 +2816,34 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p, bool force_si
 
    PARSER_EXPECTS(interp, "valfn or objfn keyword expected after '.'", TOK_OBJFN, TOK_VALFN);
 
-   /* See whether we have a conditional, as with */
+   /* See whether we have a conditional*/
+   bool has_condition = false;
    if (force_single) {
+
       TokenType toktype_peek;
       S_CHECK(peek(interp, &p2, &toktype_peek));
+
       if (toktype_peek == TOK_CONDITION) {
-         error("[empinterp] ERROR on line %u: single node label selection via conditional "
-               "is not implemented yet. Please report this to help implemented it\n",
-               interp->linenr);
-         return Error_NotImplemented;
+
+         // HACK embmode
+         if (!embmode(interp) && gmsindices_nvardims(&interp->gmsindices) > 0) {
+            error("[empinterp] ERROR on line %u: single node label selection via conditional "
+                  "is not implemented yet. Please report this to help implemented it\n",
+                  interp->linenr);
+            return Error_NotImplemented;
+         }
+
+         *p = p2;
+         interp_cpypeek2cur(interp);
+
+         if (immmode(interp)) {
+            error("[empinterp] ERROR on line %u: conditional in immediate mode is "
+                  "unsupported.\n", interp->linenr);
+            return Error_EMPRuntimeError;
+         }
+
+         has_condition = true;
+         S_CHECK(vm_parse_condition(interp, p));
       }
    }
 
@@ -2850,6 +2872,10 @@ NONNULL static int parse_VF_attr(Interpreter *interp, unsigned *p, bool force_si
 
    if (toktype == TOK_STAR) {
       TO_IMPLEMENT("'node.valFn *' is not yet supported");
+   }
+
+   if (has_condition) {
+      S_CHECK(vm_condition_fini(interp));
    }
 
    assert(!gmsindices_isactive(&interp->gmsindices));
@@ -4047,7 +4073,7 @@ static int parse_ovfparam(Interpreter * restrict interp, unsigned * restrict p,
          *p = p2;
       }
       hack_dscratch = scratch->data;
-      parser_cpypeek2cur(interp);
+      interp_cpypeek2cur(interp);
    } else if (pdef->mandatory) {
       error("[empinterp] Error line %u: unable to parse parameter '%s' for OVF '%s'"
             " got token '%.*s' with type %s\n", interp->linenr, pdef->name, 
@@ -5396,7 +5422,7 @@ int process_statement(Interpreter * restrict interp, unsigned * p, TokenType tok
       switch (toktype) {
       case TOK_DEFVAR:
          *p = p2;
-         parser_cpypeek2cur(interp);
+         interp_cpypeek2cur(interp);
          S_CHECK(parse_defvar(interp, p));
          TO_IMPLEMENT("defined variable needs attention");
       default: ;

@@ -40,18 +40,20 @@ typedef enum {
    OP_PUSH_LIDX,         // 1 arg: lidx
    OP_PUSH_VMUINT,        // 1 arg: 16 bits index
    OP_PUSH_VMINT,         // 1 arg: 16 bits index
-   OP_UPDATE_LOOPVAR,
+   OP_PUSH_FALSE,         // 0 arg
+   OP_PUSH_TRUE,         // 0 arg
+   OP_LOOPVAR_UPDATE,
    OP_POP,
    OP_NIL,
    OP_TRUE,
    OP_FALSE,
    OP_GMSSYMITER_SETFROM_LOOPVAR,  // 2 arg: local idx and gmd filter idx
    OP_REGENTRY_SETFROM_LOOPVAR,  // 2 arg: local idx and gmd filter idx
-   OP_LOCAL_COPYFROM_GIDX,
-   OP_LOCAL_COPYOBJLEN,
-   OP_LOCAL_COPYTO_LOCAL,
-   OP_LOCAL_INC,
-   OP_STACKTOP_COPYTO_LOCAL,
+   OP_LVAR_COPYFROM_GIDX,
+   OP_LVAR_COPYOBJLEN,
+   OP_LVAR_COPYTO_LVAR,
+   OP_LVAR_INC,
+   OP_STACKTOP_COPYTO_LVAR,
    OP_STACKTOP_INC,
    OP_LSET_ADD,
    OP_LSET_RESET,
@@ -228,7 +230,7 @@ typedef struct {
 } VmState;
 
 typedef struct {
-   ScalarSymbolStatus scalar_tracker; /**< Tracker to ensure 1 record is read */
+   ScalarSymbolStatus scalar_tracker; /**< Tracker to ensure that only 1 record is read */
 
    VmEquVarData equvar;
    VmState state;

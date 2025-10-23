@@ -1158,14 +1158,13 @@ int empdag_reserve_mp(EmpDag *empdag, unsigned reserve)
 static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
 {
    if (chk_mpid_(empdag, mp_id) != OK) {
-      error("[empdag] ERROR: seeking to delete MP ID #%u, which does not exists",
-            mp_id);
+      error("[empdag] ERROR: seeking to delete MP ID #%u, which does not exists", mp_id);
       return Error_RuntimeError;
    }
 
    if (mp_id != empdag->mps.len-1) {
-      error("[empdag] ERROR: seeking to delete MP ID #%u, but it is not the "
-            "last one\n", mp_id);
+      error("[empdag] ERROR: seeking to delete MP ID #%u, but it is not the last one\n",
+            mp_id);
       return Error_RuntimeError;
    }
 
@@ -1182,6 +1181,8 @@ static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
    }
 
    empdag->mps.len--;
+   mp_free(empdag->mps.arr[mp_id]);
+   free((char*)empdag->mps.names[mp_id]);
 
    return OK;
 }

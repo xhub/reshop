@@ -57,6 +57,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
    interp->state.peekisactive = false;
    interp->state.read_gms_symbol = true;
    interp->state.err_shown = false;
+   interp->state.cond_depth = 0;
    interp->linenr = 1;
    interp->read = 0;
    interp->linestart = NULL;
@@ -92,7 +93,7 @@ void empinterp_init(Interpreter *interp, Model *mdl, const char *fname)
 
 
    interp->ops = &interp_ops_imm;
-   interp->compiler = empvm_compiler_init(interp);
+   interp->compiler = compiler_init(interp);
 
    interp->regentry = NULL;
    interp->dag_root_label = NULL;
@@ -820,3 +821,5 @@ int empinterp_finalize(Interpreter *interp)
 
    return OK;
 }
+
+

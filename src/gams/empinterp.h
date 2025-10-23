@@ -395,10 +395,11 @@ typedef struct {
 
 typedef struct {
    enum parser_health health;
-   bool peekisactive;
+   bool peekisactive;               /**< True if in peek mode            */
    bool read_gms_symbol;
    bool err_shown;                  /**< Error message was already shown */
    InterpParsedKwds   parsed_kwds;  /**< Parsed keywords                 */
+   unsigned cond_depth;             /**< depth in a given conditional    */
 } InterpState;
 
 typedef struct interpreter {

@@ -64,8 +64,10 @@ typedef enum emptok_type {
    TOK_DEFVAR,
    /* Conditionals */
    TOK_AND,
+   TOK_NO,
    TOK_NOT,
    TOK_OR,
+   TOK_YES,
    /* Single token */
    TOK_LANGLE,          /**< < */
    TOK_RANGLE,          /**< > */

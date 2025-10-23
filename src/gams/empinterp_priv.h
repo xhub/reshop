@@ -56,7 +56,7 @@ void interp_resetlastkw(Interpreter* interp)
 }
 
 NONNULL static inline
-void parser_cpypeek2cur(Interpreter *interp)
+void interp_cpypeek2cur(Interpreter *interp)
 {
    memcpy(&interp->cur, &interp->peek, sizeof(Token));
    trace_empparser("[empinterp] peek -> current: token '%.*s' of type %s\n",
@@ -173,7 +173,7 @@ static inline uint8_t gmsindices_numiterators(GmsIndicesData *indices)
    return indices->num_sets + indices->num_localsets + indices->num_loopiterators;
 }
 
-static inline uint8_t gmsindices_nvaridxs(GmsIndicesData *indices)
+static inline uint8_t gmsindices_nvardims(GmsIndicesData *indices)
 {
    return indices->num_sets + indices->num_localsets;
 }
@@ -339,5 +339,6 @@ NONNULL static inline void interp_reset_last_symbol(Interpreter *interp)
 {
    interp->last_symbol.type = IdentNotFound;
 }
+
 #endif // !EMPINTERP_PRIV_H
 

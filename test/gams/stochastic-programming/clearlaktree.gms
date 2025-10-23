@@ -45,7 +45,6 @@ $offEcho
 sets r Stochastic realizations (precipitation) /low, normal, high/,
      t Time periods                            /dec,jan,feb,mar/,
      n Nodes,
-     root(n),
      succ(n,n);
 
 alias (n,child,parent);
@@ -72,11 +71,9 @@ $gdxin
 *------------------------------------------------------------------------------
 * Model logic:  only needs n, succ, prob, ndelta
 
-root(n) = yes$n.first;
-
 parameter n_prob(n)       Probability of being at any node;
 
-n_prob(root) = 1;
+n_prob(n)$(n.first) = 1;
 loop {succ(parent,child),
       n_prob(child) = prob(child)*n_prob(parent);
 };
@@ -94,11 +91,11 @@ EQUATIONS ecdef, ldef;
 
 ecdef.. EC =e= sum {n, n_prob(n)*[floodcost*F(n)+lowcost*Z(n)]};
 
-ldef(n)$[not root(n)].. L(n) =e= sum{succ(parent,n),L(parent)} + ndelta(n)+Z(n)-Release(n)-F(n);
+ldef(n)$[NOT n.first].. L(n) =e= sum{succ(parent,n),L(parent)} + ndelta(n)+Z(n)-Release(n)-F(n);
 
 Release.up(n) = r_max;
 L.up(n) = l_max;
-L.fx(root) = l_start;
+L.fx(n)$(n.first) = l_start;
 
 *-------------------------------------------------------------------------------
 model mincost / ecdef, ldef /;
@@ -137,14 +134,22 @@ EQUATIONS defobjnode(n), deflvl(n);
 
 defobjnode(n).. objnode(n) =E= (floodcost*F(n)+lowcost*Z(n))$(not n.first);
 
-deflvl(n)$[not root(n)].. L(n) =E= sum( succ(parent,n), L(parent) ) + ndelta(n)+Z(n)-Release(n)-F(n);
+SET deflvlset(n);
+deflvlset(n) = yes$(NOT n.first);
+
+deflvl(n)$[deflvlset(n)].. L(n) =E= sum( succ(parent,n), L(parent) ) + ndelta(n)+Z(n)-Release(n)-F(n);
 
 MODEL mincostEMP / defobjnode, deflvl /;
 
 mincostEMP.optfile = 1;
 
+*******************************************************************************
+* First model
+*******************************************************************************
+
+
 embeddedCode reshop:
-nodalprob(n)$(root(n)):        min objnode(n) + SUM{child$(succ(n,child)), prob(child)*nodalprob(child).valFn}
+nodalprob(n)$(n.first):        min objnode(n) + SUM{child$(succ(n,child)), prob(child)*nodalprob(child).valFn}
                                    L(n) defobjnode(n)
 nodalprob(n)$(nonleafroot(n)): min objnode(n) + SUM{child$(succ(n,child)), prob(child)*nodalprob(child).valFn}
                                    L(n) F(n) Release(n) Z(n) defobjnode(n) deflvl(n) 
@@ -152,7 +157,7 @@ nodalprob(n)$(leaf(n)):        min objnode(n)
                                    L(n) F(n) Release(n) Z(n) defobjnode(n) deflvl(n)
 endEmbeddedCode
 
-solve mincostEMP using EMP;
+SOLVE mincostEMP using EMP;
 
 abort$[mincostEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mincostEMP.solveStat;
 abort$[mincostEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', mincostEMP.modelStat;
@@ -174,26 +179,93 @@ abort$[smax{n$(NOT n.first), abs(F.l(n) - F_L(n))} > %tol%]     'wrong F.l', F.l
 abort$[smax{n$(NOT n.first), abs(Z.l(n) - Z_L(n))} > %tol%]     'wrong Z.l', Z.l;
 abort$[smax{n$(NOT n.first), abs(Release.l(n) - Release_L(n))} > %tol%]     'wrong Release.l', Release.l;
 
-* This is not working
-* abort$[smax{n$(NOT n.first), abs(L.m(n) - L_M(n))} > %tol%]     'wrong L.m', L.m;
-* abort$[smax{n$(NOT n.first), abs(deflvl.m(n) - ldef_M(n))} > %tol%]     'wrong lvldef.m', deflvl.m;
+mincostEMP.holdfixed = 0;
 
+deflvlset(n)$(n.first) = yes;
+ndelta(n)$(n.first) = L.l(n);
+F.fx(n)$(n.first) = 0;
+Z.fx(n)$(n.first) = 0;
+Release.fx(n)$(n.first) = 0;
+
+display deflvlset;
+
+*******************************************************************************
+* Second model, purely recursive
+*******************************************************************************
 
 embeddedCode reshop:
-nodalprob(n)$(root(n)): min objnode(n) + CRM(n).valFn L(n) defobjnode(n)
-nodalprob(n)$(nonleafroot(n)): min objnode(n) + CRM(n).valFn F(n) L(n) Release(n) Z(n) defobjnode(n) deflvl(n) 
-nodalprob(n)$(leaf(n)): min objnode(n) F(n) L(n) Release(n) Z(n) defobjnode(n) deflvl(n)
-
-CRM(n)$(not leaf(n)): MP('expectation', nodalprob(child).valFn$(succ(n,child)), prob=prob(child)$(succ(n,child)))
+nodalprob(n): min objnode(n) + SUM{child$(succ(n,child)), prob(child)*nodalprob(child).valFn}
+                  L(n) F(n) Release(n) Z(n) defobjnode(n) deflvl(n) 
 endEmbeddedCode
 
-solve mincostEMP using EMP;
+SOLVE mincostEMP using EMP;
+
+abort$[mincostEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mincostEMP.solveStat;
+abort$[mincostEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', mincostEMP.modelStat;
+
+PARAMETER deltaL_L(n), deltaL_M(n), deltaLvlDef_M(n);
+deltaL_L(n) = L.l(n) - L_L(n);
+deltaL_M(n) = L.m(n) - L_M(n);
+deltaLvlDef_M(n) = deflvl.m(n) - ldef_M(n);
+
+deltaL_L(n)$(abs(deltaL_L(n)) < %tol%) = 0.;
+deltaL_M(n)$(abs(deltaL_M(n)) < %tol%) = 0.;
+deltaLvlDef_M(n)$(abs(deltaLvlDef_M(n)) < %tol%) = 0.;
+
+
+display deltaL_L, deltaL_M, deltaLvlDef_M;
 
 abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
 abort$[smax{n$(NOT n.first), abs(F.l(n) - F_L(n))} > %tol%]     'wrong F.l', F.l;
 abort$[smax{n$(NOT n.first), abs(Z.l(n) - Z_L(n))} > %tol%]     'wrong Z.l', Z.l;
 abort$[smax{n$(NOT n.first), abs(Release.l(n) - Release_L(n))} > %tol%]     'wrong Release.l', Release.l;
 
+
+* This is not working
+* abort$[smax{n$(NOT n.first), abs(L.m(n) - L_M(n))} > %tol%]     'wrong L.m', L.m;
+* abort$[smax{n$(NOT n.first), abs(deflvl.m(n) - ldef_M(n))} > %tol%]     'wrong lvldef.m', deflvl.m;
+
+*******************************************************************************
+* 3rd model, with CRM
+*******************************************************************************
+
+embeddedCode reshop:
+nodalprob(n)$(succ(n,child)): min objnode(n) + CRM(n).valFn F(n) L(n) Release(n) Z(n) defobjnode(n) deflvl(n) 
+nodalprob(n)$(NOT succ(n, child)): min objnode(n) F(n) L(n) Release(n) Z(n) defobjnode(n) deflvl(n)
+
+CRM(n)$(succ(n,child)): MP('expectation', nodalprob(child).valFn$(succ(n,child)), prob=prob(child)$(succ(n,child)))
+endEmbeddedCode
+
+SOLVE mincostEMP using EMP;
+
+abort$[mincostEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mincostEMP.solveStat;
+abort$[mincostEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', mincostEMP.modelStat;
+
+abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
+abort$[smax{n$(NOT n.first), abs(F.l(n) - F_L(n))} > %tol%]     'wrong F.l', F.l;
+abort$[smax{n$(NOT n.first), abs(Z.l(n) - Z_L(n))} > %tol%]     'wrong Z.l', Z.l;
+abort$[smax{n$(NOT n.first), abs(Release.l(n) - Release_L(n))} > %tol%]     'wrong Release.l', Release.l;
+
+
+$exit
+*******************************************************************************
+* 4rd model, with CRM
+*******************************************************************************
+
+embeddedCode reshop:
+nodalprob(n): min objnode(n) + CRM(n).valFn$(succ(n,child)) F(n) L(n) Release(n) Z(n) defobjnode(n) deflvl(n) 
+CRM(n)$(succ(n,child)): MP('expectation', nodalprob(child).valFn$(succ(n,child)), prob=prob(child)$(succ(n,child)))
+endEmbeddedCode
+
+SOLVE mincostEMP using EMP;
+
+abort$[mincostEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mincostEMP.solveStat;
+abort$[mincostEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', mincostEMP.modelStat;
+
+abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
+abort$[smax{n$(NOT n.first), abs(F.l(n) - F_L(n))} > %tol%]     'wrong F.l', F.l;
+abort$[smax{n$(NOT n.first), abs(Z.l(n) - Z_L(n))} > %tol%]     'wrong Z.l', Z.l;
+abort$[smax{n$(NOT n.first), abs(Release.l(n) - Release_L(n))} > %tol%]     'wrong Release.l', Release.l;
 
 
 $exit

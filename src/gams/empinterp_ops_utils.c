@@ -46,7 +46,7 @@ static inline int symtype_dct2ident(enum dcttypes dcttype, IdentData *ident)
  */
 NONNULL_AT(1,3) static int
 gmd_search_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *ident,
-                gmdHandle_t gmdcpy)
+                  gmdHandle_t gmdcpy)
 {
 
    void *symptr;
@@ -469,7 +469,7 @@ static inline int convert_uelidx(gmdHandle_t gmddst, gmdHandle_t gmdsrc, int uel
 {
    char uelstr[GMS_SSSIZE];
 
-   if (gmdGetUelByIndex(gmdsrc, uelidx, uelstr)) {
+   if (!gmdGetUelByIndex(gmdsrc, uelidx, uelstr)) {
       return -gmderr(gmdsrc);
    }
 
@@ -551,7 +551,7 @@ int uelidx_check_or_convert_dct_vs_gmd(gmdHandle_t gmd, dctHandle_t dct,
    }
 
    case IdentOriginGmd:
-      if (gmdGetUelByIndex(gmd, uelidx, uelstr)) {
+      if (!gmdGetUelByIndex(gmd, uelidx, uelstr)) {
          return -gmderr(gmd);
       }
 

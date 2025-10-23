@@ -28,7 +28,7 @@ typedef struct {
 void empvm_compiler_free(struct empvm_compiler* c);
 bool resolve_local(struct empvm_compiler* c,  struct ident_data *ident);
 NONNULL MALLOC_ATTR(empvm_compiler_free,1) OWNERSHIP_RETURNS
-struct empvm_compiler* empvm_compiler_init(Interpreter * restrict interp);
+struct empvm_compiler* compiler_init(Interpreter * restrict interp);
 NONNULL void empvm_compiler_setgmd(Interpreter * restrict interp);
 
 NONNULL
@@ -55,6 +55,7 @@ int vm_add_Ctrl_edge(Interpreter * interp, unsigned * restrict p, const char* ar
 
 int vm_add_Varc_dual(Interpreter * interp, UNUSED unsigned *p) NONNULL;
 int vm_parse_condition(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
+int vm_condition_fini(Interpreter * restrict interp) NONNULL;
 
 int empvm_finalize(Interpreter *interp) NONNULL;
 

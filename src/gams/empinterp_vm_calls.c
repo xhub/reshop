@@ -212,7 +212,7 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *argv)
    assert(mp->ccflib.ccf);
 
    /* ---------------------------------------------------------------------
-    * If the CCF has no child, by convention it has value 1 and we delete the MP
+    * If the CCF has no child, by convention it has value 0 and we delete the MP
     * --------------------------------------------------------------------- */
 
    EmpDag *empdag = &data->mdl->empinfo.empdag;
@@ -235,8 +235,16 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *argv)
       if (has_child) { num_children = 1; }
    }
 
+   /* ---------------------------------------------------------------------
+    * NOTE that here we delete a CCF node if it has no children
+    * An alternative is to error
+    * ---------------------------------------------------------------------- */
    if (!has_child) {
       S_CHECK(empdag_delete(empdag, ccflib_uid));
+      /* HACK: when tracing empinterp, before the pop, we would attempt to display we
+       * just freed */
+      VmValue *vals = (VmValue*)argv;
+      vals[0] = BOOL_VAL(false);
       goto _fini; /* Need to cleanup the vmdata */
    }
 

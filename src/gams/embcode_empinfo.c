@@ -49,7 +49,7 @@ static int emb_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned * p
       *p = p2;
       // HACK: shound't save token
       interp_save_tok(interp);
-      parser_cpypeek2cur(interp);
+      interp_cpypeek2cur(interp);
       S_CHECK(vm_parse_condition(interp, p));
 //      S_CHECK(advance(interp, p, &toktype))
       interp_restore_savedtok(interp);

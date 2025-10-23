@@ -157,7 +157,7 @@ void linklabels_free(LinkLabels *link)
    FREE(link->vi);
    FREE(link->coeff);
    FREE(link->extras);
-   FREE(link);
+   free(link);
 }
 
 LinkLabel* linklabel_new(const char *label, unsigned label_len, uint8_t dim)

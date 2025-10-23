@@ -300,7 +300,7 @@ void gmd_printuel(gmdHandle_t gmd, int uel, unsigned mode, int *offset)
 
    if (uel == 0) {
       printout(mode, ":%n", offset);
-   } else if (gmdGetUelByIndex(gmd, uel, uelstr)) {
+   } else if (!gmdGetUelByIndex(gmd, uel, uelstr)) {
       printout(mode, "UEL#%d%n", uel, offset);
    } else {
       printout(mode, "'%s'%n", uelstr, offset);

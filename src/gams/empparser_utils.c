@@ -47,6 +47,7 @@ static int resolve_tokenasgmsidx(Interpreter * restrict interp, unsigned * restr
    }
 
    switch (toktype) {
+
    case TOK_GMS_UEL:
       tok2ident(&interp->peek, ident);
       ident->type = IdentUEL;
@@ -235,7 +236,6 @@ int resolve_tokasident(Interpreter *interp, IdentData *ident)
     * 3. Look for an alias
     * 4. Look for a GAMS set / multiset / scalar / vector / param
     * 5. Look for a symbol in the GMD
-    *
     * --------------------------------------------------------------------- */
 
    char *identstr = NULL;

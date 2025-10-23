@@ -31,23 +31,17 @@ EQUATIONS defobjN(n);
 
 defobjN(n).. objN(n) =E= cN(n)*xN(n);
 
-* TODO: implement
-* embeddedCode ReSHOP:
-* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
-* node(n)$(NOT sum(succ(n,child), yes)): min objN(n) xN(n) defobjN(n)
-* endEmbeddedCode
-
 embeddedCode ReSHOP:
 node(n)$(NOT leaf(n)): min objN(n) + m(n).valFn xN(n) defobjN(n)
 m(n)$(NOT leaf(n)): MP('smax', node(child).valFn$(succ(n,child)))
 node(n)$(leaf(n)): min objN(n) xN(n) defobjN(n)
 endEmbeddedCode
 
-model m_dynamic_scalar_max /defobjN/;
+model m_basic4 /defobjN/;
 
-solve m_dynamic_scalar_max using emp;
-abort$[m_dynamic_scalar_max.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_dynamic_scalar_max.modelStat;
-abort$[m_dynamic_scalar_max.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_dynamic_scalar_max.solveStat;
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
 
 SET pow2(n,t);
 pow2(n,t) = yes$(ord(n) = power(2,ord(t)-1));
@@ -59,15 +53,19 @@ abort$[ smax(n$(sum(t, pow2(n,t))), abs( xN.m(n) ) ) < 2. - 1e-4 ] 'wrong xN.m v
 abort$[ smax(n$(NOT sum(t, pow2(n,t))), abs( xN.m(n) ) ) > 1e-4 ] 'wrong xN.m values', xN.m;
 
 * With this model, the values at each node are nailed down
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
 embeddedCode ReSHOP:
 node(n)$(NOT leaf(n)): min objN(n) + m(n).valFn xN(n) defobjN(n)
 m(n)$(NOT leaf(n)): MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
 node(n)$(leaf(n)): min objN(n) xN(n) defobjN(n)
 endEmbeddedCode
 
-solve m_dynamic_scalar_max using emp;
-abort$[m_dynamic_scalar_max.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_dynamic_scalar_max.modelStat;
-abort$[m_dynamic_scalar_max.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_dynamic_scalar_max.solveStat;
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
 
 * Odd variables are at their upper bounds
 * Even at their upper bounds
@@ -77,6 +75,212 @@ abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even
 * Check that the absolute marginal values sum to 2 at each stage
 abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
 
+
+****************************************************************************************************************
+* Test for the syntax   '$succ(set1, set2)'
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n)$(succ(n,child)):      min objN(n) + CRM(n).valFn xN(n) defobjN(n)
+CRM(n)$(succ(n,child)):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+node(n)$(NOT succ(n,child)):  min objN(n) xN(n) defobjN(n)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
+
+****************************************************************************************************************
+* Test for the syntax  'SUM(set2, multiset(set1,set2))'
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n)$(sum(child, succ(n,child))):      min objN(n) + CRM(n).valFn xN(n) defobjN(n)
+CRM(n)$(sum(child, succ(n,child))):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+node(n)$(NOT sum(child, succ(n,child))):  min objN(n) xN(n) defobjN(n)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
+
+****************************************************************************************************************
+* Test for the syntax  'SUM(multiset(set1,set2), yes)'
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n)$(sum(succ(n,child), yes)):      min objN(n) + CRM(n).valFn xN(n) defobjN(n)
+CRM(n)$(sum(succ(n,child), yes)):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+node(n)$(NOT sum(succ(n,child), yes)):  min objN(n) xN(n) defobjN(n)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
+
+****************************************************************************************************************
+* Test for the syntax  'SUM{ multiset(set1,set2), multiset2(set1, set2) }'
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n)$(sum(succ(n,child), succ(n,child))):      min objN(n) + CRM(n).valFn xN(n) defobjN(n)
+CRM(n)$(sum(succ(n,child), succ(n,child))):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+node(n)$(NOT sum(succ(n,child), succ(n,child))):  min objN(n) xN(n) defobjN(n)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
+
+****************************************************************************************************************
+* Test for the syntax  'SUM{set2$multiset(set1,set2), yes}'
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n)$(sum{ child$(succ(n,child)), yes }):      min objN(n) + CRM(n).valFn xN(n) defobjN(n)
+CRM(n)$( sum{ child$(succ(n,child)), yes }):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+node(n)$(NOT sum{child$(succ(n,child)), yes}):  min objN(n) xN(n) defobjN(n)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
+
+****************************************************************************************************************
+* Test for the syntax  'SUM{set2$multiset(set1,set2), multiset2(set1,set2)}'
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n)$(sum{ child$(succ(n,child)), succ(n,child) }):      min objN(n) + CRM(n).valFn xN(n) defobjN(n)
+CRM(n)$( sum{ child$(succ(n,child)), succ(n,child) }):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+node(n)$(NOT sum{child$(succ(n,child)), succ(n,child) }):  min objN(n) xN(n) defobjN(n)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
+
+****************************************************************************************************************
+* Test for the syntax   'CRM(n).valFn$succ(set1, set2)'
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n):      min objN(n) + CRM(n).valFn$(succ(n,child)) xN(n) defobjN(n)
+CRM(n)$(succ(n,child)):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
+
+****************************************************************************************************************
+* Test for the syntax   MP(..., node(...).valFn$(succ(n,child)) yielding 0
+****************************************************************************************************************
+option clear = xN;
+xN.lo(n) = -ord(n);
+xN.up(n) =  ord(n);
+
+embeddedCode ReSHOP:
+* node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
+node(n):   min objN(n) + CRM(n).valFn$(succ(n,child)) xN(n) defobjN(n)
+CRM(n):    MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+endEmbeddedCode
+
+solve m_basic4 using emp;
+abort$[m_basic4.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m_basic4.modelStat;
+abort$[m_basic4.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m_basic4.solveStat;
+
+* Odd variables are at their upper bounds
+* Even at their upper bounds
+abort$[ smax{n$(mod(ord(n),2) = 0), abs(xN.l(n) - xN.lo(n))} > 1e-4] 'wrong even xN values', xN.l;
+abort$[ smax{n$(mod(ord(n),2) = 1), abs(xN.l(n) - xN.up(n))} > 1e-4] 'wrong even xN values', xN.l;
+
+* Check that the absolute marginal values sum to 2 at each stage
+abort$[ smax{t, abs( sum[n$(ord(n) >= power(2, ord(t)-1) AND ord(n) < power(2, ord(t))), abs(xN.m(n)) ] - 2.) } > 1e-4] 'wrong even xN values', xN.m;
 
 $exit
 
@@ -93,6 +297,6 @@ node('t4'): min obj('t4')                            x('t4') y('t4') defobj('t4'
 endEmbeddedCode
 
 
-solve m_dynamic_scalar_NL using emp;$(sum(t, pow2(n,t))
+solve m_dynamic_scalar_NL using emp;
 
 
