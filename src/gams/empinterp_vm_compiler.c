@@ -2814,6 +2814,222 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
    return OK;
 }
 
+typedef struct {
+   bool has_var;
+   bool has_param;
+   bool has_valfn;
+   bool parse_kwd;
+   bool has_smooth;
+   unsigned p_bck;
+   unsigned addr_linklabel_gidx;
+   Lexeme  label_valfn;
+   GmsIndicesData label_gmsindices;
+} SimpleExpr;
+
+/**
+ * @brief Parse a simple expression in the objective part, potentially within a sum
+ *
+ * @param      interp  the EMP interpreter
+ * @param      p       the position index
+ * @param[out] sexpr   the simple expression
+ *
+ * @return             the error code
+ */
+static int parse_sexpr(Interpreter * restrict interp, unsigned * restrict p,
+                       SimpleExpr * restrict sexpr)
+{
+   TokenType toktype;
+
+   do {
+      S_CHECK(advance(interp, p, &toktype));
+      PARSER_EXPECTS(interp, "a GAMS variable or parameter or a value function",
+                     TOK_GMS_VAR, TOK_GMS_PARAM, TOK_IDENT);
+
+      switch (toktype) {
+
+      case TOK_GMS_VAR:
+         if (sexpr->has_var) {
+            error("[empinterp] ERROR on line %u: only one variable is allowed in a %s "
+                  "statement\n", interp->linenr, toktype2str(TOK_SUM));
+            return Error_EMPIncorrectInput;
+            }
+         sexpr->has_var = true;
+         break;
+
+      case TOK_GMS_PARAM:
+         if (sexpr->has_param) {
+            error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
+                  "statement\n", interp->linenr, toktype2str(TOK_SUM));
+            return Error_EMPIncorrectInput;
+            }
+         sexpr->has_param = true;
+         break;
+
+      case TOK_IDENT: {
+         IdentData ident;
+         // HACK
+         S_CHECK(interp->ops->resolve_tokasident(interp, &ident));
+
+         // HACK
+         if (ident.type == IdentNotFound) {
+            /* ----------------------------------------------------------------------
+             * We expect the identifier to be a label, followed by a valfn
+             * ---------------------------------------------------------------------- */
+             if (sexpr->has_valfn) {
+                error("[empinterp] ERROR on line %u: only one value function (valFn) is allowed in a %s "
+                      "statement\n", interp->linenr, toktype2str(TOK_SUM));
+                return Error_EMPIncorrectInput;
+             }
+             sexpr->has_valfn = true;
+
+             tok2lexeme(&interp->cur, &sexpr->label_valfn);
+
+             unsigned p2 = *p;
+             TokenType toktype2;
+             S_CHECK(peek(interp, &p2, &toktype2));
+             if (toktype2 == TOK_LPAREN) {
+                  *p = p2;
+                  S_CHECK(parse_gmsindices(interp, p, &sexpr->label_gmsindices));
+              }
+
+               S_CHECK(advance(interp, p, &toktype));
+
+               S_CHECK(consume_valfn_kwd(interp, p));
+
+               /* HACK: there needs to be an abstraction here */
+                  //{ GDB_STOP()}
+
+                  p2 = *p;
+                  S_CHECK(peek(interp, &p2, &toktype2));
+                  if (toktype2 == TOK_DOT) {
+                     *p = p2;
+                     S_CHECK(advance(interp, p, &toktype2));
+                     S_CHECK(parser_expect(interp, "After a valfn, only the smooth operator is valid",
+                                           TOK_SMOOTH));
+                     sexpr->has_smooth = true;
+
+                     /* smoothing requires at least one parameter (the value) */
+                     //S_CHECK(advance(interp, p, &toktype));
+                     //S_CHECK(parser_expect(interp, "After a smooth keyword, an left parenthesis '(' is expected",
+                     //                      TOK_LPAREN));
+                     //S_CHECK(advance(interp, p, &toktype));
+                     
+                     
+                     OperatorKeyword smoothing_keywords[] = {
+                        {.name = "scheme", .optional = true, .type = OperatorKeywordString,
+                           .position = UINT_MAX, .kwstrs = smoothing_scheme_options, .strsetter = smoothing_scheme_setter},
+                        {.name = "par",    .optional = true, .type = OperatorKeywordScalar,
+                           .position = UINT_MAX, //.dblsetter = smoothing_par_dblsetter,
+                           .uintsetter = smoothing_par_uintsetter },
+                     };
+
+
+                     SmoothingOperatorData smoothing_operator;
+                     smoothing_operator_data_init(&smoothing_operator);
+
+                     S_CHECK(parse_operator_kw_args(interp, p, ARRAY_SIZE(smoothing_keywords),
+                                                    smoothing_keywords, &smoothing_operator));
+
+                     sexpr->p_bck = smoothing_operator.parameter_position;
+
+                     sexpr->parse_kwd = true;
+                  }
+
+
+             } else {
+
+             if (sexpr->has_param) {
+                error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
+                      "statement\n", interp->linenr, toktype2str(TOK_SUM));
+                return Error_EMPIncorrectInput;
+             }
+             sexpr->has_param = true;
+
+              double dummyval;
+              S_CHECK(parse_identasscalar(interp, p, &dummyval));
+             }
+
+         }
+         break;
+
+      default: runtime_error(interp->linenr);
+      }
+
+      S_CHECK(advance(interp, p, &toktype));
+   } while (toktype == TOK_STAR);
+
+   return OK;
+}
+
+/**
+ * @brief Perform codegen for a simple expression
+ *
+ * @param interp         the Interpreter
+ * @param sexpr          the simple expression
+ * @param c              the EMP Compiler
+ * @param tape           the VM tape
+ * @param sum_iterators  the SUM operator iterators, if any
+ *
+ * @return               the error code
+ */
+static int sexpr_codegen(Interpreter * restrict interp, SimpleExpr * restrict sexpr,
+                         Compiler *c, Tape * restrict tape,
+                         LoopIterators * restrict sum_iterators)
+{
+   unsigned linklabel_gidx = UINT16_MAX;
+
+   if (sexpr->has_valfn) {
+
+      // HACK
+      if (gmsindices_nvardims(&sexpr->label_gmsindices) > 0 && !embmode(interp)) {
+         TO_IMPLEMENT("Implementation of the SUM operator is incomplete")
+      }
+
+      LinkType linktype = sexpr->has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
+      LoopIterators loopiters = {.niters = 0};
+      S_CHECK(linklabels_init_from_loopiterators(interp, tape, sexpr->label_valfn.start,
+                                                 sexpr->label_valfn.len, linktype,
+                                                 &sexpr->label_gmsindices, &loopiters,
+                                                 &linklabel_gidx));
+
+      u8 num_iterators = sum_iterators ? sum_iterators->niters : 0;
+
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
+
+      for (unsigned i = 0; i < num_iterators; ++i) {
+         S_CHECK(emit_byte(tape, sum_iterators->iters[i].iter_lidx));
+      }
+
+
+      if (sexpr->parse_kwd) { // only smooth() operator. We assume to be at n.valn.smooth(
+                       //                                                         ^ 
+         assert(sexpr->p_bck < UINT_MAX);
+         double dummy;
+         TokenType toktype_dummy;
+         S_CHECK(advance(interp, &sexpr->p_bck, &toktype_dummy));
+         if (!embmode(interp)) {
+            S_CHECK(parse_identasscalar(interp, &sexpr->p_bck, &dummy));
+         }
+         S_CHECK(emit_byte(tape, OP_LINKLABELS_KEYWORDS_UPDATE));
+      }
+
+   }  else { // FIXME: This looks like a hack
+      LinkLabels *linklabels;
+      S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, NULL, 0, 0, 0,
+                                  0, LinkObjAddMap, &linklabel_gidx));
+
+      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, 0));
+   }
+
+   if (linklabel_gidx < UINT16_MAX) {
+      S_CHECK(patch_short(tape, sexpr->addr_linklabel_gidx, linklabel_gidx))
+   } else {
+      return runtime_error(interp->linenr);
+   }
+
+   return OK;
+}
+
 /* ------------------------------------------------------------------------
  * Design notes for projection implementation.
  *
@@ -2859,19 +3075,18 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
     * --------------------------------------------------------------------- */
    /* This defines the loop iterators and the linklabels object */
    // XXX understand what loopiterator is doing in our case
-   unsigned addr_linklabel_gidx;
-   Lexeme label_valfn;
-   GmsIndicesData label_gmsindices = {.nargs = 0};
+
+   SimpleExpr sexpr = {0};
+   sexpr.p_bck = UINT_MAX;
 
    S_CHECK(emit_byte(tape, OP_LINKLABELS_INIT));
-   S_CHECK(emit_patchable_short(tape, &addr_linklabel_gidx));
+   S_CHECK(emit_patchable_short(tape, &sexpr.addr_linklabel_gidx));
 
    begin_scope(c, __func__);
 
    /* ---------------------------------------------------------------------
     * Step 1: Parse sum iterators
     * --------------------------------------------------------------------- */
-   /* If arg1 has no test, just sets up iterator, need to add to the start of arg2 */
    bool no_test_in_arg1;
    LoopIterators sum_iterators;
    S_CHECK(sumtype_parse_arg1(interp, p, c, tape, &sum_iterators, &no_test_in_arg1));
@@ -2887,133 +3102,9 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    }
 
    /* ---------------------------------------------------------------------
-    * Step 2: parse the expression like param * n(...){.dual()}.valFn * variables
+    * Step 2: parse an expression like param * n(...){.dual()}.valFn * var
     * --------------------------------------------------------------------- */
-   typedef struct {
-   bool has_var;
-   bool has_param;
-   bool has_valfn;
-   bool parse_kwd;
-   bool has_smooth;
-   } SimpleExpr;
-   SimpleExpr sexpr = {0};
-   unsigned p_bck = UINT_MAX;
-
-   do {
-   S_CHECK(advance(interp, p, &toktype));
-   PARSER_EXPECTS(interp, "a GAMS variable or parameter or a value function",
-                  TOK_GMS_VAR, TOK_GMS_PARAM, TOK_IDENT);
-
-   switch (toktype) {
-   case TOK_GMS_VAR:
-      if (sexpr.has_var) {
-         error("[empinterp] ERROR on line %u: only one variable is allowed in a %s "
-               "statement\n", interp->linenr, toktype2str(TOK_SUM));
-         return Error_EMPIncorrectInput;
-         }
-      sexpr.has_var = true;
-      break;
-   case TOK_GMS_PARAM:
-      if (sexpr.has_param) {
-         error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
-               "statement\n", interp->linenr, toktype2str(TOK_SUM));
-         return Error_EMPIncorrectInput;
-         }
-      sexpr.has_param = true;
-      break;
-   case TOK_IDENT: {
-      IdentData ident;
-      // HACK
-      S_CHECK(interp->ops->resolve_tokasident(interp, &ident));
-
-      // HACK
-      if (ident.type == IdentNotFound) {
-         /* ----------------------------------------------------------------------
-          * We expect the identifier to be a label, followed by a valfn
-          * ---------------------------------------------------------------------- */
-          if (sexpr.has_valfn) {
-             error("[empinterp] ERROR on line %u: only one value function (valFn) is allowed in a %s "
-                   "statement\n", interp->linenr, toktype2str(TOK_SUM));
-             return Error_EMPIncorrectInput;
-          }
-          sexpr.has_valfn = true;
-
-          tok2lexeme(&interp->cur, &label_valfn);
-
-          unsigned p2 = *p;
-          TokenType toktype2;
-          S_CHECK(peek(interp, &p2, &toktype2));
-          if (toktype2 == TOK_LPAREN) {
-               *p = p2;
-               S_CHECK(parse_gmsindices(interp, p, &label_gmsindices));
-           }
-
-            S_CHECK(advance(interp, p, &toktype));
-
-            S_CHECK(consume_valfn_kwd(interp, p));
-
-            /* HACK: there needs to be an abstraction here */
-               //{ GDB_STOP()}
-
-               p2 = *p;
-               S_CHECK(peek(interp, &p2, &toktype2));
-               if (toktype2 == TOK_DOT) {
-                  *p = p2;
-                  S_CHECK(advance(interp, p, &toktype2));
-                  S_CHECK(parser_expect(interp, "After a valfn, only the smooth operator is valid",
-                                        TOK_SMOOTH));
-                  sexpr.has_smooth = true;
-
-                  /* smoothing requires at least one parameter (the value) */
-                  //S_CHECK(advance(interp, p, &toktype));
-                  //S_CHECK(parser_expect(interp, "After a smooth keyword, an left parenthesis '(' is expected",
-                  //                      TOK_LPAREN));
-                  //S_CHECK(advance(interp, p, &toktype));
-                  
-                  
-                  OperatorKeyword smoothing_keywords[] = {
-                     {.name = "scheme", .optional = true, .type = OperatorKeywordString,
-                        .position = UINT_MAX, .kwstrs = smoothing_scheme_options, .strsetter = smoothing_scheme_setter},
-                     {.name = "par",    .optional = true, .type = OperatorKeywordScalar,
-                        .position = UINT_MAX, //.dblsetter = smoothing_par_dblsetter,
-                        .uintsetter = smoothing_par_uintsetter },
-                  };
-
-
-                  SmoothingOperatorData smoothing_operator;
-                  smoothing_operator_data_init(&smoothing_operator);
-
-                  S_CHECK(parse_operator_kw_args(interp, p, ARRAY_SIZE(smoothing_keywords),
-                                                 smoothing_keywords, &smoothing_operator));
-
-                  p_bck = smoothing_operator.parameter_position;
-
-                  sexpr.parse_kwd = true;
-               }
-
-
-          } else {
-
-          if (sexpr.has_param) {
-             error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
-                   "statement\n", interp->linenr, toktype2str(TOK_SUM));
-             return Error_EMPIncorrectInput;
-          }
-          sexpr.has_param = true;
-
-           double dummyval;
-           S_CHECK(parse_identasscalar(interp, p, &dummyval));
-          }
-
-      }
-      break;
-
-   default: runtime_error(interp->linenr);
-   }
-
-   S_CHECK(advance(interp, p, &toktype));
-   } while (toktype == TOK_STAR);
-
+   S_CHECK(parse_sexpr(interp, p, &sexpr));
 
    // WE need to ensure that all parameters / variables only resolve to scalar quantities
  
@@ -3021,52 +3112,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    /* Consume the delimiter_endloop token */
    S_CHECK(parser_expect(interp, "end delimiter of sum", closing_delimiter));
 
-   unsigned gidx;
-
-   if (sexpr.has_valfn) {
-
-      // HACK
-      if (gmsindices_nvardims(&label_gmsindices) > 0 && !embmode(interp)) {
-         TO_IMPLEMENT("Implementation of the SUM operator is incomplete")
-      }
-
-      LinkType linktype = sexpr.has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
-      LoopIterators loopiters = {.niters = 0};
-      S_CHECK(linklabels_init_from_loopiterators(interp, tape, label_valfn.start,
-                                                 label_valfn.len, linktype,
-                                                 &label_gmsindices, &loopiters, &gidx));
-
-      u8 num_iterators = sum_iterators.niters;
-
-      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
-
-      for (unsigned i = 0; i < num_iterators; ++i) {
-         S_CHECK(emit_byte(tape, sum_iterators.iters[i].iter_lidx));
-      }
-
-
-      if (sexpr.parse_kwd) { // only smooth() operator. We assume to be at n.valn.smooth(
-                       //                                                         ^ 
-         assert(p_bck < UINT_MAX);
-         double dummy;
-         TokenType toktype_dummy;
-         S_CHECK(advance(interp, &p_bck, &toktype_dummy));
-         if (!embmode(interp)) {
-            S_CHECK(parse_identasscalar(interp, &p_bck, &dummy));
-         }
-         S_CHECK(emit_byte(tape, OP_LINKLABELS_KEYWORDS_UPDATE));
-      }
-
-   }  else {
-      LinkLabels *linklabels;
-      S_CHECK(vm_linklabels_alloc(c->vm, &linklabels, NULL, 0, 0, 0,
-                                  0, LinkObjAddMap, &gidx));
-
-      S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, 0));
-   }
-
-   assert(gidx < UINT16_MAX);
-   S_CHECK(patch_short(tape, addr_linklabel_gidx, gidx))
+   S_CHECK(sexpr_codegen(interp, &sexpr, c, tape, &sum_iterators));
 
    /* ---------------------------------------------------------------------
     * Step 3:  Increment loop index and check of the condition idx < max
