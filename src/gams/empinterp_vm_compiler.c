@@ -2814,17 +2814,29 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
    return OK;
 }
 
-typedef struct {
-   bool has_var;
-   bool has_param;
-   bool has_valfn;
-   bool parse_kwd;
-   bool has_smooth;
-   unsigned p_bck;
-   unsigned addr_linklabel_gidx;
-   Lexeme  label_valfn;
-   GmsIndicesData label_gmsindices;
-} SimpleExpr;
+static int sexpr_init(Tape * restrict tape, SimpleExpr *sexpr)
+{
+   sexpr->p_bck = UINT_MAX;
+   gmsindices_init(&sexpr->label_gmsindices);
+   gmsindices_deactivate(&sexpr->label_gmsindices);
+
+   S_CHECK(emit_byte(tape, OP_LINKLABELS_INIT));
+   S_CHECK(emit_patchable_short(tape, &sexpr->addr_linklabel_gidx));
+
+   return OK;
+}
+
+int vm_sexpr_init(Interpreter * interp, SimpleExpr * sexpr)
+{
+   S_CHECK(c_switch_to_compmode(interp, &sexpr->switch_back_imm));
+   Compiler *c = interp->compiler;
+
+   EmpVm *vm = c->vm;
+   Tape _tape = {.code = &vm->code, .linenr = UINT_MAX};
+   Tape * const tape = &_tape;
+
+   return sexpr_init(tape, sexpr);
+}
 
 /**
  * @brief Parse a simple expression in the objective part, potentially within a sum
@@ -2839,6 +2851,7 @@ static int parse_sexpr(Interpreter * restrict interp, unsigned * restrict p,
                        SimpleExpr * restrict sexpr)
 {
    TokenType toktype;
+   unsigned p_bck;
 
    do {
       S_CHECK(advance(interp, p, &toktype));
@@ -2955,10 +2968,23 @@ static int parse_sexpr(Interpreter * restrict interp, unsigned * restrict p,
       default: runtime_error(interp->linenr);
       }
 
+      p_bck = *p;
+
       S_CHECK(advance(interp, p, &toktype));
    } while (toktype == TOK_STAR);
 
+   //backtrack
+   *p = p_bck;
+
    return OK;
+}
+
+int vm_parse_sexpr(Interpreter * restrict interp, unsigned * restrict p,
+                   SimpleExpr * restrict sexpr)
+{
+   assert(!immmode(interp));
+
+   return parse_sexpr(interp, p, sexpr);
 }
 
 /**
@@ -3030,6 +3056,23 @@ static int sexpr_codegen(Interpreter * restrict interp, SimpleExpr * restrict se
    return OK;
 }
 
+int vm_codegen_sexpr(Interpreter * restrict interp, SimpleExpr * restrict sexpr)
+{
+   Compiler *c = interp->compiler;
+
+   EmpVm *vm = c->vm;
+   Tape _tape = {.code = &vm->code, .linenr = UINT_MAX};
+   Tape * const tape = &_tape;
+
+   S_CHECK(sexpr_codegen(interp, sexpr, c, tape, NULL));
+
+   if (sexpr->switch_back_imm) {
+      S_CHECK(c_switch_to_immmode(interp))
+   }
+
+   return OK;
+}
+
 /* ------------------------------------------------------------------------
  * Design notes for projection implementation.
  *
@@ -3077,11 +3120,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    // XXX understand what loopiterator is doing in our case
 
    SimpleExpr sexpr = {0};
-   sexpr.p_bck = UINT_MAX;
-
-   S_CHECK(emit_byte(tape, OP_LINKLABELS_INIT));
-   S_CHECK(emit_patchable_short(tape, &sexpr.addr_linklabel_gidx));
-
+   S_CHECK(sexpr_init(tape, &sexpr));
    begin_scope(c, __func__);
 
    /* ---------------------------------------------------------------------
@@ -3110,6 +3149,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
  
    // HACK: move this around, towards the end of the function
    /* Consume the delimiter_endloop token */
+   S_CHECK(advance(interp, p, &toktype));
    S_CHECK(parser_expect(interp, "end delimiter of sum", closing_delimiter));
 
    S_CHECK(sexpr_codegen(interp, &sexpr, c, tape, &sum_iterators));

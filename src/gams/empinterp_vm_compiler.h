@@ -57,6 +57,26 @@ int vm_add_Varc_dual(Interpreter * interp, UNUSED unsigned *p) NONNULL;
 int vm_parse_condition(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
 int vm_condition_fini(Interpreter * restrict interp) NONNULL;
 
+
+// HACK for simple expression
+ typedef struct {
+   bool has_var;
+   bool has_param;
+   bool has_valfn;
+   bool parse_kwd;
+   bool has_smooth;
+   bool switch_back_imm;
+   unsigned p_bck;
+   unsigned addr_linklabel_gidx;
+   Lexeme  label_valfn;
+   GmsIndicesData label_gmsindices;
+} SimpleExpr;
+
+int vm_sexpr_init(Interpreter * interp, SimpleExpr * restrict sexpr) NONNULL;
+int vm_parse_sexpr(Interpreter * restrict interp, unsigned * restrict p,
+                          SimpleExpr * restrict sexpr) NONNULL;
+int vm_codegen_sexpr(Interpreter * restrict interp, SimpleExpr * restrict sexpr) NONNULL;
+
 int empvm_finalize(Interpreter *interp) NONNULL;
 
 int c_switch_to_compmode(Interpreter *interp, bool *switched) NONNULL;

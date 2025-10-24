@@ -129,10 +129,10 @@ int parse_gmsindices(Interpreter * restrict interp, unsigned * restrict p,
    Lexeme symbol_lexeme = interp->last_symbol.lexeme;
    IdentOrigin symbol_origin = interp->last_symbol.origin;
   /* ----------------------------------------------------------------------
-   * We are expecting to be called at gmssymb('a', '1')
-   *                                          ^
+   * We are expecting to be called at symbol('a', '1')
+   *                                         ^
    * Peek mode is used to parse all the gms indices. This allows to show
-   * "gmssymb" in the error message. Likewise in a loop or sum statement
+   * "symbol" in the error message. Likewise in a loop or sum statement.
    * ---------------------------------------------------------------------- */
    interp_peekseqstart(interp);
 
