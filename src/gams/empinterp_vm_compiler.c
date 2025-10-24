@@ -325,7 +325,7 @@ static inline void iterators_init_from_gmsindices(LoopIterators* restrict iterat
                                                   GmsIndicesData* restrict gmsindices)
 {
    unsigned nargs = gmsindices->nargs;
-   iterators->niters = nargs;
+   iterators->niters = gmsindices_numiterators(gmsindices);
    iterators->loopobj_gidx = UINT_MAX;
    memcpy(iterators->idents, gmsindices->idents, nargs*sizeof(IdentData));
 }
@@ -2816,6 +2816,8 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
 
 static int sexpr_init(Tape * restrict tape, SimpleExpr *sexpr)
 {
+   memset(sexpr, 0, sizeof(*sexpr));
+
    sexpr->p_bck = UINT_MAX;
    gmsindices_init(&sexpr->label_gmsindices);
    gmsindices_deactivate(&sexpr->label_gmsindices);

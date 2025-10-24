@@ -29,7 +29,7 @@ cons(a)..
 model nash / defobj, cons /;
 
 EmbeddedCode ReSHOP:
-n(a,'0'): min obj(a,'0')+n.valfn(a,'1') x(a,'0') defobj(a,'0')
+n(a,'0'): min obj(a,'0')+n(a,'1').valfn x(a,'0') defobj(a,'0')
 n(a,'1'): min obj(a,'1') x(a,'1') defobj(a,'1') cons(a)
 root: Nash(n(a,'0'))
 endEmbeddedCode
@@ -74,7 +74,7 @@ cons(a)..
 model nash / defobj, cons /;
 
 EmbeddedCode ReSHOP:
-n(a,'0'): min obj(a,'0')+n.valfn(a,'1') x(a,'0') defobj(a,'0')
+n(a,'0'): min obj(a,'0')+n(a,'1').valfn x(a,'0') defobj(a,'0')
 n(a,'1'): min obj(a,'1') x(a,'1') defobj(a,'1') cons(a)$sameas(a,'a1')
 root: Nash(n(a,'0'))
 endEmbeddedCode

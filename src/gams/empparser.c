@@ -3370,9 +3370,6 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
    /* Save the keyword info in case we parse another keyword */
    KeywordLexemeInfo opt_kw_info = interp->last_kw_info;
 
-   /* TODO(urg) An analysis should yield the problem type */
-//   mp->probtype = MdlProbType_nlp;
-
    /* ---------------------------------------------------------------------
     * The next token is either the MP type (optional) or the objvar
     * --------------------------------------------------------------------- */
@@ -3437,27 +3434,39 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
       S_CHECK(advance(interp, p, &toktype));
 
    }
+
    while (toktype == TOK_PLUS) { /* TODO(URG): support TOK_MINUS */
 
+      unsigned p2 = *p;
       S_CHECK(advance(interp, p, &toktype))
-      PARSER_EXPECTS_EXIT(interp, "edgeVF expression is expected",
+      PARSER_EXPECTS_EXIT(interp, "arcVF expression is expected",
                           TOK_GMS_VAR, TOK_REAL, TOK_VALFN, TOK_IDENT, TOK_SUM,
-                          TOK_MP);
+                          TOK_MP, TOK_GMS_PARAM);
 
 
       if (toktype == TOK_SUM) {
          S_CHECK(parse_sum(interp, p));
-
-      } else if (toktype == TOK_IDENT) {          // Expecting label.valfn
-         S_CHECK(parse_single_VF_attr(interp, p));
 
       } else if (toktype == TOK_MP) {             // Expecting MP.valfn('name', ...)
 
          S_CHECK(parse_MP_CCF(mp, interp, p));
          TO_IMPLEMENT("MP in objective");
          //S_CHECK(ensure_valfn_kwd(interp, p));
+#if 0
+      } else if (toktype == TOK_IDENT || toktype == TOK_GMS_VAR || toktype == TOK_GMS_PARAM) {
+         // backtrack
+         *p = p2;
+         SimpleExpr sexpr;
+         S_CHECK_EXIT(vm_sexpr_init(interp, &sexpr));
+         S_CHECK_EXIT(vm_parse_sexpr(interp, p, &sexpr));
+         S_CHECK_EXIT(vm_codegen_sexpr(interp, &sexpr));
+#else
+      } else if (toktype == TOK_IDENT) {          // Expecting label.valfn
+         S_CHECK(parse_single_VF_attr(interp, p));
+
+#endif
       } else {
-         TO_IMPLEMENT("complex edgeVF parsing");
+         TO_IMPLEMENT("complex arcVF parsing");
       }
 
       S_CHECK(advance(interp, p, &toktype));
@@ -4739,6 +4748,9 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
    S_CHECK(imm_set_regentry(interp, label, label_len, &gmsindices));
 
    S_CHECK(labdeldef_parse_statement(interp, p));
+
+   // NOTE
+   gmsindices_deactivate(&gmsindices);
 
    return OK;
 }

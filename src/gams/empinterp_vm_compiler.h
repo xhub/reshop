@@ -19,7 +19,7 @@ typedef struct {
 typedef struct {
    unsigned loopobj_gidx;             /**< global index for the object inducing the loop */
    EmpVmOpCode loopobj_opcode;        /**< Update opcode for the loop object             */
-   u8 niters;                         /**< Number of true iterators                      */
+   u8 niters;                          /**< Number of true iterators                      */
    u8 varidxs2pos[GMS_MAX_INDEX_DIM]; /**< Position of the variable iterators            */
    IdentData idents[GMS_MAX_INDEX_DIM];
    IteratorData iters[GMS_MAX_INDEX_DIM];

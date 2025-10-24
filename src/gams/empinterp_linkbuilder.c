@@ -15,16 +15,16 @@ bool linklabels_valid(const LinkLabels *l)
 }
 
 LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len,
-                            uint8_t dim, uint8_t nvaridxs, unsigned maxrecs)
+                            uint8_t dim, uint8_t nvardims, unsigned maxrecs)
 {
    LinkLabels *link = NULL;
-   assert(dim >= nvaridxs);
-   CALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+nvaridxs));
+   assert(dim >= nvardims);
+   CALLOCBYTES_EXIT_NULL(link, LinkLabels, sizeof(LinkLabels) + sizeof(int) * (dim+nvardims));
 
    // HACK: check that uels_var needs to be of size num_vars.
    // That is not obvious as OP_LINKLABELS_SETFROM_LOOPVAR touches .data ...
    if (maxrecs > 0) {
-      MALLOC_EXIT_NULL(link->uels_var, int, (size_t)maxrecs*nvaridxs); 
+      MALLOC_EXIT_NULL(link->uels_var, int, (size_t)maxrecs*nvardims); 
       MALLOC_EXIT_NULL(link->vi, rhp_idx, (size_t)maxrecs); 
       MALLOC_EXIT_NULL(link->coeff, double, (size_t)maxrecs); 
    } else {
@@ -45,7 +45,7 @@ LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len
    link->extras = NULL;
 
    link->dim = dim;
-   link->nvaridxs = nvaridxs;
+   link->nvaridxs = nvardims;
    link->label_len = label_len;
 
    link->nrecs = 0;
