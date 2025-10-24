@@ -329,9 +329,12 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
 
          if (valid_vi(objvar)) { lequ_len--; assert(lequ_debug_hasvar(eobj->lequ, objvar)); }
 
+         S_CHECK(rctr_getnl(&mdl->ctr, eobj));
+
          /* If the equation is just a constant, just add the term vi * cst */
          if (lequ_len == 0 && (!eobj->tree || !eobj->tree->root)) {
-            assert(((RhpContainerData*)&mdl->ctr)->cmat.equs[eobj->idx]->type == CMatEltCstEqu);
+            assert(valid_ei_(eobj->idx, mdl_nequs_total(mdl), __func__));
+            assert(((RhpContainerData*)mdl->ctr.data)->cmat.equs[eobj->idx]->type == CMatEltCstEqu);
             cpydat_child->single.coeff_path = coeff_path;
             return rctr_equ_addlvar(&mdl->ctr, e, vi, coeff_path*ecst);
          }
