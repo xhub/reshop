@@ -1845,6 +1845,34 @@ static int sumtype_parse_arg1(Interpreter * restrict interp, unsigned * restrict
    return OK;
 }
 
+/* ------------------------------------------------------------------------
+ * Design notes for projection implementation.
+ *
+ * The high-level syntax is SUM { arg1, arg2 }. The generated pseudo-code is
+ *
+ * 1. init arg1 iterators (arg1_iter)
+ * 2. if (arg1.condition and arg1.condition(arg1_iter)) then jump @5 (ARG2_START) end;
+ * 3. while(!arg1.iterend(arg1_iter)) { update(arg1_iter); jump @2. }
+ * 4. goto END_PROJECTION
+ *
+ * 5. init arg2 iterations (arg2_iter)
+ * 6.  if (!arg2.condition or arg2.condition(arg2_iter)) then goto PROJECTION_TRUE end;
+ * 7. while(!arg2.iterend(arg2_iter)) { update(arg2_iter); jump @6. }
+ * 8. goto 3. (ARG1_UPDATE)
+ *
+ * 9. goto (PROJECTION_FALSE)
+ * 
+ * PROJECTION_TRUE: do xyz
+ *
+ * PROJECTION_FALSE: continue
+ *
+ *
+ * When negating the projection, there is an added inversion of the result that
+ * happens at PROJECTION_TRUE and PROJECTION_FALSE to negate them.
+ *
+ * Salient point: There needs to be an indicator whether arg1.condition exists . In that
+ * case more codegen needs to happen to not continue to 5 in that case
+ * ------------------------------------------------------------------------ */
 static int parse_projection_in_conditional(Interpreter * restrict interp, unsigned * restrict p,
                                            Compiler * restrict c, Tape * restrict tape,
                                            bool do_emit_not)
@@ -2786,6 +2814,22 @@ int parse_loop(Interpreter * restrict interp, unsigned * restrict p)
    return OK;
 }
 
+/* ------------------------------------------------------------------------
+ * Design notes for projection implementation.
+ *
+ * The high-level syntax is SUM { arg, simple_expr }. The generated pseudo-code is
+ *
+ * 1. init arg1 iterators (arg1_iter)
+ * 2. if (!arg1.condition or arg1.condition(arg1_iter)) then jump @5 (SEXPR_START) end;
+ * 3. goto 5 (ARG1_UPDATE)
+ *
+ * 4. Parse SEXPR
+ *
+ * 5. while(!arg1.iterend(arg1_iter)) { update(arg1_iter); jump @2. }
+ *
+ * Salient point: There needs to be an indicator whether arg1.condition exists . In that
+ * case more codegen needs to happen to not continue to 4 in that case
+ * ------------------------------------------------------------------------ */
 int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 {
    int status = OK;
