@@ -34,7 +34,27 @@ typedef struct arc_dat {
 } ArcDat;
 
 
-static void labeldat_print(LabelDat *labeldat, dctHandle_t dct, unsigned mode)
+static void labeldat_print_gmd(LabelDat *labeldat, gmdHandle_t gmd, unsigned mode)
+{
+   printout(mode, "%.*s", labeldat->label_len, labeldat->label);
+   unsigned dim = labeldat->dim;
+
+   if (dim == 0) return;
+
+   printstr(mode, "(");
+   int dummyoffset;
+   gmd_printuel(gmd, labeldat->uels[0], mode, &dummyoffset);
+
+
+   for (unsigned i = 1; i < dim; ++i) {
+      printstr(mode, ", ");
+      gmd_printuel(gmd, labeldat->uels[i], mode, &dummyoffset);
+   }
+
+   printstr(mode, ")");
+}
+
+static void labeldat_print_dct(LabelDat *labeldat, dctHandle_t dct, unsigned mode)
 {
    printout(mode, "%.*s", labeldat->label_len, labeldat->label);
    unsigned dim = labeldat->dim;
@@ -52,6 +72,16 @@ static void labeldat_print(LabelDat *labeldat, dctHandle_t dct, unsigned mode)
    }
 
    printstr(mode, ")");
+}
+
+/* TODO: cleanup and use only one */
+static void labeldat_print(LabelDat *labeldat, Interpreter *interp, unsigned mode)
+{
+   if (interp->gmd) {
+      labeldat_print_gmd(labeldat, interp->gmd, mode);
+   } else {
+      labeldat_print_dct(labeldat, interp->dct, mode);
+   }
 }
 
 static daguid_t dagregister_find(const DagRegister *dagreg, LabelDat *labeldat)
@@ -157,7 +187,7 @@ static int err_wrong_node_type(Interpreter *interp, daguid_t uid_parent,
    EmpDag *empdag = &interp->mdl->empinfo.empdag;
    error("[empinterp] ERROR: %s. This error happened while processing the label '",
          errmsg);
-   labeldat_print(&arcdat->labeldat, interp->dct, PO_ERROR);
+
    error("' within the parent %s(%s)\n", daguid_type2str(uid_parent),
          empdag_getname(empdag, uid_parent));
    return Error_EMPIncorrectInput;
@@ -418,14 +448,15 @@ static int dag_resolve_arc_labels(Interpreter *interp)
 
          daguid_t daguid_dst = dagregister_find(dagregister, &arcdat.labeldat);
 
-        if (daguid_dst == UINT_MAX) {
-           error("[empinterp] ERROR: while building arc for node '%s' could "
-                 "not resolve the label '", empdag_getname(empdag, daguid_src));
-           labeldat_print(&arcdat.labeldat, interp->dct, PO_ERROR);
-           errormsg("'\n");
-           num_err++;
-           continue;
-        }
+         if (daguid_dst == UINT_MAX) {
+            error("[empinterp] ERROR: while building arc for node '%s' could "
+                  "not resolve the label '", empdag_getname(empdag, daguid_src));
+            labeldat_print(&arcdat.labeldat, interp, PO_ERROR);
+
+            errormsg("'\n");
+            num_err++;
+            continue;
+         }
 
          arcdat.basic_dat.vi  = vis[j];
          arcdat.basic_dat.cst = coeffs[j];
@@ -501,7 +532,7 @@ static int dag_resolve_arc_label(Interpreter *interp)
       if (uid_child == UINT_MAX) {
 
          errormsg("[empinterp] ERROR: could not resolve the label \"");
-         labeldat_print(&arcdat.labeldat, interp->dct, PO_ERROR);
+         labeldat_print(&arcdat.labeldat, interp, PO_ERROR);
          errormsg("\"\n");
          num_err++;
          continue;
@@ -593,7 +624,7 @@ static int dag_resolve_duals_label(Interpreter *interp)
 
          if (daguid_parent == UINT_MAX) {
             errormsg("[empinterp] ERROR: could not resolve the label '");
-            labeldat_print(&labeldat, interp->dct, PO_ERROR);
+            labeldat_print(&labeldat, interp, PO_ERROR);
             errormsg("'\n");
             num_err++;
             continue;
@@ -611,7 +642,7 @@ static int dag_resolve_duals_label(Interpreter *interp)
 
          if (err) {
             errormsg("[empinterp] ERROR: label '");
-            labeldat_print(&labeldat, interp->dct, PO_ERROR);
+            labeldat_print(&labeldat, interp, PO_ERROR);
             errormsg("' did not resolved to an MP. The dual operator can only be applied to OPT MPs\n");
             num_err++;
          }
@@ -697,7 +728,7 @@ static int dag_resolve_dual_label(Interpreter *interp)
 
       if (daguid_parent == UINT_MAX) {
          errormsg("[empinterp] ERROR: could not resolve the label '");
-         labeldat_print(&labeldat, interp->dct, PO_ERROR);
+         labeldat_print(&labeldat, interp, PO_ERROR);
          errormsg("'\n");
          num_err++;
          continue;
@@ -715,7 +746,7 @@ static int dag_resolve_dual_label(Interpreter *interp)
 
       if (err) {
          errormsg("[empinterp] ERROR: label '");
-         labeldat_print(&labeldat, interp->dct, PO_ERROR);
+         labeldat_print(&labeldat, interp, PO_ERROR);
          errormsg("' did not resolved to an MP. The dual operator can only be applied to OPT MPs\n");
       }
 
@@ -778,7 +809,7 @@ int empinterp_set_empdag_root(Interpreter *interp)
    if (root_daguid == UINT_MAX) {
       errormsg("[empinterp] ERROR: while setting the EMPDAG root, could not "
                "resolve the label '");
-      labeldat_print(&arcdat.labeldat, interp->dct, PO_ERROR);
+      labeldat_print(&arcdat.labeldat, interp, PO_ERROR);
       errormsg("'\n");
       return Error_EMPIncorrectInput;
    }

@@ -1,6 +1,7 @@
 $TITLE Basic 4 stage SP
 
 $onText
+Basic 4 stage stochastic test with various syntax 
 
 Contributor: Olivier Huber <oli.huber@gmail.com>
 Date: October 2025
@@ -33,8 +34,8 @@ defobjN(n).. objN(n) =E= cN(n)*xN(n);
 
 embeddedCode ReSHOP:
 node(n)$(NOT leaf(n)): min objN(n) + m(n).valFn xN(n) defobjN(n)
-m(n)$(NOT leaf(n)): MP('smax', node(child).valFn$(succ(n,child)))
-node(n)$(leaf(n)): min objN(n) xN(n) defobjN(n)
+m(n)$(NOT leaf(n)):    MP('smax', node(child).valFn$(succ(n,child)))
+node(n)$(leaf(n)):     min objN(n) xN(n) defobjN(n)
 endEmbeddedCode
 
 model m_basic4 /defobjN/;

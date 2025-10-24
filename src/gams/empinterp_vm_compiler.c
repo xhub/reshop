@@ -159,6 +159,10 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
 
 static int parse_loopsets(Interpreter * restrict interp, unsigned * restrict p,
                           GmsIndicesData * restrict indices);
+static int patch_jumps(Jumps * restrict jumps, Tape * restrict tape, unsigned depth);
+
+
+
 
 static int delimiter_error(Interpreter *interp, TokenType closing_delimiter, const char *opname)
 {
@@ -252,6 +256,62 @@ NONNULL static inline int jump_depth_dec(Compiler *c)
    return OK;
 }
 
+/**
+ * @brief Normalize the depth values to be at most a given depth
+ *
+ * @param jumps  the jumps to normalize
+ * @param depth  the depth at which to normalize (upper bound)
+ *
+ * @return       the error code
+ */
+static int jump_depth_normalize(Jumps *jumps, unsigned depth)
+{
+   if (jumps->len == 0) {
+      trace_empparsermsg("[empcompiler] ERROR: no jump to normalize\n");
+      return Error_RuntimeError;
+   }
+
+   trace_empparser("[empcompiler] JUMPS: normalize depth to %u\n", depth);
+
+   for (unsigned len = jumps->len, i = len-1; i < len; --i) {
+      Jump * jump = &jumps->list[i];
+
+      /* NOTE: unclear whether we rather want to check all and change the depth when
+       * it is > depth */
+      if (jump->depth < depth) {
+         return OK;
+      }
+
+      jump->depth = depth;
+   }
+
+   return OK;
+}
+
+/**
+ * @brief Normalize the falsey jumps to a be less or equal to a given depth
+ *
+ * This is necessary for the falsey jumps to only be resolve after the loop body.
+ * This also checks for any remaining truey jumps.
+ *
+ * @param c  the EMP compiler
+ *
+ * @return   the error code
+ */
+static int c_normalize_jumps_depth(Compiler *c)
+{
+   /* NOTE: the check below might be too strict. For now, no good example why this
+    * would be valid */
+   if (c->truey_jumps.len > 0) {
+      errormsg("[empinterp] ERROR: unexpected truey jump\n");
+      return Error_RuntimeError;
+   }
+
+   S_CHECK(jump_depth_normalize(&c->falsey_jumps, c->state.scope_depth));
+
+   return OK;
+}
+
 /* ---------------------------------------------------------------------
  * Short design note:
  *
@@ -265,7 +325,7 @@ static inline void iterators_init_from_gmsindices(LoopIterators* restrict iterat
                                                   GmsIndicesData* restrict gmsindices)
 {
    unsigned nargs = gmsindices->nargs;
-   iterators->size = nargs;
+   iterators->niters = nargs;
    iterators->loopobj_gidx = UINT_MAX;
    memcpy(iterators->idents, gmsindices->idents, nargs*sizeof(IdentData));
 }
@@ -378,7 +438,8 @@ UNUSED static inline int make_global(EmpVm *vm, VmValue value, GIDX_TYPE *i) {
    return OK;
 }
 
-static int patch_jump(Tape *tape, unsigned jump_addr) {
+static int patch_jump(Tape *tape, unsigned jump_addr)
+{
    // -2 to adjust for the bytecode for the jump jump_addr itself.
    assert(jump_addr >= 2 && tape->code->len > jump_addr - 2);
    unsigned jump_val = tape->code->len - jump_addr - 2;
@@ -415,6 +476,37 @@ UNUSED static int patch_short(Tape *tape, unsigned addr, uint16_t val) {
 
    tape->code->ip[addr] = (val >> 8) & 0xff;
    tape->code->ip[addr + 1] = val & 0xff;
+
+   return OK;
+}
+
+/**
+ * @brief Codegen for a NOT in the context of a projection like 'NOT sum { ... }'
+ *
+ * @param c     the EMP compiler
+ * @param tape  the VM tape
+ * 
+ * @return      the error code
+ */
+static int emit_not_projection(Compiler * restrict c, Tape * restrict tape)
+{
+   /* FALSE case: we push false and jump to the continue */
+   Jump jump_false = { .depth = UINT_MAX };
+   S_CHECK(emit_byte(tape, OP_PUSH_FALSE))
+   S_CHECK(emit_jump(tape, OP_JUMP, &jump_false.addr));
+
+   /* TRUE case: we push true and continue */
+   S_CHECK(patch_jumps(&c->truey_jumps, tape, jump_depth(c)));
+   S_CHECK(emit_byte(tape, OP_PUSH_TRUE))
+
+   /* Make sure the FALSE case comes here */
+   S_CHECK(patch_jump(tape, jump_false.addr));
+
+   S_CHECK(emit_byte(tape, OP_NOT));
+
+   Jump jump = { .depth = jump_depth(c) };
+   S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
+   S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
 
    return OK;
 }
@@ -700,7 +792,7 @@ static int define_lvars_from_iterator(Interpreter * restrict interp, Tape * rest
 static int loop_init(Interpreter * restrict interp, Tape * restrict tape,
                      LoopIterators * restrict iterators)
 {
-   const unsigned nargs = iterators->size;
+   const unsigned nargs = iterators->niters;
    IdentData * restrict loopidents = iterators->idents;
    IteratorData * restrict loopiters = iterators->iters;
    assert(nargs < GMS_MAX_INDEX_DIM);
@@ -784,7 +876,7 @@ static int loopobj_chk_opcode(EmpVmOpCode given, EmpVmOpCode expected)
 int loop_initandstart(Interpreter * restrict interp, Tape * restrict tape,
                       LoopIterators * restrict iterators)
 {
-   const unsigned nargs = iterators->size;
+   const unsigned nargs = iterators->niters;
    const IdentData * restrict loopidents = iterators->idents;
    IteratorData * restrict loopiters = iterators->iters;
 
@@ -864,7 +956,7 @@ int loop_initandstart(Interpreter * restrict interp, Tape * restrict tape,
 }
 
 
-static inline int patch_jumps(Jumps * restrict jumps, Tape * restrict tape, unsigned depth)
+static int patch_jumps(Jumps * restrict jumps, Tape * restrict tape, unsigned depth)
 {
    if (jumps->len == 0) { trace_empparsermsg("[empcompiler] JUMP: nothing to patch\n"); return OK; }
 
@@ -897,7 +989,7 @@ static inline int patch_jumps(Jumps * restrict jumps, Tape * restrict tape, unsi
 NONNULL static inline
 int loop_increment(Tape * restrict tape, LoopIterators* restrict iterators)
 {
-   unsigned nargs = iterators->size;
+   unsigned nargs = iterators->niters;
    const IdentData* restrict idents = iterators->idents;
    IteratorData* restrict iters = iterators->iters;
 
@@ -926,8 +1018,8 @@ int loop_increment(Tape * restrict tape, LoopIterators* restrict iterators)
       }
       S_CHECK(emit_byte(tape, OP_EQUAL));
 
-      assert(iters[i].tapepos_at_loopstart < UINT_MAX);
-      S_CHECK(emit_jump_back_false(tape, iters[i].tapepos_at_loopstart));
+      assert(iter->tapepos_at_loopstart < UINT_MAX);
+      S_CHECK(emit_jump_back_false(tape, iter->tapepos_at_loopstart));
 
       if (i > 0) {
          S_CHECK(emit_bytes(tape, OP_LVAR_COPYFROM_GIDX, idx_i));
@@ -1085,7 +1177,7 @@ static int ident_gmsindices_process(GmsIndicesData *indices, LoopIterators *iter
       }
    }
 
-   iterators->size = loopi;
+   iterators->niters = loopi;
 
    return OK;
 }
@@ -1125,7 +1217,7 @@ static int gmssymiter_init(Interpreter * restrict interp, IdentData *ident,
    S_CHECK(vm_gmssymiter_alloc(c, ident, &symiter, gmssymiter_gidx));
 
    if (indices->nargs == 0) {
-      iterators->size = 0;
+      iterators->niters = 0;
       iterators->loopobj_gidx = UINT_MAX;
       return OK;
    }
@@ -1167,7 +1259,7 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
    *linklabels_gidx = gidx;
 
    if (dim == 0) {
-      loopiterators->size = 0;
+      loopiterators->niters = 0;
       loopiterators->loopobj_gidx = UINT_MAX;
       return OK;
    }
@@ -1186,7 +1278,7 @@ static int linklabels_init(Interpreter * restrict interp, Tape * restrict tape,
    * n('1', i, '2', j) -> varidxs2pos = [1, 3]
    * ---------------------------------------------------------------------- */
 
-   for (unsigned i = 0, len = loopiterators->size, j = dim; i < len; ++i, ++j) {
+   for (unsigned i = 0, len = loopiterators->niters, j = dim; i < len; ++i, ++j) {
       linklabels->data[j] = loopiterators->varidxs2pos[i];
    }
 
@@ -1225,7 +1317,7 @@ linklabels_init_from_loopiterators(Interpreter * restrict interp, Tape * restric
    * n('1', i, '2', j) -> varidxs2pos = [1, 3]
    * ---------------------------------------------------------------------- */
 
-   for (unsigned i = 0, len = loopiterators->size, j = dim; i < len; ++i, ++j) {
+   for (unsigned i = 0, len = loopiterators->niters, j = dim; i < len; ++i, ++j) {
       linklabels->data[j] = loopiterators->varidxs2pos[i];
    }
 
@@ -1254,9 +1346,27 @@ static int regentry_init(Interpreter * restrict interp, const char *labelname,
    return OK;
 }
 
+/**
+ * @brief Create loop iterators and generates the bytecode to start iterations
+ *
+ * @param      interp    the EMP interpreter
+ * @param      p         the position index
+ * @param      c         the EMP compiler
+ * @param      tape      the VM tape
+ * @param[out] loopiter  the resulting loop iterators
+ *
+ * @return              the error code
+ */
 static int membership_test_start(Interpreter * restrict interp, unsigned * restrict p,
-                                 Tape *tape, LoopIterators *loopiter, Jump *jump_true)
+                                 Compiler *c, Tape *tape, LoopIterators *loopiter)
 {
+   /* ---------------------------------------------------------------------
+    * We initialize the iterators for a case like
+    *    v
+    * n$(leaf(n))
+    *
+    * and codegen the instructions to start the iteration
+    * ---------------------------------------------------------------------- */
 
    assert(parser_getcurtoktype(interp) == TOK_IDENT || parser_getcurtoktype(interp) == TOK_GMS_SET);
    IdentData ident_gmsarray;
@@ -1268,16 +1378,12 @@ static int membership_test_start(Interpreter * restrict interp, unsigned * restr
    trace_empparser("[empcompiler] membership test with type '%s' and dimension %u\n",
                    identtype2str(ident_gmsarray.type), ident_gmsarray.dim);
 
-   /* WARNING: This operates on the current token */
-   /* TODO: why not store the gmsindices on the stack */
-   GmsIndicesData gmsindices;
-   gmsindices_init(&gmsindices);
-
-// TODO(URG) is needed?  parser_save(interp);
 
    S_CHECK(advance(interp, p, &toktype));
    S_CHECK(parser_expect(interp, "'(' expected", TOK_LPAREN));
 
+   GmsIndicesData gmsindices;
+   gmsindices_init(&gmsindices);
    S_CHECK(parse_gmsindices(interp, p, &gmsindices));
 
    /* ---------------------------------------------------------------------
@@ -1300,49 +1406,48 @@ static int membership_test_start(Interpreter * restrict interp, unsigned * restr
    S_CHECK(emit_byte(tape, OP_GMS_MEMBERSHIP_TEST));
    S_CHECK(EMIT_GIDX(tape, gmsfilter_gidx));
 
-   /* Jump to TRUE case if the result is true */
-   S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump_true->addr));
+   Jump jump = { .depth = jump_depth(c) + 1}; //increase depth just here
+   S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
+   S_CHECK(jumps_add_verbose(&interp->compiler->truey_jumps, jump));
 
    return OK;
-
 }
 
+/**
+ * @brief Codeden for 'set1(set2, ...)'
+ *
+ * This is treated equivalently to ' SUM { set1(set2, ...), yes } '.
+ * The name comes from the interpretation of answering the question whether for any
+ * tuple (set2, ...), set1(set2, ...) is true.
+ *
+ * set1 can be a 1D or multiset.
+ *
+ * @param interp       the EMP interpreter
+ * @param p            the position index
+ * @param c            the EMP compiler
+ * @param tape         the VM tape
+ * @param do_emit_not  true if one needs to emit a NOT
+ *
+ * @return             the error code
+ */
 static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
-                           Compiler *c, Tape *tape, bool emit_not)
+                           Compiler *c, Tape *tape, bool do_emit_not)
 {
    begin_scope(c, __func__);
 
+   /* Step 1: init iterators and perform membership check */
    LoopIterators loopiter;
-   Jump jump_true = { .depth = UINT_MAX };
-   S_CHECK(membership_test_start(interp, p, tape, &loopiter, &jump_true));
+   S_CHECK(membership_test_start(interp, p, c, tape, &loopiter));
 
-   /* ---------------------------------------------------------------------
-    * Step 4:  Increment loop index and check of the condition idx < max
-    * --------------------------------------------------------------------- */
-
+   /* Step 2:  Increment loop index and check of the condition idx < max */
    tape->linenr = interp->linenr;
-
    S_CHECK(loop_increment(tape, &loopiter));
 
-   /* FALSE case: we push false and jump to the continue */
-   Jump jump_false = { .depth = UINT_MAX };
-   S_CHECK(emit_byte(tape, OP_PUSH_FALSE))
-   S_CHECK(emit_jump(tape, OP_JUMP, &jump_false.addr));
-
-   /* TRUE case: we push true and continue */
-   S_CHECK(patch_jump(tape, jump_true.addr));
-   S_CHECK(emit_byte(tape, OP_PUSH_TRUE))
-
-   /* Make sure the FALSE case comes here */
-   S_CHECK(patch_jump(tape, jump_false.addr));
-
-   if (emit_not) {
-      S_CHECK(emit_byte(tape, OP_NOT));
+   /* Step 3:  End of loop: deal with NOT if present; add the falsey jump */
+   /* This isn't very optimized */
+   if (do_emit_not) {
+      S_CHECK(emit_not_projection(c, tape));
    }
-
-   Jump jump = { .depth = jump_depth(c) };
-   S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
-   S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
 
    S_CHECK(end_scope(interp, tape));
 
@@ -1352,7 +1457,7 @@ static int membership_test(Interpreter * restrict interp, unsigned * restrict p,
 }
 
 static int parse_set_in_conditional(Interpreter * restrict interp, unsigned * restrict p,
-                                    Compiler *c, Tape *tape, bool emit_not)
+                                    Compiler *c, Tape *tape, bool do_emit_not)
 {
   /* ----------------------------------------------------------------------
    * We are at the position
@@ -1370,7 +1475,6 @@ static int parse_set_in_conditional(Interpreter * restrict interp, unsigned * re
    * We need to determine whether we just have a set or set.(first|last)
    * ---------------------------------------------------------------------- */
 
-   S_CHECK(jump_depth_inc(c));
    TokenType tokpeek;
    unsigned p2 = *p;
    S_CHECK(peek(interp, &p2, &tokpeek));
@@ -1378,8 +1482,8 @@ static int parse_set_in_conditional(Interpreter * restrict interp, unsigned * re
 
    /* just set */
    if (tokpeek != TOK_DOT) {
-      S_CHECK(membership_test(interp, p, c, tape, emit_not));
-      return jump_depth_dec(c);
+      S_CHECK(membership_test(interp, p, c, tape, do_emit_not));
+      return OK;
    }
 
    S_CHECK(peek(interp, &p2, &tokpeek));
@@ -1445,7 +1549,7 @@ static int parse_set_in_conditional(Interpreter * restrict interp, unsigned * re
       emit_bytes(tape, OP_PUSH_LIDX, lvar->iteratordat.idx_lidx, OP_STACKTOP_INC, OP_EQUAL);
    }
 
-   if (emit_not) {
+   if (do_emit_not) {
       S_CHECK(emit_byte(tape, OP_NOT));
    }
 
@@ -1453,8 +1557,6 @@ static int parse_set_in_conditional(Interpreter * restrict interp, unsigned * re
    Jump jump = { .depth = jump_depth(c) };
    S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
    S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
-
-   S_CHECK(jump_depth_dec(c));
 
    return OK;
 
@@ -1468,7 +1570,7 @@ err_unsupported_attr:
 }
 
 static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
-                           Compiler *c, Tape *tape, bool emit_not)
+                           Compiler *c, Tape *tape, bool do_emit_not)
 {
 
    TokenType toktype;
@@ -1574,7 +1676,7 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
 
    S_CHECK(emit_bytes(tape, OP_PUSH_LIDX, lvars[0], OP_EQUAL));
 
-   if (emit_not) {
+   if (do_emit_not) {
       S_CHECK(emit_byte(tape, OP_NOT));
    }
 
@@ -1681,9 +1783,71 @@ static int parse_loopiters_operator(Interpreter * restrict interp, unsigned * re
    return OK;
 }
 
+/**
+ * @brief Parse the 1st argument of the sum (classic or projection) operator
+ *
+ * @param      interp         the interpreter
+ * @param      p              the position pointer
+ * @param      c              the VM compiler
+ * @param      tape           the VM tape
+ * @param[out] sum_iterators  the iterators in sum first argument
+ * @param[out] need_fwd_jump  on output true, if the callee need to inject a forward jump
+ *
+ * @return                    the error code 
+ */
+static int sumtype_parse_arg1(Interpreter * restrict interp, unsigned * restrict p,
+                              Compiler *c, Tape * tape, LoopIterators *sum_iterators,
+                              bool *need_fwd_jump)
+{
+   TokenType toktype;
+   unsigned p2 = *p;
+   S_CHECK(peek(interp, &p2, &toktype));
+   unsigned p_ = p2;
+   TokenType toktype_;
+   S_CHECK(peek(interp, &p_, &toktype_));
+   if ((toktype == TOK_GMS_SET || toktype == TOK_IDENT) && toktype_ == TOK_LPAREN) {
+
+      /* ---------------------------------------------------------------------
+       * Step 1bis: Case ' sum{ multiset(set1, ..., setN), ... } '
+       * This is equivalent to sum{ (setj, ...)$(multiset(set1, ..., setN)), ...}
+       * --------------------------------------------------------------------- */
+
+      /* New to rewind and restart as we had 2 peek calls */
+      S_CHECK(advance(interp, p, &toktype));
+
+      IdentData multiset;
+      S_CHECK(resolve_tokasident(interp, &multiset));
+
+      if (multiset.type != IdentMultiSet && multiset.type != IdentSet) {
+         error("[empinterp] ERROR on line %u: only GAMS sets are supported as first "
+               "argument to the projection operator 'sum'; got type '%s' for lexeme "
+               "'%.*s'\n", interp->linenr, ident_fmtargs(&multiset));
+         return Error_EMPIncorrectSyntax;
+      }
+
+      S_CHECK(membership_test_start(interp, p, c, tape, sum_iterators));
+
+      /* membership_test_start() does not parse the ','; loop_initandstart() does */
+      S_CHECK(advance(interp, p, &toktype));
+      S_CHECK(parser_expect(interp, "a comma ',' separating the 'sum' arguments",
+                            TOK_COMMA));
+
+      *need_fwd_jump = false;
+
+   } else { /* regular case 'sum{ (set1, ...), ... }' */
+
+      S_CHECK(parse_loopiters_operator(interp, p, c, sum_iterators));
+
+      *need_fwd_jump = true;
+
+   }
+
+   return OK;
+}
+
 static int parse_projection_in_conditional(Interpreter * restrict interp, unsigned * restrict p,
                                            Compiler * restrict c, Tape * restrict tape,
-                                           bool emit_not)
+                                           bool do_emit_not)
 {
   /* ----------------------------------------------------------------------
    * We are at the position
@@ -1721,84 +1885,72 @@ static int parse_projection_in_conditional(Interpreter * restrict interp, unsign
     * sum { multiset(set1, ...), ...}
     * --------------------------------------------------------------------- */
    LoopIterators sum_iterators;
-   Jump jump_true  = {.addr = UINT_MAX, .depth = UINT_MAX },
-        jump_false = {.addr = UINT_MAX, .depth = UINT_MAX };
 
-   unsigned p2 = *p;
-   S_CHECK(peek(interp, &p2, &toktype));
-   unsigned p_ = p2;
-   TokenType toktype_;
-   S_CHECK(peek(interp, &p_, &toktype_));
-   if ((toktype == TOK_GMS_SET || toktype == TOK_IDENT) && toktype_ == TOK_LPAREN) {
+   /* If arg1 has no test, jsut sets up iterator, need to add to the start of arg2 */
+   bool need_truey_jump;
+   S_CHECK(sumtype_parse_arg1(interp, p, c, tape, &sum_iterators, &need_truey_jump));
 
-      /* ---------------------------------------------------------------------
-       * Step 1bis: Case ' sum{ multiset(set1, ..., setN), ... } '
-       * This is equivalent to sum{ (setj, ...)$(multiset(set1, ..., setN)), ...}
-       * --------------------------------------------------------------------- */
-
-      /* New to rewind and restart as we had 2 peek calls */
-      S_CHECK(advance(interp, p, &toktype));
-
-      IdentData multiset;
-      S_CHECK(resolve_tokasident(interp, &multiset));
-
-      if (multiset.type != IdentMultiSet && multiset.type != IdentSet) {
-         error("[empinterp] ERROR on line %u: only GAMS sets are supported as first "
-               "argument to the projection operator 'sum'; got type '%s' for lexeme "
-               "'%.*s'\n", interp->linenr, ident_fmtargs(&multiset));
-         return Error_EMPIncorrectSyntax;
-      }
-
-      S_CHECK(membership_test_start(interp, p, tape, &sum_iterators, &jump_true));
-
-      /* membership_test_start() does not parse the ','; loop_initandstart() does */
-      S_CHECK(advance(interp, p, &toktype));
-      S_CHECK(parser_expect(interp, "a comma ',' separating the 'sum' arguments",
-                            TOK_COMMA));
-
-   } else { /* regular case 'sum{ (set1, ...), ... }' */
-
-      S_CHECK(parse_loopiters_operator(interp, p, c, &sum_iterators));
-
+   if (need_truey_jump) {
+      Jump jump = {.depth = jump_depth(c)};
+      S_CHECK(emit_jump(tape, OP_JUMP, &jump.addr));
+      S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
    }
+
+   /* Resolve the falsey jump to the iterators increments */
+   S_CHECK(patch_jumps(&c->falsey_jumps, tape, jump_depth(c)));
+
+   unsigned tapepos_sum_iterators_inc = tape->code->len;
+   S_CHECK(loop_increment(tape, &sum_iterators));
+
+   Jump jump_end_arg1 = {.depth = jump_depth(c) };
+   S_CHECK(emit_jump(tape, OP_JUMP, &jump_end_arg1.addr));
 
    /* ---------------------------------------------------------------------
     * Step 2: Deal with the second argument of the projection operator
     * ---------------------------------------------------------------------- */
 
+   /* Patch TRUEY jumps from arg1 */
+   S_CHECK(patch_jumps(&c->truey_jumps, tape, jump_depth(c)));
+
    S_CHECK(advance(interp, p, &toktype));
 
-   if (toktype == TOK_YES) { /* only action: if not jump instruction, emit one */
+   if (toktype == TOK_YES) { /* only action: emit jump instruction */
 
-      if (jump_true.addr == UINT_MAX) {
-         S_CHECK(emit_jump(tape, OP_JUMP, &jump_true.addr));
+      unsigned p2 = *p;
+      S_CHECK(peek(interp, &p2, &toktype));
+
+      /* Case: sum { ..., yes$(...) } */
+      if (toktype == TOK_CONDITION) {
+         interp_cpypeek2cur(interp);
+         *p = p2;
+         S_CHECK(parse_condition(interp, p, c, tape));
       }
+
+      Jump jump = {.depth = jump_depth(c)};
+      S_CHECK(emit_jump(tape, OP_JUMP, &jump.addr));
+      S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
 
    } else {
 
       PARSER_EXPECTS(interp, "In the projection operator 'sum', only GAMS sets are expected",
                      TOK_GMS_MULTISET, TOK_GMS_SET, TOK_IDENT);
 
-      IdentData ident_gmsarray;
-      S_CHECK(resolve_identas(interp, &ident_gmsarray, "In a conditional, a GAMS set is expected",
+      IdentData ident_arg2;
+      S_CHECK(resolve_identas(interp, &ident_arg2, "In a conditional, a GAMS set is expected",
                               IdentLocalSet, IdentSet, IdentMultiSet));
 
       trace_empparser("[empcompiler] membership test with type '%s' and dimension %u\n",
-                      identtype2str(ident_gmsarray.type), ident_gmsarray.dim);
+                      identtype2str(ident_arg2.type), ident_arg2.dim);
 
       GmsIndicesData gmsindices;
       gmsindices_init(&gmsindices);
-
-      // TODO(URG) is needed?  parser_save(interp);
 
       S_CHECK(advance(interp, p, &toktype));
       S_CHECK(parser_expect(interp, "'(' expected", TOK_LPAREN));
 
       S_CHECK(parse_gmsindices(interp, p, &gmsindices));
 
-      if (embmode(interp)) { goto _advance; } // HACK!!
- 
-      if (gmsindices_nvardims(&gmsindices) > 0) {
+      if (!embmode(interp) && gmsindices_nvardims(&gmsindices) > 0) {
 
          u8 nargs = gmsindices_nargs(&gmsindices);
          u8 nvardims = gmsindices_nvardims(&gmsindices);
@@ -1816,52 +1968,39 @@ static int parse_projection_in_conditional(Interpreter * restrict interp, unsign
 
          return Error_EMPIncorrectInput;
       }
-_advance:
-
-      /* Patch TRUE case from the 1st argument, if it exists. In that case, jump over
-       * the test if false. */
-      if (jump_true.addr < UINT_MAX) {
-         S_CHECK(emit_jump(tape, OP_JUMP, &jump_false.addr));
-         S_CHECK(patch_jump(tape, jump_true.addr));
-      }
 
       unsigned gmsfilter_gidx;
-      LoopIterators symiterator;
-      S_CHECK(gmssymiter_init(interp, &ident_gmsarray, &gmsindices, &symiterator, tape, &gmsfilter_gidx));
+      LoopIterators arg2iterators;
+      S_CHECK(gmssymiter_init(interp, &ident_arg2, &gmsindices, &arg2iterators, tape, &gmsfilter_gidx));
 
       S_CHECK(emit_byte(tape, OP_GMS_MEMBERSHIP_TEST));
       S_CHECK(EMIT_GIDX(tape, gmsfilter_gidx));
 
-      S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump_true.addr));
+      Jump jump = {.depth = jump_depth(c)};
+      S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
+      S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
+
+      if (!embmode(interp)) { //HACK
+         S_CHECK(loop_increment(tape, &arg2iterators));
+      }
    }
 
-   /* If the first argument was false, jump here */
-   if (jump_false.addr < UINT_MAX) {
-      S_CHECK(patch_jump(tape, jump_false.addr));
+   /* arg2 did not evaluate to true => jump back to the sum_iterators update */
+   S_CHECK(emit_jump_back(tape, tapepos_sum_iterators_inc));
+
+   /* This is the end of arg1 */
+   S_CHECK(patch_jump(tape, jump_end_arg1.addr));
+
+   /* ---------------------------------------------------------------------
+    * Part 3: end of projection. Deal with 'NOT sum{...}' case
+    * ---------------------------------------------------------------------- */
+   if (do_emit_not) {
+      S_CHECK(emit_not_projection(c, tape));
    }
 
-   S_CHECK(patch_jumps(&c->falsey_jumps, tape, jump_depth(c)));
-
-   S_CHECK(loop_increment(tape, &sum_iterators));
-
-   /* FALSE case: we push false and jump to the continue */
-   S_CHECK(emit_byte(tape, OP_PUSH_FALSE))
-   S_CHECK(emit_jump(tape, OP_JUMP, &jump_false.addr));
-
-   /* TRUE case: we push true and continue */
-   S_CHECK(patch_jump(tape, jump_true.addr));
-   S_CHECK(emit_byte(tape, OP_PUSH_TRUE))
-
-   /* Make sure the FALSE case comes here */
-   S_CHECK(patch_jump(tape, jump_false.addr));
-
-   if (emit_not) {
-      S_CHECK(emit_byte(tape, OP_NOT));
-   }
-
-   Jump jump = { .depth = jump_depth(c) };
-   S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
-   S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
+   Jump jump = {.depth = jump_depth(c)};
+   S_CHECK(emit_jump(tape, OP_JUMP, &jump.addr));
+   S_CHECK(jumps_add_verbose(&c->falsey_jumps, jump));
 
    S_CHECK(end_scope(interp, tape));
 
@@ -1876,7 +2015,7 @@ _advance:
 }
 
 static int parse_conditional(Interpreter * restrict interp, unsigned * restrict p,
-                              Compiler * restrict c, Tape * restrict tape, bool emit_not)
+                              Compiler * restrict c, Tape * restrict tape, bool do_emit_not)
 {
 
    TokenType toktype = parser_getcurtoktype(interp);
@@ -1898,8 +2037,9 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
    if (tok_isopeningdelimiter(toktype)) { 
       assert(closing_delimiter != TOK_UNSET);
       S_CHECK(advance(interp, p, &toktype));
-      PARSER_EXPECTS(interp, "a GAMS set or NOT or sameAs or sum", TOK_IDENT, TOK_NOT,
-                     TOK_SAMEAS, TOK_SUM, TOK_GMS_SET, TOK_GMS_MULTISET);
+      PARSER_EXPECTS(interp, "a GAMS set or NOT or sameAs or sum or '(', '{', '['",
+                     TOK_IDENT, TOK_NOT, TOK_SAMEAS, TOK_SUM, TOK_GMS_SET,
+                     TOK_GMS_MULTISET, TOK_LPAREN, TOK_LBRACE, TOK_LBRACK);
    }
 
    do {
@@ -1918,40 +2058,45 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
 
       if (tok_isopeningdelimiter(toktype)) {
          S_CHECK(jump_depth_inc(c));
-         S_CHECK(parse_conditional(interp, p, c, tape, emit_not));
+         S_CHECK(parse_conditional(interp, p, c, tape, do_emit_not));
          S_CHECK(jump_depth_dec(c));
 
-         if (emit_not) {
+         if (do_emit_not) {
             S_CHECK(emit_byte(tape, OP_NOT));
-            emit_not = false;
+            do_emit_not = false;
          }
 
       } else {
 
          if (toktype == TOK_NOT) {
 
-            emit_not = true;
+            do_emit_not = true;
             S_CHECK(advance(interp, p, &toktype));
             PARSER_EXPECTS(interp, "a GAMS set or logical operator",
                            TOK_IDENT, TOK_SAMEAS, TOK_SUM, TOK_GMS_SET); //HACK GMSSYMB
             //
          }
 
-         S_CHECK(jump_depth_inc(c));
-         if (toktype == TOK_SAMEAS) {
-            S_CHECK(parse_sameas(interp, p, c, tape, emit_not));
-         } else if (toktype == TOK_SUM) {
-            S_CHECK(parse_projection_in_conditional(interp, p, c, tape, emit_not))
-         } else if (toktype == TOK_IDENT || toktype == TOK_GMS_SET) {
+         switch(toktype) {
+
+         case TOK_SAMEAS:
+            S_CHECK(parse_sameas(interp, p, c, tape, do_emit_not));
+            break;
+         case TOK_SUM:
+            S_CHECK(parse_projection_in_conditional(interp, p, c, tape, do_emit_not))
+            break;
+         case TOK_IDENT:
+         case TOK_GMS_SET:
             /* Now we expect a GAMS set to perform the membership test on*/
-            S_CHECK(parse_set_in_conditional(interp, p, c, tape, emit_not));
-         } else {
+            S_CHECK(parse_set_in_conditional(interp, p, c, tape, do_emit_not));
+            break;
+         default:
             error("[empparser] ERROR: unexpected token type %s\n", toktype2str(toktype));
             return Error_EMPIncorrectSyntax;
-         }
-         S_CHECK(jump_depth_dec(c));
 
-         emit_not = false;
+         }
+
+         do_emit_not = false;
       }
 
       S_CHECK(advance(interp, p, &toktype));
@@ -1984,22 +2129,25 @@ static int parse_conditional(Interpreter * restrict interp, unsigned * restrict 
       if (toktype == TOK_AND) {
 
          Jump jump = {.depth = jump_depth(c)};
-         S_CHECK(emit_jump(tape, OP_JUMP_IF_FALSE, &jump.addr));
+         S_CHECK(emit_jump(tape, OP_JUMP, &jump.addr));
          S_CHECK(jumps_add_verbose(&c->falsey_jumps, jump));
 
          S_CHECK(patch_jumps(&c->truey_jumps, tape, jump_depth(c)));
 
       } else if (toktype == TOK_OR) {
 
-         Jump jump = {.depth = jump_depth(c)};
-         S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
-         S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
+         /* FIXME this is most likely unnecessary and will induce bugs */
+         //Jump jump = {.depth = jump_depth(c)};
+         //S_CHECK(emit_jump(tape, OP_JUMP_IF_TRUE, &jump.addr));
+         //S_CHECK(jumps_add_verbose(&c->truey_jumps, jump));
 
          S_CHECK(patch_jumps(&c->falsey_jumps, tape, jump_depth(c)));
 
       } else {
          break;
       }
+
+      S_CHECK(advance(interp, p, &toktype));
 
    } while (true);
 
@@ -2102,20 +2250,20 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype));
 
-   bool emit_not = false;
+   bool do_emit_not = false;
    if (toktype == TOK_NOT) {
-      emit_not = true;
+      do_emit_not = true;
       S_CHECK(advance(interp, p, &toktype));
    }
 
    /* Not great to make this distinction here. Can't find something nicer */
    if (tok_isopeningdelimiter(toktype)) {
-      S_CHECK(parse_conditional(interp, p, c, tape, emit_not));
+      S_CHECK(parse_conditional(interp, p, c, tape, do_emit_not));
    } else if (toktype == TOK_SUM) {
-      S_CHECK(parse_projection_in_conditional(interp, p, c, tape, emit_not))
+      S_CHECK(parse_projection_in_conditional(interp, p, c, tape, do_emit_not))
    } else {
       PARSER_EXPECTS(interp, "a GAMS set", TOK_IDENT, TOK_GMS_SET);
-      S_CHECK(parse_set_in_conditional(interp, p, c, tape, emit_not));
+      S_CHECK(parse_set_in_conditional(interp, p, c, tape, do_emit_not));
    }
 
    /* Re-enable reading GAMS symbols */
@@ -2135,6 +2283,7 @@ int parse_condition(Interpreter * restrict interp, unsigned * restrict p,
    S_CHECK(jumps_add_verbose(&c->falsey_jumps, jump));
 
    /* Resolve all remaining jumps linked to a true condition */
+   // FIXME
    S_CHECK(patch_jumps(&c->truey_jumps, tape, jump_depth(c)));
 
    return OK;
@@ -2172,7 +2321,7 @@ static int vm_gmsindicesasarc(Interpreter *interp, unsigned *p, const char *labe
     */
 
    /* This defines the loop iterators and the linklabels object */
-   LoopIterators loopiters = {.size = 0};
+   LoopIterators loopiters = {.niters = 0};
    unsigned linklabels_gidx;
    S_CHECK(linklabels_init(interp, tape, label, label_len, link_type,
                            gmsindices, &loopiters, &linklabels_gidx));
@@ -2282,7 +2431,7 @@ int dualslabels_setupnew(Interpreter *interp, Tape *tape, const char *label,
 //   S_CHECK(EMIT_GIDX(tape, gidx));
 
    if (gmsindices->nargs == 0) {
-      loopiterators->size = 0;
+      loopiterators->niters = 0;
       loopiterators->loopobj_gidx = UINT_MAX;
       return OK;
    }
@@ -2300,7 +2449,7 @@ int dualslabels_setupnew(Interpreter *interp, Tape *tape, const char *label,
    * n('1', i, '2', j) -> varidxs2pos = [1, 3]
    * ---------------------------------------------------------------------- */
 
-   for (unsigned i = 0, len = loopiterators->size, j = dim; i < len; ++i, ++j) {
+   for (unsigned i = 0, len = loopiterators->niters, j = dim; i < len; ++i, ++j) {
       dualslabel->data[j] = loopiterators->varidxs2pos[i];
    }
 
@@ -2326,7 +2475,7 @@ int vm_add_dualslabel(Interpreter *interp, const char *label, unsigned label_len
     */
 
    /* This defines the loop iterators and the linklabels object */
-   LoopIterators loopiters = {.size = 0};
+   LoopIterators loopiters = {.niters = 0};
    unsigned dualslabel_gidx;
    S_CHECK(dualslabels_setupnew(interp, tape, label, label_len, gmsindices,
                                 opdat, &loopiters, &dualslabel_gidx));
@@ -2678,14 +2827,32 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
    /* ---------------------------------------------------------------------
     * Step 1: Parse sum iterators
     * --------------------------------------------------------------------- */
+   /* If arg1 has no test, just sets up iterator, need to add to the start of arg2 */
+   bool no_test_in_arg1;
    LoopIterators sum_iterators;
-   S_CHECK(parse_loopiters_operator(interp, p, c, &sum_iterators));
+   S_CHECK(sumtype_parse_arg1(interp, p, c, tape, &sum_iterators, &no_test_in_arg1));
+
+   /* If there was a test in arg1, we need to unconditionally jump to the sum_iterators
+    * update and then resolve the truey jumps */
+   if (!no_test_in_arg1) {
+      Jump jump = { .depth = jump_depth(c) };
+      S_CHECK(emit_jump(tape, OP_JUMP, &jump.addr));
+      S_CHECK(jumps_add_verbose(&c->falsey_jumps, jump));
+
+      S_CHECK(patch_jumps(&c->truey_jumps, tape, jump_depth(c)));
+   }
 
    /* ---------------------------------------------------------------------
     * Step 2: parse the expression like param * n(...){.dual()}.valFn * variables
     * --------------------------------------------------------------------- */
-   bool has_var = false, has_param = false, has_valfn = false;
-   bool parse_kwd = false, has_smooth = false; //, has_dual = false;
+   typedef struct {
+   bool has_var;
+   bool has_param;
+   bool has_valfn;
+   bool parse_kwd;
+   bool has_smooth;
+   } SimpleExpr;
+   SimpleExpr sexpr = {0};
    unsigned p_bck = UINT_MAX;
 
    do {
@@ -2695,20 +2862,20 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 
    switch (toktype) {
    case TOK_GMS_VAR:
-      if (has_var) {
+      if (sexpr.has_var) {
          error("[empinterp] ERROR on line %u: only one variable is allowed in a %s "
                "statement\n", interp->linenr, toktype2str(TOK_SUM));
          return Error_EMPIncorrectInput;
          }
-      has_var = true;
+      sexpr.has_var = true;
       break;
    case TOK_GMS_PARAM:
-      if (has_param) {
+      if (sexpr.has_param) {
          error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
                "statement\n", interp->linenr, toktype2str(TOK_SUM));
          return Error_EMPIncorrectInput;
          }
-      has_param = true;
+      sexpr.has_param = true;
       break;
    case TOK_IDENT: {
       IdentData ident;
@@ -2720,12 +2887,12 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
          /* ----------------------------------------------------------------------
           * We expect the identifier to be a label, followed by a valfn
           * ---------------------------------------------------------------------- */
-          if (has_valfn) {
+          if (sexpr.has_valfn) {
              error("[empinterp] ERROR on line %u: only one value function (valFn) is allowed in a %s "
                    "statement\n", interp->linenr, toktype2str(TOK_SUM));
              return Error_EMPIncorrectInput;
           }
-          has_valfn = true;
+          sexpr.has_valfn = true;
 
           tok2lexeme(&interp->cur, &label_valfn);
 
@@ -2751,7 +2918,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
                   S_CHECK(advance(interp, p, &toktype2));
                   S_CHECK(parser_expect(interp, "After a valfn, only the smooth operator is valid",
                                         TOK_SMOOTH));
-                  has_smooth = true;
+                  sexpr.has_smooth = true;
 
                   /* smoothing requires at least one parameter (the value) */
                   //S_CHECK(advance(interp, p, &toktype));
@@ -2777,18 +2944,18 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
 
                   p_bck = smoothing_operator.parameter_position;
 
-                  parse_kwd = true;
+                  sexpr.parse_kwd = true;
                }
 
 
           } else {
 
-          if (has_param) {
+          if (sexpr.has_param) {
              error("[empinterp] ERROR on line %u: only one parameter is allowed in a %s "
                    "statement\n", interp->linenr, toktype2str(TOK_SUM));
              return Error_EMPIncorrectInput;
           }
-          has_param = true;
+          sexpr.has_param = true;
 
            double dummyval;
            S_CHECK(parse_identasscalar(interp, p, &dummyval));
@@ -2808,24 +2975,24 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
  
    // HACK: move this around, towards the end of the function
    /* Consume the delimiter_endloop token */
-   S_CHECK(parser_expect(interp, "end delimiter of loop", closing_delimiter));
+   S_CHECK(parser_expect(interp, "end delimiter of sum", closing_delimiter));
 
    unsigned gidx;
 
-   if (has_valfn) {
+   if (sexpr.has_valfn) {
 
       // HACK
       if (gmsindices_nvardims(&label_gmsindices) > 0 && !embmode(interp)) {
          TO_IMPLEMENT("Implementation of the SUM operator is incomplete")
       }
 
-      LinkType linktype = has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
-      LoopIterators loopiters = {.size = 0};
+      LinkType linktype = sexpr.has_smooth ? LinkObjAddMapSmoothed : LinkArcVF;
+      LoopIterators loopiters = {.niters = 0};
       S_CHECK(linklabels_init_from_loopiterators(interp, tape, label_valfn.start,
                                                  label_valfn.len, linktype,
                                                  &label_gmsindices, &loopiters, &gidx));
 
-      u8 num_iterators = sum_iterators.size;
+      u8 num_iterators = sum_iterators.niters;
 
       S_CHECK(emit_bytes(tape, OP_LINKLABELS_STORE, num_iterators));
 
@@ -2834,7 +3001,7 @@ int parse_sum(Interpreter * restrict interp, unsigned * restrict p)
       }
 
 
-      if (parse_kwd) { // only smooth() operator. We assume to be at n.valn.smooth(
+      if (sexpr.parse_kwd) { // only smooth() operator. We assume to be at n.valn.smooth(
                        //                                                         ^ 
          assert(p_bck < UINT_MAX);
          double dummy;
@@ -2988,7 +3155,7 @@ int parse_defvar(Interpreter * restrict interp, unsigned * restrict p)
 
    //}
    /* declare all the required data */
-   LoopIterators loopiter = {.size = 1, .loopobj_gidx = UINT_MAX};
+   LoopIterators loopiter = {.niters = 1, .loopobj_gidx = UINT_MAX};
    memcpy(&loopiter.idents[0], &ident, sizeof(ident));
    S_CHECK(loop_initandstart(interp, tape, &loopiter));
 
@@ -3099,8 +3266,12 @@ int vm_labeldef_condition(Interpreter * interp, unsigned * restrict p,
 
    S_CHECK(loop_initandstart(interp, tape, &iterators));
  
-   /* Parse  $(inset(sets)) */
+   /* Parse $(filter(sets)) */
    S_CHECK(parse_condition(interp, p, c, tape));
+
+   /* All remaining jumps from the condition should now be set to the scope depth.
+    * This avoids interference with condition in the label definition */
+   S_CHECK(c_normalize_jumps_depth(c));
 
    TokenType toktype;
    S_CHECK(advance(interp, p, &toktype))
@@ -3110,8 +3281,6 @@ int vm_labeldef_condition(Interpreter * interp, unsigned * restrict p,
             interp->linenr, emptok_getstrlen(&interp->cur),
             emptok_getstrstart(&interp->cur), toktype2str(emptok_gettype(&interp->cur)));
    }
-
-   //S_CHECK(labelargs_initandstart(interp, tape, &iterators));
 
    S_CHECK(labdeldef_parse_statement(interp, p));
 
@@ -3361,7 +3530,7 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   LoopIterators loopiter = {.size = 0};
+   LoopIterators loopiter = {.niters = 0};
    unsigned symiter_gidx;
    IdentData *ident = &interp->gms_sym_iterator.ident;
 
@@ -3370,7 +3539,7 @@ static int c_gms_resolve(Interpreter* restrict interp, unsigned * p)
    S_CHECK(gmssymiter_init(interp, ident, &interp->gms_sym_iterator.indices,
                            &loopiter, tape, &symiter_gidx));
 
-   if (loopiter.size == 0) {
+   if (loopiter.niters == 0) {
 
      /* ---------------------------------------------------------------------
       * We can just resolve and move on.
@@ -3668,7 +3837,7 @@ static int c_read_param(Interpreter* restrict interp, unsigned *p,
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   LoopIterators loopiters = {.size = 0};
+   LoopIterators loopiters = {.niters = 0};
    unsigned gmsfilter_gidx;
 
    const Lequ * vec;
@@ -3733,9 +3902,9 @@ static int c_read_param(Interpreter* restrict interp, unsigned *p,
    S_CHECK(gmssymiter_init(interp, ident, &interp->gms_sym_iterator.indices, &loopiters,
                               tape, &gmsfilter_gidx));
 
-   if (loopiters.size != 1) {
+   if (loopiters.niters != 1) {
       error("[empcompiler] ERROR on line %u: OVF parameter can only have one set as indices, got %u\n",
-            interp->linenr, loopiters.size);
+            interp->linenr, loopiters.niters);
       return Error_EMPIncorrectSyntax;
    }
 
@@ -3829,12 +3998,12 @@ static int c_read_elt_vector(Interpreter *interp, const char *vectorname,
    Tape tape_ = {.code = &vm->code, .linenr = interp->linenr};
    Tape * const tape = &tape_;
 
-   LoopIterators loopiter = {.size = 0};
+   LoopIterators loopiter = {.niters = 0};
    unsigned gmssymiter_gidx;
    S_CHECK(gmssymiter_init(interp, ident, gmsindices,
                            &loopiter, tape, &gmssymiter_gidx));
 
-   if (loopiter.size != 0) { 
+   if (loopiter.niters != 0) { 
       TO_IMPLEMENT("loop iterators");
    }
 
@@ -4197,4 +4366,3 @@ int hack_scalar2vmdata(Interpreter *interp, unsigned idx)
 
    return OK;
 }
-

@@ -9,18 +9,18 @@
 #include "empinterp_fwd.h"
 
 typedef struct {
-   LIDX_TYPE iter_lidx;            /**< LocalVar index for the iterator            */
-   LIDX_TYPE idx_lidx;             /**< LocalVar index for the iterator index      */
-   LIDX_TYPE idxmax_lidx;          /**< localVar index for the max of the iterator index */
-   GIDX_TYPE idxmax_gidx;          /**< Global index for the max of the iterator index */
-   unsigned tapepos_at_loopstart;  /**< Position of the loop start in the code */
+   LIDX_TYPE iter_lidx;           /**< LocalVar index for the iterator                  */
+   LIDX_TYPE idx_lidx;            /**< LocalVar index for the iterator index            */
+   LIDX_TYPE idxmax_lidx;         /**< localVar index for the max of the iterator index */
+   GIDX_TYPE idxmax_gidx;         /**< Global index for the max of the iterator index   */
+   unsigned tapepos_at_loopstart; /**< Position of the loop start in the code           */
 } IteratorData;
 
 typedef struct {
-   unsigned size;          /**< Number of true iterators  */
-   unsigned loopobj_gidx;  /**< global index for the object inducing the loop      */
-   EmpVmOpCode loopobj_opcode; /**< Update opcode for the loop object              */
-   uint8_t varidxs2pos[GMS_MAX_INDEX_DIM]; /**< Position of the variable iterators */
+   unsigned loopobj_gidx;             /**< global index for the object inducing the loop */
+   EmpVmOpCode loopobj_opcode;        /**< Update opcode for the loop object             */
+   u8 niters;                         /**< Number of true iterators                      */
+   u8 varidxs2pos[GMS_MAX_INDEX_DIM]; /**< Position of the variable iterators            */
    IdentData idents[GMS_MAX_INDEX_DIM];
    IteratorData iters[GMS_MAX_INDEX_DIM];
 } LoopIterators;
