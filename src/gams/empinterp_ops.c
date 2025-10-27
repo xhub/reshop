@@ -135,7 +135,7 @@ static int imm_read_gms_symbol(Interpreter* restrict interp, UNUSED unsigned *p)
 
    S_CHECK(gmssymiter_fixup_domains(interp, &symiter->indices));
 
-   for (unsigned i = 0, len = gmsindices_nargs(&symiter->indices); i < len; ++i) {
+   for (unsigned i = 0, len = gmsindices_len(&symiter->indices); i < len; ++i) {
       IdentData *ident = &idents[i];
       switch (ident->type) {
       case IdentUEL: {

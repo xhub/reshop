@@ -60,6 +60,7 @@ gmd_search_symbol(gmdHandle_t gmd, const char sym_name[GMS_SSSIZE], IdentData *i
       if (uelidx <= 0) { return OK; }
 
       ident->type = IdentUEL;
+      ident->origin = IdentOriginGmd;
       ident->idx = uelidx;
 
       trace_empinterp("[GMD] Lexeme '%s' resolved as UEL #%d\n", sym_name, uelidx);
@@ -432,6 +433,7 @@ int find_uelidx(Interpreter * restrict interp, const char uelstr[VMT(static 1)],
       }
       FALLTHRU
    case IdentSet: case IdentParam: case IdentVector:
+
       return find_uelidx_gmd(interp->gmd, uelstr, uelidx);
    default:
       return runtime_error(interp->linenr);

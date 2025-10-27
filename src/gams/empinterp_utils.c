@@ -266,7 +266,7 @@ int gmssymiter_fixup_domains(Interpreter * restrict interp, GmsIndicesData *indi
       /* If we don't have a gmd, we can't lookup set */
       gmdHandle_t gmd = interp->gmd;
 
-      if (!gmd || gmsindices_nargs(indices) == 0) {
+      if (!gmd || gmsindices_len(indices) == 0) {
          return OK;
       }
 
@@ -295,7 +295,7 @@ int gmssymiter_fixup_domains(Interpreter * restrict interp, GmsIndicesData *indi
       }
 
 
-      for (unsigned i = 0, len = gmsindices_nargs(indices); i < len; ++i)  {
+      for (unsigned i = 0, len = gmsindices_len(indices); i < len; ++i)  {
          IdentData *idx_ident = &idents_indices[i];
 
          if (idx_ident->type != IdentSet) { continue; }
@@ -371,9 +371,9 @@ int gmssymiter_fixup_domains(Interpreter * restrict interp, GmsIndicesData *indi
 
       int symdim;
       dct_call_rc(dctSymDomNames, dct, symnr, dom_strs_ptr, &symdim);
-      assert(symdim == gmsindices_nargs(indices) || gmsindices_nargs(indices) == 0);
+      assert(symdim == gmsindices_len(indices) || gmsindices_len(indices) == 0);
 
-      for (unsigned i = 0, len = gmsindices_nargs(indices); i < len; ++i)  {
+      for (unsigned i = 0, len = gmsindices_len(indices); i < len; ++i)  {
          IdentData *idx_ident = &idents_indices[i];
 
          if (idx_ident->type != IdentSet) { continue; }

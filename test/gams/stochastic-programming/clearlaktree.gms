@@ -187,9 +187,9 @@ abort$[smax{n$(NOT n.first), abs(R.l(n) - R_L(n))} > %tol%]     'wrong R.l', R.l
 *******************************************************************************
 
 embeddedCode reshop:
-nodalprob(n)$(n.first):        min objnode(n) + SUM{child$(succ(n,child)), prob(child)*nodalprob(child).valFn}
+nodalprob(n)$(n.first):      min objnode(n) + SUM{ child$(succ(n,child)), prob(child)*nodalprob(child).valFn }
                                    L(n) defobjnode(n)
-nodalprob(n)$(NOT n.first): min objnode(n) + SUM{child$(succ(n,child)), prob(child)*nodalprob(child).valFn}
+nodalprob(n)$(NOT n.first):  min objnode(n) + SUM{ child$(succ(n,child)), prob(child)*nodalprob(child).valFn }
                                    L(n) F(n) R(n) Z(n) defobjnode(n) deflvl(n) 
 endEmbeddedCode
 

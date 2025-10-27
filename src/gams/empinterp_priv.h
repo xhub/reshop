@@ -163,12 +163,12 @@ static inline bool gmsindices_isset(GmsIndicesData *indices)
    return indices->nargs != UINT8_MAX;
 }
 
-static inline uint8_t gmsindices_nargs(GmsIndicesData *indices)
+static inline uint8_t gmsindices_len(GmsIndicesData *indices)
 {
    return indices->nargs != UINT8_MAX ? indices->nargs : 0;
 }
 
-static inline uint8_t gmsindices_numiterators(GmsIndicesData *indices)
+static inline uint8_t gmsindices_niterators(GmsIndicesData *indices)
 {
    return indices->num_sets + indices->num_localsets + indices->num_loopiterators;
 }

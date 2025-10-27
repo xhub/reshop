@@ -8,21 +8,23 @@
 #include "empinterp_vm.h"
 #include "empinterp_fwd.h"
 
+/** Loop iterators codegen data */
 typedef struct {
    LIDX_TYPE iter_lidx;           /**< LocalVar index for the iterator                  */
    LIDX_TYPE idx_lidx;            /**< LocalVar index for the iterator index            */
    LIDX_TYPE idxmax_lidx;         /**< localVar index for the max of the iterator index */
    GIDX_TYPE idxmax_gidx;         /**< Global index for the max of the iterator index   */
    unsigned tapepos_at_loopstart; /**< Position of the loop start in the code           */
-} IteratorData;
+} CodegenIteratorData;
 
+/** iterators defining loops */
 typedef struct {
-   unsigned loopobj_gidx;             /**< global index for the object inducing the loop */
-   EmpVmOpCode loopobj_opcode;        /**< Update opcode for the loop object             */
-   u8 niters;                          /**< Number of true iterators                      */
-   u8 varidxs2pos[GMS_MAX_INDEX_DIM]; /**< Position of the variable iterators            */
-   IdentData idents[GMS_MAX_INDEX_DIM];
-   IteratorData iters[GMS_MAX_INDEX_DIM];
+   unsigned loopobj_gidx;             /**< global index for the object driving the loop */
+   EmpVmOpCode loopobj_opcode;        /**< Update opcode for the loop object            */
+   u8 niters;                         /**< Number of true iterators                     */
+   u8 varidxs2pos[GMS_MAX_INDEX_DIM]; /**< Position of the variable iterators           */
+   IdentData idents[GMS_MAX_INDEX_DIM]; /**< Iterator identifiers */
+   CodegenIteratorData iters[GMS_MAX_INDEX_DIM]; /**< Codegen info regarding iterators  */
 } LoopIterators;
 
 void empvm_compiler_free(struct empvm_compiler* c);

@@ -358,7 +358,6 @@ NONNULL static int vmdata_consume_scalardata(VmData *data, double *coeff)
    *coeff = dnrecs == 0 ? 1. : data->equvar.dval; assert(isfinite(*coeff));
 
    data->equvar.dnrecs = UINT_MAX;
-
    data->equvar.dval = NAN;
 
    return OK;
@@ -1068,25 +1067,29 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
       }
 
       /* ---------------------------------------------------------------------
-       * Update a fixed uel from a loop variable
+       * Update a fixed uel in a linklabel from a loop variable
        * args: gidx dim_idx lidx
+       *
+       * FIXME: this modifies a global object. An alternative would be to modify
+       * the current VM linklabel. This may have big benefits when parsing sum
+       * where ALL indices are "resolved" (no set to iterate over)
        * ---------------------------------------------------------------------- */
       case OP_LINKLABELS_SETFROM_LOOPVAR: {
          GIDX_TYPE gidx = READ_GIDX(vm);
-         uint8_t dim_idx = READ_BYTE(vm);
+         uint8_t uel_pos = READ_BYTE(vm);
          uint8_t lidx = READ_BYTE(vm);
 
          LinkLabels *linklabels;
          N_CHECK_EXIT(linklabels, getlinklabels(&vm->globals, gidx));
 
-         assert(dim_idx < linklabels->dim);
+         assert(uel_pos < linklabels->dim);
          assert(IS_LOOPVAR(vm->locals[lidx]));
 
          int uel = AS_LOOPVAR(vm->locals[lidx]);
-         linklabels->data[dim_idx] = uel;
+         linklabels->data[uel_pos] = uel;
 
          DBGUSED int offset1, offset2;
-         DEBUGVMRUN("%.*s[%u] <- %n", linklabels->label_len, linklabels->label, dim_idx, &offset1);
+         DEBUGVMRUN("%.*s[%u] <- %n", linklabels->label_len, linklabels->label, uel_pos, &offset1);
          DEBUGVMRUN_EXEC({vm_printuel(&vm->data, uel, PO_TRACE_EMPINTERP, &offset2);})
          DEBUGVMRUN("%*sloopvar@%u", getpadding(offset1 + offset2), "", lidx);
 
@@ -1418,7 +1421,8 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          if (!o) {
             error("\n\n[empvm_run] ERROR: allocation failed in '%s'\n",
                   empnewobjs_names[newobj_call_idx]);
-            return Error_RuntimeError;
+            status = Error_RuntimeError;
+            goto _exit;
          }
 
          vmstack_mvback(vm, argc);
@@ -1451,9 +1455,11 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          avar_reset(&vm->data.equvar.v);
 
          vm->data.state.linklabels = linklabels_cpy;
-         unsigned nvaridxs = linklabels_cpy->nvaridxs;
-         if (nvaridxs > 0) {
-            REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->nvaridxs);
+
+         // FIXME: delete code?
+         unsigned nvardims = linklabels_cpy->nvardims;
+         if (nvardims > 0) {
+            REALLOC_EXIT(vm->data.linklabel_ws, int, linklabels_cpy->nvardims);
          }
 
          DEBUGVMRUN("DAGUID parent %u", linklabels_cpy->daguid_parent);
@@ -1472,7 +1478,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          rhp_idx vi = IdxNA;
          S_CHECK_EXIT(vmdata_consume_scalardata(&vm->data, &coeff));
          // HACK
-         //S_CHECK_EXIT(vmdata_consume_scalarvar(&vm->data, &vi));
+         S_CHECK_EXIT(vmdata_consume_scalarvar(&vm->data, &vi));
 
          A_CHECK_EXIT(linklabel_cpy, linklabels_dupaslabel(linklabels_src, coeff, vi));
          linklabel_cpy->daguid_parent = vm->data.state.uid_parent;
@@ -1480,11 +1486,27 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          S_CHECK_EXIT(linklabel2arc_add(vm->data.linklabel2arc, linklabel_cpy));
 
          DEBUGVMRUN("#%u: ", vm->data.linklabel2arc->len-1);
+         DEBUGVMRUN("#%u <- %.*s", vm->data.linklabel2arc->len-1, linklabel_cpy->label_len,
+                    linklabel_cpy->label);
+         DEBUGVMRUN_EXEC({
+            u8 dim = linklabel_cpy->dim;
+            int * restrict uels = linklabel_cpy->uels;
+
+            for (u8 i = 0; i < dim; ++i) {
+               int dummy; if (i == 0) {DEBUGVMRUN("(");}
+               if (i > 0) { DEBUGVMRUN(",");}
+
+               vm_printuel(&vm->data, uels[i], PO_TRACE_EMPINTERP, &dummy);
+               if (i == dim-1) { DEBUGVMRUN(")");}
+            }
+            if (valid_vi(vi)) {DEBUGVMRUN(" vi = %s", mdl_printvarname(vm->data.mdl, vi));}
+            if (isfinite(coeff) && coeff != 1.) {DEBUGVMRUN(" c = %e", coeff);}
+            });
          break;
       }
 
       /* ---------------------------------------------------------------------
-       * args: lidx1 ... lidxN
+       * args: N lidx1 ... lidxN
        * ---------------------------------------------------------------------- */
       case OP_LINKLABELS_STORE: {
          assert(vm->data.state.linklabels);
@@ -1492,18 +1514,18 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          assert(linklabels);
 
          /* This is a dummy read. Otherwise the VM dissassembler is lost */
-         uint8_t nargs = READ_BYTE(vm);
-         assert(linklabels->nvaridxs == nargs);
+         uint8_t nvardims = READ_BYTE(vm);
+         assert(linklabels->nvardims == nvardims);
 
-         int *uels = NULL;
-         if (nargs > 0) {
-            S_CHECK_EXIT(scratchint_ensure(&vm->data.equvar.iscratch, nargs));
-            uels = vm->data.equvar.iscratch.data;
+         int *vardims = NULL;
+         if (nvardims > 0) {
+            S_CHECK_EXIT(scratchint_ensure(&vm->data.equvar.iscratch, nvardims));
+            vardims = vm->data.equvar.iscratch.data;
 
-            for (u8 i = 0; i < nargs; ++i) {
+            for (u8 i = 0; i < nvardims; ++i) {
                u8 slot = READ_BYTE(vm);
                int uel_lidx = AS_INT(vm->locals[slot]);
-               uels[i] = uel_lidx;
+               vardims[i] = uel_lidx;
             }
          }
 
@@ -1512,14 +1534,27 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          S_CHECK_EXIT(vmdata_consume_scalardata(&vm->data, &coeff));
          S_CHECK_EXIT(vmdata_consume_scalarvar(&vm->data, &vi));
 
-         S_CHECK_EXIT(linklabels_add(linklabels, uels, coeff, vi));
+         S_CHECK_EXIT(linklabels_add(linklabels, vardims, coeff, vi));
 
-         DEBUGVMRUN("#%u: ", linklabels->nrecs-1);
-         DEBUGVMRUN_EXEC({ for (unsigned i = 0; i < nargs; ++i) {
-            int dummy; if (i == 0) {DEBUGVMRUN("(");}
-            if (i > 0) { DEBUGVMRUN(",");}
-            vm_printuel(&vm->data, uels[i], PO_TRACE_EMPINTERP, &dummy);
-            if (i == nargs-1) { DEBUGVMRUN(")");}}
+         DEBUGVMRUN("#%u <- %.*s", linklabels->nrecs-1, linklabels->label_len, linklabels->label);
+         DEBUGVMRUN_EXEC({
+            u8 dim = linklabels->dim;
+            int uels[GMS_MAX_INDEX_DIM];
+            int * restrict positions = &linklabels->data[dim];
+            memcpy(uels, linklabels->data, dim*sizeof(*uels));
+
+            for (u8 k = 0; k < nvardims; ++k) {
+               assert(positions[k] < dim);
+               uels[positions[k]] = vardims[k];
+            }
+
+            for (u8 i = 0; i < dim; ++i) {
+               int dummy; if (i == 0) {DEBUGVMRUN("(");}
+               if (i > 0) { DEBUGVMRUN(",");}
+
+               vm_printuel(&vm->data, uels[i], PO_TRACE_EMPINTERP, &dummy);
+               if (i == dim-1) { DEBUGVMRUN(")");}
+            }
             if (valid_vi(vi)) {DEBUGVMRUN(" vi = %s", mdl_printvarname(vm->data.mdl, vi));}
             if (isfinite(coeff) && coeff != 1.) {DEBUGVMRUN(" c = %e", coeff);}
             });
@@ -1591,14 +1626,15 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          break;
       }
 
-         // HACK: Delete?
+      // FIXME: Delete?
       case OP_SET_DAGUID_FROM_REGENTRY: {
          DagRegister *dagregister = vm->data.dagregister;
          unsigned reglen = dagregister->len;
 
          if (reglen == 0) {
             errormsg("\n\n[empvm_run] ERROR: dagregister is empty. Please report this\n");
-            return Error_EMPRuntimeError;
+            status = Error_EMPRuntimeError;
+            goto _exit;
          }
          vm->data.state.uid_parent = dagregister->list[reglen-1]->daguid_parent;
          assert(valid_uid(vm->data.state.uid_parent));
@@ -1657,6 +1693,21 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
          double val = vm->data.globals->scalars.list[gidx];
          DEBUGVMRUN("stored %e", val);
          vm->data.equvar.dval = val;
+         break;
+      }
+
+      /* FIXME: Delete scalar variable. This avoid it being taking into account when storing or
+       * duplicating a linklabel */
+      case OP_HACK_DEL_SCALARVAR: {
+         avar_reset(&vm->data.equvar.v);
+         break;
+      }
+
+      /* FIXME: Delete scalar. This avoid it being taking into account when storing or
+       * duplicating a linklabel */
+      case OP_HACK_DEL_SCALARPARAM: {
+         vm->data.equvar.dnrecs = UINT_MAX;
+         vm->data.equvar.dval = NAN;
          break;
       }
 

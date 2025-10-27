@@ -10,7 +10,7 @@
 
 bool linklabels_valid(const LinkLabels *l)
 {
-   if (l->nvaridxs > l->dim) return false;
+   if (l->nvardims > l->dim) return false;
    return true;
 }
 
@@ -45,7 +45,7 @@ LinkLabels * linklabels_new(LinkType type, const char *label, unsigned label_len
    link->extras = NULL;
 
    link->dim = dim;
-   link->nvaridxs = nvardims;
+   link->nvardims = nvardims;
    link->label_len = label_len;
 
    link->nrecs = 0;
@@ -70,17 +70,17 @@ LinkLabels * linklabels_dup(const LinkLabels *link_src)
 
    LinkLabels *link_cpy = NULL;
    uint8_t dim = link_src->dim;
-   uint8_t nvaridxs = link_src->nvaridxs;
+   uint8_t nvardims = link_src->nvardims;
    unsigned max_children = link_src->maxrecs;
 
-   size_t data_size = sizeof(int) * (dim + nvaridxs);
+   size_t data_size = sizeof(int) * (dim + nvardims);
    MALLOCBYTES_NULL(link_cpy, LinkLabels, sizeof(LinkLabels) + data_size);
 
    memcpy(link_cpy, link_src, sizeof(LinkLabels) + data_size);
 
    if (max_children > 0) {
 
-      MALLOC_EXIT_NULL(link_cpy->uels_var, int, (size_t)nvaridxs*max_children);
+      MALLOC_EXIT_NULL(link_cpy->uels_var, int, (size_t)nvardims*max_children);
       MALLOC_EXIT_NULL(link_cpy->vi, rhp_idx, max_children);
       MALLOC_EXIT_NULL(link_cpy->coeff, double, max_children);
 
@@ -111,6 +111,13 @@ LinkLabel * linklabels_dupaslabel(const LinkLabels *link_src, double coeff, rhp_
    link->label = link_src->label;
    memcpy(link->uels, link_src->data, sizeof(int) * dim);
 
+   if (link_src->nvardims > 0 && link_src->nrecs == 1) {
+      const int * restrict positions = &link_src->data[dim];
+      for (u8 k = 0, len = link_src->nvardims; k < len; ++k) {
+         link->uels[positions[k]] = link_src->uels_var[k];
+      }
+   }
+
    link->daguid_parent = link_src->daguid_parent;
    link->vi = vi;
    link->coeff = coeff;
@@ -123,13 +130,13 @@ int linklabels_add(LinkLabels *link, int *uels, double coeff, rhp_idx vi)
 {
    assert(linklabels_valid(link));
 
-   uint8_t num_var = link->nvaridxs;
+   uint8_t nvardims = link->nvardims;
    unsigned nrecs = link->nrecs, maxrecs = link->maxrecs;
 
    if (nrecs >= maxrecs) {
       unsigned size = link->maxrecs = MAX(2*maxrecs, nrecs + 10);
-      if (num_var > 0) {
-         size_t size_data = (num_var*size);
+      if (nvardims > 0) {
+         size_t size_data = ((size_t)nvardims*size);
          REALLOC_(link->uels_var, int, size_data);
       }
       REALLOC_(link->coeff, double, size);
@@ -138,7 +145,7 @@ int linklabels_add(LinkLabels *link, int *uels, double coeff, rhp_idx vi)
    }
 
    if (uels) {
-      memcpy(&link->uels_var[(size_t)num_var*nrecs], uels, sizeof(*uels)*num_var);
+      memcpy(&link->uels_var[(size_t)nvardims*nrecs], uels, sizeof(*uels)*nvardims);
    }
 
    link->coeff[nrecs] = coeff;

@@ -2121,7 +2121,7 @@ static int imm_set_dagrootlabel(Interpreter * restrict interp, const char *ident
     * - IdentLoopIterator, but these needs to be queried
     * --------------------------------------------------------------------- */
 
-   A_CHECK(interp->dag_root_label, linklabel_new(identname, identname_len, gmsindices_nargs(indices)));
+   A_CHECK(interp->dag_root_label, linklabel_new(identname, identname_len, gmsindices_len(indices)));
    LinkLabel *root_label = interp->dag_root_label;
 
    return assign_uels(root_label->uels, indices, interp->linenr);
@@ -2138,7 +2138,7 @@ static int imm_add_linklabel(Interpreter * restrict interp, LinkType linktype,
     * --------------------------------------------------------------------- */
 
    LinkLabel *linklabel;
-   A_CHECK(linklabel, linklabel_new(identname, identname_len, gmsindices_nargs(gmsindices)));
+   A_CHECK(linklabel, linklabel_new(identname, identname_len, gmsindices_len(gmsindices)));
    linklabel->linktype = linktype;
 
    DagRegister *dagreg = &interp->dagregister;
@@ -2157,7 +2157,7 @@ static int imm_add_linklabel(Interpreter * restrict interp, LinkType linktype,
 
    trace_empinterp("[empinterp] Adding link of type %s between %s and %.*s\n", linktype2str(linktype),
                    empdag_getname(&interp->mdl->empinfo.empdag, interp->daguid_parent),
-                   gmsindices_nargs(gmsindices) > 0 ? ((int)(gmsindices->idents[gmsindices->nargs-1].lexeme.start - identname))
+                   gmsindices_len(gmsindices) > 0 ? ((int)(gmsindices->idents[gmsindices->nargs-1].lexeme.start - identname))
                    +  gmsindices->idents[gmsindices->nargs-1].lexeme.len : identname_len, identname);
 
    S_CHECK(linklabel2arc_add(&interp->linklabel2arc, linklabel));
@@ -2181,7 +2181,7 @@ int imm_add_duallabel(Interpreter * restrict interp, MathPrgm *mp,
 
    mp->dual.dualdat = *dualdat;
 
-   A_CHECK(dual, dual_label_new(identname, identname_len, gmsindices_nargs(indices), mpid_child));
+   A_CHECK(dual, dual_label_new(identname, identname_len, gmsindices_len(indices), mpid_child));
 
    DagRegister *dagreg = &interp->dagregister;
    unsigned dagreg_len = dagreg->len;
@@ -2198,7 +2198,7 @@ int imm_add_duallabel(Interpreter * restrict interp, MathPrgm *mp,
    } 
    trace_empinterp("[empinterp] Marking %s as dual of %.*s\n",
                    empdag_getmpname(&interp->mdl->empinfo.empdag, mpid_child),
-                   gmsindices_nargs(indices) > 0 ?
+                   gmsindices_len(indices) > 0 ?
                    ((int)(indices->idents[indices->nargs-1].lexeme.start - identname))
                    +  indices->idents[indices->nargs-1].lexeme.len : identname_len, identname);
 
@@ -3437,7 +3437,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
 
    while (toktype == TOK_PLUS) { /* TODO(URG): support TOK_MINUS */
 
-      unsigned p2 = *p;
+      UNUSED unsigned p2 = *p;
       S_CHECK(advance(interp, p, &toktype))
       PARSER_EXPECTS_EXIT(interp, "arcVF expression is expected",
                           TOK_GMS_VAR, TOK_REAL, TOK_VALFN, TOK_IDENT, TOK_SUM,
@@ -3452,7 +3452,8 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
          S_CHECK(parse_MP_CCF(mp, interp, p));
          TO_IMPLEMENT("MP in objective");
          //S_CHECK(ensure_valfn_kwd(interp, p));
-#if 0
+   /* 2025.10.27: FIXME Delete old code */
+#if 1
       } else if (toktype == TOK_IDENT || toktype == TOK_GMS_VAR || toktype == TOK_GMS_PARAM) {
          // backtrack
          *p = p2;
@@ -4720,7 +4721,7 @@ int parse_labeldef(Interpreter * restrict interp, unsigned *p)
       return vm_labeldef_condition(interp, p, label, label_len, &gmsindices);
    }
 
-   if (gmsindices_numiterators(&gmsindices)) {
+   if (gmsindices_niterators(&gmsindices)) {
       return vm_labeldef_loop(interp, p, label, label_len, &gmsindices);
    }
 

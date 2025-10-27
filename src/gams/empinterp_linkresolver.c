@@ -100,8 +100,7 @@ static daguid_t dagregister_find(const DagRegister *dagreg, LabelDat *labeldat)
    for (unsigned i = 0, len = dagreg->len; i < len; ++i) {
       const DagRegisterEntry *entry = dagreg->list[i];
 
-      if (entry->label_len != labelname_len ||
-          entry->dim != dim ||
+      if (entry->label_len != labelname_len || entry->dim != dim ||
           strncasecmp(labelname, entry->label, labelname_len) != 0) {
          goto _loop;
       }
@@ -332,7 +331,7 @@ static int addarc(Interpreter *interp, daguid_t uid_parent, daguid_t uid_child,
       return OK;
    }
    case LinkObjAddMap: {
-      error("[empinterp] ERROR: wrong function called for link type %s",
+      error("[empinterp] ERROR: wrong function called for link type %s\n",
             linktype2str(arcdat->type));
       return Error_RuntimeError;
    }
@@ -365,9 +364,9 @@ static int dag_resolve_arc_labels(Interpreter *interp)
    for (unsigned i = 0, len = labels2resolve->len; i < len; ++i) {
       LinkLabels *link = labels2resolve->arr[i];
 
-      unsigned num_children = link->nrecs;
+      unsigned nrecs = link->nrecs;
 
-      if (num_children == 0) {
+      if (nrecs == 0) {
          error("[empinterp] ERROR: empty daglabel for node '%s'.\n",
                empdag_getname(empdag, link->daguid_parent));
          status = Error_EMPIncorrectInput;
@@ -407,7 +406,7 @@ static int dag_resolve_arc_labels(Interpreter *interp)
 
       LinkLabels *link = labels2resolve->arr[i];
       int * restrict child = link->uels_var;
-      uint8_t num_vars = link->nvaridxs;
+      uint8_t nvardims = link->nvardims;
       uint8_t dim = link->dim;
       daguid_t daguid_src = link->daguid_parent; assert(daguid_src != EMPDAG_UID_NONE);
 
@@ -439,9 +438,9 @@ static int dag_resolve_arc_labels(Interpreter *interp)
       memcpy(arcdat.labeldat.uels, link->data, sizeof(*link->data)*dim);
 
       const int * restrict positions = &link->data[dim];
-      for (unsigned j = 0; j < nrecs; ++j, child += num_vars) {
+      for (unsigned j = 0; j < nrecs; ++j, child += nvardims) {
  
-         for (u8 k = 0; k < num_vars; ++k) {
+         for (u8 k = 0; k < nvardims; ++k) {
             assert(positions[k] < dim);
             arcdat.labeldat.uels[positions[k]] = child[k];
          }
@@ -449,8 +448,8 @@ static int dag_resolve_arc_labels(Interpreter *interp)
          daguid_t daguid_dst = dagregister_find(dagregister, &arcdat.labeldat);
 
          if (daguid_dst == UINT_MAX) {
-            error("[empinterp] ERROR: while building arc for node '%s' could "
-                  "not resolve the label '", empdag_getname(empdag, daguid_src));
+            error("[empinterp] ERROR: while building arc for node '%s' could not "
+                  "resolve the label '", empdag_getname(empdag, daguid_src));
             labeldat_print(&arcdat.labeldat, interp, PO_ERROR);
 
             errormsg("'\n");
@@ -487,10 +486,13 @@ static int dag_resolve_arc_label(Interpreter *interp)
    // TODO: DELETE?
 
    for (unsigned i = 0, len = label2resolve->len; i < len; ++i) {
-      LinkLabel *dagl = label2resolve->arr[i];
+      LinkLabel *link = label2resolve->arr[i];
 
-      const char *label = dagl->label;
-      uint16_t label_len = dagl->label_len;
+      const char *label = link->label;
+      uint16_t label_len = link->label_len;
+
+      if (!label || label_len == 0) { continue; }
+
       bool found = false;
 
       for (unsigned j = 0; j < dagreg_len; ++j) {
@@ -511,7 +513,7 @@ static int dag_resolve_arc_label(Interpreter *interp)
    }
 
    if (status != OK) {
-      error("\n[empinterp] %u fatal error%s, exiting\n", num_err, num_err > 1 ? "s" : "");
+      error("[empinterp] %u fatal error%s, exiting\n", num_err, num_err > 1 ? "s" : "");
       return status;
    }
 
@@ -521,6 +523,17 @@ static int dag_resolve_arc_label(Interpreter *interp)
       uint8_t dim = link->dim;
       daguid_t uid_parent = link->daguid_parent;
       assert(valid_linktype(link->linktype));
+
+      const double * restrict coeffs;
+      const rhp_idx * restrict vis;
+      A_CHECK(coeffs, &link->coeff);
+      A_CHECK(vis, &link->vi);
+
+      if (link->linktype == LinkObjAddMap) {
+         assert(uidisMP(uid_parent));
+         S_CHECK(addobjaddmaps(interp, uid2id(uid_parent), 1, coeffs, vis));
+         continue;
+      }
 
       ArcDat arcdat = {.type = link->linktype,  .labeldat = {.dim = link->dim,
          .label_len = link->label_len, .label = link->label} };
@@ -546,7 +559,7 @@ static int dag_resolve_arc_label(Interpreter *interp)
    }
 
    if (num_err > 0) {
-      error("\n[empinterp] during the labels resolution, %u errors were encountered!\n", num_err);
+      error("[empinterp] during the labels resolution, %u errors were encountered!\n", num_err);
       return Error_EMPIncorrectInput;
    }
 

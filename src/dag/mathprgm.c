@@ -1370,7 +1370,7 @@ int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le)
    rhp_idx * restrict vis = le->vis;
    double * restrict coeffs = le->coeffs;
    for (unsigned i = 0, len = le->len; i < len; ++i) {
-      rhp_idx vi = vis[i], ei;
+      rhp_idx vi = vis[i], ei; assert(valid_vi_(vi, ctr_nvars_total(ctr), __func__));
       double c = coeffs[i];
 
       S_CHECK(ctr_get_defined_mapping_by_var(ctr, vi, &ei));

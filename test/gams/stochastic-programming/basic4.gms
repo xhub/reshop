@@ -242,8 +242,8 @@ xN.up(n) =  ord(n);
 
 embeddedCode ReSHOP:
 * node(n)$(sum(succ(n,child),yes)): min objN(n) + MP('smax', node(child).valFn$(succ(n,child))) xN(n) defobjN(n)
-node(n):      min objN(n) + CRM(n).valFn$(succ(n,child)) xN(n) defobjN(n)
-CRM(n)$(succ(n,child)):       MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
+node(n):                  min objN(n) + CRM(n).valFn$(succ(n,child)) xN(n) defobjN(n)
+CRM(n)$(succ(n,child)):   MP('ecvarup', node(child).valFn$(succ(n,child)), risk_wt=.8, tail=.4)
 endEmbeddedCode
 
 solve m_basic4 using emp;

@@ -130,15 +130,14 @@ int vm_store_set_nrecs_gmd(Interpreter * restrict interp, EmpVm * restrict vm,
 
 int vmdata_consume_scalarvar(VmData *data, rhp_idx *vi)
 {
-   unsigned var_len = data->equvar.v.size;
+   unsigned vlen = data->equvar.v.size;
 
-   if (var_len > 1) {
-      error("[empvm] ERROR: expecting a variable of size at most 1, got %u\n",
-            var_len);
+   if (vlen > 1) {
+      error("[empvm] ERROR: expecting a variable of size at most 1, got %u\n", vlen);
       return Error_EMPIncorrectInput;
    }
 
-   *vi = var_len == 0 ? IdxNA : avar_fget(&data->equvar.v, 0);
+   *vi = vlen == 0 ? IdxNA : avar_fget(&data->equvar.v, 0);
 
    avar_reset(&data->equvar.v);
 

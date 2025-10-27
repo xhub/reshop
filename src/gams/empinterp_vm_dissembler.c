@@ -111,6 +111,8 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_SCALAR_SYMBOL_TRACKER_INIT] = {{OPARG_NONE}},
    [OP_SCALAR_SYMBOL_TRACKER_CHECK] = {{OPARG_NONE}},
    [OP_HACK_SCALAR2VMDATA] = {{OPARG_GIDX}, },
+   [OP_HACK_DEL_SCALARVAR] = {{OPARG_NONE}, },
+   [OP_HACK_DEL_SCALARPARAM] = {{OPARG_NONE}, },
    [OP_END] = {{OPARG_NONE},},
 };
 
@@ -175,6 +177,8 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_SCALAR_SYMBOL_TRACKER_CHECK] = 0,
    [OP_SET_DAGUID_FROM_REGENTRY] = 0,
    [OP_HACK_SCALAR2VMDATA] = 1,
+   [OP_HACK_DEL_SCALARVAR] = 0,
+   [OP_HACK_DEL_SCALARPARAM] = 0,
    [OP_END] = 0,
 };
 
@@ -242,6 +246,8 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_SCALAR_SYMBOL_TRACKER_CHECK,"SCALAR_SYMBOL_TRACKER_CHECK") \
  DEFSTR(OP_SET_DAGUID_FROM_REGENTRY, "SET_DAGUID_FROM_REGENTRY") \
  DEFSTR(OP_HACK_SCALAR2VMDATA, "HACK_SCALAR2VMDATA") \
+ DEFSTR(OP_HACK_DEL_SCALARVAR, "HACK_DEL_SCALARVAR") \
+ DEFSTR(OP_HACK_DEL_SCALARPARAM, "HACK_DEL_SCALARPARAM") \
  DEFSTR(OP_END,"END")
  
 //DEFSTR(OP_DUALSLABEL_ADD,"DUALSLABEL_ADD")
@@ -293,7 +299,7 @@ static inline int valid_vmidx(unsigned idx, unsigned len, const char* setname)
    return OK;
 }
 
-#define VM_CHK(EXPR) { int status42 = (EXPR); if (status42) status = status42; }
+#define VM_CHK(EXPR) { int status42 = (EXPR); if (status42) { status = status42; } }
 
 static void print_globals(EmpVm *vm, unsigned mode)
 {
