@@ -9,7 +9,7 @@ build-leg:
     - !reference [.gams-folder-leg]
     - /opt/miniconda3/bin/python3 -m venv pyenv
     - . pyenv/bin/activate
-    - pip install swig numpy scipy pytest setuptools
+    - pip install swig==4.3.1.post0 numpy scipy pytest setuptools
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
@@ -52,7 +52,7 @@ build-debug-leg:
     - !reference [.gams-folder-leg]
     - /opt/miniconda3/bin/python3 -m venv pyenv
     - . pyenv/bin/activate
-    - pip install swig numpy scipy pytest setuptools
+    - pip install swig==4.3.1.post0 numpy scipy pytest setuptools
     - export PATH="/cache/gams-installs/$(cat gams_folder_leg.txt):$HOME/.local/bin:$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
@@ -136,7 +136,7 @@ build-dac:
     - !reference [.gams-folder-dac]
     - python3 -m venv pyenv
     - . pyenv/bin/activate
-    - pip install swig numpy scipy pytest setuptools
+    - pip install swig==4.3.1.post0 numpy scipy pytest setuptools
     - export PATH="$HOME/cache/gams-installs/$(cat gams_folder_dac.txt):$PATH"
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
@@ -267,7 +267,7 @@ build-wei:
     - *pw-replace-symlinks
     - python -m venv pyenv
     - .\pyenv\Scripts\Activate.ps1
-    - pip install swig numpy scipy pytest setuptools
+    - pip install swig==4.3.1.post0 numpy scipy pytest setuptools
     - $gmsdirname = Get-Content mygmsdir.tmp -Raw
     - $GAMS_PATH = Join-Path -Path (Get-Location) -ChildPath "gamsdir"
     - if (Test-Path "gamsdir") { Remove-Item -Path "gamsdir" -Recurse -Force }
