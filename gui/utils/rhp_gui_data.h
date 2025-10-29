@@ -40,7 +40,13 @@ static inline GuiData* guidata_new(void)
 {
    GuiData *gdat = (GuiData *)mymalloc(sizeof(GuiData));
    gdat->connected = false;
-   gdat->ipc.server_fd = -1;
+   gdat->ipc.server_fd =
+#ifdef _WIN32
+   INVALID_SOCKET;
+#else
+   -1;
+#endif
+
    gdat->ipc.data = NULL;
    gdat->ipc.name = NULL;
    gdat->models = NULL;
