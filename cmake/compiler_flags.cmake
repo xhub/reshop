@@ -61,7 +61,7 @@ macro(SET_C_WARNINGS _TARGETS)
 
          foreach(_f ${clang_flags_cxx})
             foreach(_t ${_TARGETS})
-               target_compile_options(${_t} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:"-Wno-${_f}")
+               target_compile_options(${_t} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:"-Wno-${_f}">)
             endforeach()
          endforeach()
       endif()
