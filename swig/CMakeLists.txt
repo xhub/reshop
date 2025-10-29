@@ -393,6 +393,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
 
    set (ENVVARS)
+
    if (APPLE)
       list(APPEND ENVVARS "DYLD_FALLBACK_LIBRARY_PATH=${CMAKE_BINARY_DIR}/test")
    endif()
@@ -409,7 +410,10 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       message(STATUS "[python] Setting RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
    endif()
 
-   set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT ${ENVVARS})
+   if (ENVVARS)
+      message(STATUS "[python] Setting env vars ${ENVVARS}")
+      set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "${ENVVARS}")
+   endif()
 
 endmacro()
 
@@ -417,4 +421,3 @@ endmacro()
 foreach (P IN LISTS BUILD_PYTHON)
    SETUP_SWIG_PYTHON_MODULE(${P})
 endforeach()
-
