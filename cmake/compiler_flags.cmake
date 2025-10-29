@@ -3,7 +3,7 @@ include(CheckCCompilerFlag)
 
 if ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" MATCHES "GNU" OR
     "${CMAKE_COMPILER_IS_GNUCC}") # for cmake 3.22 on ubuntu 22.04 
-  set(C_COMPILER_GNU_LIKE 1)  
+  set(C_COMPILER_GNU_LIKE 1) 
 endif()
 
 
@@ -184,6 +184,10 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Intel")
 elseif("x${CMAKE_C_COMPILER_ID}" STREQUAL "xMSVC")
       add_compile_options(/fp:precise /Zc:__STDC__ /wd4113 /wd5105 /wd4866 /wd4200)
 endif()
+
+message(STATUS "Compiler summary: ")
+message(STATUS "- CMAKE_C_COMPILER_ID='${CMAKE_C_COMPILER_ID}'")
+message(STATUS "- CMAKE_C_COMPILER_FRONTEND_VARIANT='${CMAKE_C_COMPILER_FRONTEND_VARIANT}'")
 
 #if (APPLE)
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
