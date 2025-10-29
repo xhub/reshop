@@ -9,6 +9,7 @@ import sys
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_once():
+    print(f"Executing setup. RHP_PATH_FILENAME env var is {os.environ.get('RHP_PATH_FILENAME')}")
     # Need to find PATH
     if 'RHP_PATH_FILENAME' in os.environ:
         print(f"PATH solver provided at {os.environ['RHP_PATH_FILENAME']}", file=sys.stderr)
