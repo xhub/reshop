@@ -394,6 +394,10 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
 
    set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
 
+   if (APPLE)
+      set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "DYLD_FALLBACK_LIBRARY_PATH='${CMAKE_BINARY_DIR}/test:$DYLD_FALLBACK_LIBRARY_PATH'")
+   endif()
+
    if (VENV_TESTING)
       if (WITH_BACKWARD)
          # We rely on libbackward being copied
