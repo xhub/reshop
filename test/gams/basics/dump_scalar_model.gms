@@ -9,7 +9,7 @@ equation  defobj;
 
 x.lo = 1;
 
-defobj.. obj =E= sqr(x + 3);
+defobj .. obj =E= sqr(x + 3);
 
 model m / defobj /;
 
@@ -23,5 +23,5 @@ m.optfile = 1;
 
 solve m using emp;
 
-abort$[m.modelStat > %MODELSTAT.LOCALLY OPTIMAL%]      'solve failed', m.modelStat;
+abort$[m.modelStat >  %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', m.modelStat;
 abort$[m.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', m.solveStat;
