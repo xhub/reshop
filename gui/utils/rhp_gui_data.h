@@ -42,7 +42,7 @@ static inline GuiData* guidata_new(void)
    gdat->connected = false;
    gdat->ipc.server_fd =
 #ifdef _WIN32
-   INVALID_SOCKET;
+   (UINT_PTR)~0;
 #else
    -1;
 #endif
