@@ -389,7 +389,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    endif()
 
    add_test(NAME python-${pytarget}-tests
-            COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest ${PYTEST_OPTS} ${PYTEST_DIR}
+            COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest -q -s ${PYTEST_OPTS} ${PYTEST_DIR}
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
 
    if (RHP_PATH_FILENAME)
