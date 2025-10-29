@@ -6,6 +6,7 @@ import pytest
 import os
 import sys
 
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_once():
     # Need to find PATH

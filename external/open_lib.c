@@ -29,6 +29,12 @@
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include <windows.h>
 typedef HMODULE PluginHandle;
+
+#include <shlwapi.h>
+
+#pragma comment(lib, "Shlwapi.lib")
+
+
 #else
 typedef void* PluginHandle;
 #endif
@@ -41,7 +47,21 @@ static void* open_library_priv(const char* lib_name, int flags, bool doprint)
   void* HandleRes;
 
 #ifdef _WIN32
-  HandleRes = (void*) LoadLibrary(lib_name);
+   /* See https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexa
+    * When the argument is an absolute path, LoadLibrary odes not include the directory
+    * part when looking for dependencies of the library */
+
+   if (!PathIsRelativeA((LPCSTR)lib_name)) {
+      HandleRes = (void*) LoadLibraryExA((LPCSTR)lib_name, NULL, 
+                     LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+   } else {
+      HandleRes = NULL;
+   }
+
+   if (!HandleRes) { /* DLL resolution is complex. try vanilla LoadLibrary */
+      HandleRes = (void*) LoadLibrary(lib_name);
+   }
+
   if (!HandleRes && doprint)
   {
     int err = (int)GetLastError();

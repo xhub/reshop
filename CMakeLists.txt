@@ -309,7 +309,7 @@ endif (APPLE OR UNIX)
 
 # In that case, #pragma comment(lib, ...) does not work
 if (MINGW)
-   set (EXTRA_LIBS ws2_32 rpcrt4 dbghelp)
+   set (EXTRA_LIBS ws2_32 rpcrt4 dbghelp shlwapi)
 endif()
 
 # TODO: move this to a separate file?
