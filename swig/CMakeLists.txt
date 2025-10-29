@@ -392,22 +392,24 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
             COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest -q -s ${PYTEST_OPTS} ${PYTEST_DIR}
             WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
 
-   if (RHP_PATH_FILENAME)
-      set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT RHP_PATH_FILENAME=${RHP_PATH_FILENAME})
-      message(STATUS "[python] Setting RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
-   endif()
-
+   set (ENVVARS)
    if (APPLE)
-      set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT DYLD_FALLBACK_LIBRARY_PATH=${CMAKE_BINARY_DIR}/test)
+      list(APPEND ENVVARS "DYLD_FALLBACK_LIBRARY_PATH=${CMAKE_BINARY_DIR}/test")
    endif()
 
    if (VENV_TESTING)
       if (WITH_BACKWARD)
          # We rely on libbackward being copied
-         set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/test)
+         list(APPEND ENVVARS "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/test")
       endif()
    endif()
 
+   if (RHP_PATH_FILENAME)
+      list(APPEND ENVVARS "RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
+      message(STATUS "[python] Setting RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
+   endif()
+
+   set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT ${ENVVARS})
 
 endmacro()
 
