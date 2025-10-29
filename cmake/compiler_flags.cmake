@@ -50,8 +50,7 @@ macro(SET_C_WARNINGS _TARGETS)
       add_compile_options (/Wall /wd4061 /wd4710 /wd4100 /wd4820 /wd5045)
 
       # With clang-cl, Wall is equivalent to Weverything, so it is very verbose
-      if ("x${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC" AND 
-        CMAKE_C_COMPILER_ID MATCHES "Clang") 
+      if (CMAKE_C_COMPILER_ID MATCHES "Clang") 
 
          set(clang_flags_common "reserved-macro-identifier;reserved-identifier;declaration-after-statement;sign-conversion;missing-variable-declarations;extra-semi-stmt;unsafe-buffer-usage;nonportable-system-include-path")
          set(clang_flags_cxx "zero-as-null-pointer-constant;c++98-compat;shadow-field-in-constructor;old-style-cast;c++98-compat-pedantic")
