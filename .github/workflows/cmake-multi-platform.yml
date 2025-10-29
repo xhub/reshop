@@ -75,7 +75,7 @@ jobs:
         python-version: '3.13' 
 
     - name: Install dependencies
-      run: pip install swig numpy scipy pytest setuptools
+      run: pip install swig==4.3.1.post0 numpy scipy pytest setuptools
 
     - name: Setup MSVC
       if: matrix.c_compiler == 'cl'
