@@ -773,7 +773,7 @@ int rhp_PATH_setfname(const char* fname)
       return Error_NullPointer;
    }
 
-   FREE(libpath_fname);
+   free((void*)libpath_fname);
 
    libpath_fname = strdup(fname);
    if (!libpath_fname) {

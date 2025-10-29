@@ -91,7 +91,7 @@ static void* open_library_priv(const char* lib_name, int flags, bool doprint)
   HandleRes = dlopen(lib_name, mode);
 
   if (!HandleRes && doprint) {
-    error("[open_library] ERROR: dlopen error '%s while trying to open library '%s'\n", dlerror(), lib_name);
+    error("[open_library] ERROR: dlopen error '%s' while trying to open library '%s'\n", dlerror(), lib_name);
   }
 #endif
 
