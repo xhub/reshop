@@ -1227,7 +1227,7 @@ int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
    }
 
    EmpDag * empdag = &mp->mdl->empinfo.empdag;
-   VarcArray *varcs = empdag->mps.Varcs;
+   VarcArray *varcs = &empdag->mps.Varcs[mp->id];
    Varc * varcs_arr = varcs->arr;
 
    /* Update the objequ in the EMPDAG arcs */
