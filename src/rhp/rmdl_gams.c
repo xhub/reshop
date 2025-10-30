@@ -46,6 +46,15 @@
 #include "nltree_priv.h"
 #endif
 
+typedef struct {
+   rhp_idx ei;
+   rhp_idx vi;
+} GmoObjVarAdded;
+
+typedef struct {
+   GmoObjVarAdded objvaradded;
+} GmoConversionTracker;
+
 
 UNUSED static int _debug_check_nlcode(int opcode, int value, size_t nvars, size_t poolen)
 {
@@ -355,7 +364,8 @@ static int chk_nlpool(NlPool *pool, Model *mdl_src)
    return OK;
 }
 
-static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Container *ctr_gms)
+static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Container *ctr_gms,
+                         GmoConversionTracker *tracker)
 {
    int status = OK;
 
@@ -381,8 +391,8 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
       CMatElt * restrict * restrict cmat_equs = cdat->cmat.equs;
 
       for (int i = 0, m = ctr_gms->m, ei = 0; i < m; ++i, ++ei) {
-         int nz, nlnz;
-         gmoGetRowSparse(gmo, i, equidx, jacval, isvarNL, &nz, &nlnz);
+         int nz_gmo, nlnz_gmo;
+         gmoGetRowSparse(gmo, i, equidx, jacval, isvarNL, &nz_gmo, &nlnz_gmo);
 
          while (!valid_ei(ctr_src->rosetta_equs[ei])) { ei++; assert(ei < cdat->total_m); }
 
@@ -390,14 +400,21 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
          int nz_rhp = 0, nlnz_rhp = 0;
          while (cme) { nz_rhp++; if (cme_isNL(cme)) { nlnz_rhp++; } cme = cme->next_var; }
 
-         if (nz != nz_rhp || nlnz != nlnz_rhp) {
-            error("[GMOexport] ERROR for equation %s: GMO nz = %d, nlnz = %d; RHP "
-                  "nz = %d, nlnz = %d\n", ctr_printequname(ctr_src, ei), nz, nlnz, nz_rhp,
-                  nlnz_rhp);
-            status = Error_RuntimeError;
+         if (nz_gmo != nz_rhp || nlnz_gmo != nlnz_rhp) {
+
+            /* if an objvar was added to the GMO, the difference is fine */
+            if (!((nz_gmo == nz_rhp + 1) && (i == tracker->objvaradded.ei))) {
+
+               error("[GMOexport] ERROR for variable '%s': GMO nz = %d, nlnz = %d; "
+                     "RHP nz = %d, nlnz = %d\n", ctr_printvarname(ctr_src, ei), nz_gmo,
+                     nlnz_gmo, nz_rhp, nlnz_rhp);
+               status = Error_RuntimeError;
+
+            }
          }
+
          printout(PO_VVV, "EQU %s involves %d variables (nl: %d)\n",
-                  ctr_printequname(ctr_src, ei), nz, nlnz);
+                  ctr_printequname(ctr_gms, i), nz_gmo, nlnz_gmo);
 
       }
 
@@ -405,23 +422,29 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
       CMatElt * restrict * restrict cmat_vars = cdat->cmat.vars;
 
       for (int i = 0, n = ctr_gms->n, vi = 0; i < n; ++i, ++vi) {
-         int nz, nlnz;
-         gmoGetColSparse(gmo, i, vidxs, jacval, isvarNL, &nz, &nlnz);
+         int nz_gmo, nlnz_gmo;
+         gmoGetColSparse(gmo, i, vidxs, jacval, isvarNL, &nz_gmo, &nlnz_gmo);
 
          while (!valid_ei(ctr_src->rosetta_vars[vi])) { vi++; assert(vi < cdat->total_n); }
          CMatElt *cme = cmat_vars[vi];
          int nz_rhp = 0, nlnz_rhp = 0;
          while (cme) { nz_rhp++; if (cme_isNL(cme)) { nlnz_rhp++; } cme = cme->next_equ; }
 
-         if (nz != nz_rhp || nlnz != nlnz_rhp) {
+         if (nz_gmo != nz_rhp || nlnz_gmo != nlnz_rhp) {
 
-            error("[GMOexport] ERROR for variable %s: GMO nz = %d, nlnz = %d; RHP "
-                  "nz = %d, nlnz = %d\n", ctr_printvarname(ctr_src, vi), nz, nlnz, nz_rhp,
-                  nlnz_rhp);
-            status = Error_RuntimeError;
+            /* if an objvar was added to the GMO, the difference is fine */
+            if (!((nz_gmo == nz_rhp + 1) && (i == tracker->objvaradded.vi))) {
+
+               error("[GMOexport] ERROR for variable '%s': GMO nz = %d, nlnz = %d; "
+                     "RHP nz = %d, nlnz = %d\n", ctr_printvarname(ctr_src, vi), nz_gmo,
+                     nlnz_gmo, nz_rhp, nlnz_rhp);
+               status = Error_RuntimeError;
+
+            }
          }
+
          printout(PO_VVV, "VAR %s is present in %d equations (nl: %d)\n",
-                  ctr_printvarname(ctr_src, vi), nz, nlnz);
+                  ctr_printvarname(ctr_gms, i), nz_gmo, nlnz_gmo);
 
       }
 
@@ -431,20 +454,20 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
    if (status != OK) { return status; }
 
    if (gmoM(gmo) != dctNRows(dct)) {
-      error("[GMOexport] ERROR: There are %d equations in the DCT, but %d are "
-            "expected\n", dctNRows(dct), gmoM(gmo));
+      error("[GMOexport] ERROR: dictionary has %d equations, %d were expected.\n",
+            dctNRows(dct), gmoM(gmo));
       return Error_RuntimeError;
    }
 
    if (gmoN(gmo) != dctNCols(dct)) {
-      error("[GMOexport] ERROR: There are %d variables in the DCT, but %d are "
-            "expected\n", dctNCols(dct), gmoN(gmo));
+      error("[GMOexport] ERROR: dictionary has %d variables, %d were expected.\n",
+            dctNCols(dct), gmoN(gmo));
       return Error_RuntimeError;
    }
 
    return OK;
-
 }
+
 /**
  * @brief Export an RHP model to a GAMS GMO object
  *
@@ -462,6 +485,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
    int status = OK;
    char buffer[2048];
    RESHOP_STATIC_ASSERT(sizeof(buffer) >= GMS_SSSIZE, "");
+   GmoConversionTracker tracker = { .objvaradded = { IdxNA, IdxNA }};
 
    Container * restrict ctr_src = &mdl_src->ctr;
    Container * restrict ctr_gms = &mdl_gms->ctr;
@@ -641,9 +665,9 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
          equtype = gmoequ_N;
          break;
       default:
-         error("[GMOexport] ERROR in %s model '%.*s' #%u: equ '%s' has "
-               "unsupported type %s\n", mdl_fmtargs(mdl_src),
-               ctr_printequname(ctr_src, e->idx), equtype_name(e->object));
+         error("[GMOexport] ERROR in %s model '%.*s' #%u: equ '%s' has unsupported type "
+               "%s\n", mdl_fmtargs(mdl_src), ctr_printequname(ctr_src, e->idx),
+               equtype_name(e->object));
          status = Error_NotImplemented;
          goto _exit;
       }
@@ -682,15 +706,15 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
       double gms_marginal = dbl_to_gams(marginal, gms_pinf, gms_minf, gms_na);
 
       GMSCHK_EXIT(gmoAddRow(gmo,
-       /* type      */     equtype,                         
-       /* match     */     match,                                
+       /* type      */     equtype,
+       /* match     */     match,
                            /*  TODO(xhub) check correctness 
                             *  2023.10.20: used to be e->value + equ_cst*/
        /* slack     */     dbl_to_gams(e->value-equ_cst, gms_pinf, gms_minf, gms_na), 
-      /* scale      */     1.,                                   
-      /* rhs        */     -equ_cst,         
-      /* marginal   */     gms_marginal,       
-      /* is basic?  */     (e->basis == BasisBasic) ? 0 : 1,     
+      /* scale      */     1.,
+      /* rhs        */     -equ_cst,
+      /* marginal   */     gms_marginal,
+      /* is basic?  */     (e->basis == BasisBasic) ? 0 : 1,
                            0,
                            NULL,
                            NULL,
@@ -917,7 +941,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
 
    }
 
-   for (unsigned j = 0; j < (unsigned) ctr_gms->m; ++j) {
+   for (unsigned j = 0, len = ctr_gms->m; j < len; ++j) {
        DPRINT("Equation %d: isNL = %s\n", j, NLequs[j] ? "true" : "false");
    }
 
@@ -1019,13 +1043,17 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
          gams_fix_equvar_names(buffer); /* Need to convert -  to _ from UUIDv4 */
 
          /* dct, symName, symTyp, symDim, userInfo, symTxt  */
-         dctAddSymbol(dct, buffer, dctvarSymType, 0, 0, "");
+         dctAddSymbol(dct, buffer, dctvarSymType, 0, 0, "objective variable added during conversion to GMO");
          dctAddSymbolData(dct, NULL);
 
          rhp_idx ei_objequ = rosetta_equs[objequ];
          equidx[0] = (int) ei_objequ;
          jacval[0] = -1.;
          isvarNL[0] = 0;
+
+         /* Keep track of this addition */
+         tracker.objvaradded.ei = ei_objequ;
+         tracker.objvaradded.vi = objvar_gmo;
 
          GMSCHK_EXIT(gmoAddCol(gmo,
          /* type     */       gmovar_X,
@@ -1077,7 +1105,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
 
    GMSCHK_BUF_EXIT(gmoCompleteData, gmo, buffer);
 
-   S_CHECK_EXIT(chk_newgmodct(gmo, dct, mdl_src, ctr_gms));
+   S_CHECK_EXIT(chk_newgmodct(gmo, dct, mdl_src, ctr_gms, &tracker));
 
    /* This must be after setting the dictionary */
    assert(!mdltype_isopt(probtype) || gmoGetObjName(gmo, buffer));
