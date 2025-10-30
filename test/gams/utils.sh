@@ -177,14 +177,20 @@ run_all_gms() {
 
    # To silence GAMS
    export DEBUG_PGAMS=0
+
+   # Copy all gdx data first
+   for f in *.gdx; do
+      if [ ! -f "$f" ]; then break; fi
+      cp "$f" "$TMPDIR"
+   done
  
    # Start tests
-   for f in *.gms
-   do
-      # Copy gms and potentially other files (gdx)
+   for f in *.gms; do
+      # Copy gms and potentially other files
       cp "${f/.gms/}".* "$TMPDIR"
       e_subcase "Running $f"
       start_time=$(date +%s)
+
       cd "$TMPDIR";
       exec_gams "$(basename "$f")"
       end_time=$(date +%s)
@@ -193,17 +199,18 @@ run_all_gms() {
       cd ..
    done
  
-# Try to be POSIX compliant
-#   if [[ $# -eq 1 || ($# -ge 2 && $2 != "keep") ]]; then
-#   Complex conditions are hard ...
+   # Try to be POSIX compliant
+   #   if [[ $# -eq 1 || ($# -ge 2 && $2 != "keep") ]]; then
+   #   Complex conditions are hard ...
    if [ $# -ge 2 ] && [ "$2" != "keep" ]; then
       doKeep=1
    else
       doKeep=0
    fi
+
    if [ $# -eq 1 ] || [ $doKeep -eq 1 ]; then
       rm -rf "$TMPDIR"
    fi
-   
+ 
    popd > /dev/null
 }
