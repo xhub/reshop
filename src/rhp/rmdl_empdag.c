@@ -268,7 +268,8 @@ static int copy_expr_arc_parent_basic(Model *mdl, ArcVFBasicData *arcdat, Equ *e
 
       cpydat_child->single.ei = e->idx;
 
-      trace_empdag("[empdag/contraction] copying objective equation '%s' into '%s'\n\tcoeff = %e = %e * %e; nlnode_addr = %p\n",
+      trace_empdag("[empdag/contraction] copying objective equation '%s' into '%s'\n"
+                   "\tcoeff = %e = %e * %e; nlnode_addr = %p\n",
                    mdl_printequname(mdl, eobj->idx), mdl_printequname2(mdl, e->idx),
                    coeff_path, arcdat->cst, cpydat_single->coeff_path, (void*)nlnode_addr);
 
@@ -595,11 +596,11 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
       rhp_idx objequ_big = mp_getobjequ(mp_big);
 
       if (valid_vi(objvar_big)) {
-         vmeta[objvar_big].mp_id = mpid_big;
+         vmeta[objvar_big].mp_id = mpid_big; /* FIXME: Why is this necessary? */
       }
 
       if (valid_ei(objequ_big)) {
-         emeta[objequ_big].mp_id = mpid_big;
+         emeta[objequ_big].mp_id = mpid_big; /* FIXME: why is this necessary? */
       }
 
       if (valid_vi(objvar_big) && valid_ei(objequ_big)) {
@@ -610,7 +611,7 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
          S_CHECK(rmdl_mp_objequ2objfun(mdl, mp_big, objvar_big, objequ_big));
       }
 
-      /* TODO: what does this do? */
+      /* Update the reference to the old mpid_subtree_root in any of its parent */
       S_CHECK(empdag_substitute_mp_parents_arcs(empdag, mpid_subtree_root, mpid_big));
 
       /* -------------------------------------------------------------------
@@ -940,7 +941,7 @@ static int rmdl_contract_analyze(Model *mdl, VFContractions *contractions)
             unsigned arc_num_cons = arcVF_getnumcons(arc, mdl);
 
             if (arc_num_cons == UINT_MAX) {
-               error("[empdag/contract] ERROR while procesing arcVF %u of MP(%s). "
+               error("[empdag/contract] ERROR while processing arcVF %u of MP(%s). "
                      "Please file a bug report\n", k, empdag_getmpname(empdag_src, mpid_));
                return Error_RuntimeError;
             }
@@ -996,17 +997,18 @@ int rmdl_contract_along_Vpaths(Model *mdl_src, Model **mdl_dst)
    unsigned num_mp = mdl_src->empinfo.empdag.mps.len;
 
    if (num_mp <= 1) {
-      error("[model] ERROR with %s model '%.*s' #%u: graph contraction "
-            "meaningless with no EMPDAG", mdl_fmtargs(mdl_src));
+      error("[model] ERROR in %s model '%.*s' #%u: graph contraction is meaningless with "
+            "no or a trivial EMPDAG.\n", mdl_fmtargs(mdl_src));
+      return Error_EMPRuntimeError;
    }
 
    char *mdlname;
-   IO_PRINT(asprintf(&mdlname, "Contracted version of model '%s'", mdl_getname(mdl_src)));
+   IO_PRINT(asprintf(&mdlname, "%s_contracted", mdl_getname(mdl_src)));
 
    //TODO if mdl_Src is not rhp, copy
    S_CHECK(rmdl_get_editable_mdl(mdl_src, mdl_dst, mdlname));
 
-   FREE(mdlname);
+   free(mdlname);
 
    Model *mdl_dst_ = *mdl_dst;
 

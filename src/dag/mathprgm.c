@@ -1135,7 +1135,7 @@ int mp_rm_equ(MathPrgm *mp, rhp_idx ei)
 /**
  * @brief Instantiate the Fenchel dual of an MP
  *
- * @param mp  the MP to instanciate
+ * @param mp  the MP to instantiate
  *
  * @return    the error code
  */

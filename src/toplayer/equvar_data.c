@@ -51,17 +51,17 @@ const char * badidx2str(rhp_idx idx)
    case IdxOutOfRange:
       return "Index is out of range";
    case IdxError:
-      return "An error occured";
+      return "An error occurred";
    case IdxDuplicate:
       return "Duplicate value found";
    case IdxNone:
       return "No value was given";
    case IdxCcflib:
-      return "CCF lib data";
+      return "CCFlib data";
    case IdxObjFunc:
       return "Objective function (generic)";
    case IdxEmpDagChildNotFound:
-      return "Child of EMPdag object not found";
+      return "Child of EMPDAG object not found";
    case IdxMaxValid:
       return "Maximum valid index";
    default:

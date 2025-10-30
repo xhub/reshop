@@ -32,7 +32,6 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
    const OvfOps *ops;
 
    Container *ctr = &mdl->ctr;
-
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
 
    switch (type) {
@@ -66,13 +65,13 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
 
    /* ----------------------------------------------------------------------
     * Analyze the conic QP structure:
-    * - Find the convex cone K to which y (or y - \tilde{y}) belongs
+    * - Find the convex cone K to which y (or y - ỹ) belongs
     * - Complete the constraints with  XXX
     *
     * In step 1.1, we look for y in R₊. If this is not the case, we look for a
     * finite lower bound. If there is none, we look for a finite upper-bound.
     *
-    * \TODO(xhub) support My - \tilde{y} ∈ K (cf Ben-Tal and Den ...)?
+    * \TODO(xhub) support My - ỹ ∈ K (cf Ben-Tal and Den ...)?
     *
     * OUTPUT:
     *   - u_shift    the value of \tilde{u}
@@ -98,15 +97,14 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
 
    /* ---------------------------------------------------------------------
     * 2. Add given location (OVF: where rho appears, ccflib: MP obj func) the terms
-    *   o   <c,v> + 0.5 <s, Js> in the simplest case
-    *   o   <G(F(x)), tilde_y> - .5 <tilde_y, M tilde_y> + <c - A tilde_y, v> +
-    *       0.5 <s, Js> if y has to be shifted by - tilde_y.
+    *  x  <c,v> + 0.5 <s, Js> in the simplest case
+    *  x  <G(F(x)), ỹ> - .5 <ỹ, M ỹ> + <c - A ỹ, v> + 0.5 <s, Js>   if y is shifted by -ỹ.
     * --------------------------------------------------------------------- */
 
    unsigned n_y = fdat.primal.ydat.n_y;
 
    void *iter = NULL;
-   unsigned counter = 0;
+   unsigned iter_cnt = 0;
    rhp_idx vi_ovf = fdat.vi_ovf;
    unsigned n_dualvars_mult = avar_size(&fdat.dual.vars.v) +  avar_size(&fdat.dual.vars.w);
 
@@ -114,6 +112,8 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
       rhp_idx ei_new;
       double ovf_coeff;
 
+      /* For a CCFLIB MP, this instanciate the objequ and update the EMPDAG
+       * For a regular OVF/CCF, this gets all the equation where the OVF var appears */
       S_CHECK_EXIT(ops->get_equ(ovfd, mdl, &iter, vi_ovf, &ovf_coeff, &ei_new, n_dualvars_mult));
 
       assert(ei_new < mdl_nequs_total(mdl));
@@ -125,7 +125,7 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
          if (fdat.primal.ydat.has_shift) {
 
             /* ----------------------------------------------------------------
-             * Add < G(F(x)), tilde_y >
+             * Add < G(F(x)), ỹ >
              * ---------------------------------------------------------------- */
 
             S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, eq, fdat.primal.ydat.tilde_y, n_y,
@@ -151,10 +151,10 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
          }
       }
 
-      counter++;
+      iter_cnt++;
    } while(iter);
 
-   S_CHECK_EXIT(rctr_reserve_equs(ctr, counter - 1));
+   S_CHECK_EXIT(rctr_reserve_equs(ctr, iter_cnt - 1));
 
    /* ---------------------------------------------------------------------
     * 2.2 Add an equation to evaluate rho
@@ -173,7 +173,7 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
       if (fdat.primal.ydat.has_shift) {
 
          /* ----------------------------------------------------------------
-          * Add <B(F(x)), tilde_y>, < b, tilde_y> has already been added
+          * Add <B(F(x)), ỹ>, < b, ỹ> has already been added
           * ---------------------------------------------------------------- */
 
          S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, e_objfn, fdat.primal.ydat.tilde_y,
@@ -181,6 +181,7 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
                                                 ovf_args, equ_idx, 1.));
 
       }
+
    /* ---------------------------------------------------------------------
     * 2.2 Add an equation to evaluate rho
     *
@@ -200,12 +201,12 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
 
 
    /* ---------------------------------------------------------------------
-    * 3. Add constraints G( F(x) ) - A^T v - D s - M^T tilde_y  ∈ (K_y)°
+    * 3. Add constraints G( F(x) ) - A^T v - D s - M^T ỹ  ∈ (K_y)°
     *
     * Right now, we expect K to be either R₊, R₋ or {0}.
     * (K_y)° is either the polar (or dual for inf OVF) of K_y
     *
-    * 3.1 Using common function, create - A^T v - D s - M^T tilde_y  ∈ (K_y)°
+    * 3.1 Using common function, create - A^T v - D s - M^T ỹ  ∈ (K_y)°
     * 3.2 Add G( F(x) ) to them
     * --------------------------------------------------------------------- */
    S_CHECK(fenchel_gen_cons(&fdat, mdl));
@@ -227,7 +228,7 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
       double single_val;
       double *lcoeffs = NULL;
       S_CHECK_EXIT(rhpmat_row_needs_update(&fdat.B_lin, i, &single_idx, &single_val, &nargs,
-                         &arg_idx, &lcoeffs));
+                                           &arg_idx, &lcoeffs));
 
       if (nargs == 0) {
          printout(PO_DEBUG, "[Warn] %s :: row %d is empty\n", __func__, i);
@@ -248,9 +249,8 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
       }
 
       /* -------------------------------------------------------------------
-       * We have now define the new constraint. We need to keep the model
-       * consistent. Only the linear part as to be taken care of, the nonlinear
-       * code has already done its part
+       * Keep the container consistent after adding a new constraint.
+       * Only the linear part as to be taken care of, the nonlinear part has been done
        *
        * TODO: move this call
        * ------------------------------------------------------------------- */
@@ -298,4 +298,3 @@ _exit:
 
    return status;
 }
-

@@ -176,7 +176,7 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type, const OvfOps *ops,
       const char *ovf_name = ops->get_name(ovfd);
       error("[ccflib/primal] the number of variable associated with the CCF '%s' "
             "of type %s is 0. This should never happen\n."
-            "Check the OVF definition if it is a custom one, or file a bug\n",
+            "Check the OVF definition if it is a custom one, or please file a bug.\n",
             ovf_name, ops->get_name(ovfd));
       return Error_UnExpectedData;
    }
@@ -213,7 +213,7 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type, const OvfOps *ops,
    avar_init(&fdat->dual.vars.s);
 
   /* ----------------------------------------------------------------------
-   * Determine \tilde{y} such that y - \tilde{y} ∈ K_y
+   * Determine ỹ such that y - ỹ ∈ K_y
    * ---------------------------------------------------------------------- */
 
    /* WARNING, this needs to be called before getting all the matrices */
@@ -295,7 +295,7 @@ int fenchel_apply_yshift(CcfFenchelData *fdat)
    OvfOpsData ovfd = fdat->ovfd;
 
    /* -------------------------------------------------------------
-    * 1.a Perform a -= A tilde_y  for the nonbox polyhedral constraints
+    * 1.a Perform a -= A ỹ  for the nonbox polyhedral constraints
     * ------------------------------------------------------------- */
 
    S_CHECK(rhpmat_atxpy(&fdat->At, fdat->primal.ydat.tilde_y, fdat->tmpvec));
@@ -308,7 +308,7 @@ int fenchel_apply_yshift(CcfFenchelData *fdat)
    /* -------------------------------------------------------------
        * 1.b 
        * the shift on the upper bound on y is easier: if it is finite,
-       * then subtract tilde_y
+       * then subtract ỹ
        *
        * Since some constraints may not have multipliers, we make use of
        * v_bnd_revidx
@@ -321,7 +321,7 @@ int fenchel_apply_yshift(CcfFenchelData *fdat)
    }
 
    /* -------------------------------------------------------------
-       * Add -.5 <tilde_y, M tilde_y> to the RHS to take into account M
+       * Add -.5 <ỹ, M ỹ> to the RHS to take into account M
        * ------------------------------------------------------------- */
 
    if (fdat->primal.is_quad) {
@@ -352,7 +352,7 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
     * - v has the same dimension has the number of constraints. We have two
     *   types of constraints:
     *     + The ones given by Ax - b ∈ K_c
-    *     + The finite upper bound on y, collected during the anaysis phase in
+    *     + The finite upper bound on y, collected during the analysis phase in
     *       var_ub
     *   v belongs to the polar (or dual for inf OVF) of K_c and R_+ (upper bound)
     *
@@ -528,7 +528,7 @@ int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl)
    MathPrgm *mp_dst = fdat->mp_dst;
 
    /* ---------------------------------------------------------------------
-    * Perform the computation of   M tilde_y
+    * Perform the computation of   M ỹ
     * --------------------------------------------------------------------- */
 
    unsigned n_y = fdat->primal.ydat.n_y;
@@ -598,6 +598,7 @@ int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl)
          fdat->skipped_cons = true;
          continue;
       }
+
       cons_gen[i] = true;
 
       S_CHECK(rctr_add_equ_empty(ctr, &ei_new, &e, ConeInclusion, cons_cone));
@@ -636,7 +637,7 @@ int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl)
       }
       size_t size_new_lequ = size_At + size_d;
 
-      /* │Add - M tilde_y to the constant part */
+      /* │Add - M ỹ to the constant part */
       equ_add_cst(e, -fdat->tmpvec[i]);
 
       if (isfinite(var_ub[i])) {
@@ -706,13 +707,12 @@ int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl)
 /**
  * @brief Add objective function 
  *
- *   o   \f$ <c,v> + 0.5 <s, Js>\f$ in the simplest case
- *   o   \f$ - 0.5 <tilde_y, M tilde_y> + <c - A tilde_y, v> + 0.5 <s, Js> \f$
- *       if y has to be shifted by - tilde_y.
+ *   x   \f$ <c,v> + 0.5 <s, Js>\f$ in the simplest case
+ *   x   \f$ - 0.5 <ỹ, M ỹ> + <c - A ỹ, v> + 0.5 <s, Js> \f$    if y is shifted by - ỹ.
  *
- * @warning The term <G(F(x)), tilde_y> needs to be added by the callee
+ * @warning The term <G(F(x)), ỹ> needs to be added by the callee
  *
- * @param  fdat  the fenchel data
+ * @param  fdat  the Fenchel data
  * @param  mdl   the model
  *
  * @return       the error code
@@ -732,7 +732,7 @@ int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl)
 
    }
 
-   /* - 0.5 <tilde_y, M tilde_y> + < b, tilde_y> */
+   /* - 0.5 <ỹ, M ỹ> + < b, ỹ> */
    if (fdat->primal.ydat.has_shift) {
 
       // cblas_ddot
