@@ -3089,7 +3089,7 @@ static int sexpr_codegen(Interpreter * restrict interp, SimpleExpr * restrict se
                                                  &sexpr->label_gmsindices, &loopiters,
                                                  &linklabel_gidx));
 
-      u8 nvardims = sum_iterators ? gmsindices_nvardims(&sexpr->label_gmsindices) : 0;
+      DBGUSED u8 nvardims = sum_iterators ? gmsindices_nvardims(&sexpr->label_gmsindices) : 0;
       assert(embmode(interp) || nvardims == 0);
 
       /* FIXME: very dirty, there are as many linklabels objects as links ... */
