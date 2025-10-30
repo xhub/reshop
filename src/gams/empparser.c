@@ -3215,9 +3215,13 @@ int parse_MP_CCF(MathPrgm * restrict mp_parent, Interpreter * restrict interp,
       /* Consume '=' */
       (*p)++;
 
-      const OvfParamDef *pdef;
       unsigned pidx;
-      A_CHECK(pdef, ovfparamdef_find(paramsdef, kwnamestart, kwnamelen, &pidx))
+      const OvfParamDef *pdef = ovfparamdef_find(paramsdef, kwnamestart, kwnamelen, &pidx);
+      if (!pdef) {
+         error("[empparser] Parameter named '%.*s' is not valid for CCF '%.*s'.\n", kwnamelen,
+               kwnamestart, ccfnamelen, ccfnamestart);
+         return Error_EMPIncorrectInput;
+      }
 
       S_CHECK(advance(interp, p, &toktype));
 
