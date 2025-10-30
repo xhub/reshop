@@ -1565,10 +1565,10 @@ int empdag_substitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid
    DagNashArray *nashs = &empdag->nashs;
 
    /* Delete the arcs from the old MP and substitute with the new one */
-   VarcArray *Varcs = &mps->Varcs[mpid_old];
-   ArcVFData *Varcs_arr = Varcs->arr;
+   VarcArray *Varcs_old = &mps->Varcs[mpid_old];
+   ArcVFData *Varcs_old_arr = Varcs_old->arr;
 
-   S_CHECK(_edgeVFs_copy(&mps->Varcs[mpid_new], Varcs));
+   S_CHECK(_edgeVFs_copy(&mps->Varcs[mpid_new], Varcs_old));
 
    daguid_t uid_old = mpid2uid(mpid_old);
    daguid_t VFuid_old = rarcVFuid(uid_old);
@@ -1576,10 +1576,10 @@ int empdag_substitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid
    daguid_t VFuid_new = rarcVFuid(uid_new);
 
 
-   for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
+   for (unsigned i = 0, len = Varcs_old->len; i < len; ++i) {
 
-      mpid_t mpid_child = Varcs_arr[i].mpid_child;
-      assert(chk_mpid_(empdag, mpid_child));
+      mpid_t mpid_child = Varcs_old_arr[i].mpid_child;
+      assert(chk_mpid_(empdag, mpid_child) == OK);
 
       DagUidArray *rarcs_child = &mps->rarcs[mpid_child];
 
