@@ -8,6 +8,7 @@
 const char * const ovfparam_synonyms[][2] = {
    /* Synonym, OVF name */
    { "risk_weight", "risk_wt" },
+   { "cvar_wt", "risk_wt" },
    { NULL, NULL },
 };
 
@@ -73,7 +74,23 @@ ovfparamdef_find(const OvfParamDefList *plist, const char *kwnamestart,
          kwnamelen, kwnamestart);
 
    for (unsigned i = 0, len = *plist->s; i < len; ++i) {
-      error("%s\n", plist->p[i]->name);
+      const char *pname = plist->p[i]->name;
+      error("- '%s'", pname);
+      size_t sz = strlen(pname);
+      bool first = true;
+      unsigned j = 0;
+      while (ovfparam_synonyms[j][0]) {
+         if (!strncasecmp(pname, ovfparam_synonyms[j][1], sz)) {
+            if (first) {
+               error(" with synonym '%s'", ovfparam_synonyms[j][0]);
+               first = false;
+            } else {
+               error(", '%s'", ovfparam_synonyms[j][0]);
+            }
+         }
+         j++;
+      }
+      errormsg("\n");
    }
 
    *pidx = UINT_MAX;
