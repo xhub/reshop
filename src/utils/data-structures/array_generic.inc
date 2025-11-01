@@ -123,7 +123,9 @@ FN_SCOPE int RHP_MAKE_STR(set)(struct RHP_ARRAY_TYPE *dat, RHP_ELT_TYPE* elts, I
 
 FN_SCOPE void RHP_MAKE_STR(free)(struct RHP_ARRAY_TYPE *dat)
 {
-   free(dat->arr);
+   assert((dat->max == 0 && !dat->arr) || (dat->max > 0 && dat->arr));
+   dat->max = dat->len = 0;
+   FREE(dat->arr);
 }
 
 #ifdef RHP_ELT_FREE
@@ -138,7 +140,7 @@ FN_SCOPE void RHP_MAKE_STR(freeall)(struct RHP_ARRAY_TYPE *dat)
       RHP_ELT_FREE(arr[i]);
 #endif
    }
-   FREE(arr);
+   FREE(dat->arr);
 }
 #endif
 
@@ -172,18 +174,20 @@ _exit:
 
 #endif /* RHP_ONLY_DEF */
 
+#undef FN_SCOPE
+#undef IDX_TYPE
 #undef RHP_ARRAY_PREFIX
+#undef RHP_ARRAY_TAKES_OWNERSHIP
 #undef RHP_ARRAY_TYPE
+#undef RHP_CONCAT
+#undef RHP_DEFINE_STRUCT
 #undef RHP_ELT_FREE
+#undef RHP_ELT_FREE_TAKE_ADDRESS
 #undef RHP_ELT_INVALID
 #undef RHP_ELT_SORT
 #undef RHP_ELT_TYPE
-#undef IDX_TYPE
-#undef RHP_CONCAT
-#undef _RHP_MAKE_STR
-#undef RHP_MAKE_STR
-#undef FN_SCOPE
 #undef RHP_LOCAL_SCOPE
-#undef RHP_DEFINE_STRUCT
+#undef RHP_MAKE_STR
 #undef RHP_ONLY_DEF
-#undef RHP_ARRAY_TAKES_OWNERSHIP
+#undef _RHP_MAKE_STR
+

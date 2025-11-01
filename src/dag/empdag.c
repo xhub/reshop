@@ -472,7 +472,7 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
    assert(valid_sense(sense));
    MathPrgm *mp;
 
-   char *mp_name = mdl->commondata.name ? mdl->commondata.name : "user model";
+   char *mp_name = mdl->commondata.name ? mdl->commondata.name : "user_model";
    A_CHECK(mp, empdag_newmpnamed(empdag, sense, mp_name));
 
    if (valid_ei(objequ)) {
@@ -807,7 +807,7 @@ int empdag_mpVFmpbyid(EmpDag *empdag, mpid_t mpid_parent, const ArcVFData *arc)
 
 
    /* We store the details of the VF edge on the parent MP */
-   S_CHECK(_edgeVFs_add(&empdag->mps.Varcs[mpid_parent], *arc));
+   S_CHECK(arcVFs_add(&empdag->mps.Varcs[mpid_parent], *arc));
 
    empdag->finalized = false;
 
@@ -1075,9 +1075,9 @@ int empdag_check(EmpDag *empdag)
       }
    }
 
-   int status2 = empdag_analysis(empdag);
+   int status_analysis = empdag_analysis(empdag);
 
-   return status == OK ? status2 : status;
+   return status == OK ? status_analysis : status;
 }
 
 /**
@@ -1099,7 +1099,7 @@ const ArcVFData* empdag_find_Varc(const EmpDag *empdag, unsigned mpid_parent,
 
    if (Varcs->len == 0) return NULL;
 
-   unsigned edgeVF_idx = _edgeVFs_find(Varcs, mpid_child);
+   unsigned edgeVF_idx = arcVFs_find(Varcs, mpid_child);
 
    if (edgeVF_idx == UINT_MAX) { return NULL; }
    
@@ -1109,26 +1109,26 @@ const ArcVFData* empdag_find_Varc(const EmpDag *empdag, unsigned mpid_parent,
 /**
  * @brief Set the name of an MP
  *
- * This function copies the string in name
+ * This function duplicates the string in name
  *
  * @param empdag the EMPDAG 
- * @param mpid  the MP ID
+ * @param mpid   the MP ID
  * @param name   the name
  *
- * @return      the error code
+ * @return       the error code
  */
 int empdag_setmpname(EmpDag *empdag, mpid_t mpid, const char *const name)
 {
    S_CHECK(chk_mpid_(empdag, mpid));
 
    if (empdag->mps.names[mpid]) {
-      error("%s :: MP already has name \"%s\"\n", __func__, empdag->mps.names[mpid]);
+      error("[empdag] ERROR: MP already has name '%s'\n", empdag->mps.names[mpid]);
       return Error_UnExpectedData;
    }
 
    empdag->mps.names[mpid] = strdup(name);
    if (!empdag->mps.names[mpid]) {
-      error("%s :: couldn't allocate memory for %s!\n", __func__, name);
+      error("[empdag] ERROR: couldn't allocate memory for MP name '%s'!\n", name);
       return Error_SystemError;
    }
 
@@ -1155,52 +1155,46 @@ int empdag_reserve_mp(EmpDag *empdag, unsigned reserve)
    return dagmp_array_reserve(&empdag->mps, reserve);
 }
 
-static int empdag_mpdelete(EmpDag *empdag, unsigned mp_id)
+/**
+ * @brief Delete the last created MP
+ *
+ * @param empdag  the EMPDAG
+ *
+ * @return        the error code
+ */
+int empdag_delete_last_mp(EmpDag *empdag)
 {
-   if (chk_mpid_(empdag, mp_id) != OK) {
-      error("[empdag] ERROR: seeking to delete MP ID #%u, which does not exists", mp_id);
-      return Error_RuntimeError;
-   }
+   mpid_t mpid = empdag->mps.len-1;
 
-   if (mp_id != empdag->mps.len-1) {
-      error("[empdag] ERROR: seeking to delete MP ID #%u, but it is not the last one\n",
-            mp_id);
-      return Error_RuntimeError;
-   }
-
-   unsigned n_parents = empdag->mps.rarcs[mp_id].len;
+   unsigned n_parents = empdag->mps.rarcs[mpid].len;
    if (n_parents > 0) {
       error("[empdag] ERROR: seeking to delete MP ID #%u, but it has %u parents.\n",
-            mp_id, n_parents);
+            mpid, n_parents);
    }
 
-   unsigned n_children = empdag->mps.Carcs[mp_id].len;
+   unsigned n_children = empdag->mps.Carcs[mpid].len;
    if (n_children > 0) {
       error("[empdag] ERROR: seeking to delete MP ID #%u, but it has %u children.\n",
-            mp_id, n_children);
+            mpid, n_children);
    }
 
    empdag->mps.len--;
-   mp_free(empdag->mps.arr[mp_id]);
-   free((char*)empdag->mps.names[mp_id]);
+   mp_free(empdag->mps.arr[mpid]);
+   free((char*)empdag->mps.names[mpid]);
 
    return OK;
 }
 
-static int empdag_delnash(EmpDag *empdag, nashid_t nashid)
+/**
+ * @brief Delete the last created Nash
+ *
+ * @param empdag the EMPDAG
+ *
+ * @return       the error code
+ */
+int empdag_delete_last_nash(EmpDag *empdag)
 {
-   if (chk_nashid_(empdag, nashid) != OK) {
-      error("[empdag] ERROR: seeking to delete Nash ID #%u, which does not exists",
-            nashid);
-      return Error_RuntimeError;
-   }
-
-   if (nashid != empdag->nashs.len-1) {
-      error("[empdag] ERROR: seeking to delete Nash ID #%u, but it is not the "
-            "last one\n", nashid);
-      return Error_RuntimeError;
-   }
-
+   nashid_t nashid = empdag->nashs.len-1;
    unsigned n_parents = empdag->nashs.rarcs[nashid].len;
    if (n_parents > 0) {
       error("[empdag] ERROR: seeking to delete Nash ID #%u, but it has %u parents.\n",
@@ -1216,16 +1210,6 @@ static int empdag_delnash(EmpDag *empdag, nashid_t nashid)
    empdag->nashs.len--;
 
    return OK;
-}
-
-int empdag_delete(EmpDag *empdag, daguid_t uid)
-{
-
-   if (uidisMP(uid)) {
-      return empdag_mpdelete(empdag, uid2id(uid));
-   }
-
-   return empdag_delnash(empdag, uid2id(uid));
 }
 
 int empdag_simple_init(EmpDag *empdag)
@@ -1568,7 +1552,7 @@ int empdag_substitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid
    VarcArray *Varcs_old = &mps->Varcs[mpid_old];
    ArcVFData *Varcs_old_arr = Varcs_old->arr;
 
-   S_CHECK(_edgeVFs_copy(&mps->Varcs[mpid_new], Varcs_old));
+   S_CHECK(arcVFs_copy(&mps->Varcs[mpid_new], Varcs_old));
 
    daguid_t uid_old = mpid2uid(mpid_old);
    daguid_t VFuid_old = rarcVFuid(uid_old);
@@ -1627,7 +1611,7 @@ int empdag_substitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new)
    return empdag_substitute_mp_child_arcs(empdag, mpid_old, mpid_new);
 }
 
-bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Container *ctr)
+bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Model *mdl)
 {
    rhp_idx ei = arc->ei;
 
@@ -1639,11 +1623,13 @@ bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Container *ctr
       return false;
    }
 
-   bool res = ctr_chk_equ_ownership(ctr, ei, mpid);
+   mpid_t mpid_owner;
+   bool res = ctr_chk_equ_ownership(&mdl->ctr, ei, mpid, &mpid_owner);
 
    if (!res) {
-      error("[empdag] ERROR: Equation '%s' does not belong to parent MP\n",
-            ctr_printequname(ctr, ei));
+      error("[empdag] ERROR: Equation '%s' does not belong to parent MP(%s), rather to "
+            "MP(%s)\n", mdl_printequname(mdl, ei), empdag_getmpname(&mdl->empinfo.empdag, mpid),
+            empdag_getmpname(&mdl->empinfo.empdag, mpid_owner));
    }
 
    return res;

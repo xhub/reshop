@@ -379,7 +379,7 @@ static inline int vmcode_stripmem(VmCode *code)
    return OK;
 }
 
-static inline int vmcode_add(VmCode *code, uint8_t instr, unsigned linenr)
+static inline int vmcode_add(VmCode * restrict code, uint8_t instr, unsigned linenr)
 {
 
    if (code->len >= code->max) {

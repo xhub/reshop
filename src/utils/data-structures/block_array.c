@@ -26,12 +26,14 @@ DblArrayBlock* dblarrs_new_(M_ArenaLink *arena, unsigned len, ...)
 
    va_list ap;
    va_start(ap, len);
-   for (unsigned i = 0, j = 0; j < len; ++i, j+=2) {
+
+   for (unsigned i = 0, j = 0; i < len; ++i, j+=2) {
       unsigned size = (unsigned)va_arg(ap, unsigned);
       sz += size;
       dblarrs->blocks[i].size = size;
       dblarrs->blocks[i].arr = (double*)va_arg(ap, double*);
    }
+
    va_end(ap);
 
    dblarrs->size = sz;

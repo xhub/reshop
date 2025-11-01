@@ -119,12 +119,12 @@ static int cdat_resize_equs(RhpContainerData *cdat, unsigned max_m, unsigned old
 
    REALLOC_(cdat->cmat.equs, CMatElt *, max_m);
    REALLOC_(cdat->equ_rosetta, struct rosetta, max_m);
-   REALLOC_(cdat->equ_stage, unsigned char, max_m);
+   REALLOC_(cdat->equ_stage, unsigned, max_m);
 
    if (max_m > old_max_m) {
       memset(&cdat->cmat.equs[old_max_m], 0, diff*sizeof(CMatElt *));
       memset(&cdat->equ_rosetta[old_max_m], 0, diff*sizeof(struct rosetta));
-      memset(&cdat->equ_stage[old_max_m], 0, diff*sizeof(unsigned char));
+      memset(&cdat->equ_stage[old_max_m], 0, diff*sizeof(unsigned));
    }
 
    if (cdat->cmat.deleted_equs) {

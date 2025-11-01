@@ -4838,7 +4838,7 @@ int parse_bilevel(Interpreter *interp, unsigned *p)
    EmpDag * restrict empdag = &mdl->empinfo.empdag;
 
    MathPrgm *mp_upper;
-   S_CHECK(create_base_mp(interp, "upper level", &mp_upper));
+   S_CHECK(create_base_mp(interp, "upper_level", &mp_upper));
 
    /* ------------------------------------------------------------------
     * We are ready to parse the bilevel statement
@@ -4860,8 +4860,7 @@ int parse_bilevel(Interpreter *interp, unsigned *p)
     * We attempt to parse at least one MP declaration, OPT or VI.
     * --------------------------------------------------------------------- */
 
-   PARSER_EXPECTS_EXIT(interp, "optimization or VI problem",
-                       TOK_MIN, TOK_MAX, TOK_VI);
+   PARSER_EXPECTS_EXIT(interp, "optimization or VI problem", TOK_MIN, TOK_MAX, TOK_VI);
 
    nashid_t nash_lower = MpeId_NA;
 
@@ -4895,7 +4894,7 @@ int parse_bilevel(Interpreter *interp, unsigned *p)
 
          if (toktype_is_dagnode_kw || toktype == TOK_DUALEQU) {
 
-            S_CHECK(empdag_addnashnamed(empdag, "lower level Nash", &nash_lower));
+            S_CHECK(empdag_addnashnamed(empdag, "lower_level_Nash", &nash_lower));
             S_CHECK(empdag_mpCTRLnashbyid(empdag, mpid_upper, nash_lower))
             S_CHECK(empdag_nashaddmpbyid(empdag, nash_lower, mpid_last));
 

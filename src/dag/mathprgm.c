@@ -356,7 +356,7 @@ void mp_free(MathPrgm *mp)
    rhp_idx_empty(&mp->equs);
    rhp_idx_empty(&mp->vars);
 
-   FREE(mp);
+   free(mp);
 }
 
 /**
@@ -1169,9 +1169,10 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    mp->sense = mp_primal->sense == RhpMin ? RhpMax : RhpMin;
    mp->status = MpStatusUnset;
 
-   
-
    mpopt_init(&mp->opt);
+
+   /* Necessary for the dualization procedure. The arcVF ei value was set to this value */
+   mp->opt.objequ = IdxCcflib;
 
    OvfDef *ccf = mp_primal->ccflib.ccf;
    OvfPpty ovf_ppty;
@@ -1223,9 +1224,12 @@ int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
    S_CHECK(mp_setobjequ(mp, ei_new));
 
    if (valid_vi(objvar)) {
-      S_CHECK(rctr_equ_addnewvar(ctr, eobj, objvar, 1.));
+      TO_IMPLEMENT("This looks wrong");
+//      S_CHECK(rctr_equ_addnewvar(ctr, eobj, objvar, 1.));
    }
 
+   // FIXME: this is wrong
+#ifdef DELETED_ON_2025_10_30
    EmpDag * empdag = &mp->mdl->empinfo.empdag;
    VarcArray *varcs = &empdag->mps.Varcs[mp->id];
    Varc * varcs_arr = varcs->arr;
@@ -1234,6 +1238,7 @@ int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
    for (unsigned i = 0, len = varcs->len; i < len; ++i) {
       S_CHECK(arcVF_subei(&varcs_arr[i], ei_, ei_new));
    }
+#endif
 
    return OK;
 }
@@ -1437,5 +1442,111 @@ int mp_packing_display(const MathPrgm *mp, uint8_t buf[VMT(static 1024)])
    uint32_t slen = (uint32_t)namelen;
    memcpy(buf, &slen, sizeof(slen));
 */
+   return OK;
+}
+
+/**
+ * @brief Make an MP claim equations and variables from another MP
+ *
+ * @warning This does not claim the objequ or the objvar
+ *
+ * @param mp        the new owner
+ * @param mp_owner  the MP owner
+ *
+ * @return          the error code
+ */
+int mp_claimequvar_from_mp(MathPrgm* mp, const MathPrgm *mp_owner)
+{
+   rhp_idx objequ = mp_getobjequ(mp_owner);
+   rhp_idx objvar = mp_getobjvar(mp_owner);
+
+   EquMeta * restrict emeta = mp->mdl->ctr.equmeta;
+   VarMeta * restrict vmeta = mp->mdl->ctr.varmeta;
+
+   const IdxArray * restrict equs = &mp_owner->equs;
+   const IdxArray * restrict vars = &mp_owner->vars;
+
+   mpid_t mpid = mp->id;
+
+   if (valid_ei(objequ)) {
+      S_CHECK(rhp_idx_extend_except_sorted(&mp->equs, equs, objequ));
+
+      if (emeta) {
+
+         unsigned i = 0, len = equs->len;
+         emeta[objequ].mp_id = MpId_NA;
+
+         for (; i < len; ++i) {
+            rhp_idx ei = equs->arr[i];
+            if (ei == objequ) { break; }
+
+            assert(emeta[ei].mp_id == mp_owner->id);
+            assert(!equmeta_is_shared(&emeta[ei]));
+            emeta[ei].mp_id = mpid;
+         }
+
+         i++; /* skip objequ */
+
+         for (; i < len; ++i) {
+            rhp_idx ei = equs->arr[i];
+
+            assert(emeta[ei].mp_id == mp_owner->id);
+            assert(!equmeta_is_shared(&emeta[ei]));
+            emeta[ei].mp_id = mpid;
+         }
+      }
+
+   } else {
+      S_CHECK(rhp_idx_extend_sorted(&mp->equs, equs));
+
+      if (emeta) {
+
+         for (unsigned i = 0, len = equs->len; i < len; ++i) {
+            rhp_idx ei = equs->arr[i];
+            assert(emeta[ei].mp_id == mp_owner->id);
+            assert(!equmeta_is_shared(&emeta[ei]));
+            emeta[ei].mp_id = mpid;
+         }
+      }
+
+   }
+
+   if (valid_vi(objvar)) {
+      S_CHECK(rhp_idx_extend_except_sorted(&mp->vars, vars, objvar));
+
+      if (vmeta) {
+         unsigned i = 0, len = vars->len;
+         vmeta[objvar].mp_id = MpId_NA;
+
+         for (; i < len; ++i) {
+            rhp_idx vi = vars->arr[i];
+            if (vi == objvar) { break; }
+
+            assert(vmeta[vi].mp_id == mp_owner->id);
+            vmeta[vi].mp_id = mpid;
+         }
+
+         i++; /* skip objvar */
+
+         for (; i < len; ++i) {
+            rhp_idx vi = vars->arr[i];
+
+            assert(vmeta[vi].mp_id == mp_owner->id);
+            vmeta[vi].mp_id = mpid;
+         }
+      }
+   } else {
+      S_CHECK(rhp_idx_extend_sorted(&mp->vars, vars));
+      if (vmeta) {
+
+         for (unsigned i = 0, len = vars->len; i < len; ++i) {
+            rhp_idx vi = vars->arr[i];
+            assert(vmeta[vi].mp_id == mp_owner->id);
+            vmeta[vi].mp_id = mpid;
+         }
+      }
+
+   }
+
    return OK;
 }

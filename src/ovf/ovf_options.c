@@ -101,7 +101,7 @@ int ovf_syncenv(void)
 
    const char* init_vars_env = mygetenv("RHP_OVF_INIT_NEW_VARS");
    if (init_vars_env) {
-      O_Ovf_Init_New_Variables = true;
+      O_Ovf_Init_New_Variables = init_vars_env[0] != '\0' && init_vars_env[0] != '0';
    }
    myfreeenvval(init_vars_env);
 

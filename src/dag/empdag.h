@@ -303,7 +303,8 @@ int empdag_subdag_getmplist(const EmpDag *empdag, daguid_t subdag_root,
  * Removal
  * -------------------------------------------------------------------------- */
 
-int empdag_delete(EmpDag *empdag, daguid_t uid) NONNULL;
+int empdag_delete_last_mp(EmpDag *empdag) NONNULL;
+int empdag_delete_last_nash(EmpDag *empdag) NONNULL;
 
 /* --------------------------------------------------------------------------
  * Getters

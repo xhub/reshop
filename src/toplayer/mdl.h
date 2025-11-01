@@ -31,7 +31,7 @@ typedef enum mdl_status {
    MdlFinalized             = 0x4,
    MdlContainerInstantiable = 0x8,
    MdlInstantiable          = MdlContainerInstantiable,
-   MdlPreSolve              = 0x1,  /**< Model is generated during the presolve stage */
+   MdlPreSolve              = 0x10,  /**< Model is generated during the presolve stage */
 } MdlStatus;
 
 /* ----------------------------------------------------------------------

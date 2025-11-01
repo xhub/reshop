@@ -14,6 +14,8 @@ Date:        October 2025
 
 $offtext
 
+$if not set longtest $exit
+
 $eolcom #
 
 $if not set tol $set tol 1e-6
@@ -45,9 +47,11 @@ $offEcho
 SETS p Stochastic realizations (precipitation) /low, normal, high/,
      t Time periods                            /dec,jan,feb,mar/,
      n set of nodes,
-     succ(n,n) Successor relationship;
+     succ(n,n) Successor relationship,
+     a The (fake) agents                       / a1*a2 /;
 
 ALIAS (n,child,parent);
+ALIAS (a,aa);
 
 *-------------------------------------------------------------------------------
 *Parameters are specified
@@ -75,17 +79,22 @@ VARIABLE EC               'Total Cost';
 *------------------------------------------------------------------------------
 
 POSITIVE VARIABLES
-		   F(n)             'Floodwater released (mm)',
-         L(n)             'Reservoir water level -- EOP',
-		   R(n)             'Normal release of water (mm)',
-		   Z(n)             'Water imports (mm)';
+		   F(a,n)             'Floodwater released (mm)',
+         L(a,n)             'Reservoir water level -- EOP',
+		   R(a,n)             'Normal release of water (mm)',
+		   Z(a,n)             'Water imports (mm)',
+		   Fref(n)            'Floodwater released (mm)',
+         Lref(n)            'Reservoir water level -- EOP',
+		   Rref(n)            'Normal release of water (mm)',
+		   Zref(n)            'Water imports (mm)';
 
-R.up(n) = r_max;
-L.up(n) = l_max;
-L.fx(n)$(n.first) = l_start;
+R.up(a,n) = r_max;
+L.up(a,n) = l_max;
+L.fx(a,n)$(n.first) = l_start;
 
-
-SET list(n) 'list of node to visit (for BFS)';
+Rref.up(n) = r_max;
+Lref.up(n) = l_max;
+Lref.fx(n)$(n.first) = l_start;
 
 * CVaR parameters
 PARAMETER tail    'tail of the CVaR',
@@ -93,42 +102,52 @@ PARAMETER tail    'tail of the CVaR',
 
 PARAMETER beta;
 
-SET test1, test2;
+SET tailvals, cvar_wt_vals;
 
-PARAMETERS tails(test1<)    / '1'   1., '0.75' .75, '0.5' .5, '0.3' .3, '0.1' .1/;
-PARAMETERS cvar_wts(test2<) / '0.9' .9, '0.75' .75, '0.5' .5, '0.3' .3, '0.1' .1/;
+
+* TODO: $genlabel(v, 'tail={tailvals(v)}')
+PARAMETERS tails(tailvals<)        / 'tail=1'   1., 'tail=0.74' .74, 'tail=0.49' .49,
+                                     'tail=0.3' .3/;
+PARAMETERS cvar_wts(cvar_wt_vals<) / 'cvar_wt=0.9' .9, 'cvar_wt=0.75' .75, 'cvar_wt=0.5' .5,
+                                     'cvar_wt=0.3' .3, 'cvar_wt=0.1'  .1/;
 
 * Comparison
-PARAMETERS L_L(n), L_M(n), ldef_M(n), F_L(n), F_M(n), R_L(n), R_M(n), Z_L(n), Z_M(n),
-           L_Ld(n), F_Ld(n), R_Ld(n), Z_Ld(n), y_L(n), cost_L(n), v_L(n);
+PARAMETERS L_L(n), L_M(n), ldef_M(n), F_L(n), F_M(n), R_L(n), R_M(n),
+           Z_L(n), Z_M(n), L_Ld(a,n), F_Ld(a,n), R_Ld(a,n), Z_Ld(a,n), y_L(n),
+           cost_L(n), v_L(n);
 
-VARIABLES          v(n)    'Var value at each non-leaf node',
-                   cost(n) 'total cost at each node';
+VARIABLES          v(a,n)     'Var value at each non-leaf node (per agent)',
+                   vRef(n)    'Var value at each non-leaf node (reference)',
+                   cost(a,n)  'total cost at each node (per agent)',
+                   costRef(n) 'total cost at each node (reference)';
 
-POSITIVE VARIABLES y(n)    'Contribution of the cost for each node'
+POSITIVE VARIABLES y(a,n)     'Contribution of the cost for each node (per agent)',
+                   yRef(n)    'Contribution of the cost for each node (reference)';
 
 *-------------------------------------------------------------------------------
 * Model components for computing CVaR a posteriori
 *-------------------------------------------------------------------------------
 
+SET list(n);
+
 VARIABLES cvarURobj;
-EQUATIONS defcvarURobj, cvarURcons(n,n);
+EQUATIONS defcvarURobj(a), cvarURcons(a,n,n);
 
-PARAMETER QL(n);
+PARAMETER QL(a,n);
 
-SINGLETON SET activeNode(n);
+SINGLETON SET activeNode(n), activeAgent(a);
 
-defcvarURobj..
+defcvarURobj(a)$(activeAgent(a))..
    cvarURobj
    =E=
-   sum(activeNode(n), v(n) + [1/(1-beta)] * sum(succ(n,child), prob(child)*y(child)));
+   sum(activeNode(n), v(a,n) + [1/(1-beta)] * sum(succ(n,child), prob(child)*y(a,child)));
 
-cvarURcons(n,child)$(activeNode(n) AND succ(n,child))..
-   y(child) =G= QL(child) - v(n);
+cvarURcons(a,n,child)$(activeNode(n) AND succ(n,child))..
+   y(a,child) =G= QL(a,child) - v(a,n);
 
 MODEL cvarUR 'Uryasev-Rockafellar formulation for cvar' / defcvarURobj, cvarURcons /;
 
-PARAMETER QLd(n), y_Ld(n), v_ld(n);
+PARAMETER QLd(a,n), y_Ld(a,n), v_ld(a,n);
 
 *-------------------------------------------------------------------------------
 * Reference model
@@ -139,20 +158,21 @@ EQUATIONS ecdef, ldef;
 EQUATIONS cvar_ineq(n,n), defcost(n), totalCost;
 
 cvar_ineq(n,child)$(succ(n,child))..
-   y(child) =G= cost(child) - v(n);
+   yRef(child) =G= costRef(child) - vRef(n);
 
 defcost(n)..
-   cost(n) =G= (floodcost*F(n)+lowCost*Z(n))$(NOT n.first) + 
+   costRef(n) =G= (floodcost*Fref(n)+lowCost*Zref(n))$(NOT n.first) + 
    (
-          cvar_wt * [ v(n) + [1/(1-beta)] * sum(succ(n,child), prob(child)*y(child)) ] +
-      (1-cvar_wt) * [ sum(succ(n,child), prob(child)*cost(child)) ]
+          cvar_wt * [ vRef(n) + [1/(1-beta)] * sum(succ(n,child), prob(child)*yRef(child)) ] +
+      (1-cvar_wt) * [ sum(succ(n,child), prob(child)*costRef(child)) ]
    )$(sum(succ(n,child), yes));
 
 totalCost..
-   EC =E= sum(n$n.first, cost(n));
+   EC =E= sum(n$n.first, costRef(n));
 
 
-ldef(n)$[NOT n.first].. L(n) =e= sum{ succ(parent,n), L(parent)} + ndelta(n)+Z(n)-R(n)-F(n);
+ldef(n)$[NOT n.first].. Lref(n) =e= sum{ succ(parent,n), Lref(parent)}
+                                    + ndelta(n) + Zref(n) - Rref(n) - Fref(n);
 
 MODEL mincost / totalCost, defcost, cvar_ineq, ldef /;
 
@@ -163,15 +183,16 @@ mincost.optfile=1;
 * EMP model
 *-------------------------------------------------------------------------------
 
-VARIABLES  objnode(n)     'nodal (local) cost'; 
+VARIABLES  objnode(a,n)     'nodal (local) cost'; 
 
-EQUATIONS  defobjnode(n)  'nodal cost definition',
-           deflvl(n)      'water level';
+EQUATIONS  defobjnode(a,n)  'nodal cost definition',
+           deflvl(a,n)      'water level';
 
-defobjnode(n)..
-      objnode(n) =E= (floodCost*F(n)+lowCost*Z(n))$(not n.first);
+defobjnode(a,n)..
+      objnode(a,n) =E= (floodCost*F(a,n)+lowCost*Z(a,n))$(not n.first);
 
-deflvl(n).. L(n) =E= sum( succ(parent,n), L(parent) ) + ndelta(n)+Z(n)-R(n)-F(n);
+deflvl(a,n).. L(a,n) =E= sum( succ(parent,n), L(a,parent) ) + ndelta(n) + Z(a,n)
+                         - R(a,n) - F(a,n);
 
 MODEL mincostEMP 'EMP stochastic model' / defobjnode, deflvl /;
 
@@ -181,13 +202,14 @@ SCALAR optfileVal;
 * Start of tests
 *-------------------------------------------------------------------------------
 SET s     'reformulation scheme' / 'equilibrium', 'fenchel' /;
+*SET s     'reformulation scheme' / 'fenchel' /;
 
-PARAMETER QLdiff(n)    'Q values difference';
+PARAMETER QLdiff(a,n)    'Q values difference';
 
-loop((s,test1,test2),
+loop((s,tailvals,cvar_wt_vals),
 
-tail    = tails(test1);
-cvar_wt = cvar_wts(test2);
+tail    = tails(tailvals);
+cvar_wt = cvar_wts(cvar_wt_vals);
 optfileVal = ord(s);
 
 $label test_start
@@ -198,48 +220,49 @@ beta = 1-tail;
 
 SOLVE mincost using LP minimizing EC;
 
-display v.l, y.l;
+display vRef.l, yRef.l;
 
-* Save values
-L_L(n) = L.l(n);
-L_M(n) = L.m(n);
+* Save reference values
+L_L(n) = Lref.l(n);
+L_M(n) = Lref.m(n);
 ldef_M(n)$(NOT n.first) = ldef.m(n);
 
-F_L(n) = F.l(n);
-F_M(n) = F.m(n);
-R_L(n) = R.l(n);
-R_M(n) = R.m(n);
-Z_L(n) = Z.l(n);
-Z_M(n) = Z.m(n);
+F_L(n) = Fref.l(n);
+F_M(n) = Fref.m(n);
+R_L(n) = Rref.l(n);
+R_M(n) = Rref.m(n);
+Z_L(n) = Zref.l(n);
+Z_M(n) = Zref.m(n);
 
-y_L(n) = y.l(n);
-v_L(n) = v.l(n);
-cost_L(n) = cost.l(n);
+y_L(n) = yRef.l(n);
+v_L(n) = vRef.l(n);
+cost_L(n) = costRef.l(n);
 
 
 * Reset
-L.l(n) = 0.;
-L.fx(n)$(n.first) = l_start;
-R.l(n) = 0.;
-F.l(n) = 0.;
-Z.l(n) = 0.;
-L.m(n) = 0.;
-R.m(n) = 0.;
-F.m(n) = 0.;
-Z.m(n) = 0.;
+L.l(a,n) = 0.;
+L.fx(a,n)$(n.first) = l_start;
+R.l(a,n) = 0.;
+F.l(a,n) = 0.;
+Z.l(a,n) = 0.;
+L.m(a,n) = 0.;
+R.m(a,n) = 0.;
+F.m(a,n) = 0.;
+Z.m(a,n) = 0.;
 
-ndelta(n)$(n.first) = L.l(n);
-F.fx(n)$(n.first) = 0;
-Z.fx(n)$(n.first) = 0;
-R.fx(n)$(n.first) = 0;
+ndelta(n)$(n.first) = l_start;
+F.fx(a,n)$(n.first) = 0;
+Z.fx(a,n)$(n.first) = 0;
+R.fx(a,n)$(n.first) = 0;
 
 *******************************************************************************
 * 1st EMP model
 *******************************************************************************
 
 embeddedCode reshop:
-nodalprob(n): min objnode(n) + CRM(n).valFn$(succ(n,child)) F(n) L(n) R(n) Z(n) defobjnode(n) deflvl(n) 
-CRM(n)$(succ(n,child)): MP('ecvarup', nodalprob(child).valFn$(succ(n,child)), tail=tail, cvar_wt=cvar_wt, prob=prob(child)$(succ(n,child)))
+nodalprob(a,n): min objnode(a,n) + CRM(a,n).valFn$(succ(n,child)) F(a,n) L(a,n) R(a,n) Z(a,n) defobjnode(a,n) deflvl(a,n) 
+CRM(a,n)$(succ(n,child)): MP('ecvarup', nodalprob(a,child).valFn$(succ(n,child)), tail=tail, cvar_wt=cvar_wt, prob=prob(child)$(succ(n,child)))
+main: Nash(nodalprob(a,n)$(n.first))
 endEmbeddedCode
 
 mincostEMP.optfile = optfileVal;
@@ -258,7 +281,7 @@ abort$[mincostEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', 
 * leaf: just initialize local costs
 list(n)$(NOT sum(succ(n,child), yes)) = yes;
 
-QL(list(n)) = objnode.l(n);
+QL(a,list(n)) = objnode.l(a,n);
 
 * Select leaf node parents
 list(parent) = yes$(sum(n$(list(n) AND succ(parent,n)), yes));
@@ -268,11 +291,16 @@ while(card(list),
    loop(list,
       activeNode(list) = yes;
 
-      solve cvarUR min cvarURobj using LP;
+      loop(aa,
+      activeAgent(aa) = yes;
 
-      QL(list) = objnode.l(list)
-             + (1-cvar_wt) * sum(succ(list,child), prob(child)*QL(child))
-             + cvar_wt * cvarURobj.l;
+         solve cvarUR min cvarURobj using LP;
+
+         QL(aa,list) = objnode.l(aa,list)
+                + (1-cvar_wt) * sum(succ(list,child), prob(child)*QL(aa,child))
+                + cvar_wt * cvarURobj.l;
+
+      );
 
    );
 
@@ -280,32 +308,32 @@ while(card(list),
 
 );
 
-QLdiff(n) = abs(QL(n) - cost_L(n));
-QLdiff(n)$(QLdiff(n) <= %tol%) = 0.;
+QLdiff(a,n) = abs(QL(a,n) - cost_L(n));
+QLdiff(a,n)$(QLdiff(a,n) <= %tol%) = 0.;
 
-y_Ld(n) = abs(y.l(n) - y_L(n));
-v_Ld(n) = abs(v.l(n) - v_L(n));
+y_Ld(a,n) = abs(y.l(a,n) - y_L(n));
+v_Ld(a,n) = abs(v.l(a,n) - v_L(n));
 
-L_Ld(n) = abs(L.l(n) - L_L(n));
-F_Ld(n) = abs(F.l(n) - F_L(n));
-Z_Ld(n) = abs(Z.l(n) - Z_L(n));
-R_Ld(n) = abs(R.l(n) - R_L(n));
+L_Ld(a,n) = abs(L.l(a,n) - L_L(n));
+F_Ld(a,n) = abs(F.l(a,n) - F_L(n));
+Z_Ld(a,n) = abs(Z.l(a,n) - Z_L(n));
+R_Ld(a,n) = abs(R.l(a,n) - R_L(n));
 
 display L_Ld, F_Ld, Z_Ld, R_Ld, QLdiff, y_Ld, v_Ld;
 
 * With pure cvar (cvar_wt = 1), then many variables are not nailed down
 * Unless tail = 1 (expectation case) it only make sense to compare the root node cost
 if (cvar_wt = 1. AND tail < 1.,
-   abort$[smax{n$n.first, abs(QLdiff(n))} > %tol%]   'wrong costs', QLdiff, QL, cost_L;
+   abort$[smax{(a,n)$n.first, abs(QLdiff(a,n))} > %tol%]   'wrong costs', QLdiff, QL, cost_L;
 else
 
-   abort$[smax{n, abs(QLdiff(n))} > %tol% AND {sum[n$n.first, QLdiff(n)/QL(n)] > %tol%} ]   'wrong costs', QLdiff, QL, cost_L;
+   abort$[smax{(a,n), abs(QLdiff(a,n))} > %tol% AND {smax[(a,n)$n.first, QLdiff(a,n)/QL(a,n)] > %tol%} ]   'wrong costs', QLdiff, QL, cost_L;
 * TODO: (.75, .75) yields different solutions. 
 *   abort$[smax{n, abs(y_Ld(n))} > %tol%]  'wrong probability measures', y_Ld, y.l, y_L;
 *   abort$[smax{n, abs(v_Ld(n))} > %tol%]  'wrong VaR', v_Ld, v.l, v_L;
 
-   abort$[smax{n$(NOT n.first), F_Ld(n)} > %tol%]     'wrong F.l', F_Ld;
-   abort$[smax{n$(NOT n.first), Z_Ld(n)} > %tol%]     'wrong Z.l', Z_Ld;
+   abort$[smax{(a,n)$(NOT n.first), F_Ld(a,n)} > %tol%]     'wrong F.l', F_Ld;
+   abort$[smax{(a,n)$(NOT n.first), Z_Ld(a,n)} > %tol%]     'wrong Z.l', Z_Ld;
 )
 * end of loop
 ); 

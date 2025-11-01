@@ -150,6 +150,8 @@ int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src) NONNULL;
 int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le) NONNULL;
 int mp_operator_kkt(MathPrgm *mp) NONNULL;
 
+int mp_claimequvar_from_mp(MathPrgm* mp, const MathPrgm *mp_owner) NONNULL;
+
 int mp_packing_display(const MathPrgm *mp, uint8_t buf[VMT(static 1024)]);
 
 void mp_err_noobjdata(const MathPrgm *mp) NONNULL;

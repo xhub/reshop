@@ -15,6 +15,7 @@
 #include <stdio.h>
 
 #include "asprintf.h"
+#include "allocators.h"
 #include "crash_reporter.h"
 #include "option_priv.h"
 #include "macros.h"
@@ -258,6 +259,8 @@ DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
    case DLL_PROCESS_ATTACH:
 
       SetUnhandledExceptionFilter(UnhandledExceptionHandler);
+
+      allocators_set_pagesize();
 
       /* To support %n in printf,
        * see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/set-printf-count-output?view=msvc-170 */

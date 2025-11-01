@@ -85,7 +85,29 @@ L.up(n) = l_max;
 L.fx(n)$(n.first) = l_start;
 
 
-SET list(n) 'list of node to visit (for BFS)';
+
+SCALAR max_stage / 1 /;
+
+PARAMETER stage(n)  'stage of each node';
+
+SET list(n);
+
+* Compute stage of each node
+list(n)$(n.first) = yes;
+stage(n)$(n.first) = max_stage;
+
+while(card(list),
+
+   max_stage = max_stage + 1;
+
+   list(n) = yes$(sum(parent$(list(parent) AND succ(parent,n)), yes));
+
+   stage(n)$(list(n)) = max_stage;
+);
+
+
+SET test / t1*t4 /;
+
 
 * CVaR parameters
 PARAMETER tail    'tail of the CVaR',
@@ -169,9 +191,9 @@ EQUATIONS  defobjnode(n)  'nodal cost definition',
            deflvl(n)      'water level';
 
 defobjnode(n)..
-      objnode(n) =E= (floodCost*F(n)+lowCost*Z(n))$(not n.first);
+      objnode(n) =E= (floodCost*log(exp(F(n))) + lowCost*Z(n))$(not n.first);
 
-deflvl(n).. L(n) =E= sum( succ(parent,n), L(parent) ) + ndelta(n)+Z(n)-R(n)-F(n);
+deflvl(n).. L(n) =E= sum{ succ(parent,n), L(parent) } + ndelta(n)+log(exp(Z(n))) - R(n) - F(n);
 
 MODEL mincostEMP 'EMP stochastic model' / defobjnode, deflvl /;
 

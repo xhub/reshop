@@ -39,56 +39,63 @@ typedef struct {
    bool do_free_weight;
 } ArcVFStrings;
 
-static int arcVF_basic_arcdat(const ArcVFData *arcVF, const MathPrgm *mp,
-                              const Model *mdl, ArcVFStrings *strs)
+static int arcVF_basic_arcdat(const ArcVFBasicData *dat, const MathPrgm *mp,
+                              const Model *mdl, FILE *f, const char **labelcolor)
 {
-   if (arcVF->type != ArcVFBasic) {
-      strs->equname = arcVFType2str(arcVF->type);
-      return OK;
-   }
+   ArcVFStrings strs = {.do_free_weight = false};
 
-   const ArcVFBasicData *dat = &arcVF->basic_dat;
    rhp_idx ei = dat->ei;
+
    if (valid_ei(ei)) {
       rhp_idx objequ = mp_getobjequ(mp);
-      strs->labelcolor = ei == objequ ? "blue" : "magenta";
-      strs->equname = ctr_printequname(&mdl->ctr, ei);
+      *labelcolor = ei == objequ ? "blue" : "magenta";
+      strs.equname = mdl_printequname(mdl, ei);
    } else if (ei == IdxCcflib) {
-      strs->labelcolor = "brown";
-      strs->equname = "CCF obj";
+      *labelcolor = "brown";
+      strs.equname = "CCF obj";
    } else if (ei == IdxObjFunc) {
-      strs->labelcolor = "green";
-      strs->equname = "objequ";
+      *labelcolor = "green";
+      strs.equname = "objequ";
    } else {
+
       const EmpDag *empdag = &mdl->empinfo.empdag;
-      error("[empdag:dot] ERROR: invalid equation for VF arc between MP(%s) and "
-            "MP(%s)\n", empdag_getmpname(empdag, mp->id),
-            empdag_getmpname(empdag, arcVF->mpid_child));
-      strs->equname = "ERROR invalid equation index";
-      strs->labelcolor = "red";
-      strs->weight = NULL;
+      error("[empdag:dot] ERROR: invalid equation for VF arc start at MP(%s).\n",
+             empdag_getmpname(empdag, mp->id));
+      strs.equname = "ERROR invalid equation index";
+      *labelcolor = "red";
+      strs.weight = NULL;
 
       return OK;
+
    }
 
-   double cst = arcVF->basic_dat.cst;
-   rhp_idx vi = arcVF->basic_dat.vi;
-   strs->weight = NULL;
-   strs->do_free_weight = true;
+   double cst = dat->cst;
+   rhp_idx vi = dat->vi;
+   strs.weight = NULL;
+   strs.do_free_weight = true;
    if (cst != 1.) {
       if (valid_vi(vi)) {
-         IO_PRINT(asprintf(&strs->weight, "%e %s", cst, ctr_printvarname(&mdl->ctr, vi)));
+         IO_PRINT(asprintf(&strs.weight, "%.2g <BR/> %s", cst, mdl_printvarname(mdl, vi)));
       } else {
-         IO_PRINT(asprintf(&strs->weight, "%e", cst));
+         IO_PRINT(asprintf(&strs.weight, "%.2g", cst));
       }
    } else {
       if (valid_vi(vi)) {
-         IO_PRINT(asprintf(&strs->weight, "%s", ctr_printvarname(&mdl->ctr, vi)));
+         IO_PRINT(asprintf(&strs.weight, "%s", mdl_printvarname(mdl, vi)));
       } else {
-         strs->weight = "";
-         strs->do_free_weight = false;
+         strs.weight = NULL;
+         strs.do_free_weight = false;
       }
    }
+
+   IO_PRINT(fputs(strs.equname, f));
+
+   if (strs.weight) {
+      //IO_PRINT(fprintf(f, "<BR/>%s", strs.weight));
+      IO_PRINT(fprintf(f, " %s", strs.weight));
+   }
+
+   if (strs.do_free_weight) { FREE(strs.weight); }
 
    return OK;
 }
@@ -108,52 +115,54 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
       }
 
       const UIntArray *Carcs = &mps->Carcs[i];
-      unsigned mp_id = mp->id;
+      mpid_t mpid = mp->id;
 
-      for (unsigned j = 0, alen = Carcs->len; j < alen; ++j) {
+      for (unsigned j = 0, clen = Carcs->len; j < clen; ++j) {
 
-         unsigned uid = Carcs->arr[j];
+         daguid_t uid = Carcs->arr[j];
          bool isMP = uidisMP(uid);
          unsigned id = uid2id(uid);
  
 
-         IO_PRINT(fprintf(f, " MP%u -> %s%u [%s];\n", mp_id,
+         IO_PRINT(fprintf(f, " MP%u -> %s%u [%s];\n", mpid,
                          isMP ? "MP" : "Nash", id, arcstyle_CTRL));
       }
 
       const VarcArray *Varcs = &mps->Varcs[i];
 
-      for (unsigned j = 0, alen = Varcs->len; j < alen; ++j) {
+      for (unsigned j = 0, vlen = Varcs->len; j < vlen; ++j) {
 
          const struct rhp_empdag_arcVF* arcVF = &Varcs->arr[j];
-         unsigned mpchild_id = arcVF->mpid_child;
+         unsigned mpid_child = arcVF->mpid_child;
+         const char *labelcolor;
 
-         ArcVFStrings VFstrings = {.do_free_weight = false};
-
+         IO_PRINT(fprintf(f, " MP%u -> MP%u [label=<", mpid, mpid_child));
+ 
          switch (arcVF->type) {
          case ArcVFBasic:
-            arcVF_basic_arcdat(arcVF, mp, empdag->mdl, &VFstrings);
+            arcVF_basic_arcdat(&arcVF->basic_dat, mp, empdag->mdl, f, &labelcolor);
             break;
+         case ArcVFMultipleBasic: {
+            IO_PRINT(fputs("[ {", f));
+            for (unsigned k = 0, klen = arcVF->basics_dat.len; k < klen; ++k) {
+               if (k >= 1) { IO_PRINT(fputs("},<BR/> {", f)) };
+               arcVF_basic_arcdat(&arcVF->basics_dat.list[k], mp, empdag->mdl, f, &labelcolor);
+            }
+            IO_PRINT(fputs("} ]", f));
+            labelcolor = "black";
+            break;
+         }
          case ArcVFUnset:
-            VFstrings.labelcolor = "red";
-            VFstrings.equname = "INVALID arcVF";
+            labelcolor = "red";
+            IO_PRINT(fputs("INVALID arcVF", f));
             break;
          default:
-            VFstrings.labelcolor = "red";
-            VFstrings.equname = "unsupported arcVF type";
+            labelcolor = "red";
+            IO_PRINT(fputs("unsupported arcVF type", f));
          }
 
-         IO_PRINT(fprintf(f, " MP%u -> MP%u [label=<%s",
-                         mp_id, mpchild_id, VFstrings.equname)); //VFstrings.weight,
- 
-         if (VFstrings.weight) {
-            IO_PRINT(fprintf(f, "<BR/>%s", VFstrings.weight));
-         }
+         IO_PRINT(fprintf(f, ">, fontcolor=%s, %s];\n", labelcolor, arcstyle_VF));
 
-         IO_PRINT(fprintf(f, ">, fontcolor=%s, %s];\n",
-                         VFstrings.labelcolor, arcstyle_VF));
-
-         if (VFstrings.do_free_weight) { FREE(VFstrings.weight); }
 
       }
 
@@ -328,7 +337,7 @@ int empdag2dotfile(const EmpDag * empdag, const char* fname)
    FILE* f = fopen(fname, RHP_WRITE_TEXT);
 
    if (!f) {
-      error("%s ERROR: Could not create file named '%s'\n", __func__, fname);
+      error("[empdag] ERROR: Could not create file named '%s' for DOT export\n", fname);
       return OK;
    }
 

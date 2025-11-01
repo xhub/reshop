@@ -43,7 +43,16 @@ int reformulation_equil_compute_inner_product(enum OVF_TYPE type, union ovf_ops_
    S_CHECK(op->get_coeffs(ovfd, &coeffs));
 
    Avar *args;
-   S_CHECK(op->get_args(ovfd, &args));
+   unsigned num_empdag_children;
+   S_CHECK(op->get_args(ovfd, &args, &num_empdag_children));
+
+   if (num_empdag_children > 0) {
+      errormsg("[equilibrium] ERROR: not implemented for mixture of EMPDAG children and "
+               "algebraic argument\n");
+      return Error_NotImplemented;
+   }
+
+
    S_CHECK(ovf_process_indices(mdl, args, equ_idx));
 
    Container *ctr = &mdl->ctr;

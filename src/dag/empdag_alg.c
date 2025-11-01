@@ -126,28 +126,35 @@ typedef struct empdag_mp_ppty {
    unsigned level;
 } DagMpPpty;
 
-typedef struct empdag_mpe_ppty {
+typedef struct empdag_nash_ppty {
    unsigned level;
 } DagNashPpty;
 
+typedef struct {
+   unsigned Varc;
+   unsigned Carc;
+   unsigned Narc;
+} AncestorCount;
+
 typedef struct empdag_dfs {
-   const Model *mdl;
+   Model *mdl;
    EmpDag *empdag;
 
    bool isTree;
-   unsigned n_nonleaf;
    unsigned timestamp;
-   unsigned num_visited;
-   unsigned num_visited_dual;
+   unsigned max_depth;
    unsigned num_mps;
    unsigned num_nashs;
    unsigned num_nodes;
-   unsigned max_depth;
+   unsigned num_nonleaf;
+   unsigned num_visited;
+   unsigned num_visited_dual;
    DfsState * restrict nodes_stat;
-   unsigned * restrict preorder;          /**< Nodal timestamp in preorder fashion */
    unsigned * restrict postorder;         /**< Nodal timestamp postorder fashion */
+   unsigned * restrict preorder;          /**< Nodal timestamp in preorder fashion */
    unsigned * restrict topo_order;        /**< EMPDAG topological order (tidx -> nidx)*/
    unsigned * restrict topo_order_nidx2tidx; /**< EMPDAG topological order for each node (nidx -> tidx)*/
+   AncestorCount * restrict num_ancestors;   /**< Number of ancestors */
    DagMpPpty * restrict mp_ppty;
    DagNashPpty * restrict nash_ppty;
    bool * restrict processed_vi;
@@ -372,7 +379,7 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    dfsdata->isTree = true;
    dfsdata->hasVFPath = false;
 
-   dfsdata->n_nonleaf = 0;
+   dfsdata->num_nonleaf = 0;
    dfsdata->timestamp = 0;
    dfsdata->num_visited = 0;
    dfsdata->num_visited_dual = 0;
@@ -385,20 +392,22 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    unsigned num_mps = dfsdata->num_mps;
    unsigned num_nash = dfsdata->num_nashs;
 
+   dfsdata->processed_vi_len = ctr_nvars_total(&empdag->mdl->ctr);
+
    CALLOC_(dfsdata->nodes_stat, DfsState, num_nodes);
-   CALLOC_(dfsdata->preorder, unsigned, num_nodes);
+   CALLOC_(dfsdata->num_ancestors, AncestorCount, num_nodes);
    CALLOC_(dfsdata->postorder, unsigned, num_nodes);
+   CALLOC_(dfsdata->preorder, unsigned, num_nodes);
    CALLOC_(dfsdata->topo_order, unsigned, num_nodes);
    CALLOC_(dfsdata->topo_order_nidx2tidx, unsigned, num_nodes);
+
    MALLOC_(dfsdata->mp_ppty, DagMpPpty, num_mps);
    MALLOC_(dfsdata->nash_ppty, DagNashPpty, num_nash);
-
-   dfsdata->processed_vi_len = ctr_nvars_total(&empdag->mdl->ctr);
    MALLOC_(dfsdata->processed_vi, bool, dfsdata->processed_vi_len);
+
 
    rhp_uint_init(&dfsdata->adversarial_mps);
    rhp_uint_init(&dfsdata->saddle_path_starts);
-
 
 
    return OK;
@@ -407,14 +416,16 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
 NONNULL static
 void dfsdata_free(EmpDagDfsData *dfsdata)
 {
-   FREE(dfsdata->nodes_stat);
-   FREE(dfsdata->preorder);
-   FREE(dfsdata->postorder);
-   FREE(dfsdata->topo_order);
-   FREE(dfsdata->topo_order_nidx2tidx);
    FREE(dfsdata->mp_ppty);
    FREE(dfsdata->nash_ppty);
    FREE(dfsdata->processed_vi);
+
+   FREE(dfsdata->nodes_stat);
+   FREE(dfsdata->num_ancestors);
+   FREE(dfsdata->postorder);
+   FREE(dfsdata->preorder);
+   FREE(dfsdata->topo_order);
+   FREE(dfsdata->topo_order_nidx2tidx);
 
    rhp_uint_empty(&dfsdata->adversarial_mps);
    /* DO not empty dfsdata->saddle_path_starts, it is passed to the empdag */
@@ -515,25 +526,30 @@ DagPathType sense2pathtype(RhpSense sense)
 }
 
 NONNULL static int process_Carcs(EmpDagDfsData *dfsdata, UIntArray *Carcs,
-                                 DfsPathDataFwd pathdata_child, unsigned nidx)
+                                 DfsPathDataFwd pathdata_child, mpid_t mpid_parent)
 {
    int rc = 0;
-   for (unsigned i = 0, len = Carcs->len; i < len; ++i) {
+
+   for (unsigned i = 0, Clen = Carcs->len; i < Clen; ++i) {
       daguid_t uid_child = Carcs->arr[i];
+      dagid_t id_child = uid2id(uid_child);
 
       pathdata_child.pathtype = DfsPathCtrl;
       pathdata_child.saddle_path_start = UINT_MAX;
 
       if (uidisMP(uid_child)) {
-         rc = dfs_mpC(uid2id(uid_child), dfsdata, pathdata_child);
+         dfsdata->num_ancestors[id_child].Carc += 1;
+         rc = dfs_mpC(id_child, dfsdata, pathdata_child);
       } else {
-         rc = dfs_nash(uid2id(uid_child), dfsdata, pathdata_child);
+         dfsdata->num_ancestors[id_child+dfsdata->num_mps].Carc += 1;
+         rc = dfs_nash(id_child, dfsdata, pathdata_child);
       }
+
       if (rc == 0) continue;
       if (rc > 0) { return rc; }
       if (rc == -DagErrDagCycle) {
          error("MP(%s)\n", empdag_getname(dfsdata->empdag, uid_child));
-         DfsState stat = get_state(dfsdata, nidx);
+         DfsState stat = get_state(dfsdata, mpid_parent);
          if (stat == CycleStart) { return -DagErrGeneric; }
          return rc;
       }
@@ -551,7 +567,7 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, VarcArray *Varcs,
 {
    EmpDag *empdag = dfsdata->empdag;
    DagPathType cur_pathtype = pathdata.pathtype;
-   const Container *ctr = &dfsdata->mdl->ctr;
+   const Model *mdl = dfsdata->mdl;
 
    dfsdata->hasVFPath = true;
 
@@ -562,11 +578,13 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, VarcArray *Varcs,
       const ArcVFData *arcVF = &Varcs->arr[i];
       mpid_t mpid_child = arcVF->mpid_child;
 
+      dfsdata->num_ancestors[mpid_child].Varc += 1;
+
       /* -------------------------------------------------------------------
        * First check: are the equations in the Varc assigned to the parent mp?
-       *
        * ------------------------------------------------------------------- */
-      if (!arcVF_chk_equ(arcVF, mpid_parent, ctr)) {
+
+      if (!arcVF_chk_equ(arcVF, mpid_parent, mdl)) {
          error("[empdag] ERROR: The VF arc between MP(%s) and MP(%s) involves "
                "at least one equation that does not belong to the parent MP(%s)\n",
                empdag_getmpname(empdag, mpid_parent),
@@ -577,9 +595,8 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, VarcArray *Varcs,
 
 
       /* ------------------------------------------------------------------
-       * If we have an adversarial MP, we add it to a list of MP to reformulate
-       * This is the case when the edge is of VF type and the sense of the
-       * path and the child MP are opposite.
+       * If we have an adversarial MP, we add it to a list of MP to reformulate.
+       * This occurs when the sense of the path and the child MP are opposite.
        * ------------------------------------------------------------------ */
 
       const MathPrgm *mp_child = empdag->mps.arr[mpid_child];
@@ -595,15 +612,19 @@ NONNULL static int process_Varcs(EmpDagDfsData *dfsdata, VarcArray *Varcs,
             pathdata.saddle_path_registered = true;
          }
       } else if (sense == RhpFeasibility) {
+
          error("[empdag] ERROR: MP(%s), of type %s, is linked via a VF arc to "
                "its parent MP(%s). This is nonsensical.\n",
                empdag_getmpname(empdag, mpid_child), mp_gettypestr(mp_child),
                empdag_getmpname(empdag, mpid_parent));
          return Error_EMPIncorrectInput;
+
       } else if (sense != RhpMax && sense != RhpMin) {
+
          error("[empdag] ERROR: MP(%s) has unknown/unsupported sense %s\n",
                empdag_getmpname(empdag, mpid_child), sense2str(sense));
          return Error_EMPRuntimeError;
+
       }
 
       int rc = dfs_mpV(mpid_child, dfsdata, pathdata);
@@ -626,16 +647,16 @@ NONNULL static
 int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
-   unsigned node_idx = mpid; assert(mpid < empdag->mps.len);
+   unsigned nidx = mpid; assert(mpid < empdag->mps.len);
    UIntArray *Carcs = &empdag->mps.Carcs[mpid];
-   struct VFedges *Varcs = &empdag->mps.Varcs[mpid];
+   VarcArray *Varcs = &empdag->mps.Varcs[mpid];
 
    assert(pathdata.pathtype == DfsPathCtrl);
    DfsPathDataFwd pathdata_child = pathdata;
    pathdata_child.depth++;
 
 
-   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), node_idx);
+   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), nidx);
    switch (state) {
    case InProgress:
       break;
@@ -653,7 +674,7 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
    /* Dual MPs are specials */
    if (mp->type == MpTypeDual) {
       /* Mark node as processed so that no further exploration is required */
-      mark_as_processed(dfsdata, node_idx);
+      mark_as_processed(dfsdata, nidx);
 
       dfsdata->num_visited_dual++;
 
@@ -661,11 +682,11 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
       return dfs_mpC(mpid_primal, dfsdata, pathdata);
    }
  
-   dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
+   dfsdata->preorder[nidx] = ++dfsdata->timestamp;
 
    /* We are at a leaf node */
-   unsigned Vlen = Varcs->len;
-   if (Carcs->len == 0 && Vlen == 0) {
+   unsigned Vlen = Varcs->len, Clen = Carcs->len;
+   if (Clen == 0 && Vlen == 0) {
       dfsdata->max_depth = MAX(dfsdata->max_depth, pathdata.depth);
    }
 
@@ -673,7 +694,9 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
     * Children on CTRL edge do not require further analysis, just visit them
     * --------------------------------------------------------------------- */
 
-   S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, node_idx));
+   if (Clen > 0) {
+      S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, mpid));
+   }
 
    /* ---------------------------------------------------------------------
     * Children on VF arc: we need to determine whether we have a saddle path
@@ -697,13 +720,13 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
     * Post order: set the topo order
     * --------------------------------------------------------------------- */
 
-   dfsdata->topo_order_nidx2tidx[node_idx] = dfsdata->num_visited;
-   dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
+   dfsdata->topo_order_nidx2tidx[nidx] = dfsdata->num_visited;
+   dfsdata->topo_order[dfsdata->num_visited++] = nidx;
 
-   dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
+   dfsdata->postorder[nidx] = ++dfsdata->timestamp;
 
    /* Mark node as processed so that no further exploration is required */
-   mark_as_processed(dfsdata, node_idx);
+   mark_as_processed(dfsdata, nidx);
 
    return OK;
 }
@@ -716,16 +739,16 @@ NONNULL static
 int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
-   unsigned node_idx = mpid;
+   nidx_t nidx = mpid;
    assert(mpid < empdag->mps.len);
    UIntArray *Carcs = &empdag->mps.Carcs[mpid];
-   struct VFedges *Varcs = &empdag->mps.Varcs[mpid];
+   VarcArray *Varcs = &empdag->mps.Varcs[mpid];
 
    assert(pathtype_is_VF(pathdata.pathtype));
    DfsPathDataFwd pathdata_child = pathdata;
    pathdata_child.depth++;
 
-   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), node_idx);
+   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), nidx);
    switch (state) {
    case InProgress:
       break;
@@ -743,7 +766,7 @@ int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
    /* Dual MPs are specials */
    if (mp->type == MpTypeDual) {
       /* Mark node as processed so that no further exploration is required */
-      mark_as_processed(dfsdata, node_idx);
+      mark_as_processed(dfsdata, nidx);
 
       dfsdata->num_visited_dual++;
 
@@ -751,7 +774,7 @@ int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
       return dfs_mpV(mpid_primal, dfsdata, pathdata);
    }
 
-    dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
+    dfsdata->preorder[nidx] = ++dfsdata->timestamp;
 
    /* We are at a leaf node */
    unsigned Vlen = Varcs->len;
@@ -776,16 +799,16 @@ int dfs_mpV(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 
    if (Clen > 0) {
       pathdata_child.pathtype = DfsPathCtrl;
-      S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, node_idx));
+      S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, mpid));
    }
 
-   dfsdata->topo_order_nidx2tidx[node_idx] = dfsdata->num_visited;
-   dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
+   dfsdata->topo_order_nidx2tidx[nidx] = dfsdata->num_visited;
+   dfsdata->topo_order[dfsdata->num_visited++] = nidx;
 
-   dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
+   dfsdata->postorder[nidx] = ++dfsdata->timestamp;
 
    /* Mark node as processed so that no further exploration is required */
-   mark_as_processed(dfsdata, node_idx);
+   mark_as_processed(dfsdata, nidx);
 
    return OK;
 }
@@ -794,16 +817,14 @@ NONNULL static
 int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
-   unsigned node_idx = mpid;
+   nidx_t nidx = mpid;
    assert(mpid < empdag->mps.len);
-   UIntArray *Carcs = &empdag->mps.Carcs[mpid];
-   struct VFedges *Varcs = &empdag->mps.Varcs[mpid];
 
    assert(pathdata.pathtype == DfsPathEquil || pathdata.pathtype == DfsPathUnset);
    DfsPathDataFwd pathdata_child = pathdata;
    pathdata_child.depth++;
 
-   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), node_idx);
+   DfsState state = process_node_state(dfsdata, mpid2uid(mpid), nidx);
    switch (state) {
    case InProgress:
       break;
@@ -815,21 +836,21 @@ int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathd
       return runtime_error_state(state);
    }
 
-   dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
+   dfsdata->preorder[nidx] = ++dfsdata->timestamp;
 
+   UIntArray *Carcs = &empdag->mps.Carcs[mpid];
+   VarcArray *Varcs = &empdag->mps.Varcs[mpid];
    /* Are we at a leaf node? */
-   unsigned Vlen = Varcs->len;
-   if (Carcs->len == 0 && Vlen == 0) {
+   unsigned Vlen = Varcs->len, Clen = Carcs->len;
+   if (Clen == 0 && Vlen == 0) {
       dfsdata->max_depth = MAX(dfsdata->max_depth, pathdata.depth);
    }
 
-   /* ---------------------------------------------------------------------
-    * Children on VF arc: we need to determine whether we have a saddle path
-    * --------------------------------------------------------------------- */
-
+   /* VF arcs: look for saddle path */
    if (Vlen > 0) {
       RhpSense sense = mp_getsense(empdag->mps.arr[mpid]);
       assert(sense == RhpMax || sense == RhpMin);
+
       DagPathType cur_pathtype = sense2pathtype(sense);
       pathdata_child.pathtype = cur_pathtype;
       pathdata_child.saddle_path_start = mpid;
@@ -838,20 +859,50 @@ int dfs_mpInNashOrRoot(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathd
       S_CHECK(process_Varcs(dfsdata, Varcs, pathdata_child, mpid));
    }
 
-   /* ---------------------------------------------------------------------
-    * Children on CTRL arc: reset pathtype
-    * --------------------------------------------------------------------- */
+   /* Children on CTRL arc: reset pathtype */
+   if (Clen > 0) {
+      pathdata_child.pathtype = DfsPathCtrl;
+      S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, mpid));
+   }
 
-   pathdata_child.pathtype = DfsPathCtrl;
-   S_CHECK(process_Carcs(dfsdata, Carcs, pathdata_child, node_idx));
+   /* Make sure there between nodes there is only ONE arc */
+   const DagUidArray * restrict rarcs = &empdag->mps.rarcs[mpid];
+   if (rarcs->len > 1) {
+      size_t sz = (dfsdata->num_nodes)*sizeof(bool);
+      bool * restrict mp_parents;
+      A_CHECK(mp_parents, ctr_memtmp_get(&dfsdata->mdl->ctr, sz));
 
-   dfsdata->topo_order_nidx2tidx[node_idx] = dfsdata->num_visited;
-   dfsdata->topo_order[dfsdata->num_visited++] = node_idx;
+      memset(mp_parents, 0, (dfsdata->num_nodes)*sizeof(bool));
+      nidx_t nmps = dfsdata->num_mps;
+      daguid_t * restrict rarcs_arr = rarcs->arr;
 
-   dfsdata->postorder[node_idx] = ++dfsdata->timestamp;
+      for (unsigned i = 0, len = rarcs->len; i < len; ++i) {
+         daguid_t uid = rarcs_arr[i];
+         nidx_t nidx_parent = uidisMP(uid) ? uid2id(uid) : uid2id(uid) + nmps;
+
+         if (mp_parents[nidx_parent]) {
+            error("[empdag] ERROR: multiple arcs between %s(%s) and MP(%s). "
+                  "Only one is allowed\n", daguid_type2str(uid),
+                  empdag_getname(empdag, uid), empdag_getmpname(empdag, mpid));
+
+            ctr_memtmp_rel(&dfsdata->mdl->ctr, sz);
+            return Error_EMPIncorrectInput;
+         }
+
+         mp_parents[nidx_parent] = true;
+
+      }
+
+      ctr_memtmp_rel(&dfsdata->mdl->ctr, sz);
+   }
+
+   dfsdata->topo_order_nidx2tidx[nidx] = dfsdata->num_visited;
+   dfsdata->topo_order[dfsdata->num_visited++] = nidx;
+
+   dfsdata->postorder[nidx] = ++dfsdata->timestamp;
 
    /* Mark node as processed so that no further exploration is required */
-   mark_as_processed(dfsdata, node_idx);
+   mark_as_processed(dfsdata, nidx);
 
    return OK;
 }
@@ -860,7 +911,7 @@ NONNULL static
 int dfs_nash(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 {
    const EmpDag * restrict empdag = dfsdata->empdag;
-   unsigned node_idx = id_parent + dfsdata->num_mps;
+   dagid_t node_idx = id_parent + dfsdata->num_mps;
 
    UIntArray *arcs = &empdag->nashs.arcs[id_parent];
    DfsPathDataFwd pathdata_child = pathdata;
@@ -891,9 +942,20 @@ int dfs_nash(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata
 
    for (unsigned i = 0, len = arcs->len; i < len; ++i) {
       daguid_t uid_child = arcs->arr[i];
-      assert(uidisMP(uid_child)); assert(empdag->mps.arr[uid2id(uid_child)]);
+      dagid_t id_child = uid2id(uid_child);
 
-      int rc = dfs_mpInNashOrRoot(uid2id(uid_child), dfsdata, pathdata_child);
+      if (!(uidisMP(uid_child))) {
+         error("[empdag/analysis] ERROR: Nash(%s) has Nash(%s) as child. A Nash node can "
+               "not have a Nash node among its children\n",
+               empdag_getnashname(empdag, id_parent), empdag_getnashname(empdag, id_child));
+         return Error_EMPIncorrectInput;
+      }
+
+      assert(uidisMP(uid_child)); assert(empdag->mps.arr[id_child]);
+
+      dfsdata->num_ancestors[id_child].Narc += 1;
+
+      int rc = dfs_mpInNashOrRoot(id_child, dfsdata, pathdata_child);
 
       if (rc == 0) continue;
       if (rc > 0) { return rc; }
@@ -1007,7 +1069,7 @@ bool is_child_Carcs(const UIntArray *arcs, mpid_t mp_id)
 }
 
 NONNULL static inline
-bool is_child_Varcs(const struct VFedges *Varcs, mpid_t mp_id)
+bool is_child_Varcs(const VarcArray *Varcs, mpid_t mp_id)
 {
    for (unsigned i = 0, len = Varcs->len; i < len; ++i) {
       if (Varcs->arr[i].mpid_child == mp_id) return true;
@@ -1570,6 +1632,7 @@ int empdag_analysis(EmpDag * restrict empdag)
    double start = get_thrdtime();
    EmpDagDfsData dfsdata;
    S_CHECK(dfsdata_init(&dfsdata, empdag));
+   AnalysisData analysis_data = {0};
 
    /* For now we assume that there is only 1 root, could be multiple ones.
     * Lots has to be changed to extend this. This includes LCA */
@@ -1611,10 +1674,14 @@ int empdag_analysis(EmpDag * restrict empdag)
                mptype2str(mptype));
          return Error_EMPRuntimeError;
       }
-      
+
    } else {
       empdag_setrootprobtype(empdag, EmpDag_RootEquil);
    }
+
+   trace_empdag("[empdag/analysis] Performing analysis on the EMPDAG of %s model '%.*s' #%u\n",
+                mdl_fmtargs(empdag->mdl));
+
 
    for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
       daguid_t uid = empdag->roots.arr[i], idx = uid2id(uid);
@@ -1638,6 +1705,7 @@ int empdag_analysis(EmpDag * restrict empdag)
     * to the DAG
     * --------------------------------------------------------------------- */
 
+   MathPrgm **mps = empdag->mps.arr;
    if (dfsdata.num_visited + dfsdata.num_visited_dual < dfsdata.num_nodes) {
 
       /* -------------------------------------------------------------------
@@ -1645,7 +1713,6 @@ int empdag_analysis(EmpDag * restrict empdag)
        * ------------------------------------------------------------------- */
 
       unsigned num_mps = empdag->mps.len, num_mps_null = 0, num_mps_hidden = 0;
-      MathPrgm **mps = empdag->mps.arr;
       for (unsigned i = 0; i < num_mps; ++i) {
          MathPrgm *mp = mps[i];
          if (!mp) { num_mps_null++; continue; }
@@ -1653,7 +1720,8 @@ int empdag_analysis(EmpDag * restrict empdag)
          if (mp_ishidden(mp) && dfsdata.nodes_stat[i] != Processed) { num_mps_hidden++; }
       }
 
-      unsigned num_seen_nodes = dfsdata.num_visited +  dfsdata.num_visited_dual + num_mps_null + num_mps_hidden;
+      unsigned num_seen_nodes = dfsdata.num_visited + dfsdata.num_visited_dual
+                                + num_mps_null + num_mps_hidden;
       if (num_seen_nodes != dfsdata.num_nodes) {
 
          if (num_seen_nodes > dfsdata.num_nodes) {
@@ -1693,19 +1761,46 @@ int empdag_analysis(EmpDag * restrict empdag)
 
             num_visited++;
 
-   
          } while (missing_nodes > 0);
 
          /* If ask, export the EMPDAG for debugging purposes */
          S_CHECK(empdag_export(empdag->mdl));
-   
+ 
          return Error_EMPIncorrectInput;
       }
    }
 
-   /* Now we can perform all the checks */
-   AnalysisData analysis_data;
+   /* Check the arc and rarcs consistency */
+
+
+   DagUidArray * restrict rarcs = empdag->mps.rarcs;
    unsigned num_issues = 0;
+   for (unsigned i = 0, len = dfsdata.num_mps; i < len; ++i) {
+
+        unsigned narcs_fwd = dfsdata.num_ancestors[i].Varc + dfsdata.num_ancestors[i].Narc +
+                             dfsdata.num_ancestors[i].Carc;
+
+      if (narcs_fwd != rarcs[i].len) {
+         int offset;
+         error("[empdag/analysis] %nERROR: MP(%s) has %u reverse arcs, but %u forward "
+               "ones:\n", &offset, empdag_getmpname(empdag, i), rarcs[i].len, narcs_fwd);
+         error("%*s- %u of type Control\n", offset, "", dfsdata.num_ancestors[i].Carc);
+         error("%*s- %u of type Nash\n", offset, "", dfsdata.num_ancestors[i].Narc);
+         error("%*s- %u of type VF\n", offset, "", dfsdata.num_ancestors[i].Varc);
+
+         status = Error_IncompleteModelMetadata;
+         num_issues += 1;
+      }
+
+   }
+
+   if (status != OK) {
+      error("\n[empdag/analysis] ERROR in the DAG consistency: %u nodes have errors\n",
+            num_issues);
+      goto _exit_analysis_loop;
+   }
+
+   /* Now we can perform all the checks */
    unsigned num_mps = dfsdata.num_mps;
    S_CHECK(analysis_data_init(&analysis_data, &dfsdata));
 
@@ -1818,6 +1913,9 @@ _exit_analysis_loop:
    if (num_issues > 0) {
       error("\n[empdag:check] analysis yielded %u nodes with issues\n", num_issues);
       status = status == OK ? Error_EMPIncorrectInput : status;
+
+      /* export if requested */
+      S_CHECK(empdag_export(empdag->mdl));
    }
 
    simple_timing_add(&empdag->mdl->timings->empdag.analysis, get_thrdtime() - start);

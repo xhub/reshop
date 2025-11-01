@@ -42,7 +42,7 @@ static NONNULL int ydat_init(yData *ydat)
    ydat->mult_ub_revidx = NULL;
 
 
-   ydat->has_shift = false;
+   ydat->has_yshift = false;
    ydat->shift_quad_cst = 0.;
 
    return OK;
@@ -77,7 +77,7 @@ int fenchel_find_yshift(CcfFenchelData *fdat)
                ydat->tilde_y[i] = 0.;
             } else {
                ydat->tilde_y[i] = lb;
-               ydat->has_shift = true;
+               ydat->has_yshift = true;
             }
 
             fdat->primal.has_set = true;
@@ -102,7 +102,7 @@ int fenchel_find_yshift(CcfFenchelData *fdat)
             ydat->tilde_y[i] = 0.;
          } else {
             ydat->tilde_y[i] = lb;
-            ydat->has_shift = true;
+            ydat->has_yshift = true;
          }
 
          if (ub_finite) {
@@ -122,7 +122,7 @@ int fenchel_find_yshift(CcfFenchelData *fdat)
             ydat->tilde_y[i] = 0.;
          } else {
             ydat->tilde_y[i] = ub;
-            ydat->has_shift = true;
+            ydat->has_yshift = true;
          }
 
       } else {
@@ -137,7 +137,7 @@ int fenchel_find_yshift(CcfFenchelData *fdat)
    }
 
    if (RHP_UNLIKELY(O_Output & PO_TRACE_CCF)) {
-      if (ydat->has_shift) {
+      if (ydat->has_yshift) {
          trace_ccf("[ccf/fenchel] Found shift for the primal variables:\n");
          for (unsigned i = 0, n_y = fdat->primal.ydat.n_y; i < n_y; ++i) {
             trace_ccf("\t[%5u] %e\n", i, ydat->tilde_y[i]);
@@ -254,7 +254,6 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type, const OvfOps *ops,
 
    fdat->primal.ncons = ncols_A;
 
-
    /* Check whether we have B_lin or b_lin  */
    S_CHECK_EXIT(ops->get_affine_transformation(ovfd, &fdat->B_lin, &fdat->b_lin));
 
@@ -282,6 +281,22 @@ int fdat_init(CcfFenchelData * restrict fdat, OvfType type, const OvfOps *ops,
    CALLOC_(fdat->dual.ub, double, fdat->primal.ydat.n_y_ub);
    CALLOC(fdat->tmpvec, double, MAX(n_y, ncols_A));
 
+   switch (type) {
+   case OvfType_Ovf:
+      fdat->mpid_dual = MpId_NA;
+      fdat->mpid_primal = MpId_NA;
+      break;
+   case OvfType_Ccflib:
+   case OvfType_Ccflib_Dual:
+      fdat->mpid_dual = ovfd.ccfdat->mpid_dual;
+      fdat->mpid_primal = ovfd.ccfdat->mp_primal->id;
+      assert(valid_mpid(fdat->mpid_dual) && valid_mpid(fdat->mpid_primal));
+      break;
+   default:
+      TO_IMPLEMENT("user-defined OVF is not implemented");
+   }
+
+
 _exit:
    return status;
 }
@@ -289,7 +304,7 @@ _exit:
 int fenchel_apply_yshift(CcfFenchelData *fdat)
 {
    yData *ydat = &fdat->primal.ydat;
-   if (!ydat->has_shift) { return OK; }
+   if (!ydat->has_yshift) { return OK; }
 
    const OvfOps *ops = fdat->ops;
    OvfOpsData ovfd = fdat->ovfd;
@@ -397,8 +412,10 @@ int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl)
    strcat(equvar_basename, "_");
    strcat(equvar_basename, fdat->type == OvfType_Ovf ? "ovf" : "ccf");
    strcat(equvar_basename, "_");
-   /* TODO URG: vi_ovf does not always make sense */
-   unsignedtostr((unsigned)fdat->vi_ovf, sizeof(unsigned), &equvar_basename[strlen(equvar_basename)], 20, 10);
+   /* vi_ovf does not make sense in the CCFLIB MP('xxx', ...) case */
+   if (valid_vi(fdat->vi_ovf)) {
+      unsignedtostr((unsigned)fdat->vi_ovf, sizeof(unsigned), &equvar_basename[strlen(equvar_basename)], 20, 10);
+   }
    unsigned ovf_name_idxlen = strlen(equvar_basename);
    fdat->equvar_basename = equvar_basename;
 
@@ -534,7 +551,7 @@ int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl)
    unsigned n_y = fdat->primal.ydat.n_y;
    memset(fdat->tmpvec, 0, sizeof(double)*n_y);
 
-   if (fdat->primal.ydat.has_shift && fdat->primal.is_quad) {
+   if (fdat->primal.ydat.has_yshift && fdat->primal.is_quad) {
       S_CHECK(rhpmat_atxpy(&fdat->M, fdat->primal.ydat.tilde_y, fdat->tmpvec));
    }
 
@@ -722,7 +739,20 @@ int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl)
    Container *ctr = &mdl->ctr;
    Equ *e_objfn;
 
+   /* TODO name */
    S_CHECK(rctr_add_equ_empty(ctr, &fdat->dual.ei_objfn, &e_objfn, Mapping, CONE_NONE));
+
+   /* TODO: think more about this. When do we need to set the objequ of mp_dst to
+    * the newly created function? Most likely when we have at least one empdag child */
+   switch(fdat->type) {
+   case OvfType_Ccflib:
+   case OvfType_Ccflib_Dual:
+      if (fdat->mp_dst) {
+         S_CHECK(mp_setobjequ(fdat->mp_dst, e_objfn->idx));
+      }
+   break;
+   default: ;
+   }
 
    if (fdat->primal.has_set) {
 
@@ -733,7 +763,7 @@ int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl)
    }
 
    /* - 0.5 <ỹ, M ỹ> + < b, ỹ> */
-   if (fdat->primal.ydat.has_shift) {
+   if (fdat->primal.ydat.has_yshift) {
 
       // cblas_ddot
       double b_tilde_y = 0; double *y = fdat->primal.ydat.tilde_y, *b = fdat->b_lin;
@@ -752,6 +782,194 @@ int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl)
    }
 
    return OK;
+}
+
+static inline unsigned filter_colrow(unsigned clen, unsigned cidxs[VMT(static restrict clen)],
+                                     double cvals[VMT(static restrict clen)],
+                                     const bool filter[VMT(static restrict clen)])
+{
+   /* Iterate over the row and see if a constraint was trivial and not generated */
+   unsigned skipped_cons = 0;
+   for (unsigned i = 0; i < clen; ++i) {
+      unsigned ridx = cidxs[i];
+      if (!filter[ridx]) { /* Skip */
+         skipped_cons++;
+         continue;
+      }
+
+      unsigned i_new = i-skipped_cons;
+      cvals[i_new] = cvals[i];
+      cidxs[i_new] = ridx;
+   }
+
+   return clen - skipped_cons;
+}
+
+int fenchel_edit_empdag(CcfFenchelData * restrict fdat, Model * restrict mdl)
+{
+   int status = OK;
+   Container *ctr = &mdl->ctr;
+   M_ArenaTempStamp atmp = ctr_memtmp_init(ctr);
+
+   // FIXME: bool *equ_gen = fdat.cons_gen; assert(equ_gen);
+   rhp_idx ei_cons_start = aequ_fget(&fdat->dual.cons, 0);
+
+  /* ----------------------------------------------------------------------
+   * We add the arcs per VF in F_i, as these are the children in the EMPDAG.
+   * It makes it easier to store them as 
+   * ---------------------------------------------------------------------- */
+
+   RHP_INT nVF;
+
+   if (spmat_isset(&fdat->B_lin)) {
+      // FIXME: should this be atmp rather than &ctr->arenaL_temp?
+      S_CHECK(rhpmat_ensure_cscA(&ctr->arenaL_temp, &fdat->B_lin));
+      nVF = spmat_ncols(&fdat->B_lin);
+   } else {
+      nVF = fdat->nargs;
+   }
+
+   /* ----------------------------------------------------------------------
+   * We go over each columns of B, and generate the empdag weight.
+   * Except, some equation might not have been generated, hence we need
+   * to take them out.
+   * ---------------------------------------------------------------------- */
+   mpid_t mpid_dual = fdat->mpid_dual, mpid_primal = fdat->mpid_primal;
+   EmpDag *empdag = &mdl->empinfo.empdag; assert(empdag->empdag_up);
+   const ArcVFData *Varcs_primal = empdag->empdag_up->mps.Varcs[mpid_primal].arr;
+   // FIXME: VarcArray *Varcs = &empdag->mps.Varcs[mpid_dual]; assert(Varcs->len == 0);
+   assert(nVF == empdag->empdag_up->mps.Varcs[mpid_primal].len);
+   DagUidArray *rarcs = empdag->mps.rarcs;
+
+   switch (fdat->type) {
+   /* All outgoing arcs are replaced. Just zero them here */
+   case OvfType_Ccflib:
+      empdag->mps.Varcs[mpid_dual].len = 0;
+      break;
+   /* arcs are substituted between the primal MP and the child */
+   // FIXME: can we just zero?
+   case OvfType_Ccflib_Dual:
+      break;
+   default:
+      return error_runtime();
+   }
+
+   //{ GDB_STOP(); }
+
+   daguid_t rarc_primal = rarcVFuid(mpid2uid(mpid_primal));
+   empdag->mps.Varcs[mpid_primal].len = 0;
+
+   for (unsigned j = 0; j < nVF; ++j, ++Varcs_primal) {
+
+      unsigned *cidxs;
+      unsigned clen;
+      double *cvals = NULL;
+      SpMatColRowWorkingMem wrkmem;
+      S_CHECK_EXIT(rhpmat_col(&fdat->B_lin, j, &wrkmem, &clen, &cidxs, &cvals));
+
+     /* ---------------------------------------------------------------------
+      * If we have a shift, we might have to add in the objective the value
+      * --------------------------------------------------------------------- */
+
+      double objCoeff = 0;
+
+      if (fdat->primal.ydat.has_yshift) {
+         double * restrict y_shift = fdat->primal.ydat.tilde_y;
+
+         for (unsigned i = 0; i < clen; ++i) {
+            unsigned idx = cidxs[i];
+            assert(idx < fdat->primal.ydat.n_y);
+            objCoeff += y_shift[idx] * cvals[i];
+         }
+
+      }
+
+      if (fdat->skipped_cons) {
+         clen = filter_colrow(clen, cidxs, cvals, fdat->cons_gen);
+      }
+
+      /* We need the indices to be in the equation index space */
+      for (unsigned i = 0; i < clen; ++i) {
+         cidxs[i] += ei_cons_start;
+      }
+
+      /* --------------------------------------------------------------------
+       * Add the EMPDAG arc between nodes
+       * -------------------------------------------------------------------- */
+
+      bool inObjFn = fabs(objCoeff) > DBL_EPSILON;
+
+      unsigned narcVFequ = clen + (inObjFn ? 1 : 0);
+
+      if (narcVFequ == 0) {
+         printout(PO_DEBUG, "[Warn] %s: row %d is empty\n", __func__, j);
+         continue;
+      }
+
+      /* --------------------------------------------------------------------
+       * Add the EMPDAG arc between nodes
+       * -------------------------------------------------------------------- */
+      ArcVFData arcvf_ccf;
+      if (narcVFequ == 1) { /* Simple arc */
+         rhp_idx ei_arc;
+         double cst_arc;
+         if (clen == 1) {
+            ei_arc = cidxs[0];
+            cst_arc = cvals[0];
+         } else {
+            ei_arc = fdat->dual.ei_objfn;
+            cst_arc = objCoeff;
+         }
+
+         arcVFb_init(&arcvf_ccf, ei_arc);
+         arcVFb_setcst(&arcvf_ccf, cst_arc);
+
+      } else { /* multiple weights */
+
+         DblArrayBlock* dblarrs;
+         Aequ *equs;
+         if (inObjFn) {
+            dblarrs = dblarrs_new_(atmp.arena, 2, clen, cvals, 1, &objCoeff);
+            A_CHECK(equs, aequ_newblockA_(atmp.arena, 2, clen, cidxs, 1, &fdat->dual.ei_objfn));
+         } else {
+            dblarrs = dblarrs_new_(atmp.arena, 1, clen, cvals);
+            A_CHECK(equs, aequ_newblockA_(atmp.arena, 1, clen, cidxs));
+         }
+
+         S_CHECK_EXIT(arcVFmb_init_from_aequ(&ctr->arenaL_perm, &arcvf_ccf, equs, dblarrs));
+      }
+
+      S_CHECK_EXIT(arcVF_mul_arcVF(&arcvf_ccf, Varcs_primal));
+
+      mpid_t mpid_child = Varcs_primal->mpid_child;
+      arcvf_ccf.mpid_child = mpid_child;
+
+      switch (fdat->type) {
+      /* Substitute the arc between the primal MP and the child */
+      case OvfType_Ccflib_Dual:
+         /* Remove the primal MP from the parent list */
+         S_CHECK_EXIT(daguidarray_rmsorted(&rarcs[mpid_child], rarc_primal));
+         S_CHECK_EXIT(empdag_mpVFmpbyid(empdag, mpid_dual, &arcvf_ccf));
+         break;
+
+      /* In-place change of the arc between the CCFLIB MP and the child */
+      case OvfType_Ccflib: {
+         /* Find the arcVF between CcfLib MP */
+         S_CHECK_EXIT(empdag_mpVFmpbyid(empdag, mpid_dual, &arcvf_ccf));
+         break;
+      }
+
+
+      default:
+         return error_runtime();
+      }
+
+   } 
+
+_exit:
+   ctr_memtmp_fini(atmp);
+
+   return status;
 }
 
 void fdat_empty(CcfFenchelData *fdat)

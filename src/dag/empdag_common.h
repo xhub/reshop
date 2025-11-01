@@ -35,8 +35,6 @@ typedef struct {
    double cst;            /**< constant part */
 } ArcVFBasicData;
 
-
-
 /** arc VF weight of the form: Σᵢ bᵢ yᵢ   */
 typedef struct {
    rhp_idx   ei;          /**< mapping where the term appears */
@@ -520,20 +518,20 @@ bool arcVF_has_abstract_objfunc(const ArcVFData *arc)
    }
 }
 
-NONNULL bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Container *ctr);
+NONNULL bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Model *mdl);
 
 NONNULL static inline
-bool arcVF_chk_equ(const ArcVFData *arc, mpid_t mpid, const Container *ctr)
+bool arcVF_chk_equ(const ArcVFData *arc, mpid_t mpid, const Model *mdl)
 {
    assert(valid_Varc(arc));
 
    switch (arc->type) {
    case ArcVFBasic:
-      return arcVFb_chk_equ(&arc->basic_dat, mpid, ctr);
+      return arcVFb_chk_equ(&arc->basic_dat, mpid, mdl);
    case ArcVFMultipleBasic: {
       const ArcVFMultipleBasicData *dat = &arc->basics_dat;
       for (unsigned i = 0, len = dat->len; i < len; ++i) {
-         if (!arcVFb_chk_equ(&dat->list[i], mpid, ctr)) { return false; }
+         if (!arcVFb_chk_equ(&dat->list[i], mpid, mdl)) { return false; }
       }
       return true;
       }

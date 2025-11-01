@@ -11,15 +11,15 @@
 #include "rhp_fwd.h"
 
 typedef struct {
-   double * restrict tilde_y;      /**< change in y to make it belong to a cone*/
+   double * restrict tilde_y;      /**< ỹ: change in y to make it belong to a cone     */
    double * restrict var_ub;       /**< upper bounds of y, after shift        */
    Cone   * restrict cones_y;
    void  ** restrict cones_y_data;
    unsigned * restrict mult_ub_revidx;  /**< reverse index on the upper bound */
-   bool has_shift;       /**< True if we shift y to make it fit in a cone     */
+   bool has_yshift;       /**< True if we shift y by ỹ to make it fit in a cone     */
    unsigned n_y_ub;      /**< Number of upper bound contraints of y, after shift */
    unsigned n_y;         /**< Size of y                                       */
-   double shift_quad_cst;      /**< Quadratic constant -1/2 <tilde_y, M tilde_y>    */
+   double shift_quad_cst;      /**< Quadratic constant -1/2 <ỹ, M ỹ>    */
 } yData;
 
 typedef struct  {
@@ -59,11 +59,13 @@ typedef struct {
    bool skipped_cons;     /**< True if some dual constraints were not created */
    bool finalize_equ;     /**< If true, finalize equations as they are generated */
    unsigned nargs;
-   rhp_idx vi_ovf;        /**< OVF variable index      */
-   bool *cons_gen;         /**< marker for generated equations                */
+   rhp_idx vi_ovf;        /**< OVF variable index                                      */
+   bool *cons_gen;         /**< marker for generated equations                         */
    const OvfOps *ops;
-   MathPrgm *mp_dst;      /**< MathPrgm that owns the new variables and equations */
-   char *equvar_basename; /**< Basename for new equations and variables       */
+   MathPrgm *mp_dst;      /**< MathPrgm that owns the new variables and equations      */
+   mpid_t mpid_primal;    /**< Primal MP id                                            */
+   mpid_t mpid_dual;      /**< Dual MP id                                              */
+   char *equvar_basename; /**< Basename for new equations and variables                */
    OvfOpsData ovfd;
 } CcfFenchelData;
 
@@ -77,5 +79,6 @@ NONNULL int fenchel_find_yshift(CcfFenchelData *fdat);
 NONNULL int fenchel_gen_vars(CcfFenchelData *fdat, Model *mdl);
 NONNULL int fenchel_gen_cons(CcfFenchelData *fdat, Model *mdl);
 NONNULL int fenchel_gen_objfn(CcfFenchelData *fdat, Model *mdl);
+int fenchel_edit_empdag(CcfFenchelData *fdat, Model *mdl);
 
 #endif

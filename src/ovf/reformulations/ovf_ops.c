@@ -17,11 +17,12 @@ static rhp_idx ovfdef_varidx(OvfOpsData ovfd)
    return vi_ovf;
 }
 
-static int ovfdef_getarg(OvfOpsData ovfd, Avar **v)
+static int ovfdef_getarg(OvfOpsData ovfd, Avar **v, unsigned *num_empdag_children)
 {
    OvfDef *ovf = ovfd.ovf;
 
    *v = ovf->args;
+   *num_empdag_children = ovf->num_empdag_children;
 
    return OK;
 }

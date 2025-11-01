@@ -27,12 +27,13 @@ static int ccflib_getnargs(OvfOpsData ovfd, unsigned *nargs)
    return OK;
 }
 
-static int ccflib_getargs(OvfOpsData ovfd, Avar **v)
+static int ccflib_getargs(OvfOpsData ovfd, Avar **v, unsigned *num_empdag_children)
 {
    assert(ovfd.ccfdat->mp_primal->type == MpTypeCcflib);
    OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
 
    *v = ovf->args;
+   *num_empdag_children = ovf->num_empdag_children;
 
    return OK;
 }
@@ -128,12 +129,16 @@ static int ccflib_get_mp_and_sense(UNUSED OvfOpsData dat, Model *mdl,
       free(name_dual);
       *mp_dual = mp_;
 
+      /* Required when instantiating the objequ and updating the EMPDAG arcs */
+      mp_->opt.objequ = IdxCcflib;
+
       mpid_dual = mp_->id;
       dat.ccfdat->mpid_dual = mpid_dual;
       S_CHECK(empdag_substitute_mp_arcs(empdag, mp_primal->id, mpid_dual));
       mp_hide(mp_primal);
 
    } else {
+
       S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid_dual, mp_dual));
       mp_ = *mp_dual;
 
@@ -213,9 +218,11 @@ static double ccflib_get_var_ub(OvfOpsData ovfd, size_t vidx)
 
 static const char* ccflib_get_name(OvfOpsData ovfd)
 {
-   OvfDef *ovf = ovfd.ccfdat->mp_primal->ccflib.ccf;
+   /* Ideally we want to get the MP basename and build something like
+    * MPbasename and pass the uels so that one can build
+    * MPbasename_y(uels) or MPbasename_v(uels) */
 
-   return ovf_getname(ovf);
+   return mp_getname(ovfd.ccfdat->mp_primal);
 }
 
 static void ccflib_trimmem(OvfOpsData ovfd)

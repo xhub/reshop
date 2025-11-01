@@ -1041,7 +1041,7 @@ int cmat_rm_equ(Container *ctr, rhp_idx ei)
       return OK;
    }
 
-   /* Remove the equation from the model*/
+   /* Remove the equation from the container */
    while (cme) {
 
       /* Update last_equ if necessary */
@@ -1156,6 +1156,13 @@ int cmat_copy_equ(Container *ctr, rhp_idx ei_src, rhp_idx ei_dst)
    S_CHECK(ei_inbounds(ei_dst, ctr_nequs_total(ctr), __func__));
 
    const CMatElt * restrict cme_src = cdat->cmat.equs[ei_src];
+
+   if (!cme_src) {
+      error("[container] ERROR: cannot copy deleted/inactive equation '%s'\n",
+            ctr_printequname(ctr, ei_src));
+      return Error_RuntimeError;
+   }
+
    assert(cme_src);
    CMatElt * restrict prev_cme = NULL;
 

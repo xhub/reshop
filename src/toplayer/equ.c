@@ -149,7 +149,7 @@ Aequ* aequ_newblockA_(M_ArenaLink *arena, unsigned nblocks, ...)
    va_list ap;
    va_start(ap, nblocks);
    Aequ *ee = e->blocks->e;
-   for (unsigned i = 0; i < nblocks; i+=2, ee++) {
+   for (unsigned i = 0; i < nblocks; ++i, ee++) {
       unsigned size = (unsigned)va_arg(ap, unsigned);
       sz += size;
       ee->size = size;

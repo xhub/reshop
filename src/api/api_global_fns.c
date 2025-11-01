@@ -263,6 +263,7 @@ void rhp_show_ccftrace(unsigned char boolval)
 void rhp_show_timings(unsigned char boolval)
 {
    rhp_options[Options_Display_Timings].value.b = boolval > 0;
+
 }
 
 /** @brief Control the output of (debugging) subsolver log
@@ -397,17 +398,18 @@ int rhp_syncenv(void)
    myfreeenvval(nodev);
 #endif
 
-   const char * restrict env_varval = find_rhpenvvar("LOG", &env_varname, &optname_maxlen);
+   const char * restrict env_rhplog = find_rhpenvvar("LOG", &env_varname, &optname_maxlen);
 
    /* If RHP_LOG is defined, then try to parse its value as "val1:val2" */
-   if (env_varval) {
-      size_t len = 0, varlen = strlen(env_varval);
+   if (env_rhplog) {
+      size_t len = 0, varlen = strlen(env_rhplog);
 
       while (len < varlen) {
-         const char *envopt = &env_varval[len];
+         const char * restrict envopt = &env_rhplog[len];
          unsigned envopt_len = 0;
          unsigned char val = 1;
 
+         /* negate to disable */
          if (envopt[0] == '-') { val = 0; envopt++; len++; }
 
          while (envopt[envopt_len] != ':' && envopt[envopt_len] != '\0') {
@@ -462,14 +464,14 @@ int rhp_syncenv(void)
          goto _exit;
 
 _continue:
-         if (env_varval[len] == ':') { len++; }
+         if (env_rhplog[len] == ':') { len++; }
          else { break; }
       }
     }
 
 
 _exit:
-   myfreeenvval(env_varval);
+   myfreeenvval(env_rhplog);
    free(env_varname);
 
    if (status == OK) {

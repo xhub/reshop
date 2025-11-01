@@ -3,6 +3,6 @@
 
 #include "rhp_fwd.h"
 
-int rhp_reformulate(Model *mdl_orig, Model **mdl_reformulated) NONNULL;
+int rhp_reformulate(Model *mdl_user, Model **mdl_reformulated) NONNULL;
 
 #endif /* RHP_PROCESS_H */

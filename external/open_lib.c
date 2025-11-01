@@ -32,7 +32,9 @@ typedef HMODULE PluginHandle;
 
 #include <shlwapi.h>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "Shlwapi.lib")
+#endif
 
 
 #else

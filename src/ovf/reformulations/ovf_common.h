@@ -72,7 +72,7 @@ if ((M).ppty & EMPMAT_EYE) { (size) += 1; } else { \
 
 typedef struct ovf_ops {
    int (*add_k)(OvfOpsData ovfd, Model *mdl, Equ *e, Avar *y);
-   int (*get_args)(OvfOpsData ovfd, Avar **v);
+   int (*get_args)(OvfOpsData ovfd, Avar **v, unsigned *num_empdag_children);
    int (*get_nargs)(OvfOpsData ovfd, unsigned *nargs);
    int (*get_mappings)(OvfOpsData ovfd, rhp_idx **eis);
    int (*get_coeffs)(OvfOpsData ovfd, double **coeffs);

@@ -446,7 +446,14 @@ int ovf_conjugate(Model *mdl, enum OVF_TYPE type, union ovf_ops_data ovfd)
 
    /* Get the indices of F(x)  */
    Avar *ovf_args;
-   S_CHECK_EXIT(op->get_args(ovfd, &ovf_args));
+   unsigned num_empdag_children;
+   S_CHECK_EXIT(op->get_args(ovfd, &ovf_args, &num_empdag_children));
+
+   if (num_empdag_children > 0) {
+      errormsg("[conjugate] ERROR: Reformulation with EMPDAG children needs to be implemented\n");
+      return Error_NotImplemented;
+   }
+
    unsigned n_args = avar_size(ovf_args);
 
    S_CHECK_EXIT(op->get_mappings(ovfd, &equ_idx));

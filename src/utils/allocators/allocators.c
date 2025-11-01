@@ -29,6 +29,18 @@ static CONSTRUCTOR_ATTR void get_pagesize(void)
 }
 #endif
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <windows.h>
+void allocators_set_pagesize(void)
+{
+   SYSTEM_INFO si;
+   GetSystemInfo(&si);
+   pagesize = (u64)si.dwPageSize;
+}
+#endif
+
 // 16 is needed for SSE instructions
 // For performance, AVX2 requires 32, AVX 512 requires 64
 #define DEFAULT_ALIGNMENT MAX(sizeof(void*), 16)
@@ -74,7 +86,7 @@ void* arena_alloc(M_Arena* arena, u64 size)
          assert(0 && "Static-Size Arena is out of memory");
          return NULL;
       }
-       u64 commit_size = size;
+      u64 commit_size = size;
 
       assert(pagesize > 0);
       commit_size += pagesize - 1;
@@ -250,28 +262,56 @@ int arenaL_init_sized(M_ArenaLink *arena, u64 size)
    return arena_init_sized(&arena->arena, size);
 }
 
-M_ArenaLink* arenaL_create(u64 max)
+M_ArenaLink* arenaL_create(u64 reserved_size)
 {
-   u16 offset = align_forward_u64(sizeof(M_ArenaLink), DEFAULT_ALIGNMENT);
-   u64 reserved_size = max+offset;
+   //u64 reserved_size = max+offset;
    void *mem = OS_MemoryReserve(reserved_size);
    if (!mem) {
       return NULL;
    }
 
-   M_ArenaLink *arena = (M_ArenaLink*)mem;
-   memset(&arena->arena, 0, sizeof(M_ArenaLink));
-   arena->arena.memory = ((u8*)mem) + offset;
-   arena->arena.reserved_size = reserved_size;
+   u16 offset = align_forward_u64(sizeof(M_ArenaLink), DEFAULT_ALIGNMENT);
+   u64 commit_size = offset;
 
-   return arena;
+   assert(pagesize > 0);
+   commit_size += pagesize - 1;
+   commit_size -= commit_size % pagesize;
+
+   if (reserved_size < commit_size) {
+      error("[allocator] ERROR: reserved_size %zu smaller than initial commit size %zu\n",
+            reserved_size, commit_size);
+      return NULL;
+   }
+
+   OS_MemoryCommit(mem, commit_size);
+   MEMORY_POISON((void*)((uintptr_t)mem + offset), commit_size-offset);
+   M_ArenaLink *arenaL = (M_ArenaLink*)mem;
+   memset(arenaL, 0, sizeof(M_ArenaLink));
+   arenaL->arena.memory = ((u8*)mem);
+   arenaL->arena.max = reserved_size;
+   arenaL->arena.reserved_size = reserved_size;
+   arenaL->arena.allocated_size = offset;
+   arenaL->arena.committed_size = commit_size;
+   arenaL->arena.alignement = DEFAULT_ALIGNMENT;
+
+   return arenaL;
 }
 
 void* arenaL_alloc(M_ArenaLink* arenaL, u64 size)
 {
    while (arenaL->next) { arenaL = arenaL->next; }
 
-   return arena_alloc(&arenaL->arena, size);
+   void *mem = arena_alloc(&arenaL->arena, size);
+
+   if (RHP_LIKELY(mem)) { return mem; }
+
+   arenaL->next = arenaL_create(arenaL->arena.reserved_size);
+   if (RHP_UNLIKELY(!arenaL->next)) {
+      errormsg("[allocator] ERROR: could not allocate new arena link");
+      return NULL;
+   }
+ 
+   return arena_alloc(&arenaL->next->arena, size);
 }
 
 void* arenaL_alloc_zero(M_ArenaLink* arenaL, u64 size)

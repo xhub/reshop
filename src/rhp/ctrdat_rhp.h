@@ -125,7 +125,9 @@ typedef struct ctrdata_rhp {
    CMat cmat;                       /**< Container Matrix                    */
    struct rosetta *equ_rosetta;
 
-   unsigned char *equ_stage;        /**< Correspondence between stage and model
+   // FIXME: this should be an unsigned; with too many presolve, this has been
+   // increase way over what it should be ...
+   unsigned *equ_stage;             /**< Correspondence between stage and model
                                          transformation                       */
 
    struct auxmdl *stage_auxmdl;

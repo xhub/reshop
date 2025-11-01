@@ -26,6 +26,7 @@
 #include <stddef.h>
 
 #include "empdag.h"
+#include "empinfo.h"
 #include "empinterp_linkbuilder.h"
 #include "empinterp_ops_utils.h"
 #include "empinterp_priv.h"
@@ -33,7 +34,6 @@
 #include "empinterp_utils.h"
 #include "empinterp_vm.h"
 #include "empinterp_vm_utils.h"
-#include "empinfo.h"
 #include "gamsapi_utils.h"
 #include "lequ.h"
 #include "macros.h"
@@ -43,8 +43,8 @@
 #include "printout.h"
 #include "reshop_data.h"
 
-#include "gclgms.h"
 #include "dctmcc.h"
+#include "gclgms.h"
 #include "gmdcc.h"
 
 
@@ -121,6 +121,8 @@ DBGUSED static inline bool identisequvar(IdentType type)
 
 static inline void print_vmval_full(VmValue val_, EmpVm *vm)
 {
+   if (RHP_LIKELY(!(O_Output & PO_TRACE_EMPINTERP))) { return; }
+
    const int pad = 10;
    switch(val_ & MASK_SIGNATURE) {
    case SIGNATURE_VALUES: {
@@ -215,6 +217,8 @@ static inline void print_vmval_full(VmValue val_, EmpVm *vm)
 
 static void vm_printuel(VmData *vmdata, int uel, unsigned mode, int *offset)
 {
+   if (RHP_LIKELY(!has_output(mode))) { return; }
+
    gmdHandle_t gmd = vmdata->gmd ? vmdata->gmd : (vmdata->gmddct ? vmdata->gmddct : NULL);
    if (gmd) {
       gmd_printuel(gmd, uel, mode, offset);
@@ -227,6 +231,8 @@ static void vm_printuel(VmData *vmdata, int uel, unsigned mode, int *offset)
 
 void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
 {
+   if (RHP_LIKELY(!has_output(mode))) { return; }
+
    switch(v & MASK_SIGNATURE) {
    case SIGNATURE_VALUES: {
       uint32_t tag = VALUE_TAG(v);
@@ -341,6 +347,7 @@ DBGUSED static void print_symiter(VmGmsSymIterator *symiter, EmpVm *vm)
       DEBUGVMRUN("%s", ")");
    }
 }
+
 NONNULL static int vmdata_consume_scalardata(VmData *data, double *coeff)
 {
    unsigned dnrecs = data->equvar.dnrecs;
@@ -380,7 +387,7 @@ NONNULL static inline void vmstack_push(struct empvm *vm, VmValue val) {
    vm->stack_top++;
 }
 
-NONNULL static inline VmValue vmstack_pop(struct empvm *vm) {
+NONNULL static inline VmValue vmstack_pop(struct empvm * restrict vm) {
   vm->stack_top--;
   assert(vm->stack_top >= vm->stack);
   DEBUGVMRUN_EXEC(print_vmval_full(*vm->stack_top, vm));
@@ -631,22 +638,22 @@ NONNULL static int vmdata_init(VmData *data)
 {
    data->scalar_tracker = ScalarSymbolInactive;
 
+   data->state.linklabels = NULL;
    data->state.mpid_dual = MpId_NA;
    data->state.uid_grandparent = EMPDAG_UID_NONE;
    data->state.uid_parent = EMPDAG_UID_NONE;
-   data->state.linklabels = NULL;
 
-   data->equvar.dval = NAN;
-   data->equvar.ival = UINT_MAX;
-   data->equvar.inrecs = UINT_MAX;
    data->equvar.dnrecs = UINT_MAX;
+   data->equvar.dval = NAN;
+   data->equvar.inrecs = UINT_MAX;
+   data->equvar.ival = UINT_MAX;
 
    aequ_init(&data->equvar.e);
    avar_init(&data->equvar.v);
-   scratchint_init(&data->equvar.e_data);
-   scratchint_init(&data->equvar.v_data);
-   scratchint_init(&data->equvar.iscratch);
    scratchdbl_init(&data->equvar.dscratch);
+   scratchint_init(&data->equvar.e_data);
+   scratchint_init(&data->equvar.iscratch);
+   scratchint_init(&data->equvar.v_data);
  
    S_CHECK(aequ_setblock(&data->equvar.e_extend, 3));
    S_CHECK(avar_setblock(&data->equvar.v_extend, 3));
@@ -683,8 +690,6 @@ EmpVm* empvm_new(Interpreter *interp)
    SN_CHECK_EXIT(vmcode_resize(&vm->code, 100));
    SN_CHECK_EXIT(vmvals_add(&vm->globals, UINT_VAL(0)));
    SN_CHECK_EXIT(vmvals_add(&vm->globals, INT_VAL(0)));
-
-
 
    /* genlabelname needs interpreter for the ops */
    vm->data.interp = interp;
@@ -778,7 +783,6 @@ int empvm_run(struct empvm *vm)
 
       if (O_Output & PO_TRACE_EMPINTERP) {
 
-
          if (vm->stack_top > vm->stack) {
             trace_empinterp("\nstack%n", &poffset);
             for (VmValue *val = vm->stack; val < vm->stack_top; val++, poffset = 0) {
@@ -789,6 +793,7 @@ int empvm_run(struct empvm *vm)
 
          trace_empinterp("[%5td] %30s%10s",
                          (vm->code.ip - vm->instr_start) - 1, opcodes_name(instr), "");
+
          } else {
 
             trace_empinterp("\n[%5td] %30s%10s",

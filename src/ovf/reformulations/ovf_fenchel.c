@@ -60,8 +60,9 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
     *   - n_args   number of arguments
     * ---------------------------------------------------------------------- */
 
-   Avar *ovf_args;
-   S_CHECK(ops->get_args(ovfd, &ovf_args));
+   Avar *ovf_args_vars;
+   unsigned num_empdag_children;
+   S_CHECK(ops->get_args(ovfd, &ovf_args_vars, &num_empdag_children));
 
    /* ----------------------------------------------------------------------
     * Analyze the conic QP structure:
@@ -90,14 +91,14 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
    rhp_idx *equ_idx = NULL;
    double *coeffs = NULL;
    S_CHECK_EXIT(ops->get_mappings(ovfd, &equ_idx));
-   S_CHECK_EXIT(ovf_process_indices(mdl, ovf_args, equ_idx));
+   S_CHECK_EXIT(ovf_process_indices(mdl, ovf_args_vars, equ_idx));
    S_CHECK_EXIT(ops->get_coeffs(ovfd, &coeffs));
 
    // XXX START ARG_IS_EXPR ONLY only
 
    /* ---------------------------------------------------------------------
     * 2. Add given location (OVF: where rho appears, ccflib: MP obj func) the terms
-    *  x  <c,v> + 0.5 <s, Js> in the simplest case
+    *  x  <c,v> + 0.5 <s, Js> in the simple case
     *  x  <G(F(x)), ỹ> - .5 <ỹ, M ỹ> + <c - A ỹ, v> + 0.5 <s, Js>   if y is shifted by -ỹ.
     * --------------------------------------------------------------------- */
 
@@ -108,7 +109,11 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
    rhp_idx vi_ovf = fdat.vi_ovf;
    unsigned n_dualvars_mult = avar_size(&fdat.dual.vars.v) +  avar_size(&fdat.dual.vars.w);
 
+//   { GDB_STOP(); }
+
    do {
+
+      if (type == OvfType_Ccflib || type == OvfType_Ccflib_Dual) { break; }
       rhp_idx ei_new;
       double ovf_coeff;
 
@@ -122,7 +127,7 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
       /* Replace var by lin */
       if (fdat.primal.has_set) {
 
-         if (fdat.primal.ydat.has_shift) {
+         if (fdat.primal.ydat.has_yshift && avar_size(ovf_args_vars) > 0) {
 
             /* ----------------------------------------------------------------
              * Add < G(F(x)), ỹ >
@@ -130,7 +135,7 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
 
             S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, eq, fdat.primal.ydat.tilde_y, n_y,
                                                    &fdat.B_lin, fdat.b_lin,
-                                                   coeffs, ovf_args, equ_idx, ovf_coeff));
+                                                   coeffs, ovf_args_vars, equ_idx, ovf_coeff));
 
          }
 
@@ -142,11 +147,14 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
          S_CHECK_EXIT(rctr_equ_addnewlin_coeff(ctr, eq, &fdat.dual.vars.w, fdat.dual.ub, ovf_coeff));
       }
 
-      /* Add the quadratic part */
+      /* Add the quadratic terms */
       if (fdat.primal.is_quad) {
+
+         /* 0.5 <s, Js> */
          S_CHECK_EXIT(rctr_equ_add_quadratic(ctr, eq, &fdat.J, &fdat.dual.vars.s, ovf_coeff));
 
-         if (fdat.primal.ydat.has_shift) {
+         /* with shift: Add .5 <ỹ, M ỹ> */
+         if (fdat.primal.ydat.has_yshift) {
             equ_add_cst(eq, -ovf_coeff*fdat.primal.ydat.shift_quad_cst);
          }
       }
@@ -154,7 +162,9 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
       iter_cnt++;
    } while(iter);
 
-   S_CHECK_EXIT(rctr_reserve_equs(ctr, iter_cnt - 1));
+   if (iter_cnt > 2) {
+      S_CHECK_EXIT(rctr_reserve_equs(ctr, iter_cnt - 1));
+   }
 
    /* ---------------------------------------------------------------------
     * 2.2 Add an equation to evaluate rho
@@ -162,23 +172,23 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
     * If we want to initialize the values of the new variables, this is the
     * start for the new equations
     * --------------------------------------------------------------------- */
-   rhp_idx ei_objfn = IdxNA;
+   S_CHECK(fenchel_gen_objfn(&fdat, mdl));
+   rhp_idx ei_objfn = fdat.dual.ei_objfn;
+
 
    if (valid_vi(vi_ovf)) {
 
-      S_CHECK(fenchel_gen_objfn(&fdat, mdl));
-      ei_objfn = fdat.dual.ei_objfn; assert(valid_ei(ei_objfn));
       Equ *e_objfn = &ctr->equs[ei_objfn];
 
-      if (fdat.primal.ydat.has_shift) {
+      if (fdat.primal.ydat.has_yshift) {
 
          /* ----------------------------------------------------------------
-          * Add <B(F(x)), ỹ>, < b, ỹ> has already been added
+          * Add <B(F(x)), ỹ>  as < b, ỹ> has already been added
           * ---------------------------------------------------------------- */
 
          S_CHECK_EXIT(rctr_equ_add_dot_prod_cst(ctr, e_objfn, fdat.primal.ydat.tilde_y,
                                                 n_y, &fdat.B_lin, NULL, coeffs,
-                                                ovf_args, equ_idx, 1.));
+                                                ovf_args_vars, equ_idx, 1.));
 
       }
 
@@ -235,8 +245,10 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
          continue;
       }
 
-      S_CHECK(rctr_equ_add_maps(ctr, e, nargs, coeffs, (rhp_idx*)arg_idx,
-                                equ_idx, ovf_args, lcoeffs, 1.));
+      if (avar_size(ovf_args_vars) > 0) {
+         S_CHECK(rctr_equ_add_maps(ctr, e, nargs, coeffs, (rhp_idx*)arg_idx, equ_idx,
+                                   ovf_args_vars, lcoeffs, 1.));
+      }
 
       /* -------------------------------------------------------------------
        * Add the constant term if it exists
@@ -255,6 +267,12 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
        * TODO: move this call
        * ------------------------------------------------------------------- */
       S_CHECK(cmat_sync_lequ(ctr, e));
+   }
+
+
+   /* Add the EMPDAG contributions */
+   if (num_empdag_children > 0) {
+      S_CHECK_EXIT(fenchel_edit_empdag(&fdat, mdl));
    }
 
    if (O_Ovf_Init_New_Variables) {

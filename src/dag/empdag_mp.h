@@ -7,14 +7,14 @@
 #include "mathprgm.h"
 
 #define RHP_LOCAL_SCOPE 1
-#define RHP_ARRAY_PREFIX _edgeVFs
+#define RHP_ARRAY_PREFIX arcVFs
 #define RHP_ARRAY_TYPE VFedges
 #define RHP_ELT_TYPE struct rhp_empdag_arcVF
 #define RHP_ELT_SORT mpid_child
 #define RHP_ELT_INVALID ((struct rhp_empdag_arcVF) {.mpid_child = UINT_MAX, .type = ArcVFUnset});
 #include "array_generic.inc"
 
-static int _edgeVFs_copy(VarcArray * restrict dat, const VarcArray * restrict dat_src)
+static int arcVFs_copy(VarcArray * restrict dat, const VarcArray * restrict dat_src)
 {
    /* ---------------------------------------------------------------------
     * The semantics of this function is to overwrite, without reading,
@@ -154,7 +154,7 @@ static inline int dagmp_array_copy(DagMpArray * restrict dat,
          }
 
          S_CHECK(rhp_uint_copy(&dat->Carcs[i], &dat_src->Carcs[i]));
-         S_CHECK(_edgeVFs_copy(&dat->Varcs[i], &dat_src->Varcs[i]));
+         S_CHECK(arcVFs_copy(&dat->Varcs[i], &dat_src->Varcs[i]));
          S_CHECK(rhp_uint_copy(&dat->rarcs[i], &dat_src->rarcs[i]));
 
       } else {
@@ -179,7 +179,7 @@ static inline void dagmp_array_free(DagMpArray *dat)
          FREE(dat->names[i]);
          rhp_uint_empty(&dat->Carcs[i]);
          rhp_uint_empty(&dat->rarcs[i]);
-         _edgeVFs_free(&dat->Varcs[i]);
+         arcVFs_free(&dat->Varcs[i]);
       }
 
       FREE(dat->arr);
@@ -188,6 +188,24 @@ static inline void dagmp_array_free(DagMpArray *dat)
       FREE(dat->Varcs);
       FREE(dat->rarcs);
    }
+}
+
+static inline int dagmp_array_remove_at(DagMpArray *dat, mpid_t mpid)
+{
+   unsigned len = dat->len;
+   if (mpid >= len) {
+      error("[empdag] ERROR: cannot remove MP with ID #%u, max is %u\n", mpid, len);
+      return Error_RuntimeError;
+   }
+
+   mp_free(dat->arr[mpid]);
+   dat->arr[mpid] = NULL;
+   rhp_uint_empty(&dat->Carcs[mpid]);
+   rhp_uint_empty(&dat->rarcs[mpid]);
+   arcVFs_free(&dat->Varcs[mpid]);
+   FREE(dat->names[mpid]);
+
+   return OK;
 }
 
 static inline int dagmp_array_trimmem(DagMpArray * restrict dat)

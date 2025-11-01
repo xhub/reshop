@@ -212,7 +212,9 @@ int rhp_process(Model *mdl, Model *mdl_solver)
        * TODO(Xhub) URG add option for that?
        * ------------------------------------------------------------------- */
 
-      S_CHECK_EXIT(rmdl_presolve(mdl_local, mdl_solver->backend));
+      if (optvalb(mdl_local, Options_Presolve)) {
+         S_CHECK_EXIT(rmdl_presolve(mdl_local, mdl_solver->backend));
+      }
 
       S_CHECK(rmdl_export_latex(mdl_local, "transformed"));
 

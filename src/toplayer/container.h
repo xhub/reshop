@@ -207,7 +207,8 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
  * Container memory management
  * ---------------------------------------------------------------------- */
 
-void *ctr_memtmp_get(Container *ctr, size_t size) ALLOC_SIZE(2);
+void *ctr_memtmp_get(Container *ctr, size_t size) ALLOC_SIZE(2) NONNULL;
+void ctr_memtmp_rel(Container *ctr, size_t size) NONNULL;
 M_ArenaTempStamp ctr_memtmp_init(Container *ctr) NONNULL;
 void ctr_memtmp_fini(M_ArenaTempStamp stamp);
 
@@ -258,6 +259,6 @@ static inline bool ctr_hasmetadata(const Container *ctr)
 
 static inline NlPool *ctr_getpool(Container *ctr) { return ctr->nlpool; }
 
-bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid) NONNULL;
+bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid, mpid_t *mpid_owner) NONNULL;
 
 #endif /* CONTAINER_H */

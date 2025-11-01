@@ -13,7 +13,7 @@
 #include <valgrind/memcheck.h>
 
 #define MEMORY_UNDEF      VALGRIND_MAKE_MEM_UNDEFINED
-#define MEMORY_POISON     VALGRIND_MAKE_MEM_POISON  
+#define MEMORY_POISON     VALGRIND_MAKE_MEM_POISON
 #define MEMORY_UNPOISON   VALGRIND_MAKE_MEM_DEFINED
 
 #elif __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)

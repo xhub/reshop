@@ -31,6 +31,30 @@ static inline int error_runtime(void)
    return Error_RuntimeError;
 }
 
+static inline bool has_output(unsigned mode)
+{
+   /* This is normal output */
+   if ( !(mode & ~PO_MASK_NONTRACING) && (mode & PO_MASK_LEVEL) <= (O_Output & PO_MASK_LEVEL) ) {
+      return true;
+   }
+
+   switch (mode) {
+   case PO_BACKEND:
+   case PO_TRACE_REFCNT:
+   case PO_TRACE_EMPINTERP:
+   case PO_TRACE_EMPPARSER:
+   case PO_TRACE_SOLREPORT:
+   case PO_TRACE_PROCESS:
+   case PO_TRACE_CONTAINER:
+   case PO_TRACE_EMPDAG:
+   case PO_TRACE_FOOC:
+   case PO_TRACE_CCF:
+      return (O_Output & mode);
+   default:
+      return false;
+   }
+}
+
 #define logger(lvl, format, ...)    printout(lvl, format, __VA_ARGS__)
 #define pr_debug(...)               printout(PO_DEBUG, __VA_ARGS__)
 #define pr_info(...)                printout(PO_INFO, __VA_ARGS__)

@@ -62,10 +62,10 @@ typedef struct M_ArenaTempStamp {
 } M_ArenaTempStamp;
 
 
-int           arenaL_free(M_ArenaLink *arena);
 int           arenaL_init(M_ArenaLink *arena);
 int           arenaL_init_sized(M_ArenaLink *arena, u64 size);
-M_ArenaLink*  arenaL_create(u64 max) MALLOC_ATTR(arenaL_free, 1);
+int           arenaL_free(M_ArenaLink *arena);
+M_ArenaLink*  arenaL_create(u64 reserved_size) MALLOC_ATTR(arenaL_free, 1);
 int           arenaL_empty(M_ArenaLink *arena) NONNULL;
 void*         arenaL_alloc(M_ArenaLink* arena, u64 size) NONNULL;
 void*         arenaL_alloc_zero(M_ArenaLink* arena, u64 size) NONNULL;
@@ -80,6 +80,11 @@ arenaL_alloc_array_sized(arena, sizeof(elem_type), count)
 
 M_ArenaTempStamp arenaTemp_begin(M_ArenaLink* arena) NONNULL;
 void             arenaTemp_end(M_ArenaTempStamp stamp);
+
+
+#ifdef _WIN32
+void allocators_set_pagesize(void);
+#endif
 
 
 //~ Scratch Helpers

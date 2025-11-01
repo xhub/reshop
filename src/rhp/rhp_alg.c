@@ -444,7 +444,7 @@ presolve_submodel_solve(Model *mdl, Model *mdl_subsolver, double * restrict nlpo
    /* TODO: add option for selection subsolver */
 
    mdl_subsolver->ctr.n = mdl_subsolver->ctr.m = 0;
-   mdl_subsolver->status = MdlPreSolve;
+   mdl_subsolver->status &= MdlPreSolve;
    mdl_subsolver->ctr.status = 0;
 
    Container * restrict ctr = &mdl->ctr;
@@ -705,6 +705,9 @@ int rmdl_presolve(Model *mdl, BackendType backend)
    ModelType mdltype;
    S_CHECK(mdl_gettype(mdl, &mdltype));
 
+   MdlStatus mdl_status = mdl->status;
+
+
    bool cpy_fops = false;
    Fops fops_orig;
    if (ctr->fops) {
@@ -743,9 +746,11 @@ _exit:
 
    memcpy(&mdl->empinfo.empdag, &empdag_orig, sizeof(EmpDag));
    S_CHECK(mdl_settype(mdl, mdltype));
+   mdl->status = mdl_status;
 
-   trace_process("[model] End of presolving for %s model '%.*s' #%u\n", mdl_fmtargs(mdl));
    mdl->timings->solve.presolve_wall = get_walltime() - start;
+   pr_info("[model] Presolving for %s model '%.*s' #%u took %.3f s\n", mdl_fmtargs(mdl),
+           mdl->timings->solve.presolve_wall);
 
    return status;
 }

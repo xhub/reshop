@@ -377,7 +377,10 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
 
    bool do_expensive_check = optvalb(mdl_src, Options_Expensive_Checks);
 
-   if (do_expensive_check) {
+   rhp_idx * restrict rosetta_equs = mdl_src->ctr.rosetta_equs;
+   rhp_idx * restrict rosetta_vars = mdl_src->ctr.rosetta_vars;
+
+   if (do_expensive_check && !(mdl_src->status & MdlPreSolve)) {
       Container *ctr_src = &mdl_src->ctr;
       RhpContainerData *cdat = ctr_src->data;
 
@@ -391,23 +394,60 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
       CMatElt * restrict * restrict cmat_equs = cdat->cmat.equs;
 
       for (int i = 0, m = ctr_gms->m, ei = 0; i < m; ++i, ++ei) {
+
          int nz_gmo, nlnz_gmo;
          gmoGetRowSparse(gmo, i, equidx, jacval, isvarNL, &nz_gmo, &nlnz_gmo);
 
-         while (!valid_ei(ctr_src->rosetta_equs[ei])) { ei++; assert(ei < cdat->total_m); }
+         while (!valid_ei(rosetta_equs[ei])) { ei++; assert(ei < cdat->total_m); }
 
          CMatElt *cme = cmat_equs[ei];
          int nz_rhp = 0, nlnz_rhp = 0;
-         while (cme) { nz_rhp++; if (cme_isNL(cme)) { nlnz_rhp++; } cme = cme->next_var; }
+         while (cme) {
+            assert(valid_vi(cme->vi));
+            if (!valid_vi(rosetta_vars[cme->vi])) { cme = cme->next_var; continue; }
+            nz_rhp++;
+            if (cme_isNL(cme)) { nlnz_rhp++; }
+            cme = cme->next_var;
+         }
+
 
          if (nz_gmo != nz_rhp || nlnz_gmo != nlnz_rhp) {
 
             /* if an objvar was added to the GMO, the difference is fine */
             if (!((nz_gmo == nz_rhp + 1) && (i == tracker->objvaradded.ei))) {
 
-               error("[GMOexport] ERROR for variable '%s': GMO nz = %d, nlnz = %d; "
-                     "RHP nz = %d, nlnz = %d\n", ctr_printvarname(ctr_src, ei), nz_gmo,
-                     nlnz_gmo, nz_rhp, nlnz_rhp);
+               error("[GMOexport] ERROR for equation '%s' (GMO name '%s'): GMO nz = %d, "
+                     "nlnz = %d; RHP nz = %d, nlnz = %d.\n", ctr_printequname(ctr_src, ei),
+                     ctr_printequname2(ctr_gms, i), nz_gmo, nlnz_gmo, nz_rhp, nlnz_rhp);
+
+               errormsg("Source container content:\n");
+               void *iter = NULL;
+               double val;
+               rhp_idx vi;
+               int nlflag;
+               unsigned j = 0;
+
+               do {
+                  S_CHECK(ctr_equ_itervars(ctr_src, ei, &iter, &val, &vi, &nlflag));
+
+                  error("  [%5d] %4s '%s'\n", j, nlflag ? "NL" : "lin",
+                        ctr_printvarname(ctr_src, vi));
+                  j++;
+
+               } while (iter);
+
+               errormsg("GMO content:\n");
+               iter = NULL;
+               j = 0;
+
+               do {
+                  S_CHECK(ctr_equ_itervars(ctr_gms, i, &iter, &val, &vi, &nlflag));
+
+                  error("  [%5d] %4s '%s'\n", j, nlflag ? "NL" : "lin",
+                        ctr_printvarname(ctr_gms, vi));
+                  j++;
+
+               } while (iter);
                status = Error_RuntimeError;
 
             }
@@ -425,20 +465,70 @@ static int chk_newgmodct(gmoHandle_t gmo, dctHandle_t dct, Model *mdl_src, Conta
          int nz_gmo, nlnz_gmo;
          gmoGetColSparse(gmo, i, vidxs, jacval, isvarNL, &nz_gmo, &nlnz_gmo);
 
-         while (!valid_ei(ctr_src->rosetta_vars[vi])) { vi++; assert(vi < cdat->total_n); }
+         while (vi < cdat->total_n && !valid_vi(rosetta_vars[vi])) {
+            vi++;
+         }
+
+         if (vi >= cdat->total_n + valid_vi(tracker->objvaradded.vi) ? 1 : 0) {
+            error("[GMOexport] ERROR: variable index %u out of range [0,%zu)",
+                  vi, cdat->total_n + (valid_vi(tracker->objvaradded.vi) ? 1 : 0));
+            status = Error_IndexOutOfRange;
+            break;
+         }
+
          CMatElt *cme = cmat_vars[vi];
          int nz_rhp = 0, nlnz_rhp = 0;
-         while (cme) { nz_rhp++; if (cme_isNL(cme)) { nlnz_rhp++; } cme = cme->next_equ; }
+         while (cme) {
+            if (!valid_ei(cme->ei) || !valid_ei(rosetta_equs[cme->ei])) {
+               cme = cme->next_equ;
+               continue;
+            }
+
+            nz_rhp++;
+            if (cme_isNL(cme)) { nlnz_rhp++; }
+            cme = cme->next_equ;
+         }
 
          if (nz_gmo != nz_rhp || nlnz_gmo != nlnz_rhp) {
 
             /* if an objvar was added to the GMO, the difference is fine */
             if (!((nz_gmo == nz_rhp + 1) && (i == tracker->objvaradded.vi))) {
 
-               error("[GMOexport] ERROR for variable '%s': GMO nz = %d, nlnz = %d; "
-                     "RHP nz = %d, nlnz = %d\n", ctr_printvarname(ctr_src, vi), nz_gmo,
-                     nlnz_gmo, nz_rhp, nlnz_rhp);
+               error("[GMOexport] ERROR for variable '%s' (GMO name '%s'): GMO nz = %d, "
+                     "nlnz = %d; RHP nz = %d, nlnz = %d.\n", ctr_printvarname(ctr_src, vi),
+                     ctr_printvarname2(ctr_gms, i), nz_gmo, nlnz_gmo, nz_rhp, nlnz_rhp);
+
+               errormsg("Source container content:\n");
+               void *iter = NULL;
+               double val;
+               rhp_idx ei;
+               int nlflag;
+               unsigned j = 0;
+
+               do {
+                  S_CHECK(ctr_var_iterequs(ctr_src, vi, &iter, &val, &ei, &nlflag));
+
+                  error("  [%5d] %4s '%s'\n", j, nlflag ? "NL" : "lin",
+                        ctr_printequname(ctr_src, ei));
+                  j++;
+
+               } while (iter);
+
+               errormsg("GMO content:\n");
+               iter = NULL;
+               j = 0;
+
+               do {
+                  S_CHECK(ctr_var_iterequs(ctr_gms, i, &iter, &val, &ei, &nlflag));
+
+                  error("  [%5d] %4s '%s'\n", j, nlflag ? "NL" : "lin",
+                        ctr_printequname(ctr_gms, ei));
+                  j++;
+
+               } while (iter);
+
                status = Error_RuntimeError;
+
 
             }
          }

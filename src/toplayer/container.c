@@ -357,6 +357,22 @@ void *ctr_memtmp_get(Container *ctr, size_t size)
    return mem;
 }
 
+void ctr_memtmp_rel(Container *ctr, size_t size)
+{
+   M_ArenaLink *arenatemp = &ctr->arenaL_temp;
+   M_Arena *arena = &ctr->arenaL_temp.arena;
+
+   while (arenatemp->next) {
+      arenatemp = arenatemp->next;
+      arena = &arenatemp->arena;
+   }
+
+
+   if (!arena) { return; }
+
+   arena_dealloc(arena, size);
+}
+
 /**
  * @brief Get some working memory
  *
@@ -905,11 +921,12 @@ int ctr_get_defined_mapping_by_var(const Container* ctr, rhp_idx vi, rhp_idx *ei
    return valid_ei(ei_) ? OK : Error_EMPRuntimeError;
 }
 
-bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid)
+bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid, mpid_t *mpid_owner)
 {
    if (ei >= ctr_nequs_total(ctr)) {
       error("FATAL ERROR: equation index %u not in [0,%u)]\n", ei,
             ctr_nequs_total(ctr));
+      *mpid_owner = MpId_NA;
       return false;
    }
 
@@ -917,8 +934,11 @@ bool ctr_chk_equ_ownership(const Container *ctr, rhp_idx ei, mpid_t mpid)
 
    if (equmeta_is_shared(emeta)) {
       errormsg("SHAREDEQU is not yet implemented\n");
+      *mpid_owner = MpId_NA;
       return false;
    }
 
-   return emeta->mp_id == mpid;
+   mpid_t mpid_owner_ = emeta->mp_id;
+   *mpid_owner = mpid_owner_;
+   return mpid_owner_ == mpid;
 }

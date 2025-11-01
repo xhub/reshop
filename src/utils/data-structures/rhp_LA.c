@@ -366,7 +366,6 @@ int rhpmat_ensure_cscA(M_ArenaLink *arena, SpMat *m)
    csr_tocsc(csr->m, csr->n, csr->p, csr->i, csr->x, csc->p, csc->i, csc->x);
 
    return OK;
-
 }
 
 /**

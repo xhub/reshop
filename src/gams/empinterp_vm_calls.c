@@ -240,7 +240,7 @@ static int vm_ccflib_finalize(VmData *data, unsigned argc, const VmValue *argv)
     * An alternative is to error
     * ---------------------------------------------------------------------- */
    if (!has_child) {
-      S_CHECK(empdag_delete(empdag, ccflib_uid));
+      S_CHECK(empdag_delete_last_mp(empdag));
       /* HACK: when tracing empinterp, before the pop, we would attempt to display we
        * just freed */
       VmValue *vals = (VmValue*)argv;

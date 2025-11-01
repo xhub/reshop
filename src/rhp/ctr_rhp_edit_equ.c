@@ -670,7 +670,7 @@ int rctr_equ_add_equ_x(Container *ctr, Equ * restrict dst, Equ * restrict src,
     * ---------------------------------------------------------------------- */
 
    /*  TODO(xhub) CONE SUPPORT */
-   assert(dst->object == Mapping || dst->object == EquTypeUnset);
+   assert(dst->object == Mapping || dst->object == EquTypeUnset || src->object == Mapping);
 
    double cst = equ_get_cst(src);
    equ_add_cst(dst, coeff*cst);
