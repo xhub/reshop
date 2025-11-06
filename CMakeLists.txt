@@ -13,7 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 include (CMakeDependentOption)
 
-project (ReSHOP VERSION          "0.4.6"
+project (ReSHOP VERSION          "0.4.7"
                 HOMEPAGE_URL     "https://reshop.eu/"
                 LANGUAGES C)
 
