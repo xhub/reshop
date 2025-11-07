@@ -1629,7 +1629,8 @@ static int parse_sameas(Interpreter * restrict interp, unsigned * restrict p,
                tok_fmtargs(&interp->cur));
          return Error_EMPRuntimeError;
       } 
-      lvars[0] = ident.idx;
+      //TODO: investigate. Might be fine since it does not happen in comp mode
+      lvars[0] = interp->cur.symdat.ident.idx;
       plvar = &lvars[1];
       break;
    case TOK_IDENT:

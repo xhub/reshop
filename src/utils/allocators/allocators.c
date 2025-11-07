@@ -278,8 +278,8 @@ M_ArenaLink* arenaL_create(u64 reserved_size)
    commit_size -= commit_size % pagesize;
 
    if (reserved_size < commit_size) {
-      error("[allocator] ERROR: reserved_size %zu smaller than initial commit size %zu\n",
-            reserved_size, commit_size);
+      error("[allocator] ERROR: reserved_size %" PRIu64 " smaller than initial commit "
+            "size %" PRIu64 "\n", reserved_size, commit_size);
       return NULL;
    }
 
