@@ -89,7 +89,8 @@ static int test_compute_degree(const int *instrs, const int *args, u8 degree, co
    u8 degree_computed = compute_nlcode_degree(args[0], instrs, args);
 
    if (degree_computed != degree) {
-      (void)fprintf(stderr, "ERROR: expected degree of %s: \t%u, got \t%u\n", testname, degree, degree_computed);
+      (void)fprintf(stderr, "ERROR: expected degree of %s: \t%hhu, got \t%hhu\n",
+                    testname, degree, degree_computed);
       return 1;
    }
 
@@ -151,21 +152,21 @@ static int test_nlopcode2otree(const int *instrs, const int *args, const char *t
    bool adiff = memcmp(args, args2, len);
    if (idiff) {
       (void)fprintf(stderr, "ERROR: differences in instructions for test %s\n", testname);
-      for (u32 i = 0; i < len; ++i) {
+      for (int i = 0; i < len; ++i) {
          (void)fprintf(stderr, "[%5u]\t%10s\t%10s\n", i, nlinstr2str(instrs[i]), nlinstr2str(instrs2[i]));
       }
    }
 
    if (adiff) {
       (void)fprintf(stderr, "ERROR: differences in arguments for test %s\n", testname);
-      for (u32 i = 0; i < len; ++i) {
+      for (int i = 0; i < len; ++i) {
          (void)fprintf(stderr, "[%5u]\t%5d\t%5d\n", i, args[i], args2[i]);
       }
    }
 
    if (idiff || adiff) {
       (void)fprintf(stderr, "%s p and i:\n", testname);
-      for (u32 i = 0; i < len+1; ++i) { (void)fprintf(stderr, "[%5u] %u\n", i, otree->p[i]); }
+      for (int i = 0; i < len+1; ++i) { (void)fprintf(stderr, "[%5u] %u\n", i, otree->p[i]); }
       for (u32 i = 0, l = otree->idx_sz; i < l; ++i) { (void)fprintf(stderr, "[%5u] %u\n", i, otree->i[i]); }
       rc = 1;
    }
@@ -193,7 +194,7 @@ int main(void) {
 
    u32 err = 0;
 #define DEF(x) if (OPARGS(x)[0] != ARRAY_SIZE(OPARGS(x))) { \
-   (void)fprintf(stderr, "ERROR: inconstent sizes for " #x ": expected %zu, got %u\n", ARRAY_SIZE(OPARGS(x)), OPARGS(x)[0]); err += 1; }
+   (void)fprintf(stderr, "ERROR: inconstent sizes for " #x ": expected %zu, got %d\n", ARRAY_SIZE(OPARGS(x)), OPARGS(x)[0]); err += 1; }
 TESTS_NLOPCODES()
 #undef DEF
 

@@ -156,7 +156,7 @@ static int run_ex2(int *instrs, int *args)
    return OK;
 }
 
-int main(int argc, const char **argv)
+int main(int argc, char **argv)
 {
    double *pool, *pool2;
    int size, dcode_size, status;

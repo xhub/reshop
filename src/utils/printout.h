@@ -34,7 +34,8 @@ static inline int error_runtime(void)
 static inline bool has_output(unsigned mode)
 {
    /* This is normal output */
-   if ( !(mode & ~PO_MASK_NONTRACING) && (mode & PO_MASK_LEVEL) <= (O_Output & PO_MASK_LEVEL) ) {
+   if ( !(mode & ~PO_MASK_NONTRACING) &&
+         (mode & PO_MASK_LEVEL) <= ((unsigned)O_Output & PO_MASK_LEVEL) ) {
       return true;
    }
 

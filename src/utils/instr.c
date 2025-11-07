@@ -67,9 +67,9 @@ static_assert(ARRAY_SIZE(opnames_offsets) == nlOpcode_size,
               "Incompatible sizes!");
 
 
-const char * nlinstr2str(enum nlopcode opcode)
+const char * nlinstr2str(int opcode)
 {
-   if (opcode >= nlOpcode_size) { return "unknown GAMS opcode"; }   
+   if (opcode < 0 || opcode >= nlOpcode_size) { return "unknown GAMS opcode"; }
 
    return opnames.dummystr + opnames_offsets[opcode];
 }

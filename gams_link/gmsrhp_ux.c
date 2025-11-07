@@ -21,7 +21,7 @@
 #include "macros.h"
 #include "printout.h"
 
-static const char * mygetenv(const char *envvar)
+static const char * mygetenv_(const char *envvar)
 {
    DWORD bufsize = 4096;
    char *envval;
@@ -45,15 +45,15 @@ static const char * mygetenv(const char *envvar)
    return envval;
 }
 
-static void myfreeenvval(const char *envval)
+static void myfreeenvval_(const char *envval)
 {
    if (envval) { free((char*)envval); }
 }
 
 #else
 
-#define mygetenv getenv
-#define myfreeenvval(X)
+#define mygetenv_ getenv
+#define myfreeenvval_(X)
 
 #endif
 
@@ -142,20 +142,20 @@ int main(int argc, char** argv)
    gmoHandle_t gmo = NULL;
    gevHandle_t gev = NULL;
 
-   const char *banner_env = mygetenv("RHP_DRIVER_BANNER");
+   const char *banner_env = mygetenv_("RHP_DRIVER_BANNER");
    if (banner_env) {
       (void)fprintf(stdout, "\nReSHOP GAMS testing driver with version %s\n\n", rhp_version());
    }
-   myfreeenvval(banner_env);
+   myfreeenvval_(banner_env);
 
    if( argc < 2 ) {
       printf("usage: %s <cntrlfile>\n", argv[0]);
       return 1;
    }
 
-   const char *silent_env = mygetenv("RHP_DRIVER_SILENT");
+   const char *silent_env = mygetenv_("RHP_DRIVER_SILENT");
    bool silent = silent_env;
-   myfreeenvval(silent_env);
+   myfreeenvval_(silent_env);
 
    rc = rhp_gms_newfromcntr(argv[1], &mdl);
 
@@ -259,7 +259,7 @@ int main(int argc, char** argv)
 
 _exit:
    if (rc) {
-      if (!silent) { (void)fprintf(stderr, "*** ReSHOP exited with rc = %u\n", rc); }
+      if (!silent) { (void)fprintf(stderr, "*** ReSHOP exited with rc = %d\n", rc); }
    }
 
    /* Special treatment: when we have a GMO, we can return the error via this way */

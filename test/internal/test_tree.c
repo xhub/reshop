@@ -301,13 +301,16 @@ int main(int argc, char **argv)
       if (status != OK) goto _exit;
    }
 
-   /* Open files  */
+   /* Open files */
    if (argc > 1) {
       for (int i = 1; i < argc; ++i) {
          struct gams_opcodes_file* equs = gams_read_opcode(argv[i], &pool2);
          if (!equs) { status = EXIT_FAILURE; goto _exit; };
 
-         struct nltree_pool pool = {equs->pool, equs->pool_len, equs->pool_len, RhpBackendGamsGmo, 1, true };
+         struct nltree_pool pool = { 
+            .data = equs->pool, .len = equs->pool_len, .max = equs->pool_len,
+            .cnt = 1, .type = RhpBackendGamsGmo, .own = true };
+
          if (ctr->nlpool) {
             pool_release(ctr->nlpool);
          }
