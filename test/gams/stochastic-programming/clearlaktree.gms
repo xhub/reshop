@@ -42,6 +42,8 @@ prox_pert 0
 crash_pert no
 $offEcho
 
+option lp=pathnlp;
+
 SETS p Stochastic realizations (precipitation) /low, normal, high/,
      t Time periods                            /dec,jan,feb,mar/,
      n Nodes,
@@ -177,10 +179,10 @@ deltaLvlDef_M(n)$(abs(deltaLvlDef_M(n)) < %tol%) = 0.;
 
 display deltaL_L, deltaL_M, deltaLvlDef_M;
 
-abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
 abort$[smax{n$(NOT n.first), abs(F.l(n) - F_L(n))} > %tol%]     'wrong F.l', F.l;
 abort$[smax{n$(NOT n.first), abs(Z.l(n) - Z_L(n))} > %tol%]     'wrong Z.l', Z.l;
 abort$[smax{n$(NOT n.first), abs(R.l(n) - R_L(n))} > %tol%]     'wrong R.l', R.l;
+abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
 
 *******************************************************************************
 * 1bis EMP model
@@ -198,10 +200,10 @@ SOLVE mincostEMP using EMP;
 abort$[mincostEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mincostEMP.solveStat;
 abort$[mincostEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', mincostEMP.modelStat;
 
-abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
 abort$[smax{n$(NOT n.first), abs(F.l(n) - F_L(n))} > %tol%]     'wrong F.l', F.l;
 abort$[smax{n$(NOT n.first), abs(Z.l(n) - Z_L(n))} > %tol%]     'wrong Z.l', Z.l;
 abort$[smax{n$(NOT n.first), abs(R.l(n) - R_L(n))} > %tol%]     'wrong R.l', R.l;
+abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
 
 
 *******************************************************************************
@@ -220,10 +222,10 @@ SOLVE mincostEMP using EMP;
 abort$[mincostEMP.solveStat <> %SOLVESTAT.NORMAL COMPLETION%]   'solve failed', mincostEMP.solveStat;
 abort$[mincostEMP.modelStat  > %MODELSTAT.LOCALLY OPTIMAL%]     'solve failed', mincostEMP.modelStat;
 
-abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
 abort$[smax{n$(NOT n.first), abs(F.l(n) - F_L(n))} > %tol%]     'wrong F.l', F.l;
 abort$[smax{n$(NOT n.first), abs(Z.l(n) - Z_L(n))} > %tol%]     'wrong Z.l', Z.l;
 abort$[smax{n$(NOT n.first), abs(R.l(n) - R_L(n))} > %tol%]     'wrong R.l', R.l;
+abort$[smax{n$(NOT n.first), abs(L.l(n) - L_L(n))} > %tol%]     'wrong L.l', L.l;
 
 mincostEMP.holdFixed = 0;
 

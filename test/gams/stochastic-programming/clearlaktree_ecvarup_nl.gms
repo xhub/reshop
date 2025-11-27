@@ -42,6 +42,9 @@ $onEcho > %gams.emp%.op2
 ovf_reformulation=fenchel
 $offEcho
 
+* option lp=pathnlp;
+
+
 SETS p Stochastic realizations (precipitation) /low, normal, high/,
      t Time periods                            /dec,jan,feb,mar/,
      n set of nodes,
