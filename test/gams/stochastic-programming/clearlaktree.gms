@@ -42,7 +42,26 @@ prox_pert 0
 crash_pert no
 $offEcho
 
+$onEcho > path.opt
+conv_tol 1e-10
+crash_method none
+prox_pert 0
+crash_pert no
+factorization_method conopt
+output_warnings 1
+path_basis_modify_tol 1000000
+path_basis_modify_verbose 1
+$offEcho
+
+* reset CPLEX optfile
+* Some other tests are very sensitive
+$onEcho > cplex.opt
+* nothing
+$offEcho
+
 option lp=pathnlp;
+
+option optca = 1e-10;
 
 SETS p Stochastic realizations (precipitation) /low, normal, high/,
      t Time periods                            /dec,jan,feb,mar/,
