@@ -62,8 +62,8 @@ typedef struct rhp_nash_equilibrium {
 
 /** Types of EMPDAG */
 typedef enum empdag_type {
-  EmpDag_Unset,
-  EmpDag_Empty,             /**< No EMPDAG given */
+  EmpDag_Unset,             /**< Unset EMPDAG type         */
+  EmpDag_Empty,             /**< No EMPDAG given           */
   EmpDag_Single_Opt,        /**< Single optimization agent */
   EmpDag_Single_Vi,         /**< Single VI agent           */
   EmpDag_Opt,
@@ -197,8 +197,8 @@ unsigned nash_getid(const Nash *nash) NONNULL;
 void empdag_reset_type(EmpDag *empdag) NONNULL;
 int empdag_dup(EmpDag *empdag, const EmpDag *empdag_up,
                        Model *mdl) NONNULL;
-int empdag_initfrommodel(EmpDag * restrict empdag, const Model *mdl_up) NONNULL;
-int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no) NONNULL;
+int empdag_initFromUpstream(EmpDag * restrict empdag, const Model *mdl_up) NONNULL;
+int empdag_initFromModel(Model *mdl, const Avar *v_no) NONNULL;
 
 int empdag_finalize(Model *mdl) NONNULL;
 
@@ -359,7 +359,7 @@ int empdag_simple_setobjvar(EmpDag *empdag, rhp_idx objvar);
  * EMPDAG Transformation
  * -------------------------------------------------------------------------- */
 
-int empdag_single_MP_to_Nash(EmpDag* empdag) NONNULL;
+int empdag_single_MP_to_Nash(EmpDag* empdag, const char *name) NONNULL;
 int empdag_substitute_mp_parents_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
 int empdag_substitute_mp_child_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
 int empdag_substitute_mp_arcs(EmpDag* empdag, mpid_t mpid_old, mpid_t mpid_new);
@@ -381,10 +381,12 @@ const char* empdag_printmpid(const EmpDag *empdag, mpid_t mpid) NONNULL;
 const char* empdag_printnashid(const EmpDag *empdag, nashid_t nashid) NONNULL;
 const char* empdag_typename(EmpDagType type);
 
+void empdag_print(const EmpDag * empdag) NONNULL;
 
 int empdag_export(Model *mdl) NONNULL;
 int empdag2dotfile(const EmpDag* empdag, const char* fname) NONNULL;
 int empdag2dotenvname(const EmpDag* empdag, const char *envname) NONNULL;
+int empdag2dot(const EmpDag *empdag, FILE *f) NONNULL;
 
 /* --------------------------------------------------------------------------
  * Fast inline stuff

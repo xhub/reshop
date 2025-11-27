@@ -88,7 +88,7 @@ FN_SCOPE int RHP_MAKE_STR(stripmem)(struct RHP_LIST_TYPE *dat)
 }
 
 #ifdef RHP_LIST_TAKES_OWNERSHIP
-OWNERSHIP_TAKES(2)
+OWNERSHIP_HOLDS(2)
 #endif
 FN_SCOPE int RHP_MAKE_STR(add)(struct RHP_LIST_TYPE *dat, RHP_ELT_TYPE elt)
 {

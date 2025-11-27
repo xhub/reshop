@@ -1,6 +1,7 @@
 #include "empinterp_priv.h"
 #include "empinterp_vm.h"
 #include "empinterp_vm_utils.h"
+#include "equvar_metadata.h"
 #include "printout.h"
 
 #include "dctmcc.h"
@@ -36,6 +37,7 @@ enum OpCodeArgType {
    OPARG_GMSSYMITER,
    OPARG_ARCOBJ,
    OPARG_REGENTRY,
+   OP_ARG_EQUVAR_PAIRS,           /**< (equ,var) or (var,equ ) relation type */
    OPARG_CUSTOM,
 };
 
@@ -110,6 +112,7 @@ const OpCodeArg opcodes_argv[][OP_MAXCODE] = {
    [OP_VARC_DUAL] = {{OPARG_NONE},},
    [OP_SCALAR_SYMBOL_TRACKER_INIT] = {{OPARG_NONE}},
    [OP_SCALAR_SYMBOL_TRACKER_CHECK] = {{OPARG_NONE}},
+   [OP_TAG_EQUVAR_PAIRS] = {{OP_ARG_EQUVAR_PAIRS}},
    [OP_HACK_SCALAR2VMDATA] = {{OPARG_GIDX}, },
    [OP_HACK_DEL_SCALARVAR] = {{OPARG_NONE}, },
    [OP_HACK_DEL_SCALARPARAM] = {{OPARG_NONE}, },
@@ -175,6 +178,7 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
    [OP_VARC_DUAL] = 0,
    [OP_SCALAR_SYMBOL_TRACKER_INIT] = 0,
    [OP_SCALAR_SYMBOL_TRACKER_CHECK] = 0,
+   [OP_TAG_EQUVAR_PAIRS] = 1,
    [OP_SET_DAGUID_FROM_REGENTRY] = 0,
    [OP_HACK_SCALAR2VMDATA] = 1,
    [OP_HACK_DEL_SCALARVAR] = 0,
@@ -245,6 +249,7 @@ const uint8_t opcodes_argc[OP_MAXCODE] = {
  DEFSTR(OP_SCALAR_SYMBOL_TRACKER_INIT,"SCALAR_SYMBOL_TRACKER_INIT") \
  DEFSTR(OP_SCALAR_SYMBOL_TRACKER_CHECK,"SCALAR_SYMBOL_TRACKER_CHECK") \
  DEFSTR(OP_SET_DAGUID_FROM_REGENTRY, "SET_DAGUID_FROM_REGENTRY") \
+ DEFSTR(OP_TAG_EQUVAR_PAIRS, "TAG_EQUVAR_PAIRS") \
  DEFSTR(OP_HACK_SCALAR2VMDATA, "HACK_SCALAR2VMDATA") \
  DEFSTR(OP_HACK_DEL_SCALARVAR, "HACK_DEL_SCALARVAR") \
  DEFSTR(OP_HACK_DEL_SCALARPARAM, "HACK_DEL_SCALARPARAM") \
@@ -582,6 +587,17 @@ int empvm_dissassemble(EmpVm *vm, unsigned mode)
                status = Error_EMPRuntimeError;
             }
             print_vmval_short(mode, v, vm);
+            break;
+         }
+
+         case OP_ARG_EQUVAR_PAIRS: {
+            val8 = READ_BYTE(vm);
+            bool flipped = val & 0x80;
+            VarRole vrole = val & 0x7f;
+
+            printout(mode, "%20s ", varrole2str(vrole));
+            if (flipped) { printout(mode, " [flipped] ");  }
+
             break;
          }
          case OPARG_CUSTOM:

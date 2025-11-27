@@ -9,6 +9,7 @@
 #include "ctrdat_rhp.h"
 #include "empinfo.h"
 #include "equvar_helpers.h"
+#include "gams_utils.h"
 #include "mathprgm.h"
 #include "nltree.h"
 #include "filter_ops.h"
@@ -405,11 +406,10 @@ int rctr_compress_equs(const Container *ctr_src, Container *ctr_dst)
 
 static int nlpool_inject_varvals(Container *ctr)
 {
-   RhpContainerData *cdat = (RhpContainerData *)ctr->data;
+   RhpContainerData * restrict cdat = (RhpContainerData *)ctr->data;
 
    NlPool * restrict pool = ctr->nlpool;
    unsigned pool_len = pool->len;
-
 
    /* ----------------------------------------------------------------------
     * Ensure that the pool is large enough to hold the values of all variables.
@@ -420,14 +420,14 @@ static int nlpool_inject_varvals(Container *ctr)
 
       if (pool->own) {
          pool->max = new_max;
-         REALLOC_(pool->data, double, pool->max);
+         REALLOC_(pool->data, double, new_max);
       } else {
          S_CHECK(pool_copy_and_own_data(pool, new_max));
       }
    }
 
    pool->len += cdat->total_n;
-   double *pool_data = pool->data;
+   double * restrict pool_data = pool->data;
 
    Var *vars = ctr->vars;
    for (unsigned vi = 0, i = pool_len, len = cdat->total_n; vi < len; ++vi, ++i) {
@@ -452,14 +452,8 @@ presolve_submodel_solve(Model *mdl, Model *mdl_subsolver, double * restrict nlpo
 
    S_CHECK(mdl_export(mdl, mdl_subsolver));
 
-   /* TODO(Xhub) URG add option for displaying that  */
-#if defined(DEBUG)
-   strncpy(ctr_solver->data, "CONVERTD", GMS_SSSIZE-1);
-   S_CHECK_EXIT(ctr_callsolver(&mdl_solver));
-   mdl_setsolvername(mdl_solver, "");
-#endif
-
    S_CHECK(mdl_solve(mdl_subsolver));
+
    /* Phase 1: report the values from the solver to the RHP */
    /* TODO(xhub) optimize and iterate over the valid equations */
 
@@ -477,8 +471,8 @@ presolve_submodel_solve(Model *mdl, Model *mdl_subsolver, double * restrict nlpo
    double * restrict vals = (double*)working_mem.ptr;
    double * restrict mults = &vals[arrsize];
 
-   S_CHECK_EXIT(ctr_getallvarsval(ctr_subsolver, vals));
-   S_CHECK_EXIT(ctr_getallvarsmult(ctr_subsolver, mults));
+   S_CHECK_EXIT(ctr_getallvarslevel(ctr_subsolver, vals));
+   S_CHECK_EXIT(ctr_getallvarsdual(ctr_subsolver, mults));
 
    unsigned nvars = ctr_nvars_total(ctr);
 
@@ -490,6 +484,9 @@ presolve_submodel_solve(Model *mdl, Model *mdl_subsolver, double * restrict nlpo
          vdst->value = vals[l];
          vdst->multiplier = mults[l];
 
+         trace_solreport("[presolve] Updated VAR '%s' to .l = %.2g; .m = %2g\n",
+                         ctr_printvarname(ctr_subsolver, l), vals[l], mults[l]);
+
          /* Update the values in the pool */
          nlpool_data[pool_varvals_start+k] = vdst->value;
 
@@ -500,8 +497,9 @@ presolve_submodel_solve(Model *mdl, Model *mdl_subsolver, double * restrict nlpo
       }
    }
 
-   S_CHECK_EXIT(ctr_getallequsval(ctr_subsolver, vals));
-   S_CHECK_EXIT(ctr_getallequsmult(ctr_subsolver, mults));
+   S_CHECK_EXIT(ctr_getallequslevel(ctr_subsolver, vals));
+   S_CHECK_EXIT(ctr_getallequslevel(ctr_subsolver, vals));
+   S_CHECK_EXIT(ctr_getallequsdual(ctr_subsolver, mults));
 
    unsigned nequs = ctr_nequs_total(ctr);
 
@@ -513,6 +511,9 @@ presolve_submodel_solve(Model *mdl, Model *mdl_subsolver, double * restrict nlpo
          Equ * restrict edst = &ctr->equs[k];
          edst->value = vals[l];
          edst->multiplier = mults[l];
+         trace_solreport("[presolve] Updated EQU '%s' to .l = %.2g; .m = %2g\n",
+                         ctr_printequname(ctr, k), vals[l], mults[l]);
+
          ++l;
       }
    }
@@ -601,13 +602,12 @@ static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varva
    Container *ctr = &mdl->ctr;
    char *mdlname = NULL;
 
+   /* Ensure that the pool size is large enough to hold the values of all variables. */
    if (pool_varvals_start == UINT_MAX) {
       S_CHECK(ctr_ensure_pool(ctr));
       pool_varvals_start = ctr->nlpool->len;
 
-      /* Ensure that the pool size is large enough to hold the values of all variables. */
       S_CHECK(nlpool_inject_varvals(ctr));
-
    }
 
    double * restrict nlpool_data = ctr->nlpool->data;
@@ -625,7 +625,8 @@ static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varva
       mpid_t mpid = mpidarr[i];    assert(mpid < empdag->mps.len);
       MathPrgm *mp = mpsarr[mpid]; assert(mp);
 
-      trace_process("[presolve] Init new variables and equations in MP(%s)\n", mp_getname(mp));
+      const char *mp_name = mp_getname(mp);
+      trace_process("[presolve] Init new variables and equations in MP(%s)\n", mp_name);
 
       /* We need to avoid a double free for the last submodule */
       if (fs) {
@@ -634,8 +635,7 @@ static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varva
 
       fs = filter_subset_new_from_mp(mp);
       if (!fs) {
-         error("[presolve] ERROR: could not create filter subset for MP(%s)\n",
-               mp_getname(mp));
+         error("[presolve] ERROR: could not create filter subset for MP(%s)\n", mp_name);
          status = Error_RuntimeError;
          goto _exit;
       }
@@ -644,11 +644,12 @@ static int rmdl_presolve_mp(Model *mdl, BackendType backend, unsigned pool_varva
 
       mdl_subsolver = mdl_new(backend);
 
-      IO_PRINT_EXIT(asprintf(&mdlname, "%s_mp%u", mdl_name, i));
+      IO_PRINT_EXIT(asprintf(&mdlname, "MP_%s_presolve", mdl_name));
+      gams_fix_symbol_name(mdlname);
       S_CHECK_EXIT(mdl_setname(mdl_subsolver, mdlname));
       FREE(mdlname);
 
-      trace_process("[presolve] Presolving MP(%s)\n", empdag_getmpname(empdag, mpid));
+      trace_process("[presolve] Presolving MP(%s)\n", mp_name);
       S_CHECK_EXIT(presolve_submodel_solve(mdl, mdl_subsolver, nlpool_data, pool_varvals_start));
 
       mdl_release(mdl_subsolver);

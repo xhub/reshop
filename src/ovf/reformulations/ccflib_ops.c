@@ -247,7 +247,7 @@ static int ccflib_get_equ(OvfOpsData ovfd, Model *mdl, void **iterator,
 
    S_CHECK(empdag_getmpbyid(&mdl->empinfo.empdag, mpid, &mp_dual));
 
-   return mp_ensure_objfunc(mp_dual, ei_new);
+   return mp_ensure_obequ(mp_dual, ei_new);
 }
 
 const struct ovf_ops ccflib_ops = {

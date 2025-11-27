@@ -52,7 +52,7 @@ static inline int dagnash_array_reserve(DagNashArray *dat, unsigned reserve)
    return OK;
 }
 
-static inline OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
+static inline OWNERSHIP_HOLDS(2) OWNERSHIP_TAKES(3)
 int dagnash_array_add(DagNashArray *dat, Nash* elt, const char *name)
 {
 

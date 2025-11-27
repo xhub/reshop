@@ -24,6 +24,7 @@ static inline void _setvarrole(MathPrgm *mp, rhp_idx vi, VarRole type)
    assert(mp->mdl->ctr.varmeta);
    MP_DEBUG("Var '%s' has now type '%s'\n", ctr_printvarname(&mp->mdl->ctr, vi),
             varrole2str(type));
+   /* TODO: we should check that it has a proper type */
    (mp->mdl->ctr.varmeta)[vi].type = type;
 }
 

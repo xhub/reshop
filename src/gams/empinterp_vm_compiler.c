@@ -4569,3 +4569,69 @@ int hack_scalar2vmdata(Interpreter *interp, unsigned idx)
 
    return OK;
 }
+
+int c_equvar_pairs(Interpreter * restrict interp, unsigned * restrict p)
+{
+   /* ---------------------------------------------------------------------
+    * We are in the statement
+    * v         
+    * deffn    var    [-]   equ
+    * dualvar  var(i)       equ(i)
+    * implicit var(j)$a(j)  equ(i)$(b(i))
+    *
+    * Both var and equ will be read by `advance`. We then consume these values
+    * with the instruction OP_TAG_EQUVAR_PAIRS
+    * ---------------------------------------------------------------------- */
+
+   /* If we are already inc compiler mode, just get a pointer to the compiler.
+    * Otherwise initialize the compiler and set the parser_ops to the VM ones */
+   Compiler *c = ensure_vm_mode(interp);
+
+   EmpVm *vm = c->vm;
+   Tape _tape = {.code = &vm->code, .linenr = UINT_MAX};
+   Tape * const tape = &_tape;
+
+   begin_scope(c, __func__);
+
+   VarRole vrole;
+   switch (interp->cur.type) {
+   case TOK_DEFFN:
+      vrole = VarDefiningMap;
+      break;
+   case TOK_DUALVAR:
+      vrole = VarMarginal;
+      break;
+   case TOK_EXPLICIT:
+      vrole = VarExplicitMap;
+      break;
+   case TOK_IMPLICIT:
+      vrole = VarImplicitMap;
+      break;
+   default:
+      return runtime_error(interp->linenr);
+   }
+
+   interp_save_tok(interp);
+
+   TokenType toktype;
+   S_CHECK(advance(interp, p, &toktype));
+
+   PARSER_EXPECTS(interp, "after deffn/dualvar/explicit/implicit, expecting a GAMS variable", TOK_GMS_VAR);
+
+   S_CHECK(advance(interp, p, &toktype));
+
+   if (toktype == TOK_MINUS) { /* Handle the negative case */
+      vrole |= 0x80;
+      S_CHECK(advance(interp, p, &toktype));
+   }
+
+   PARSER_EXPECTS(interp, "in an deffn/dualvar/explicit/implicit statement, a GAMS equation is expected after the variable", TOK_GMS_EQU);
+
+   S_CHECK(emit_bytes(tape, OP_TAG_EQUVAR_PAIRS, vrole));
+
+   end_scope(interp, tape); /* Execute VM */
+
+   S_CHECK(advance(interp, p, &toktype));
+
+   return OK;
+}

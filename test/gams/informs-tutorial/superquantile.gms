@@ -21,7 +21,8 @@ SETS i 'realizations set' /1*%nSamples%/
 
 
 PARAMETERS xi(k,i) 'normal distributions',
-           mean(k)   /1 250, 2  125, 3 2500, 4 40000/,
+           mean(k)   /1 250,
+           2  125, 3 2500, 4 40000/,
            stddev(k) /1  75, 2 62.5, 3  500, 4  4000/;
 
 
@@ -121,7 +122,7 @@ endEmbeddedCode
 * defobj is not needed
 model superquantile_EC /superquantile-defobj/;
 
-reset(x)
+reset(x);
 solve superquantile_EC using emp;
 
 abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
@@ -137,8 +138,8 @@ endEmbeddedCode
 reset(x)
 solve superquantile_EC using emp;
 
-abort$[smax{j, abs(x_l(j) - x.l(j)) > tol}] "wrong solution", x_l, x.l;
-abort$[smax{j, abs(x_m(j) - x.m(j)) > tol}] "wrong solution", x_m, x.m;
+abort$[smax{j, abs(x_l(j) - x.l(j))} > tol] "wrong solution", x_l, x.l;
+abort$[smax{j, abs(x_m(j) - x.m(j))} > tol] "wrong solution", x_m, x.m;
 
 * This is the EC of Listing 2 
 EmbeddedCode ReSHOP:

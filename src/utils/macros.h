@@ -106,8 +106,8 @@
 #define CALLOC_EXIT_NULL(ptr,type,n)  CALLOC(ptr,type,n); \
    if (RHP_UNLIKELY(!(ptr))) { goto _exit; };
 
-#define REALLOC(ptr,type,n) { (ptr) = (type*)myrealloc((void*)(ptr), (n)*sizeof(type)); \
-   assert(((ptr) || (n) == 0) && "Allocation error for object " #ptr); }
+#define REALLOC(ptr,type,n) { assert(n > 0); (ptr) = (type*)myrealloc((void*)(ptr), (n)*sizeof(type)); \
+   assert((ptr) && "Allocation error for object " #ptr); }
 
 #define REALLOC_(ptr,type,n)  REALLOC(ptr,type,n) \
    if (RHP_UNLIKELY(!(ptr) && (n) > 0)) { return Error_InsufficientMemory; }
@@ -346,5 +346,6 @@ RHP_TRACE_ME(); UNUSED int c42 = getchar(); //NOLINT(bugprone-unused-return-valu
 /* This was tested on godbolt with a few compiler, and even without optimization,
  * only the constant apperas in the binary */
 #define VA_NARG_TYPED(type,...) (sizeof((type[]){__VA_ARGS__})/sizeof(type))
+#define VA_ARRAY_TYPED(type,...) (type[]){__VA_ARGS__}
 
 #endif /* MACROS_H */

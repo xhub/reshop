@@ -61,86 +61,28 @@ x.l(i) = 1;
 mopec.justscrdir = 1;
 solve mopec using emp;
 
+EmbeddedCode ReSHOP:
+producer: max u x udef budget
+cc: vi mkt p profit y
+root: Nash(producer, cc)
+endEmbeddedCode
+
 EmbeddedCode Python:
-# This code would go into the reshop python module
-def create_mp_opt(m, mp_descr, vv, ee):
-    mp = rhp.empdag_newmp(m, mp_descr["sense"])
-    for i, v in enumerate(vv):
-        if v.split('(')[0] in mp_descr["var"]:
-            rhp.mp_addvar(mp, i)
-    for i, e in enumerate(ee):
-        if e.split('(')[0] in mp_descr["equ"]:
-            rhp.mp_addconstraint(mp, i)
-
-    objvar = mp_descr.get("objvar")
-    if not objvar:
-       raise RuntimeError("Need to give an objvar")
-
-    if objvar:
-       vi = vv.index(objvar)
-       rhp.mp_setobjvar(mp, vi)
-    
-    return mp
-
-def create_mp_vi(m, mp_descr, vv, ee):
-    mp = rhp.empdag_newmp(m, mp_descr["sense"])
-    zerovars = mp_descr.get("zerovars", ())
-    for zv in zerovars:
-       for i in (i for i, v in enumerate(vv) if v.startswith(zv)):
-          raise NotImplementedError("TODO: add zerovar")
-
-    matchings = mp_descr.get("matchings", ())
-    for vp, ep in matchings:
-       sv = (i for i, v in enumerate(vv) if v.startswith(vp))
-       se = (i for i, v in enumerate(ee) if v.startswith(ep))
-       for vidx, eidx in zip(sv, se):
-           rhp.mp_addvipair(mp, eidx, vidx)
-
-    for i, e in enumerate(ee):
-        if e.split('(')[0] in mp_descr.get("constraints", ()):
-            rhp.mp_addconstraint(mp, i)
-    return mp
-
-def create_mp(m, mp_descr, vv, ee):
-     sense = mp_descr["sense"]
-     if sense == rhp.RHP_MAX or sense == rhp.RHP_MIN:
-         return create_mp_opt(m, mp_descr, vv, ee)
-
-     if sense == rhp.RHP_FEAS:
-         return create_mp_vi(m, mp_descr, vv, ee)
-     raise RuntimeError(f"Unexpecte sense {sense}")
-
-
-# Start of the user-visible part
-
 import reshop as rhp
+import IPython
+IPython.embed(colors="neutral")
+
+
 m = rhp.Model(r"%gams.scrdir%gamscntr.%gams.scrext%")
-vv = list(rhp.mdl_printvarname(m, i) for i in range(rhp.mdl_nvars(m)))
-ee = list(rhp.mdl_printequname(m, i) for i in range(rhp.mdl_nequs(m)))
-
-maxa = {"var": ("u", "x"), "equ": ("udef", 'budget'), "type": rhp.RHP_MP_OPT, "sense": rhp.RHP_MAX, "objvar": "u"}
-mkt_clearing = {"matchings": (("p", "mkt"), ("y", "profit")), "type": rhp.RHP_MP_VI, "sense": rhp.RHP_FEAS}
-
-
-mpe = rhp.empdag_newmpe(m)
-mp_a = create_mp(m, maxa, vv, ee)
-mkt_vi = create_mp(m, mkt_clearing, vv, ee)
-
-rhp.empdag_mpeaddmp(m, mpe, mp_a)
-rhp.empdag_mpeaddmp(m, mpe, mkt_vi)
-
 m.solve(r"%gams.scrdir%savepoint.gdx")
 
 # Uncomment to start IPython
-# import IPython
-# IPython.embed(colors="neutral")
 endEmbeddedCode
 
 execute_loadpoint '%gams.scrdir%savepoint.gdx';
 
-* TODO: see if this if failing with 46?
 * abort$(mopec.solvestat <> %SOLVESTAT.NORMAL COMPLETION%) "Bad solvestat"
-* abort$(mopec.modelstat > 2) "Bad modelstat"
+* abort$(mopec.modelstat > 2)                              "Bad modelstat"
 
 $if not set tol $set tol 1e-6
 scalar tol / %tol% /;

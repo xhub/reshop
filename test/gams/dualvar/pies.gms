@@ -165,7 +165,7 @@ equations
   ;
 
 dembal(comod,users) ..
-  (sum(creg,ct(creg,users)))$[sameas(comod,'C')]
+      (sum(creg,ct(creg,users)))$[sameas(comod,'C')]
   + (sum(refin,lt(refin,users)))$[sameas(comod,'L')]
   + (sum(refin,ht(refin,users)))$[sameas(comod,'H')]
   =g=
@@ -241,7 +241,7 @@ p.lo(comod,users) = .1;
 * p.fx(comod,users) = iprice(comod,users);
 p.l(comod,users) = iprice(comod,users);
 
-* initialize the multiplies.....
+* initialize the multipliers.....
 cmbal.m(creg) = 1;
 ombal.m(oreg) = 1;
 lmbal.m(refin) = 1;
@@ -251,7 +251,7 @@ ruse.m(R) = 1;
 variables obj;
 equation defobj;
 
-defobj.. obj =e= sum((creg,ctyp), ccost(creg,ctyp)*c(creg,ctyp))
+defobj.. obj =E= sum((creg,ctyp), ccost(creg,ctyp)*c(creg,ctyp))
          + sum((oreg,otyp), ocost(oreg,otyp)*o(oreg,otyp))
          + sum((creg,users), ctcost(creg,users)*ct(creg,users))
          + sum((oreg,refin), (otcost(oreg,refin) + rcost(refin))*ot(oreg,refin))
@@ -269,6 +269,7 @@ putclose jams_opt
                   'dict PIESminDict.txt';
 
 solve piesemp using emp min obj;
+display  p.l, dembal.m;
 abort$[piesemp.solveStat <> %SOLVESTAT.NORMAL COMPLETION%] 'Bad solvestat';
 abort$[piesemp.modelStat > %MODELSTAT.LOCALLY OPTIMAL%] 'bad modelstat';
 abort$[smax((comod,users), abs(p.l(comod,users)-dembal.m(comod,users))) > 1e-10] 'ERROR in piesemp: p.l != dembal.m';
@@ -318,7 +319,7 @@ defobjMax.. -objMax =E= sum((creg,ctyp), ccost(creg,ctyp)*c(creg,ctyp))
 model piesempMax / piesemp+defobjMax-defobj /;
 
 
-putclose myinfo 'dualVar p -dembal';
+putclose myinfo 'dualVar p dembal';
 
 
 putclose jams_opt 
@@ -335,18 +336,24 @@ ot.m(oreg,refin) = -ot.m(oreg,refin);
 lt.m(refin,users) = -lt.m(refin,users);
 ht.m(refin,users) = -ht.m(refin,users);
 
+
+
+*$ifThenI %system.emp% == "jams"
 cmbal.m(creg) = -cmbal.m(creg);
 ombal.m(oreg) = -ombal.m(oreg);
 lmbal.m(refin) = -lmbal.m(refin);
 hmbal.m(refin) = -hmbal.m(refin);
 ruse.m(R) = -ruse.m(R);
+*$endIf
 
 
 * option nlp = examiner;
 * Solve piesempMax using nlp max objMax;
 
 
-piesempMax.iterlim = 0;
+* TODO: fix this
+*piesempMax.iterlim = 0;
+*option mcp=convert;
 solve piesempMax using emp max objMax;
 abort$[piesempMax.solveStat <> %SOLVESTAT.NORMAL COMPLETION%] 'Bad solvestat';
 abort$[piesempMax.modelStat > %MODELSTAT.LOCALLY OPTIMAL%] 'bad modelstat';
@@ -374,5 +381,7 @@ piesempMaxFlipped.iterlim = 0;
 solve piesempMaxFlipped using emp max objMax;
 abort$[piesempMaxFlipped.solveStat <> %SOLVESTAT.NORMAL COMPLETION%] 'Bad solvestat';
 abort$[piesempMaxFlipped.modelStat > %MODELSTAT.LOCALLY OPTIMAL%] 'bad modelstat';
+
+display  p.l, dembalFlipped.m;
 
 abort$[smax((comod,users), abs(p.l(comod,users)-dembalFlipped.m(comod,users))) > 1e-10] 'ERROR in piesempMaxFlipped: p.l != dembalFlipped.m';

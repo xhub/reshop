@@ -43,7 +43,7 @@ typedef struct mdl_timings {
          double flipped;
          double dualvar;
          double total;
-      } container;
+      } equvar;
       struct {
          SimpleTiming equilibrium;
          SimpleTiming fenchel;

@@ -209,7 +209,7 @@ static inline NONNULL void aequ_aslist(Aequ *e, unsigned size, rhp_idx *list)
    e->list = list;
 }
 
-OWNERSHIP_TAKES(3)
+OWNERSHIP_HOLDS(3)
 static inline NONNULL void aequ_asownlist(Aequ *e, unsigned size, rhp_idx *list)
 {
    e->own = true;
@@ -218,7 +218,7 @@ static inline NONNULL void aequ_asownlist(Aequ *e, unsigned size, rhp_idx *list)
    e->list = list;
 }
 
-OWNERSHIP_TAKES(3)
+OWNERSHIP_HOLDS(3)
 static inline NONNULL void aequ_asownsortedlist(Aequ *e, unsigned size, rhp_idx *list)
 {
    e->own = true;

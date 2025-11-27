@@ -762,8 +762,9 @@ void scratchdbl_empty(DblScratch *scratch)
 int scratchdbl_ensure(DblScratch *scratch, unsigned size)
 {
    if (!scratch->data || scratch->size < size) {
-      REALLOC_(scratch->data, double, size);
-      scratch->size = size;
+      unsigned sz = MAX(size, 2);
+      REALLOC_(scratch->data, double, sz);
+      scratch->size = sz;
    }
 
    return OK;

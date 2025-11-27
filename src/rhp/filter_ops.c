@@ -318,6 +318,7 @@ static unsigned get_poolidx_negvar(NlPoolVars *dat, rhp_idx vi)
       REALLOC_(dat->vis, rhp_idx, dat->max);
    }
 
+   // FIXME: hm this is dubious
    unsigned idx = pool_getidx(dat->pool, SNAN);
 
    dat->vis[dat->size] = vi;
@@ -332,8 +333,12 @@ static bool filter_subset_var(void *data, rhp_idx vi)
 
    FilterSubset* fs = (FilterSubset *)data;
    const Container * restrict ctr_src = fs->ctr_src;
-   RhpContainerData * restrict cdat = fs->ctr_src->data;
-   bool is_active = ctr_is_rhp(ctr_src) ? cdat->cmat.vars[vi] != NULL : true;
+   bool is_active = true;
+
+   if (ctr_src && ctr_is_rhp(ctr_src)) {
+      RhpContainerData * restrict cdat = fs->ctr_src->data;
+      is_active = cdat->cmat.vars[vi] != NULL;
+   }
 
    return avar_contains(&fs->vars, vi) &&
          !avar_contains(ctr_src->fixed_vars, vi) &&
@@ -345,9 +350,14 @@ static bool filter_subset_equ(void *data, rhp_idx ei)
    assert(valid_ei(ei));
 
    FilterSubset* fs = (FilterSubset *)data;
+   bool is_active = true;
+
    const Container * restrict ctr_src = fs->ctr_src;
-   RhpContainerData * restrict cdat = fs->ctr_src->data;
-   bool is_active = ctr_is_rhp(ctr_src) ? cdat->cmat.equs[ei] != NULL : true;
+
+   if (ctr_src && ctr_is_rhp(ctr_src)) {
+      RhpContainerData * restrict cdat = fs->ctr_src->data;
+      is_active = cdat->cmat.equs[ei] != NULL;
+   }
 
    /* TODO: GITLAB #107 */
    return is_active && aequ_contains(&fs->equs, ei);
@@ -464,11 +474,11 @@ static int filter_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
    for (unsigned i = 0; i < len; ++i) {
 
       if (gams_get_optype(instrs[i]) == NLNODE_OPARG_VAR) {
-         rhp_idx vi = args[i]-1;
+         rhp_idx vi = VIDX_R(args[i]);
          rhp_idx vi_new = rosetta_vars[vi];
 
          if (valid_vi(vi_new)) {
-            args[i] = 1 + vi_new;
+            args[i] = VIDX(vi_new);
          } else {
             int opcode = gams_opcode_var_to_cst(instrs[i]);
 
@@ -495,7 +505,7 @@ static int filter_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
 
    /* Update the nlStore field to match the new equation index */
    assert(instrs[len-1] == nlStore);
-   args[len-1] = 1 + ei;
+   args[len-1] = VIDX(ei);
 
    return OK;
 }

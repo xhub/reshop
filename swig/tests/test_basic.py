@@ -59,8 +59,8 @@ def test_oneobjvar1():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.0,))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((1.0,))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.0,))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((1.0,))
 
 
 def test_oneobjvar2():
@@ -78,8 +78,8 @@ def test_oneobjvar2():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.0,))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((-1.0,))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.0,))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((-1.0,))
 
 
 def test_oneobjvarcons1():
@@ -103,10 +103,10 @@ def test_oneobjvarcons1():
     solve(mdl, mdl_solver)
 
     # PATH seems buggy
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.0, 1.0), rel=1e-5)
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((1.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.0, 1.0), rel=1e-5)
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((1.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0, abs=1e-5)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(0.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(0.0)
 
 
 def test_onevar():
@@ -130,8 +130,8 @@ def test_onevar():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.0,))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((1.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.0,))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((1.0))
 
 
 def test_onevarmax():
@@ -155,8 +155,8 @@ def test_onevarmax():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.0,))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((1.0,))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.0,))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((1.0,))
 
 
 def test_twovars1():
@@ -185,10 +185,10 @@ def test_twovars1():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.0, 1.0), rel=1e-5)
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((1.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.0, 1.0), rel=1e-5)
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((1.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0, abs=1e-5)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(0.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(0.0)
 
 
 def test_qp1dense():
@@ -216,10 +216,10 @@ def test_qp1dense():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.5, 0.5))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((0.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.5, 0.5))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((0.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(2.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(2.0)
 
 
 def test_qp1():
@@ -247,10 +247,10 @@ def test_qp1():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.5, 0.5))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((0.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.5, 0.5))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((0.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(2.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(2.0)
 
 
 def test_qp2():
@@ -278,10 +278,10 @@ def test_qp2():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.5, 0.5))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((0.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.5, 0.5))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((0.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(1.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(1.0)
 
 
 def test_qp3():
@@ -309,10 +309,10 @@ def test_qp3():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, x) == approx((0.5, 0.5))
-    assert rhp.mdl_getvarsmult(mdl, x) == approx((0.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, x) == approx((0.5, 0.5))
+    assert rhp.mdl_getvarsdual(mdl, x) == approx((0.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(1.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(1.0)
 
 
 def test_qp4():
@@ -342,10 +342,10 @@ def test_qp4():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.5, 0.5))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((0.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.5, 0.5))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((0.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(3.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(3.0)
 
 
 def test_qp5():
@@ -376,10 +376,10 @@ def test_qp5():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.25, 0.75))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((0.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.25, 0.75))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((0.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(3.5)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(3.5)
 
 
 def test_qp5bis():
@@ -410,10 +410,10 @@ def test_qp5bis():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v1) == approx((0.25, 0.75))
-    assert rhp.mdl_getvarsmult(mdl, v1) == approx((0.0, 0.0))
+    assert rhp.mdl_getvarslevel(mdl, v1) == approx((0.25, 0.75))
+    assert rhp.mdl_getvarsdual(mdl, v1) == approx((0.0, 0.0))
     #     assert rhp.mdl_getequval(mdl, cons) == approx(0.0)
-    assert rhp.mdl_getequmult(mdl, cons) == approx(3.5)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(3.5)
 
 
 def test_tragedy_common():
@@ -422,8 +422,8 @@ def test_tragedy_common():
     mdl = init()
     rhp.mdl_resize(mdl, n_players, 2 * n_players)
 
-    mpe = rhp.empdag_newmpe(mdl)
-    rhp.empdag_rootsetmpe(mdl, mpe)
+    nash = rhp.empdag_newnash(mdl)
+    rhp.empdag_rootsetnash(mdl, nash)
 
     v = rhp.add_varsinbox(mdl, n_players, 0.0, 1.0)
 
@@ -458,16 +458,16 @@ def test_tragedy_common():
         rhp.mp_addconstraint(mp, cons)
         #        rhp.mp_finalize(mp)
 
-        rhp.empdag_mpeaddmp(mdl, mpe, mp)
+        rhp.empdag_nashaddmp(mdl, nash, mp)
 
     mdl_solver = init_solver()
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, v) == approx(sols)
-    assert rhp.mdl_getvarsmult(mdl, v) == approx(np.zeros(n_players), abs=1e-10)
+    assert rhp.mdl_getvarslevel(mdl, v) == approx(sols)
+    assert rhp.mdl_getvarsdual(mdl, v) == approx(np.zeros(n_players), abs=1e-10)
     #     assert rhp.mdl_getequval(mdl, cons) == approx(-1.0 / (n_players + 1))
-    assert rhp.mdl_getequmult(mdl, cons) == approx(0.0)
+    assert rhp.mdl_getequdual(mdl, cons) == approx(0.0)
 
 
 def test_cvar():
@@ -513,7 +513,7 @@ def test_cvar():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, rho) == approx(4.0 - 1 / 6.0)
+    assert rhp.mdl_getvarslevel(mdl, rho) == approx(4.0 - 1 / 6.0)
 
 
 def test_cvarlo():
@@ -559,7 +559,7 @@ def test_cvarlo():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, rho) == approx(
+    assert rhp.mdl_getvarslevel(mdl, rho) == approx(
         ((0.125 * d[0] + 0.025 * d[1]) / (tail),)
     )
 
@@ -611,8 +611,8 @@ def test_cvarcons():
 
     solve(mdl, mdl_solver)
 
-    assert rhp.mdl_getvarsval(mdl, rho) == approx(4.0 - 1 / 6.0, rel=1e-3)
-    assert rhp.mdl_getvarsval(mdl, x) == approx(0)
+    assert rhp.mdl_getvarslevel(mdl, rho) == approx(4.0 - 1 / 6.0, rel=1e-3)
+    assert rhp.mdl_getvarslevel(mdl, x) == approx(0)
 
 
 def test_cvarconsfail():

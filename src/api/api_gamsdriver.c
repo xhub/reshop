@@ -133,8 +133,7 @@ int rhp_gms_readempinfo(Model *mdl, const char *fname)
    }
 
 
-   EmpInfo *empinfo = &mdl->empinfo;
-   S_CHECK(empinfo_alloc(empinfo, mdl));
+   S_CHECK(empinfo_init(mdl));
 
    /* ---------------------------------------------------------------------
     * Processing the EMPinfo file

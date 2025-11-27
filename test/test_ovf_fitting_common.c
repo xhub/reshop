@@ -173,7 +173,7 @@ static int solve_ovf_test(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver, const
   printf(ANSI_COLOR_BLUE"\nloss: %s; reformulation %s\n", loss_fn, reformulation ? reformulation : "\"\""ANSI_COLOR_RESET);
   for (unsigned i = 0; i < 3; ++i) {
     double val;
-    rhp_mdl_getvarval(mdl, i, &val);
+    rhp_mdl_getvarlevel(mdl, i, &val);
     printf("%s: %.11e; ", rhp_mdl_printvarname(mdl, i), val);
     }
   puts("\n");
@@ -181,7 +181,7 @@ static int solve_ovf_test(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver, const
   const double *sols = loss_fn_sols[loss_idx];
   for (unsigned i = 0; i < 3; ++i) {
     double sol = sols[i], val;
-    rhp_mdl_getvarval(mdl, i, &val);
+    rhp_mdl_getvarlevel(mdl, i, &val);
 
     if (isfinite(sol)) {
       double delta = fabs(val-sols[i]);
@@ -775,8 +775,8 @@ int fitting_equil_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const ch
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, 3+nb_equ, nb_equ+1));
 
-  struct rhp_nash_equilibrium *mpe = rhp_empdag_newmpe(mdl);
-  RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
+  struct rhp_nash_equilibrium *nash = rhp_empdag_newnash(mdl);
+  RESHOP_CHECK(rhp_empdag_rootsetnash(mdl, nash));
 
   struct rhp_mathprgm *mp_v1 = rhp_empdag_newmp(mdl, RHP_MIN);
   struct rhp_mathprgm *mp_v2 = rhp_empdag_newmp(mdl, RHP_MIN);
@@ -784,11 +784,11 @@ int fitting_equil_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const ch
   struct rhp_mathprgm *mp_v4 = rhp_empdag_newmp(mdl, RHP_MIN);
   struct rhp_mathprgm *mp_v5 = rhp_empdag_newmp(mdl, RHP_MIN);
 
-  RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_v1));
-  RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_v2));
-  RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_v3));
-  RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_v4));
-  RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_v5));
+  RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp_v1));
+  RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp_v2));
+  RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp_v3));
+  RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp_v4));
+  RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp_v5));
 
   ADD_V_EQUIL(mp_v1, add_v1);
   ADD_V_EQUIL(mp_v2, add_v2);
@@ -804,7 +804,7 @@ int fitting_equil_test(struct rhp_mdl *mdl_solver, const char *loss_fn, const ch
     double sol = sols[i], val;
     for (unsigned j = 0; j < 5; ++j) {
       rhp_idx vi = i + offset*j;
-      rhp_mdl_getvarval(mdl, vi, &val);
+      rhp_mdl_getvarlevel(mdl, vi, &val);
       printf("%s: %.11e; ", rhp_mdl_printvarname(mdl, vi), val);
 
 

@@ -60,16 +60,14 @@ void varmeta_init(VarMeta *vmd)
 const char* equrole2str(EquRole role)
 {
    switch (role) {
-   case EquUndefined:
-      return "undefined";
-   case EquObjective:
-      return "objective";
-   case EquConstraint:
-      return "constraint";
-   case EquViFunction:
-      return "VI function";
-   default:
-      return "INVALID";
+
+   case EquUndefined:          return "undefined";
+   case EquObjective:          return "objective";
+   case EquConstraint:         return "constraint";
+   case EquViFunction:         return "VI function";
+   case EquIsMap:              return "mapping";
+   case EquDualizedConstraint: return "dualized constraint";
+   default:                    return "INVALID";
    }
 }
 
@@ -86,8 +84,12 @@ const char* varrole2str(VarRole type)
       return "dual variable";
    case VarDefiningMap:
       return "variable defining a mapping";
+   case VarExplicitMap:
+      return "variable in an explicit relation";
    case VarImplicitMap:
       return "variable in an implicit relation";
+   case VarMarginal:
+      return "variable bound to the marginal of an equation";
    default:
       return "INVALID";
    }
@@ -146,7 +148,6 @@ void varmeta_print(const VarMeta * restrict vmeta, rhp_idx vi, const Model *mdl,
 void equmeta_rolemismatchmsg(const Container *ctr, rhp_idx ei, EquRole actual,
                              EquRole expected, const char *fn)
 {
-   error("%s :: ERROR: the equation %s has type %s. It should be %s\n", fn,
-         ctr_printequname(ctr, ei), equrole2str(actual),
-         equrole2str(expected));
+   error("[container] ERROR in %s: the equation %s has type %s. It should be %s\n", fn,
+         ctr_printequname(ctr, ei), equrole2str(actual), equrole2str(expected));
 }

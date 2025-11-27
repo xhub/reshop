@@ -30,44 +30,50 @@ class FnDecl(NamedTuple):
 
 reshop_argname2ret = ('eout', 'vout', 'mdlout', 'dval', 'ival', 'eidx', 'vidx', 'minf', 'pinf', 'nan')
 reshop_argout_simple = (
-    ('int *', 'ei'),
-    ('int *', 'eidx'),
-    ('int **', 'eis'),
-    ('int *', 'objequ'),
-    ('int *', 'objvar'),
-    ('int *', 'vi'),
-    ('int *', 'vidx'),
-    ('int **', 'vis'),
-    ('rhp_idx *', 'ei'),
-    ('rhp_idx *', 'eidx'),
-    ('rhp_idx **', 'eis'),
-    ('rhp_idx *', 'objequ'),
-    ('rhp_idx *', 'objvar'),
-    ('rhp_idx *', 'vi'),
-    ('rhp_idx *', 'vidx'),
-    ('rhp_idx **', 'vis'),
-    ('double *', 'val'),
-    ('double *', 'equs_val'),
-    ('double *', 'equs_mult'),
-    ('double *', 'vars_val'),
-    ('double *', 'vars_mult'),
-    ('double *', 'mult'),
-    ('double *', 'vals'),
-    ('double *', 'lb'),
-    ('double *', 'ub'),
-    ('unsigned *', 'cone'),
-    ('unsigned *', 'type'),
-    ('unsigned *', 'sense'),
+    ('int *',       'ei'),
+    ('int *',       'eidx'),
+    ('int **',      'eis'),
+    ('int *',       'objequ'),
+    ('int *',       'objvar'),
+    ('int *',       'vi'),
+    ('int *',       'vidx'),
+    ('int **',      'vis'),
+    ('rhp_idx *',   'ei'),
+    ('rhp_idx *',   'eidx'),
+    ('rhp_idx **',  'eis'),
+    ('rhp_idx *',   'objequ'),
+    ('rhp_idx *',   'objvar'),
+    ('rhp_idx *',   'vi'),
+    ('rhp_idx *',   'vidx'),
+    ('rhp_idx **',  'vis'),
+    ('double *',    'dual'),
+    ('double *',    'edual'),
+    ('double *',    'vdual'),
+    ('double *',    'duals'),
+    ('double *',    'level'),
+    ('double *',    'elevel'),
+    ('double *',    'vlevel'),
+    ('double *',    'levels'),
+    ('double *',    'rhs'),
+    ('double *',    'cst'),
+    ('double *',    'val'),
+    ('double *',    'vals'),
+    ('double *',    'lb'),
+    ('double *',    'ub'),
+    ('unsigned *',  'cone'),
+    ('unsigned *',  'type'),
+    ('unsigned *',  'sense'),
     ('unsigned **', 'grps'),
-    ('int *', 'basis_status'),
-    ('int *', 'vars_basis'),
-    ('int *', 'equs_basis'),
-    ('int *', 'modelstat'),
-    ('int *', 'solvestat'),
-    ('NlNode ***', 'root'),
-    ('NlNode ***', 'child'),
-    ('OvfDef **', 'ovf_def'),
-    ('char **', 'solvername'),
+    ('int *',       'basis_info'),
+    ('int *',       'ebasis_info'),
+    ('int *',       'vbasis_info'),
+    ('int *',       'basis_infos'),
+    ('int *',       'modelstat'),
+    ('int *',       'solvestat'),
+    ('NlNode ***',  'root'),
+    ('NlNode ***',  'child'),
+    ('OvfDef **',   'ovf_def'),
+    ('char **',     'solvername'),
 )
 
 reshop_argout_multiple = {
@@ -138,7 +144,7 @@ reshop_args2nparraySzArr=(
    ('size', 'list'),
 )
 
-reshop_args2nparrayArr=('lbs', 'ubs', 'vars_val', 'vars_mult', 'equs_val', 'equs_mult')
+reshop_args2nparrayArr=('lbs', 'ubs', 'level', 'dual', 'level', 'dual')
 
 # TODO: delete?
 reshop_ctype2swig={
@@ -149,7 +155,7 @@ reshop_ctype2swig={
     'struct rhp_nash_equilibrium': 'NashEquilibrium',
 }
 
-reshop_ignore = []
+reshop_ignore = ['rhp_empdag_writeDOT']
 
 equ_addquad = FnDecl(name="equ_addquad", brief_desc="Add a quadratic term to an equation", detailed_desc="", ret=[], args=[], extra={})
 
@@ -268,7 +274,7 @@ def fnArg_c2swig(arg: FnArg) -> FnArg:
             typ = "VariableRef or int"
         elif name == 'ei' or name == 'objequ':
             typ = "EquationRef or int"
-        elif name == 'basis_status':
+        elif name in ('basis_info', 'ebasis_info', 'vbasis_info'): 
             typ = "BasisStatus or int"
         else:
             assert (f"ERROR: Unhandled rhp_idx argument '{name}' in {arg}")
@@ -301,9 +307,9 @@ def fnArgOut_c2swig(arg: FnArg) -> FnRet:
             typ = "int"
         elif name == 'modelstat':
             typ = "ModelStatus"
-        elif name in ('equs_basis', 'vars_basis'):
+        elif name in ('basis_infos', 'ebasis_info', 'vbasis_info'):
             typ = "array of BasisStatus"
-        elif name == 'basis_status':
+        elif name == 'basis_info':
             typ = "BasisStatus"
         elif name == 'solvestat':
             typ = "SolveStatus"

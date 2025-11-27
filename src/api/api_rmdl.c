@@ -1846,7 +1846,7 @@ int rhp_add_soc_constraint_named(Model *mdl, rhp_idx *ei, const char *name)
 int rhp_delete_equ(Model *mdl, rhp_idx ei)
 {
    S_CHECK(chk_rmdl(mdl, __func__));
-   return rmdl_equ_rm(mdl, ei);
+   return rmdl_rm_equ(mdl, ei);
 }
 
 /**

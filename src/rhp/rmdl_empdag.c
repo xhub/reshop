@@ -582,7 +582,7 @@ static inline int copy_expr_arc_parent(Model *mdl, MathPrgm * restrict mp_child,
       return Error_NotImplemented;
    }
 
-   S_CHECK(rmdl_equ_rm(mdl, objequ));
+   S_CHECK(rmdl_rm_equ(mdl, objequ));
 
    return OK;
 }
@@ -811,7 +811,7 @@ int rmdl_contract_subtrees(Model *mdl, VFContractions *contractions)
                if (arcVF_has_abstract_objfunc(arc)) {
 
                   if (!valid_ei(objequ_big)) {
-                     S_CHECK_EXIT(mp_ensure_objfunc(mp_big, &objequ_big));
+                     S_CHECK_EXIT(mp_ensure_obequ(mp_big, &objequ_big));
                   }
 
                   arcVF_subei(&cpydat_child->rarc, IdxObjFunc, objequ_big);

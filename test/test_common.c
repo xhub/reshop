@@ -174,7 +174,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
 
   for (rhp_idx i = 0; i < (rhp_idx)n && i < 10; ++i) {
     double val;
-    rhp_mdl_getvarval(mdl, i, &val);
+    rhp_mdl_getvarlevel(mdl, i, &val);
     printf("%s: %e; ", rhp_mdl_printvarname(mdl, i), val);
   }
    if (n >= 10) { puts("..."); } else { puts(""); }
@@ -190,7 +190,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
    if (xvals && dotest->xvals) {
     for (rhp_idx i = 0; i < (rhp_idx)n; ++i) {
       double refval = xvals[i], val;
-      rhp_mdl_getvarval(mdl, i, &val);
+      rhp_mdl_getvarlevel(mdl, i, &val);
       int rc = cmp_var_val(mdl, refval, val, i, "val");
       if (rc != 0) {
         status = rc;
@@ -201,7 +201,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
    if (xduals && dotest->xduals) {
     for (rhp_idx i = 0; i < (rhp_idx)n; ++i) {
       double sol = xduals[i], val;
-      rhp_mdl_getvarmult(mdl, i, &val);
+      rhp_mdl_getvardual(mdl, i, &val);
       int rc = cmp_var_val(mdl, sol, val, i, "dual");
       if (rc != 0) {
         status = rc;
@@ -228,7 +228,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
     for (rhp_idx i = 0, j = 0; i < (rhp_idx)m; ++i) {
       if (rhp_aequ_contains(objequs, i)) continue;
       double sol = evals[j], val;
-      rhp_mdl_getequval(mdl, i, &val);
+      rhp_mdl_getequlevel(mdl, i, &val);
       int rc = cmp_equ_val(mdl, sol, val, i, "val");
       if (rc != 0) {
         status = rc;
@@ -241,7 +241,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
     for (rhp_idx i = 0, j = 0; i < (rhp_idx)m; ++i) {
       if (rhp_aequ_contains(objequs, i)) continue;
       double sol = eduals[j], val;
-      rhp_mdl_getequmult(mdl, i, &val);
+      rhp_mdl_getequdual(mdl, i, &val);
       int rc = cmp_equ_val(mdl, sol, val, i, "dual");
       if (rc != 0) {
         status = rc;
@@ -269,7 +269,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
     double objval;
     rhp_idx objequ;
     rhp_aequ_get(objequs, 0, &objequ);
-    RHP_CHK(rhp_mdl_getequval(mdl, objequ, &objval));
+    RHP_CHK(rhp_mdl_getequlevel(mdl, objequ, &objval));
     double delta = fabs(solvals->objval - objval);
     if (delta > TOL_EPSLAX) { printf(ANSI_COLOR_RED); }
     printf("objval: %e: %e vs %e\n", delta, objval, solvals->objval);
@@ -282,7 +282,7 @@ int test_solve(struct rhp_mdl *mdl, struct rhp_mdl *rhp_mdl_solver, struct sol_v
       double objval;
       rhp_idx ei;
       rhp_aequ_get(objequs, i, &ei);
-      RHP_CHK(rhp_mdl_getequval(mdl, ei, &objval));
+      RHP_CHK(rhp_mdl_getequlevel(mdl, ei, &objval));
       double delta = fabs(solvals->objvals[i] - objval);
       if (delta > TOL_EPSLAX) { printf(ANSI_COLOR_RED); }
       printf("objval(%u): %e: %e vs %e\n", i, delta, objval, solvals->objvals[i]);

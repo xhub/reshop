@@ -126,9 +126,13 @@ int avar_aslist(Avar *v, unsigned size, rhp_idx vis[VMT(static size)]) NONNULL;
 unsigned avar_size(const Avar *v);
 
 void avar_init(Avar* v) NONNULL;
+void avar_fromIdxArray(Avar* v, const IdxArray *vis) NONNULL;
+
 int avar_copy(Avar * restrict dst, const Avar * restrict src) NONNULL;
 void avar_empty(Avar *v) NONNULL;
 void avar_reset(Avar *v) NONNULL;
+
+
 int avar_extend(Avar *v, const Avar *w) NONNULL;
 unsigned avar_findidx(const Avar* v, rhp_idx vidx) NONNULL;
 int avar_subset(Avar* v, const rhp_idx *idx, unsigned len, Avar *v_subset) NONNULL;
@@ -136,6 +140,8 @@ rhp_idx avar_block_get(const struct avar_block *b, unsigned i);
 bool avar_block_contains(const struct avar_block *b, rhp_idx vi);
 int avar_setblock(Avar *v, unsigned block_size) NONNULL;
 void avar_printnames(const Avar *v, unsigned mode, const Model *mdl) NONNULL;
+
+
 
 int var_compar(const void *a, const void *b);
 void var_print(const struct var *var);
@@ -246,7 +252,7 @@ static inline NONNULL void avar_setlist(Avar *v, unsigned size, rhp_idx *list)
    v->list = list;
 }
 
-OWNERSHIP_TAKES(3)
+OWNERSHIP_HOLDS(3)
 static inline NONNULL void avar_setandownlist(Avar *v, unsigned size, rhp_idx *list)
 {
    v->own = true;
@@ -255,7 +261,7 @@ static inline NONNULL void avar_setandownlist(Avar *v, unsigned size, rhp_idx *l
    v->list = list;
 }
 
-OWNERSHIP_TAKES(3)
+OWNERSHIP_HOLDS(3)
 static inline NONNULL void avar_setandownsortedlist(Avar *v, unsigned size, rhp_idx *list)
 {
    v->own = true;

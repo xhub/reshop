@@ -9,12 +9,17 @@
 
 //#define DEBUG_GAMS_OUTPUT
 
-int empinfo_alloc(EmpInfo *empinfo, Model *mdl)
+int empinfo_init(Model *mdl)
 {
-   empinfo->num_dualvar = 0;
-   empinfo->num_implicit = 0;
-   empinfo->num_deffn = 0;
+   EmpInfo *empinfo = &mdl->empinfo;
+ 
+   empinfo->equvar.num_implicit = 0;
+   empinfo->equvar.num_deffn = 0;
+   empinfo->equvar.num_explicit = 0;
 
+
+   empinfo->equvar.disjunctions = (Disjunctions){0};
+   empinfo->equvar.marginalVars = (IdxArray){0};
    empdag_init(&empinfo->empdag, mdl);
 
    return OK;
@@ -52,14 +57,18 @@ int empinfo_initfromupstream(Model *mdl)
    const EmpInfo *empinfo_up = &mdl_up->empinfo;
 
    EmpInfo *empinfo = &mdl->empinfo;
-   S_CHECK(empinfo_alloc(empinfo, mdl));
+   S_CHECK(empinfo_init(mdl));
 
    /* -----------------------------------------------------------------------
     * Copy basic information
     * ----------------------------------------------------------------------- */
 
-   empinfo->num_dualvar = empinfo_up->num_dualvar;
-   empinfo->num_implicit = empinfo_up->num_implicit;
+   empinfo->equvar.num_implicit = empinfo_up->equvar.num_implicit;
+   empinfo->equvar.num_explicit = empinfo_up->equvar.num_explicit;
+   empinfo->equvar.num_deffn = empinfo_up->equvar.num_deffn;
+
+   S_CHECK(rhp_idx_copy(&empinfo->equvar.marginalVars, &empinfo_up->equvar.marginalVars));
+   S_CHECK(disjunctions_copy(&empinfo->equvar.disjunctions, &empinfo_up->equvar.disjunctions));
 
    /* -----------------------------------------------------------------------
     * Borrow processable information
@@ -73,7 +82,7 @@ int empinfo_initfromupstream(Model *mdl)
     * ----------------------------------------------------------------------- */
    if (empinfo_up->empdag.mps.len == 0) {
       assert(empdag_isempty(&empinfo_up->empdag));
-      S_CHECK(empdag_initfrommodel(&empinfo->empdag, mdl_up));
+      S_CHECK(empdag_initFromUpstream(&empinfo->empdag, mdl_up));
    } else {
       S_CHECK(empdag_dup(&empinfo->empdag, &empinfo_up->empdag, mdl));
    }
@@ -121,6 +130,10 @@ void rhp_print_emp(const Model *mdl)
    /* ---------------------------------------------------------------------
     * Print the identifiers in the EMP file first.
     * --------------------------------------------------------------------- */
+   const EmpDag *empdag = &empinfo->empdag;
+   if (empdag->mps.len > 0) {
+      empdag_print(empdag);
+   }
 
 
    /* ---------------------------------------------------------------------

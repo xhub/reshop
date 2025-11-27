@@ -25,7 +25,7 @@ static inline bool valid_ei_(rhp_idx ei, rhp_idx m, const char * const fn)
       invalid_ei_errmsg(ei, m, fn);
       return false;
    }
-   return true;;
+   return true;
 }
 
 static inline bool valid_vi_(rhp_idx vi, rhp_idx n, const char * const fn)

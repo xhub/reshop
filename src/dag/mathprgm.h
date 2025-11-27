@@ -96,7 +96,7 @@ typedef struct rhp_mathprgm {
 int mp_addconstraint(MathPrgm *mp, rhp_idx ei);
 int mp_addconstraints(MathPrgm *mp, Aequ *e);
 int mp_addequ(MathPrgm *mp, rhp_idx ei);
-NONNULL OWNERSHIP_TAKES(3)
+NONNULL OWNERSHIP_HOLDS(3)
 int mp_addobjexprbylabel(MathPrgm *mp, const struct rhp_empdag_arcVF *expr,
                          const char *label);
 int mp_addobjexprbyid(MathPrgm *mp,
@@ -137,7 +137,7 @@ unsigned mp_getnumvars(const MathPrgm *mp) NONNULL;
 unsigned mp_getnumoptvars(const MathPrgm *mp) NONNULL;
 int mp_objequ_setmultiplier(MathPrgm *mp) NONNULL;
 
-int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei) NONNULL;
+int mp_ensure_obequ(MathPrgm *mp, rhp_idx *ei) NONNULL;
 
 int mp_trim_memory(MathPrgm *mp) NONNULL;
 int mp_setobjcoef(MathPrgm *mp, double coef) NONNULL;

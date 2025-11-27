@@ -86,7 +86,7 @@ static inline int dagmp_array_reserve(DagMpArray *dat, unsigned reserve)
    return OK;
 }
 
-static inline OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
+static inline OWNERSHIP_HOLDS(2) OWNERSHIP_TAKES(3)
 int dagmp_array_add(DagMpArray *dat, MathPrgm* elt, const char *name)
 {
 

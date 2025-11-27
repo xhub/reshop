@@ -145,6 +145,20 @@ void avar_init(Avar* v)
 }
 
 /**
+ * @brief Initialize from an index array
+ *
+ * @param v    the avar
+ * @param vis  the index array
+ */
+void avar_fromIdxArray(Avar* v, const IdxArray *vis)
+{
+   avar_init(v);
+   v->type = EquVar_List;
+   v->size = vis->len;
+   v->list = vis->arr;
+}
+
+/**
  * @brief Copy an avar into another one
  *
  * @param dst   the destination (copy)

@@ -48,9 +48,9 @@ const char *cone_name(unsigned cone)
  *
  * @return                the error code
  */
-int cone_dual(enum cone cone, void *cone_data,
-               enum cone *dual_cone, void **dual_cone_data)
+int cone_dual(enum cone cone, void *cone_data, enum cone *dual_cone, void **dual_cone_data)
 {
+
    switch (cone) {
    case CONE_R_PLUS:
      *dual_cone = CONE_R_PLUS;
@@ -89,9 +89,9 @@ int cone_dual(enum cone cone, void *cone_data,
  *
  * @return                      the error code
  */
-int cone_polar(enum cone cone, void *cone_data,
-               enum cone *polar_cone, void **polar_cone_data)
+int cone_polar(enum cone cone, void *cone_data, enum cone *polar_cone, void **polar_cone_data)
 {
+
    switch (cone) {
    case CONE_R_PLUS:
      *polar_cone = CONE_R_MINUS;

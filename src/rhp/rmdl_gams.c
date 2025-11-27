@@ -735,7 +735,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
        * ----------------------------------------------------------------- */
 
       S_CHECK_EXIT(ctr_copyequname(ctr_src, i, buffer, sizeof(buffer)/sizeof(char)));
-      gams_fix_equvar_names(buffer);
+      gams_fix_symbol_name(buffer);
 
       /* TODO(xhub) LOW: try to expand that */
 
@@ -836,7 +836,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
       Var *v = &ctr_src->vars[i];
 
       S_CHECK_EXIT(ctr_copyvarname(ctr_src, i, buffer, sizeof(buffer)));
-      gams_fix_equvar_names(buffer);
+      gams_fix_symbol_name(buffer);
 
       /* dct, symName, symTyp, symDim, userInfo, symTxt  */
       dctAddSymbol(dct, buffer, dctvarSymType, 0, 0, "");
@@ -1020,7 +1020,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
                            isvarNL));
 
       GMOEXPORT_DEBUG("adding var %-30s in [% 3.2e%-*s% 3.2e%*s .l = % 3.2e; .m = % 3.2e;"
-                      " %-10s %-10s and found in %d equations", buffer,
+                      " %-10s %-10s and found in %3d equations", buffer,
                       NUMANDEPAD(dbl_to_gams(v->bnd.lb, gms_pinf, gms_minf, gms_na)),
                       ",",
                       NUMANDEPAD(dbl_to_gams(v->bnd.ub, gms_pinf, gms_minf, gms_na)),
@@ -1130,7 +1130,7 @@ int rmdl_exportasgmo(Model *mdl_src, Model *mdl_gms)
          objvar_gmo = ctr_gms->n-1;
 
          (void)snprintf(buffer, sizeof(buffer), "reshop_objvar-%s", gen_random_uuidv4());
-         gams_fix_equvar_names(buffer); /* Need to convert -  to _ from UUIDv4 */
+         gams_fix_symbol_name(buffer); /* Need to convert -  to _ from UUIDv4 */
 
          /* dct, symName, symTyp, symDim, userInfo, symTxt  */
          dctAddSymbol(dct, buffer, dctvarSymType, 0, 0, "objective variable added during conversion to GMO");

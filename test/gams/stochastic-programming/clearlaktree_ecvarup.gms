@@ -95,8 +95,10 @@ PARAMETER beta;
 
 SET test1, test2;
 
-PARAMETERS tails(test1<)    / '1'   1., '0.75' .75, '0.5' .5, '0.3' .3, '0.1' .1/;
-PARAMETERS cvar_wts(test2<) / '0.9' .9, '0.75' .75, '0.5' .5, '0.3' .3, '0.1' .1/;
+PARAMETERS tails(test1<)    / '0.75' .75/;
+* PARAMETERS tails(test1<)    / '1'   1., '0.75' .75, '0.5' .5, '0.3' .3, '0.1' .1/;
+* PARAMETERS cvar_wts(test2<) / '0.9' .9, '0.75' .75, '0.5' .5, '0.3' .3, '0.1' .1/;
+PARAMETERS cvar_wts(test2<) / '0.1' .1/;
 
 * Comparison
 PARAMETERS L_L(n), L_M(n), ldef_M(n), F_L(n), F_M(n), R_L(n), R_M(n), Z_L(n), Z_M(n),

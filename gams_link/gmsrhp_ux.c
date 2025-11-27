@@ -2,7 +2,6 @@
  * does some inspection on the model instance
  */
 
-#include "reshop_priv.h"
 #if defined(__linux__) && !defined(_GNU_SOURCE)
 
 #  define _GNU_SOURCE 1
@@ -12,6 +11,8 @@
 #  define _DARWIN_C_SOURCE
 
 #endif
+
+#include "reshop_priv.h"
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN

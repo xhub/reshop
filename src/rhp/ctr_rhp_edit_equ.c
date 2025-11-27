@@ -785,7 +785,8 @@ int rctr_equ_min_equ_rosetta(Container *ctr, Equ *dst, Equ *src, const rhp_idx* 
  *
  * @return     the error code
  */
-int rctr_equ_addmulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, double coeff)
+int rctr_equ_addmulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi,
+                               double coeff)
 {
    /* TODO: we cannot use valid_vi_() because of issues with bilevel problems */
    assert(valid_vi(vi));
@@ -885,8 +886,9 @@ int rctr_equ_addmulv_equ_coeff(Container *ctr, Equ *dst, Equ *src, rhp_idx vi, d
    }
 
    if (fabs(cst) > DBL_EPSILON) {
-      NlNode **dummynode = NULL;
-      S_CHECK(nltree_add_var(ctr, tree, &dummynode, vi, -cst));
+      NlNode *dummynode = NULL;
+      NlNode **dummyaddr = &dummynode;
+      S_CHECK(nltree_add_var(ctr, tree, &dummyaddr, vi, -cst));
    }
 
    return OK;

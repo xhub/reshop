@@ -604,11 +604,11 @@ const char* ctr_printequname2(const Container *ctr, rhp_idx ei)
  *
  * @param ctr the container
  * @param ei  the equation index
- * @param val the value of the RHS
+ * @param rhs the value of the RHS
  *
  * @return    the error code
  */
-int ctr_setequrhs(Container *ctr, rhp_idx ei, double val)
+int ctr_setequrhs(Container *ctr, rhp_idx ei, double rhs)
 {
 
    /*  TODO(Xhub) check for valid equation */
@@ -619,7 +619,7 @@ int ctr_setequrhs(Container *ctr, rhp_idx ei, double val)
    case CONE_R_MINUS:
    case CONE_R:
    case CONE_0:
-      return ctr_setequcst(ctr, ei, -val);
+      return ctr_setequcst(ctr, ei, -rhs);
    case CONE_POLYHEDRAL:
    case CONE_SOC:
    case CONE_RSOC:

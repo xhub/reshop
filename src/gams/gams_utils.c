@@ -51,20 +51,20 @@ static void sub_brackets(char *str, size_t len, char c_open, char c_close)
 #endif
 
 /* Per https://www.gams.com/latest/docs/UG_GAMSPrograms.html#UG_GAMSPrograms_Identifiers */
-UNUSED static bool valid_gams_identifier(const char * restrict name)
+UNUSED static bool is_valid_gams_identifier(const char * restrict identifier)
 {
-   const char *name_bck = name;
+   const char *name_bck = identifier;
 
    /* First character must be a letter */
-   char c = *name++;
+   char c = *identifier++;
    if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z')) { 
          error("[GAMS] ERROR: invalid GAMS identifier '%s': first character must "
                "be a letter, got '%c'\n", name_bck, c);
       return false;
    }
 
-   while (*name != '\0') {
-      c = *name++;
+   while (*identifier != '\0') {
+      c = *identifier++;
 
       if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z') &&
           !(c >= '0' && c <= '9') && !(c == '_')) {
@@ -78,7 +78,7 @@ UNUSED static bool valid_gams_identifier(const char * restrict name)
 }
 
 
-void gams_fix_equvar_names(char * restrict name)
+void gams_fix_symbol_name(char * restrict name)
 {
    assert(name && name[0] != '\0');
    size_t len = strlen(name);

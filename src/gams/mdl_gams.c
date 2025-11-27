@@ -418,6 +418,9 @@ int gmdl_cdat_create(Model *mdl_gms, Model *mdl_src)
 
    gmoIndexBaseSet(gmodst, 0);
    gmoNameModelSet(gmodst, mdl_src->commondata.name);
+
+   // FIXME: should this be moved to the exportasgmo?
+   // Maybe exportasgmo should be renamed and import the data?
    gmoModelTypeSet(gmodst, mdltype_to_gams(mdl_src->commondata.mdltype));
 
    if (mdl_gms_up) {

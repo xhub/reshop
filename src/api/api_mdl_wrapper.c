@@ -254,10 +254,10 @@ int rhp_mdl_ ## name (const Model *mdl, rhp_idx vi, argtype argname) { \
 }
 
 WRAP_VAR_GETTER(getvarperp,rhp_idx*,ei)
-WRAP_VAR_GETTER(getvarbasis,int*,basis_status)
+WRAP_VAR_GETTER(getvarbasis,int*,basis_info)
 WRAP_VAR_GETTER(getvarlb,double*,lb)
-WRAP_VAR_GETTER(getvarmult,double*,mult)
-WRAP_VAR_GETTER(getvarval,double*,val)
+WRAP_VAR_GETTER(getvardual,double*,dual)
+WRAP_VAR_GETTER(getvarlevel,double*,level)
 WRAP_VAR_GETTER(getvartype,unsigned*,type)
 WRAP_VAR_GETTER(getvarub,double*,ub)
 
@@ -287,9 +287,9 @@ int rhp_mdl_ ## name (const Model *mdl, Avar *v, argtype argname) { \
    return mdl->ctr.ops->name (&mdl->ctr, v, argname); \
 }
 
-WRAP_VARS_GETTER(getvarsmult,double*,vars_mult)
-WRAP_VARS_GETTER(getvarsval,double*,vars_val)
-WRAP_VARS_GETTER(getvarsbasis,int*,vars_basis)
+WRAP_VARS_GETTER(getvarsdual,double*,vdual)
+WRAP_VARS_GETTER(getvarslevel,double*,vlevel)
+WRAP_VARS_GETTER(getvarsbasis,int*,vbasis_info)
 
 
 #define WRAP_EQU_GETTER(name, argtype, argname) \
@@ -302,11 +302,11 @@ int rhp_mdl_ ## name (const Model *mdl, rhp_idx ei, argtype argname) { \
    return mdl->ctr.ops->name (&mdl->ctr, ei, argname); \
 }
 
-WRAP_EQU_GETTER(getequcst,double*,val)
+WRAP_EQU_GETTER(getequcst,double*,cst)
 WRAP_EQU_GETTER(getequperp,rhp_idx*,vi)
-WRAP_EQU_GETTER(getequbasis,int*,basis_status)
-WRAP_EQU_GETTER(getequval,double*,val)
-WRAP_EQU_GETTER(getequmult,double*,mult)
+WRAP_EQU_GETTER(getequbasis,int*,basis_info)
+WRAP_EQU_GETTER(getequlevel,double*,level)
+WRAP_EQU_GETTER(getequdual,double*,dual)
 
 #define WRAP_EQUS_GETTER(name, argtype, argname) \
 /** @copydoc ctr_ ## name  */ \
@@ -318,9 +318,9 @@ int rhp_mdl_ ## name (const Model *mdl, Aequ *e, argtype argname) { \
    return mdl->ctr.ops->name (&mdl->ctr, e, argname); \
 }
 
-WRAP_EQUS_GETTER(getequsmult,double*,equs_mult)
-WRAP_EQUS_GETTER(getequsval,double*,equs_val)
-WRAP_EQUS_GETTER(getequsbasis,int*,equs_basis)
+WRAP_EQUS_GETTER(getequsdual,double*,edual)
+WRAP_EQUS_GETTER(getequslevel,double*,elevel)
+WRAP_EQUS_GETTER(getequsbasis,int*,ebasis_info)
 
 #define WRAP_SINGLE_SETTER(name, argtype, argname) \
 /** @copydoc mdl_set ## name */ \
@@ -365,20 +365,20 @@ int rhp_mdl_ ## name (Model *mdl, rhp_idx argidx, arg1_t arg1, arg2_t arg2) { \
 
 //WRAP_VAR_SETTER(setvarperp,rhp_idx*,match)
 //WRAP_VAR_SETTER(setvarstatone,unsigned,bstat)
-WRAP_VAR_SETTER(setvarbasis,rhp_idx,basis_status)
+WRAP_VAR_SETTER(setvarbasis,rhp_idx,basis_info)
 WRAP_VAR_SETTER2(setvarbounds,double,lb,double,ub)
 WRAP_VAR_SETTER(setvarlb,double,lb)
-WRAP_VAR_SETTER(setvarmult,double,mult)
+WRAP_VAR_SETTER(setvardual,double,dual)
 WRAP_VAR_SETTER(setvarname,const char*,name)
 WRAP_VAR_SETTER(setvartype,unsigned,type)
 WRAP_VAR_SETTER(setvarub,double,ub)
-WRAP_VAR_SETTER(setvarval,double,val)
+WRAP_VAR_SETTER(setvarlevel,double,level)
 
-WRAP_EQU_SETTER(setequbasis,rhp_idx,basis_status)
-WRAP_EQU_SETTER(setequcst,double,val)
+WRAP_EQU_SETTER(setequbasis,rhp_idx,basis_info)
+WRAP_EQU_SETTER(setequcst,double,cst)
 WRAP_EQU_SETTER(setequname,const char*,name)
-WRAP_EQU_SETTER(setequmult,double,mult)
-WRAP_EQU_SETTER(setequval,double,val)
+WRAP_EQU_SETTER(setequdual,double,dual)
+WRAP_EQU_SETTER(setequlevel,double,level)
 WRAP_EQU_SETTER(setequvarperp,rhp_idx,vi)
 WRAP_EQU_SETTER2(setequtype,unsigned,type,unsigned,cone)
 
@@ -430,12 +430,14 @@ WRAP_MDL_GETTER1(getmodelstat,int*,modelstat)
 WRAP_MDL_GETTER1(getsolvestat,int*,solvestat)
 
 
-WRAP_CTR_GETTER1(getallequsmult,double*,mult)
-WRAP_CTR_GETTER1(getallequsval,double*,vals)
-WRAP_CTR_GETTER1(getallvarsmult,double*,mult)
-WRAP_CTR_GETTER1(getallvarsval,double*,vals)
+WRAP_CTR_GETTER1(getallequsbasis,int*,basis_infos)
+WRAP_CTR_GETTER1(getallequsdual, double*,duals)
+WRAP_CTR_GETTER1(getallequslevel,double*,levels)
+WRAP_CTR_GETTER1(getallvarsbasis,int*,basis_infos)
+WRAP_CTR_GETTER1(getallvarsdual, double*,duals)
+WRAP_CTR_GETTER1(getallvarslevel,double*,levels)
 
-WRAP_CTR_SETTER2(setequrhs,rhp_idx,ei,double,val)
+WRAP_CTR_SETTER2(setequrhs,rhp_idx,ei,double,rhs)
 
 #define WRAP_MDL_QUERY2(name, rettype, errval, arg1type, arg1) \
 /** @copydoc mdl_ ## name */ \

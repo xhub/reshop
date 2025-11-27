@@ -12,7 +12,7 @@ mdl : Model
 mp : MathPrgm
     The mathematical program.
 ") rhp_empdag_rootsetmp;
-%feature("autodoc", "empdag_rootsetmpe(mdl, mpe, /)
+%feature("autodoc", "empdag_rootsetnash(mdl, mpe, /)
 --
 
 Set the root of the EMP dag to an equilibrium.
@@ -23,7 +23,7 @@ mdl : Model
     The model.
 mpe : Nash
     The equilibrium.
-") rhp_empdag_rootsetmpe;
+") rhp_empdag_rootsetnash;
 %feature("autodoc", "empdag_newmp(mdl, sense, /)
 --
 
@@ -41,7 +41,7 @@ Returns
 MathPrgm
     The MathPrgm object.
 ") rhp_empdag_newmp;
-%feature("autodoc", "empdag_newmpe(mdl, /)
+%feature("autodoc", "empdag_newnash(mdl, /)
 --
 
 Allocate an equilibrium object.
@@ -55,8 +55,8 @@ Returns
 -------
 Nash
     The equilibrium object.
-") rhp_empdag_newmpe;
-%feature("autodoc", "empdag_mpeaddmp(mpe, mp, /)
+") rhp_empdag_newnash;
+%feature("autodoc", "empdag_nashaddmp(mpe, mp, /)
 --
 
 Add a mathematical programm into the equilibrium.
@@ -67,7 +67,7 @@ mpe : Nash
     The equilibrium structure.
 mp : MathPrgm
     The mathematical programm.
-") rhp_empdag_mpeaddmp;
+") rhp_empdag_nashaddmp;
 %feature("autodoc", "ensure_mp(mdl, reserve, /)
 --
 
@@ -502,6 +502,13 @@ Returns
 str
     The string representing the ReSHOP version.
 ") rhp_version;
+%feature("autodoc", "set_userinfo()
+--
+
+Set some user or initial backend info.
+
+This is mostly used for debug and crash reporting
+") rhp_set_userinfo;
 %feature("autodoc", "show_backendinfo(boolval, /)
 --
 
@@ -1129,7 +1136,7 @@ Returns
 float
     The variable lower bound.
 ") rhp_mdl_getvarlb;
-%feature("autodoc", "mdl_getvarmult(mdl, vi, /)
+%feature("autodoc", "mdl_getvardual(mdl, vi, /)
 --
 
 Get the multiplier of a variable.
@@ -1145,8 +1152,8 @@ Returns
 -------
 float
     The variable multiplier.
-") rhp_mdl_getvarmult;
-%feature("autodoc", "mdl_getvarval(mdl, vi, /)
+") rhp_mdl_getvardual;
+%feature("autodoc", "mdl_getvarlevel(mdl, vi, /)
 --
 
 Get the value of a variable.
@@ -1161,8 +1168,8 @@ vi : VariableRef or int
 Returns
 -------
 float
-    The variable value.
-") rhp_mdl_getvarval;
+    The variable level value.
+") rhp_mdl_getvarlevel;
 %feature("autodoc", "mdl_getvartype(mdl, vi, /)
 --
 
@@ -1216,7 +1223,7 @@ float
 float
     The upper bound of the variable (could be +INF).
 ") rhp_mdl_getvarbounds;
-%feature("autodoc", "mdl_getvarsmult(mdl, v, /)
+%feature("autodoc", "mdl_getvarsdual(mdl, v, /)
 --
 
 Get the multipliers (if available) for an abstract variable.
@@ -1232,8 +1239,8 @@ Returns
 -------
 float
     The multiplier array.
-") rhp_mdl_getvarsmult;
-%feature("autodoc", "mdl_getvarsval(mdl, v, /)
+") rhp_mdl_getvarsdual;
+%feature("autodoc", "mdl_getvarslevel(mdl, v, /)
 --
 
 Get the values for an abstract variable.
@@ -1249,7 +1256,7 @@ Returns
 -------
 float
     The values array.
-") rhp_mdl_getvarsval;
+") rhp_mdl_getvarslevel;
 %feature("autodoc", "mdl_getvarsbasis(mdl, v, /)
 --
 
@@ -1320,7 +1327,7 @@ Returns
 BasisStatus
     The basis status.
 ") rhp_mdl_getequbasis;
-%feature("autodoc", "mdl_getequval(mdl, ei, /)
+%feature("autodoc", "mdl_getequlevel(mdl, ei, /)
 --
 
 Get the value of an equation.
@@ -1336,8 +1343,8 @@ Returns
 -------
 float
     The value.
-") rhp_mdl_getequval;
-%feature("autodoc", "mdl_getequmult(mdl, ei, /)
+") rhp_mdl_getequlevel;
+%feature("autodoc", "mdl_getequdual(mdl, ei, /)
 --
 
 Get the multiplier of an equation.
@@ -1352,9 +1359,9 @@ ei : EquationRef or int
 Returns
 -------
 float
-    The multiplier.
-") rhp_mdl_getequmult;
-%feature("autodoc", "mdl_getequsmult(mdl, e, /)
+    The dual multiplier.
+") rhp_mdl_getequdual;
+%feature("autodoc", "mdl_getequsdual(mdl, e, /)
 --
 
 Get the multipliers (if available) for an abstract equation.
@@ -1369,9 +1376,9 @@ e : Equs
 Returns
 -------
 float
-    The multiplier array.
-") rhp_mdl_getequsmult;
-%feature("autodoc", "mdl_getequsval(mdl, e, /)
+    The dual multiplier array.
+") rhp_mdl_getequsdual;
+%feature("autodoc", "mdl_getequslevel(mdl, e, /)
 --
 
 Get the values for an abstract equation.
@@ -1387,7 +1394,7 @@ Returns
 -------
 float
     The values array.
-") rhp_mdl_getequsval;
+") rhp_mdl_getequslevel;
 %feature("autodoc", "mdl_getequsbasis(mdl, e, /)
 --
 
@@ -1417,7 +1424,7 @@ mdl : Model
 objvar : VariableRef or int
     The objective variable index.
 ") rhp_mdl_setobjvar;
-%feature("autodoc", "mdl_setvarbasis(mdl, vi, basis_status, /)
+%feature("autodoc", "mdl_setvarbasis(mdl, vi, basis_info, /)
 --
 
 Set the basis status of a variable.
@@ -1428,7 +1435,7 @@ mdl : Model
     The model.
 vi : VariableRef or int
     The variable index.
-basis_status : BasisStatus or int
+basis_info : BasisStatus or int
     The basis status of the variable.
 ") rhp_mdl_setvarbasis;
 %feature("autodoc", "mdl_setvarbounds(mdl, vi, lb, ub, /)
@@ -1461,10 +1468,10 @@ vi : VariableRef or int
 lb : float
     The variable lower bound.
 ") rhp_mdl_setvarlb;
-%feature("autodoc", "mdl_setvarmult(mdl, vi, mult, /)
+%feature("autodoc", "mdl_setvardual(mdl, vi, dual, /)
 --
 
-Set the multiplier of a variable.
+Set the dual multiplier of a variable.
 
 Parameters
 ----------
@@ -1472,9 +1479,9 @@ mdl : Model
     The model.
 vi : VariableRef or int
     The variable.
-mult : float
+dual : float
     The variable multiplier.
-") rhp_mdl_setvarmult;
+") rhp_mdl_setvardual;
 %feature("autodoc", "mdl_setvarname(mdl, vi, name, /)
 --
 
@@ -1517,7 +1524,7 @@ vi : VariableRef or int
 ub : float
     The variable upper bound.
 ") rhp_mdl_setvarub;
-%feature("autodoc", "mdl_setvarval(mdl, vi, val, /)
+%feature("autodoc", "mdl_setvarlevel(mdl, vi, level, /)
 --
 
 Set the value of a variable.
@@ -1528,10 +1535,10 @@ mdl : Model
     The model.
 vi : VariableRef or int
     The variable.
-val : float
+level : float
     The variable name.
-") rhp_mdl_setvarval;
-%feature("autodoc", "mdl_setequbasis(mdl, ei, basis_status, /)
+") rhp_mdl_setvarlevel;
+%feature("autodoc", "mdl_setequbasis(mdl, ei, basis_info, /)
 --
 
 Set the basis status of an equation.
@@ -1542,10 +1549,10 @@ mdl : Model
     The model.
 ei : EquationRef or int
     The equation index.
-basis_status : BasisStatus or int
+basis_info : BasisStatus or int
     The basis status.
 ") rhp_mdl_setequbasis;
-%feature("autodoc", "mdl_setequcst(mdl, ei, val, /)
+%feature("autodoc", "mdl_setequcst(mdl, ei, cst, /)
 --
 
 Set the constant value of an equation.
@@ -1556,7 +1563,7 @@ mdl : Model
     The model.
 ei : EquationRef or int
     The equation index.
-val : float
+cst : float
     The constant value.
 ") rhp_mdl_setequcst;
 %feature("autodoc", "mdl_setequname(mdl, ei, name, /)
@@ -1573,10 +1580,10 @@ ei : EquationRef or int
 name : str
     The equation name.
 ") rhp_mdl_setequname;
-%feature("autodoc", "mdl_setequmult(mdl, ei, mult, /)
+%feature("autodoc", "mdl_setequdual(mdl, ei, dual, /)
 --
 
-Set the multiplier of an equation.
+Set the dual multiplier of an equation.
 
 Parameters
 ----------
@@ -1584,10 +1591,10 @@ mdl : Model
     The model.
 ei : EquationRef or int
     The equation index.
-mult : float
+dual : float
     The equation multiplier.
-") rhp_mdl_setequmult;
-%feature("autodoc", "mdl_setequval(mdl, ei, val, /)
+") rhp_mdl_setequdual;
+%feature("autodoc", "mdl_setequlevel(mdl, ei, level, /)
 --
 
 Set the (level) value of an equation.
@@ -1598,9 +1605,9 @@ mdl : Model
     The model.
 ei : EquationRef or int
     The equation index.
-val : float
+level : float
     The value.
-") rhp_mdl_setequval;
+") rhp_mdl_setequlevel;
 %feature("autodoc", "mdl_setequvarperp(mdl, ei, vi, /)
 --
 
@@ -1710,7 +1717,22 @@ Returns
 SolveStatus
     The solve status.
 ") rhp_mdl_getsolvestat;
-%feature("autodoc", "mdl_getallequsmult(mdl, /)
+%feature("autodoc", "mdl_getallequsbasis(mdl, /)
+--
+
+Get the basis status of an equation.
+
+Parameters
+----------
+mdl : Model
+    The model.
+
+Returns
+-------
+array of BasisStatus
+    The basis status.
+") rhp_mdl_getallequsbasis;
+%feature("autodoc", "mdl_getallequsdual(mdl, /)
 --
 
 Get all equations multiplier.
@@ -1724,11 +1746,11 @@ Returns
 -------
 float
     The multiplier array, of appropriate size.
-") rhp_mdl_getallequsmult;
-%feature("autodoc", "mdl_getallequsval(mdl, /)
+") rhp_mdl_getallequsdual;
+%feature("autodoc", "mdl_getallequslevel(mdl, /)
 --
 
-Get all equations values.
+Get all equations level values.
 
 Parameters
 ----------
@@ -1739,8 +1761,23 @@ Returns
 -------
 float
     The value array, of appropriate size.
-") rhp_mdl_getallequsval;
-%feature("autodoc", "mdl_getallvarsmult(mdl, /)
+") rhp_mdl_getallequslevel;
+%feature("autodoc", "mdl_getallvarsbasis(mdl, /)
+--
+
+Get all variables basis info.
+
+Parameters
+----------
+mdl : Model
+    The model.
+
+Returns
+-------
+array of BasisStatus
+    The value array, of appropriate size.
+") rhp_mdl_getallvarsbasis;
+%feature("autodoc", "mdl_getallvarsdual(mdl, /)
 --
 
 Get all variables multipliers.
@@ -1754,8 +1791,8 @@ Returns
 -------
 float
     The multipliers array, of appropriate size.
-") rhp_mdl_getallvarsmult;
-%feature("autodoc", "mdl_getallvarsval(mdl, /)
+") rhp_mdl_getallvarsdual;
+%feature("autodoc", "mdl_getallvarslevel(mdl, /)
 --
 
 Get all variables values.
@@ -1769,8 +1806,8 @@ Returns
 -------
 float
     The value array, of appropriate size.
-") rhp_mdl_getallvarsval;
-%feature("autodoc", "mdl_setequrhs(mdl, ei, val, /)
+") rhp_mdl_getallvarslevel;
+%feature("autodoc", "mdl_setequrhs(mdl, ei, rhs, /)
 --
 
 Set the RHS of an equation.
@@ -1781,7 +1818,7 @@ mdl : Model
     The model.
 ei : EquationRef or int
     The equation index.
-val : float
+rhs : float
     The value of the RHS.
 ") rhp_mdl_setequrhs;
 %feature("autodoc", "mdl_modelstattxt(mdl, modelstat, /)
@@ -2089,7 +2126,7 @@ mp : MathPrgm
 name : str
     The name.
 ") rhp_mp_setname;
-%feature("autodoc", "mpe_getid(mpe, /)
+%feature("autodoc", "nash_getid(mpe, /)
 --
 
 Get the ID of a Nash equilibrium.
@@ -2103,8 +2140,8 @@ Returns
 -------
 int
     The ID, or UINT_MAX on error.
-") rhp_mpe_getid;
-%feature("autodoc", "mpe_getname(mpe, /)
+") rhp_nash_getid;
+%feature("autodoc", "nash_getname(mpe, /)
 --
 
 Get the name of a Nash equilibrium.
@@ -2118,8 +2155,8 @@ Returns
 -------
 str
     The name, or NULL on error.
-") rhp_mpe_getname;
-%feature("autodoc", "mpe_getnumchildren(mpe, /)
+") rhp_nash_getname;
+%feature("autodoc", "nash_getnumchildren(mpe, /)
 --
 
 Get the number of children of a Nash equilibrium.
@@ -2133,8 +2170,8 @@ Returns
 -------
 int
     The number of children, or UINT_MAX on error.
-") rhp_mpe_getnumchildren;
-%feature("autodoc", "mpe_print(mpe, /)
+") rhp_nash_getnumchildren;
+%feature("autodoc", "nash_print(mpe, /)
 --
 
 Print the content of a Nash equilibrium.
@@ -2143,7 +2180,7 @@ Parameters
 ----------
 mpe : Nash
     The.
-") rhp_mpe_print;
+") rhp_nash_print;
 %feature("autodoc", "nltree_getroot(tree, /)
 --
 
@@ -2978,19 +3015,10 @@ Returns
 int
     The variable index.
 ") rhp_avar_get;
-%feature("autodoc", "avar_set_list(v, size, vis, /)
+%feature("autodoc", "avar_set_list()
 --
 
-Set the abstract as a list.
 
-Parameters
-----------
-v : Vars
-    The abstract variable.
-size : int
-    The length of the list.
-vis : array-like of VariableRef or int
-    The array of indices.
 ") rhp_avar_set_list;
 %feature("autodoc", "avar_get_list(v, /)
 --
@@ -3228,7 +3256,7 @@ Returns
 str
     The string representation of the status value.
 ") rhp_status_descr;
-%feature("autodoc", "set_printops(data, print, flush, use_asciicolors, /)
+%feature("autodoc", "set_printops(data, print, flush, flags, /)
 --
 
 Set the printing operators.
@@ -3241,8 +3269,8 @@ print : rhp_print_fn
     The print function.
 flush : rhp_flush_fn
     The flush function.
-use_asciicolors : Bool
-    If false, remove any ASCII color from the messages.
+flags : int
+    Flags to control behavior (see enum rhp_print_flags).
 ") rhp_set_printops;
 %feature("autodoc", "set_printopsdefault()
 --

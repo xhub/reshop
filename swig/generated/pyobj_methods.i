@@ -2,26 +2,28 @@
 
 %extend struct rhp_mdl {
 	int fixvar(rhp_idx vi, double val);
-	int getvarsmult(struct rhp_avar * v, double * vars_mult);
-	int getvarsbasis(struct rhp_avar * v, int * vars_basis);
-	int getvarsval(struct rhp_avar * v, double * vars_val);
-	int getequsmult(struct rhp_aequ * e, double * equs_mult);
-	int getequsbasis(struct rhp_aequ * e, int * equs_basis);
-	int getequsval(struct rhp_aequ * e, double * equs_val);
+	int getvarsbasis(rhp_vars_t * v, int * vbasis_info);
+	int getvarsdual(rhp_vars_t * v, double * vdual);
+	int getvarslevel(rhp_vars_t * v, double * vlevel);
+	int getequsbasis(rhp_equs_t * e, int * ebasis_info);
+	int getequsdual(rhp_equs_t * e, double * edual);
+	int getequslevel(rhp_equs_t * e, double * elevel);
 	int getequbyname(const char * name, rhp_idx * ei);
-	int getallequsmult(double * mult);
-	int getallequsval(double * vals);
-	int getallvarsmult(double * mult);
-	int getallvarsval(double * vals);
-	int getequbasis(rhp_idx ei, int * basis_status);
-	int getequcst(rhp_idx ei, double * val);
-	int getequval(rhp_idx ei, double * val);
+	int getallequsbasis(int * basis_infos);
+	int getallequsdual(double * duals);
+	int getallequslevel(double * levels);
+	int getallvarsbasis(int * basis_infos);
+	int getallvarsdual(double * duals);
+	int getallvarslevel(double * levels);
+	int getequbasis(rhp_idx ei, int * basis_info);
+	int getequcst(rhp_idx ei, double * cst);
+	int getequlevel(rhp_idx ei, double * level);
 	int getequperp(rhp_idx ei, rhp_idx * vi);
-	int getequmult(rhp_idx ei, double * mult);
+	int getequdual(rhp_idx ei, double * dual);
 	int getequtype(rhp_idx ei, unsigned int * type, unsigned int * cone);
 	int getmodelstat(int * modelstat);
 	int getobjequ(rhp_idx * objequ);
-	int getobjequs(struct rhp_aequ * objs);
+	int getobjequs(rhp_equs_t * objs);
 	int getsense(unsigned int * sense);
 	int getobjvar(rhp_idx * objvar);
 	int gettype(unsigned int * type);
@@ -33,67 +35,67 @@
 	int getvarbounds(rhp_idx vi, double * lb, double * ub);
 	int getvarbyname(const char * name, rhp_idx * vi);
 	int getvarlb(rhp_idx vi, double * lb);
-	int getvarval(rhp_idx vi, double * val);
-	int getvarmult(rhp_idx vi, double * mult);
+	int getvarlevel(rhp_idx vi, double * level);
+	int getvardual(rhp_idx vi, double * dual);
 	int getvartype(rhp_idx vi, unsigned int * type);
 	int getvarub(rhp_idx vi, double * ub);
 	int setname(const char * name);
 	int resize(unsigned int n, unsigned int m);
 	int setequbasis(rhp_idx ei, int basis_status);
-	int setequcst(rhp_idx ei, double val);
+	int setequcst(rhp_idx ei, double cst);
 	int setequname(rhp_idx ei, const char * name);
-	int setequmult(rhp_idx ei, double mult);
+	int setequdual(rhp_idx ei, double dual);
 	int setequtype(rhp_idx ei, unsigned int type, unsigned int cone);
 	int setequvarperp(rhp_idx ei, rhp_idx vi);
-	int setequval(rhp_idx ei, double level);
+	int setequlevel(rhp_idx ei, double level);
 	int settype(unsigned int type);
 	int setobjsense(unsigned int objsense);
 	int setobjvar(rhp_idx objvar);
-	int setequrhs(rhp_idx ei, double val);
+	int setequrhs(rhp_idx ei, double rhs);
 	int setsolvername(const char * solvername);
 	int setvarbasis(rhp_idx vi, int basis_status);
 	int setvarbounds(rhp_idx vi, double lb, double ub);
 	int setvarlb(rhp_idx vi, double lb);
-	int setvarmult(rhp_idx vi, double mult);
+	int setvardual(rhp_idx vi, double dual);
 	int setvarname(rhp_idx vi, const char * name);
 	int setvartype(rhp_idx vi, unsigned int type);
 	int setvarub(rhp_idx vi, double ub);
-	int setvarval(rhp_idx vi, double val);
-	int exportmodel(struct rhp_mdl * mdl_dst);
+	int setvarlevel(rhp_idx vi, double level);
+	int exportmodel(rhp_mdl_t * mdl_dst);
 	int ensure_mp(unsigned int reserve);
-	int empdag_rootsetmp(struct rhp_mathprgm * mp);
-	int empdag_rootsetmpe(struct rhp_nash_equilibrium * mpe);
+	int empdag_rootsetmp(rhp_mathprgm_t * mp);
+	int empdag_rootsetnash(rhp_nash_equilibrium_t * nash);
 	int gms_setgamscntr(const char * cntrfile);
 	int gms_setgamsdir(const char * gamsdir);
 	int gms_writesol2gdx(const char * gdxname);
-	int empdag_mpaddmpVF(struct rhp_mathprgm * mp, struct rhp_mathprgm * mp_child, struct rhp_empdag_arcVF * arcVF);
-	int empdag_mpaddmpCTRL(struct rhp_mathprgm * mp, struct rhp_mathprgm * mp_child);
-	int empdag_mpeaddmp(struct rhp_nash_equilibrium * mpe, struct rhp_mathprgm * mp);
+	int empdag_mpaddmpVF(rhp_mathprgm_t * mp, rhp_mathprgm_t * mp_child, rhp_empdag_arcVF_t * arcVF);
+	int empdag_mpaddmpCTRL(rhp_mathprgm_t * mp, rhp_mathprgm_t * mp_child);
+	int empdag_nashaddmp(rhp_nash_equilibrium_t * nash, rhp_mathprgm_t * mp);
 	int add_var(rhp_idx * vi);
 	int add_var(rhp_idx * vi, const char * name) { return rhp_add_varnamed (self, vi, name); };
-	int add_vars(unsigned int size, struct rhp_avar * vout);
-	int add_vars(unsigned int size, struct rhp_avar * vout, const char * name) { return rhp_add_varsnamed (self, size, vout, name); };
-	int add_posvars(unsigned int size, struct rhp_avar * vout);
-	int add_posvars(unsigned int size, struct rhp_avar * vout, const char * name) { return rhp_add_posvarsnamed (self, size, vout, name); };
-	int add_negvars(unsigned int size, struct rhp_avar * vout);
-	int add_negvars(unsigned int size, struct rhp_avar * vout, const char * name) { return rhp_add_negvarsnamed (self, size, vout, name); };
-	int add_varsinbox(unsigned int size, struct rhp_avar * vout, double lb, double ub);
-	int add_varsinbox(unsigned int size, struct rhp_avar * vout, const char * name, double lb, double ub) { return rhp_add_varsinboxnamed (self, size, vout, name, lb, ub); };
-	int add_varsinboxes(unsigned int size, struct rhp_avar * vout, double * lbs, double * ubs);
-	int add_varsinboxes(unsigned int size, struct rhp_avar * vout, const char * name, double * lbs, double * ubs) { return rhp_add_varsinboxesnamed (self, size, vout, name, lbs, ubs); };
-	int set_var_sos1(struct rhp_avar * v, double * weights);
-	int set_var_sos2(struct rhp_avar * v, double * weights);
+	int add_vars(unsigned int size, rhp_vars_t * vout);
+	int add_vars(unsigned int size, rhp_vars_t * vout, const char * name) { return rhp_add_varsnamed (self, size, vout, name); };
+	int add_posvars(unsigned int size, rhp_vars_t * vout);
+	int add_posvars(unsigned int size, rhp_vars_t * vout, const char * name) { return rhp_add_posvarsnamed (self, size, vout, name); };
+	int add_negvars(unsigned int size, rhp_vars_t * vout);
+	int add_negvars(unsigned int size, rhp_vars_t * vout, const char * name) { return rhp_add_negvarsnamed (self, size, vout, name); };
+	int add_varsinbox(unsigned int size, rhp_vars_t * vout, double lb, double ub);
+	int add_varsinbox(unsigned int size, rhp_vars_t * vout, const char * name, double lb, double ub) { return rhp_add_varsinboxnamed (self, size, vout, name, lb, ub); };
+	int add_varsinboxes(unsigned int size, rhp_vars_t * vout, double * lbs, double * ubs);
+	int add_varsinboxes(unsigned int size, rhp_vars_t * vout, const char * name, double * lbs, double * ubs) { return rhp_add_varsinboxesnamed (self, size, vout, name, lbs, ubs); };
+	int set_var_sos1(rhp_vars_t * v, double * weights);
+	int set_var_sos2(rhp_vars_t * v, double * weights);
 	int add_con(unsigned int type, rhp_idx * ei);
 	int add_con(unsigned int size, rhp_idx * ei, const char * name) { return rhp_add_connamed (self, size, ei, name); };
-	int add_cons(unsigned int size, unsigned int type, struct rhp_aequ * eout);
-	int add_cons(unsigned int size, unsigned int type, struct rhp_aequ * eout, const char * name) { return rhp_add_consnamed (self, size, type, eout, name); };
+	int add_cons(unsigned int size, unsigned int type, rhp_equs_t * eout);
+	int add_cons(unsigned int size, unsigned int type, rhp_equs_t * eout, const char * name) { return rhp_add_consnamed (self, size, type, eout, name); };
 	int add_func(rhp_idx * ei);
 	int add_func(rhp_idx * ei, const char * name) { return rhp_add_funcnamed (self, ei, name); };
-	int add_funcs(unsigned int size, struct rhp_aequ * eout);
-	int add_funcs(unsigned int size, struct rhp_aequ * eout, const char * name) { return rhp_add_funcsnamed (self, size, eout, name); };
+	int add_funcs(unsigned int size, rhp_equs_t * eout);
+	int add_funcs(unsigned int size, rhp_equs_t * eout, const char * name) { return rhp_add_funcsnamed (self, size, eout, name); };
 	int setobjequ(rhp_idx ei);
 	int add_equation(rhp_idx * ei);
-	int add_equations(unsigned int nb, struct rhp_aequ * eout);
+	int add_equations(unsigned int nb, rhp_equs_t * eout);
 	int add_equality_constraint(rhp_idx * ei);
 	int add_exp_constraint(rhp_idx * ei);
 	int add_greaterthan_constraint(rhp_idx * ei);
@@ -106,30 +108,30 @@
 	int add_lessthan_constraint(rhp_idx * ei, const char * name) { return rhp_add_lessthan_constraint_named (self, ei, name); };
 	int add_power_constraint(rhp_idx * ei, const char * name) { return rhp_add_power_constraint_named (self, ei, name); };
 	int add_soc_constraint(rhp_idx * ei, const char * name) { return rhp_add_soc_constraint_named (self, ei, name); };
-	int equ_addbilin(rhp_idx ei, struct rhp_avar * v1, struct rhp_avar * v2, double coeff);
-	int equ_addlin(rhp_idx ei, struct rhp_avar * v, const double * coeffs);
-	int equ_addlinchk(rhp_idx ei, struct rhp_avar * v, const double * coeffs);
-	int equ_addlincoeff(rhp_idx ei, struct rhp_avar * v, const double * coeffs, double coeff);
+	int equ_addbilin(rhp_idx ei, rhp_vars_t * v1, rhp_vars_t * v2, double coeff);
+	int equ_addlin(rhp_idx ei, rhp_vars_t * v, const double * coeffs);
+	int equ_addlinchk(rhp_idx ei, rhp_vars_t * v, const double * coeffs);
+	int equ_addlincoeff(rhp_idx ei, rhp_vars_t * v, const double * coeffs, double coeff);
 	int equ_addlvar(rhp_idx ei, rhp_idx vi, double val);
 	int equ_addnewlvar(rhp_idx ei, rhp_idx vi, double val);
-	int equ_setcst(rhp_idx ei, double val);
-	int equ_getcst(rhp_idx ei, double * val);
+	int equ_setcst(rhp_idx ei, double cst);
+	int equ_getcst(rhp_idx ei, double * cst);
 	int equ_getlin(rhp_idx ei, unsigned int * len, int ** idxs, double ** vals);
 	int delete_equ(rhp_idx ei);
 	int delete_var(rhp_idx vi);
 	int is_var_valid(rhp_idx vi);
 	int is_equ_valid(rhp_idx ei);
-	int nltree_call(struct rhp_nltree * tree, struct rhp_nlnode *** node, unsigned int opcode, unsigned int n_args);
-	int nltree_cst(struct rhp_nltree * tree, struct rhp_nlnode *** node, double cst);
-	int nltree_var(struct rhp_nltree * tree, struct rhp_nlnode *** node, rhp_idx vi, double coeff);
-	int nltree_addquad(rhp_idx ei, struct rhp_spmat * mat, struct rhp_avar * v, double coeff);
-	int nltree_addlin(rhp_idx ei, double * c, struct rhp_avar * v, double coeff);
+	int nltree_call(rhp_nltree_t * tree, rhp_nlnode_t *** node, unsigned int opcode, unsigned int n_args);
+	int nltree_cst(rhp_nltree_t * tree, rhp_nlnode_t *** node, double cst);
+	int nltree_var(rhp_nltree_t * tree, rhp_nlnode_t *** node, rhp_idx vi, double coeff);
+	int nltree_addquad(rhp_idx ei, struct rhp_spmat * mat, rhp_vars_t * v, double coeff);
+	int nltree_addlin(rhp_idx ei, double * c, rhp_vars_t * v, double coeff);
 	int reserve_equs(unsigned int size);
 	int reserve_vars(unsigned int size);
 	int latex(const char * filename);
-	int ovf_add(const char * name, int ovf_vi, struct rhp_avar * v_args, struct rhp_ovfdef ** ovf_def);
-	int ovf_check(struct rhp_ovfdef * ovf_def);
-	int process(struct rhp_mdl * mdl_solver);
+	int ovf_add(const char * name, int ovf_vi, rhp_vars_t * v_args, rhp_ovf_t ** ovf_def);
+	int ovf_check(rhp_ovf_t * ovf_def);
+	int process(rhp_mdl_t * mdl_solver);
 	int postprocess(void);
 	int get_var_sos1(rhp_idx vi, unsigned int ** grps);
 	int get_var_sos2(rhp_idx vi, unsigned int ** grps);
@@ -142,12 +144,12 @@
 	const char * modelstattxt(int modelstat);
 	const char * solvestattxt(int solvestat);
 	void print_emp(void);
-	struct rhp_mathprgm * empdag_newmp(unsigned int sense);
-	struct rhp_nash_equilibrium * empdag_newmpe(void);
+	rhp_mathprgm_t * empdag_newmp(unsigned int sense);
+	rhp_nash_equilibrium_t * empdag_newnash(void);
 	unsigned int nvars_total(void);
 	unsigned int nequs_total(void);
-	struct rhp_nltree * getnltree(rhp_idx ei);
-	struct rhp_mdl * newsolvermdl(void);
+	rhp_nltree_t * getnltree(rhp_idx ei);
+	rhp_mdl_t * newsolvermdl(void);
 	enum rhp_backendtype getbackend(void);
 	const char * getbackendname(void);
 	const char * getname(void);
@@ -168,9 +170,9 @@
 	int addconstraint(rhp_idx ei);
 	int addequ(rhp_idx ei);
 	int addvar(rhp_idx vi);
-	int addvars(struct rhp_avar * v);
+	int addvars(rhp_vars_t * v);
 	int addvipair(rhp_idx ei, rhp_idx vi);
-	int addvipairs(struct rhp_aequ * e, struct rhp_avar * v);
+	int addvipairs(rhp_equs_t * e, rhp_vars_t * v);
 	int finalize(void);
 	int getobjequ(void);
 	int getobjvar(void);
@@ -178,7 +180,7 @@
 	int setobjequ(rhp_idx objequ);
 	int setobjvar(rhp_idx objvar);
 	unsigned int getid(void);
-	const struct rhp_mdl * getmdl(void);
+	const rhp_mdl_t * getmdl(void);
 	unsigned int getsense(void);
 	const char * getname(void);
 	unsigned int ncons(void);
@@ -193,13 +195,13 @@
 %header %{
 #define rhp_mdl_ensure_mp rhp_ensure_mp
 #define rhp_mdl_empdag_rootsetmp rhp_empdag_rootsetmp
-#define rhp_mdl_empdag_rootsetmpe rhp_empdag_rootsetmpe
+#define rhp_mdl_empdag_rootsetnash rhp_empdag_rootsetnash
 #define rhp_mdl_gms_setgamscntr rhp_gms_setgamscntr
 #define rhp_mdl_gms_setgamsdir rhp_gms_setgamsdir
 #define rhp_mdl_gms_writesol2gdx rhp_gms_writesol2gdx
 #define rhp_mdl_empdag_mpaddmpVF rhp_empdag_mpaddmpVF
 #define rhp_mdl_empdag_mpaddmpCTRL rhp_empdag_mpaddmpCTRL
-#define rhp_mdl_empdag_mpeaddmp rhp_empdag_mpeaddmp
+#define rhp_mdl_empdag_nashaddmp rhp_empdag_nashaddmp
 #define rhp_mdl_add_var rhp_add_var
 #define rhp_mdl_add_varnamed rhp_add_varnamed
 #define rhp_mdl_add_vars rhp_add_vars
@@ -262,7 +264,7 @@
 #define rhp_mdl_get_var_sos2 rhp_get_var_sos2
 #define rhp_mdl_print_emp rhp_print_emp
 #define rhp_mdl_empdag_newmp rhp_empdag_newmp
-#define rhp_mdl_empdag_newmpe rhp_empdag_newmpe
+#define rhp_mdl_empdag_newnash rhp_empdag_newnash
 #define rhp_mdl_newsolvermdl rhp_newsolvermdl
 #define rhp_mdl_get_nb_lequ_le rhp_get_nb_lequ_le
 #define rhp_mdl_get_nb_lequ_ge rhp_get_nb_lequ_ge
@@ -294,7 +296,7 @@
 #define rhp_mathprgm_ncons rhp_mp_ncons
 #define rhp_mathprgm_nmatched rhp_mp_nmatched
 #define rhp_mathprgm_nvars rhp_mp_nvars
-#define rhp_nash_equilibrium_getid rhp_mpe_getid
-#define rhp_nash_equilibrium_getname rhp_mpe_getname
-#define rhp_nash_equilibrium_getnumchildren rhp_mpe_getnumchildren
+#define rhp_nash_equilibrium_getid rhp_nash_getid
+#define rhp_nash_equilibrium_getname rhp_nash_getname
+#define rhp_nash_equilibrium_getnumchildren rhp_nash_getnumchildren
 %}

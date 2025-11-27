@@ -37,7 +37,7 @@ GdxReader* gdx_readers_new(Interpreter* restrict interp) NONNULL;
 GdxReader* gdx_reader_last(Interpreter* restrict interp) NONNULL;
 
 void gdx_reader_free(struct gdx_reader *reader);
-NONNULL OWNERSHIP_TAKES(3)
+NONNULL OWNERSHIP_HOLDS(3)
 int gdx_reader_init(GdxReader *reader, Model *mdl, const char *fname);
 
 int gdx_reader_readsym(GdxReader *reader, const char *symname) NONNULL;

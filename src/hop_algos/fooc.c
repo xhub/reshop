@@ -94,7 +94,6 @@ static void err_objvar_(const Model *mdl, const MathPrgm *mp, rhp_idx objvar,
 static NONNULL
 int getequ_curidx(Model *mdl_src, rhp_idx ei_src, const Rosettas *r, Equ *e)
 {
-   
    Model *mdl = mdl_src;
    rhp_idx ei = ei_src;
    unsigned depth = 0;
@@ -149,6 +148,8 @@ end:
    assert(depth < r->mdls.len);
    rhp_idx * restrict rosetta_vars = &r->data[r->rosetta_starts.arr[depth]];
 
+   /* FIXME: big issue: some metadat might have been changed (like the object),
+    * between the original and the current copy */
    Equ *e_up = &mdl->ctr.equs[ei];
 
    memcpy(e, e_up, sizeof(Equ));
@@ -804,8 +805,8 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
             vifuncs_list[n_mappings] = i;
             n_mappings++;
 
-            FOOC_DEBUG("adding VI mapping '%s' at pos %zu",
-                       mdl_printequname(mdl_src, i), (size_t)ei);
+            FOOC_DEBUG("adding VI mapping '%s' at pos %zu", mdl_printequname(mdl_src, i),
+                       (size_t)ei);
 
          /* --------------------------------------------------------------
           *  The equation is a constraint and we copy it as such
@@ -815,6 +816,7 @@ static int inject_vifunc_and_cons(Model *mdl_src, Model *mdl_mcp, FoocData *fooc
             /* rev_rosetta_cons must be updated before nl_copy_ to avoid issues
            * with tracing container changes */
             if (equ.tree && equ.tree->root) {
+
                FOOC_DEBUG("adding NL constraint '%s' at pos %zu",
                           mdl_printequname(mdl_src, i), ei_nl);
                ei = ei_nl++;

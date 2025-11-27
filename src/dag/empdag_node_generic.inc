@@ -98,7 +98,7 @@ FN_SCOPE int RHP_MAKE_STR(reserve)(struct RHP_LIST_TYPE *dat, IDX_TYPE reserve)
    return OK;
 }
 
-FN_SCOPE OWNERSHIP_TAKES(2) OWNERSHIP_TAKES(3)
+FN_SCOPE OWNERSHIP_HOLDS(2) OWNERSHIP_TAKES(3)
 int RHP_MAKE_STR(add)(struct RHP_LIST_TYPE *dat, RHP_ELT_TYPE elt, const char *name)
 {
 

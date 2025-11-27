@@ -15,7 +15,7 @@ int rmdl_dup_equ(Model *mdl, rhp_idx *ei) NONNULL;
 int rmdl_equ_dup_except(Model *mdl, rhp_idx *eidx, unsigned lin_space, rhp_idx vi_no) NONNULL;
 int rmdl_equ_defmap2map(Model *mdl, Equ **e, rhp_idx defvar) NONNULL;
 int rmdl_equ_flip(Model *mdl, rhp_idx ei, rhp_idx *ei_new) NONNULL;
-int rmdl_equ_rm(Model* mdl, rhp_idx eidx) NONNULL;
+int rmdl_rm_equ(Model* mdl, rhp_idx eidx) NONNULL;
 int rmdl_appendequs(Model *mdl, const Aequ *e) NONNULL;
 
 int rmdl_getobjequ(const Model *mdl, rhp_idx *objequ) NONNULL;

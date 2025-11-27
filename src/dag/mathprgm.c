@@ -592,7 +592,7 @@ int mp_objequ_setmultiplier(MathPrgm *mp) {
       assert(mp->mdl);
       /* We can't set e->multiplier since we could have a non-rhp backend */
       Container *ctr = &mp->mdl->ctr;
-      S_CHECK(ctr->ops->setequmult(ctr, objequ, 1./objvarcoeff));
+      S_CHECK(ctr->ops->setequdual(ctr, objequ, 1./objvarcoeff));
    }
 
    return OK;
@@ -902,7 +902,9 @@ RhpSense mp_getsense(const MathPrgm *mp) {
  *
  * @return the objective equation index (could be invalid)
  */
-rhp_idx mp_getobjequ(const MathPrgm *mp) {
+rhp_idx mp_getobjequ(const MathPrgm *mp)
+{
+
    if (mp_isopt(mp)) {
       return mp->opt.objequ;
    }
@@ -1120,9 +1122,8 @@ int mp_rm_equ(MathPrgm *mp, rhp_idx ei)
    EquMeta *equmeta = mp->mdl->ctr.equmeta;
    unsigned mp2_id = equmeta[ei].mp_id;
    if (mp2_id != mp->id) {
-      error("%s :: equation '%s' does not belong to MP(%s)\n", __func__,
-            mdl_printequname(mp->mdl, ei),
-            empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
+      error("[MP] ERROR: equation '%s' does not belong to MP(%s)\n",
+            mdl_printequname(mp->mdl, ei), empdag_getmpname(&mp->mdl->empinfo.empdag, mp->id));
       return Error_Inconsistency;
    }
 
@@ -1193,7 +1194,7 @@ int mp_instantiate_fenchel_dual(MathPrgm *mp)
    return mp_finalize(mp);
 }
 
-int mp_ensure_objfunc(MathPrgm *mp, rhp_idx *ei)
+int mp_ensure_obequ(MathPrgm *mp, rhp_idx *ei)
 {
    if (!mp_isvalid(mp)) {
       errormsg("[MP] ERROR: invalid MP!\n");
@@ -1327,7 +1328,7 @@ int mp_add_objfn_mp(MathPrgm *mp_dst, MathPrgm *mp_src)
    Container *ctr = &mp_dst->mdl->ctr;
 
    rhp_idx objfn_dst;
-   S_CHECK(mp_ensure_objfunc(mp_dst, &objfn_dst));
+   S_CHECK(mp_ensure_obequ(mp_dst, &objfn_dst));
    Equ *eobj_dst = &ctr->equs[objfn_dst];
 
    if (eobj_dst->object != Mapping) {
@@ -1365,7 +1366,7 @@ int mp_add_objfn_map(MathPrgm *mp, Lequ * restrict le)
    Container *ctr = &mdl->ctr;
 
    rhp_idx objfn;
-   S_CHECK(mp_ensure_objfunc(mp, &objfn));
+   S_CHECK(mp_ensure_obequ(mp, &objfn));
    Equ *eobj = &ctr->equs[objfn];
 
    if (eobj->object != Mapping) {

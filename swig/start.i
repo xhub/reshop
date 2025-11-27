@@ -47,10 +47,11 @@ _Pragma("clang diagnostic ignored \"-Wunused-function\"")
 #include "reshop.h"
 #include "rhpidx.h"
 #include "asprintf.h"
+#include "macros.h"
 
 #include "status.h"
 
-// TODO: just for prototyping
+// FIXME: just for prototyping
 #include "pool.h"
 
 SWIGINTERN int errcode_rhp2swig(int code)
@@ -110,8 +111,43 @@ SWIGINTERN int errcode_rhp2swig(int code)
    }
 }
 
+#ifdef _WIN32
+SWIGINTERN const char unknown_err[] = "unknown error";
+
+SWIGINTERN unsigned win_strerror(unsigned sz, char buf[VMT(static sz)], const char **msg)
+{
+   DWORD err = GetLastError();
+   unsigned length42 = FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, err, 0, buf, sz, NULL);
+
+   if (length42 > 0) { *msg = buf; } else { *msg = unknown_err; }
+
+   return err;
+}
+
+#else
+
+#include <errno.h>
+#include "macros.h"
+int posix_strerror(size_t sz, char buf[VMT(static sz)], const char **msg)
+{
+   int errno_ = errno;
+   STRERROR(buf, sz, *msg);
+   return errno_;
+}
+#endif
+
 
 #define RHP_FAIL(expr, msg) do { int rc42 = (expr); if (RHP_OK != rc42) { SWIG_exception_fail(errcode_rhp2swig(rc42), msg); } } while(0);
+#define IO_CALL_SWIG(expr, msg) do { int rc42 = (expr); if (RHP_UNLIKELY(status42)) { \
+      int errno42 = errno; \
+      const char *msg42_ptr; char buf42[256], char msg42[512]; \
+      STRERROR(buf42, sizeof(buf42)-1, msg42_ptr); \
+      memcpy(msg42, msg, sizeof(msg)); \
+      strncat(msg42, buf42, sizeof(msg42)-sizeof(msg)-1); \
+      SWIG_exception_fail(PyExc_RuntimeError, msg42); \
+      } } while(0);
 
 #define IO_PRINT_SWIG(expr) { int status42 = (expr); if (RHP_UNLIKELY(status42 < 0)) { \
    SWIG_exception_fail(SWIG_RuntimeError, "write error"); } }
@@ -155,7 +191,7 @@ const RhpBackendType BackendInvalidObj  = {.backend = INT8_MAX};
 #define MY_CONCAT(x, y) x ## _ ## y
 #endif
 
-#define MAX(a, b) (a) >= (b) ? (a) : (b)
+// #define MAX(a, b) (a) >= (b) ? (a) : (b)
 
 #include "tlsdef.h"
 

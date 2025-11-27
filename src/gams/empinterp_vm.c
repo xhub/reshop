@@ -323,6 +323,17 @@ void print_vmval_short(unsigned mode, VmValue v, EmpVm *vm)
 
 }
 
+static const char *vrole2keyword(VarRole vrole)
+{
+   switch (vrole) {
+   case VarDefiningMap:  return "deffn";
+   case VarExplicitMap:  return "explicit";
+   case VarImplicitMap:  return "implicit";
+   case VarMarginal:     return "marginal";
+   default:              return "INVALID";
+   }
+}
+
 #define PADDING_VERBOSE 60
 
 DBGUSED static int getpadding(int offset)
@@ -375,7 +386,30 @@ NONNULL static int vmdata_consume_scalardata(VmData *data, double *coeff)
  * ---------------------------------------------------------------------- */
 
 
+/**
+ * @brief Get the current opcode position
+ *
+ * @param vm the EMP VM
+ *
+ * @return   the current opcode position
+ */
+static inline unsigned vm_codepos(EmpVm * restrict vm)
+{
+   unsigned pos_ = vm->code.ip - vm->instr_start;
+   return pos_ > 0 ? pos_ - 1 : 0;
+}
 
+/**
+ * @brief Get the line number of the current opcode
+ *
+ * @param vm the EMP VM
+ *
+ * @return   the line number
+ */
+static inline unsigned vm_linenr(EmpVm * restrict vm)
+{
+   return vm->code.line[vm_codepos(vm)];
+}
 
 
 NONNULL static inline void vmstack_push(struct empvm *vm, VmValue val) {
@@ -1684,9 +1718,128 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
             vm->data.scalar_tracker = ScalarSymbolRead;
             break;
          default:
-            errbug("\n\n[empvm] ERROR: unexpected value %u for symbol tracker.", symbol_tracker);
+            errbug("\n\n[empvm] ERROR: unexpected value %u for symbol tracker.\n", symbol_tracker);
             status = Error_BugPleaseReport;
             goto _exit;
+         }
+
+         break;
+      }
+
+      case OP_TAG_EQUVAR_PAIRS: {
+
+         u8 val = READ_BYTE(vm);
+         VarRole vrole = val & 0x7f;
+         bool flipped = val & 0x80, noNL, chk_var_in_equ;
+
+         switch (vrole) {
+         case VarDefiningMap:
+            noNL = true; 
+            chk_var_in_equ = true;
+            break;
+         case VarExplicitMap:
+         case VarImplicitMap:
+            noNL = false;
+            chk_var_in_equ = true;
+            break;
+         case VarMarginal:
+            noNL = false;
+            chk_var_in_equ = false;
+            break;
+         default:
+            errbug("\n\n[empvm] ERROR: unexpected value %u for the equvar pair type\n", vrole);
+            status = Error_BugPleaseReport;
+            goto _exit;
+         }
+
+         Model *mdl = vm->data.mdl;
+         Container *ctr = &mdl->ctr;
+         VarMeta * restrict vmeta = ctr->varmeta;
+         EquMeta * restrict emeta = ctr->equmeta;
+
+         Avar * restrict v = vm->data.v_current;
+         Aequ * restrict e = vm->data.e_current;
+
+         unsigned nvars = ctr_nvars(ctr);
+         unsigned nequs = ctr_nequs(ctr);
+
+         if (v->size != e->size) {
+            error("[empinterp] ERROR on line %u: the %s keyword expects the variable and "
+                  "equation to be of the same size. Here we have %u vs %u\n", vm_linenr(vm),
+                  vrole2keyword(vrole), v->size, e->size);
+            return Error_EMPIncorrectInput;
+         }
+
+         for (unsigned i = 0, len = v->size; i < len; ++i) {
+            rhp_idx vi = avar_fget(v, i);
+            rhp_idx ei = aequ_fget(e, i);
+
+            if (RHP_UNLIKELY(!chk_vi_(vi, nvars))) {
+               error("[empinterp] ERROR on line %u: the index %u of variable is outside of "
+                     "the range [0,%u). Position is %u.\n", vm_linenr(vm), vi, nvars, i);
+               return Error_EMPRuntimeError;
+            }
+
+            if (RHP_UNLIKELY(!chk_ei_(ei, nequs))) {
+               error("[empinterp] ERROR on line %u: the index %u of equation is outside of "
+                     "the range [0,%u). Position is %u\n", vm_linenr(vm), ei, nequs, i);
+               return Error_EMPRuntimeError;
+            }
+
+            double dummy;
+            int nlflag;
+            if (chk_var_in_equ && !ctr_equ_findvar(ctr, ei, vi, &dummy, &nlflag)) {
+               error("[empinterp] ERROR on line %u: while processing a %s statement"
+                     "the variable '%s' is not present in equation '%s'\n", vm_linenr(vm),
+                     vrole2keyword(vrole), ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei));
+               return Error_EMPIncorrectInput;
+            }
+
+            assert(noNL && chk_var_in_equ || !(noNL && !chk_var_in_equ));
+            if (noNL && nlflag) {
+               error("[empinterp] ERROR on line %u: while processing a %s statement. "
+                     "The variable '%s' in equation '%s' appears nonlinearly."
+                     "This is now allowed\n", vm_linenr(vm), vrole2keyword(vrole),
+                     ctr_printvarname(ctr, vi), ctr_printequname(ctr, ei));
+               return Error_EMPIncorrectInput;
+            }
+
+            vmeta[vi].type  = vrole;
+
+            if (vrole == VarDefiningMap || vrole == VarExplicitMap || vrole == VarImplicitMap) {
+               emeta[ei].role  = EquIsMap;
+
+               vmeta[vi].ppty |= nlflag ? VarIsImplicitlyDefined : VarIsExplicitlyDefined;
+               emeta[ei].ppty |= nlflag ? EquPptyIsImplicit : EquPptyIsExplicit;
+
+            } else if (vrole == VarMarginal) {
+
+               S_CHECK(rhp_idx_addsorted(&mdl->empinfo.equvar.marginalVars, vi));
+               emeta[ei].role = EquDualizedConstraint;
+               emeta[ei].dual = vi;
+               vmeta[vi].dual = ei;
+               ctr->equs[ei].object = Mapping; /* FIXME: ugly, but otw we get into trouble in FOOC */
+
+
+            }
+
+            if (flipped) {
+               emeta[ei].ppty |= EquPptyIsFlipped;
+            }
+
+         }
+
+         switch (vrole) {
+         case VarDefiningMap:
+            mdl->empinfo.equvar.num_deffn += v->size;
+            break;
+         case VarExplicitMap:
+            mdl->empinfo.equvar.num_explicit += v->size;
+            break;
+         case VarImplicitMap:
+            mdl->empinfo.equvar.num_implicit += v->size;
+            break;
+         default: ;
          }
 
          break;

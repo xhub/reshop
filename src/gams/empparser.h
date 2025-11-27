@@ -37,20 +37,8 @@ NONNULL int consume_valfn_kwd(Interpreter *interp, unsigned *p);
  * Prototypes for parsing statements
  * --------------------------------------------------------------------- */
 
-int parse_bilevel(Interpreter *interp, unsigned *p) NONNULL;
-int parse_equilibrium(Interpreter *interp) NONNULL;
-int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p) NONNULL;
-int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
-int parse_dualvar(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
-int parse_load(Interpreter* restrict interp, unsigned * restrict p) NONNULL;
-int parse_labeldef(Interpreter * restrict interp, unsigned *p) NONNULL;
 NONNULL
 int labdeldef_parse_statement(Interpreter* restrict interp, unsigned* restrict p);
-int parse_label(Interpreter *interp, unsigned *p) NONNULL;
-int parse_mp(Interpreter *interp, unsigned *p) NONNULL;
-int parse_DAG(Interpreter *interp, unsigned *p) NONNULL;
-int parse_Nash(Interpreter *interp, unsigned *p) NONNULL;
-int parse_ovf(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
 
 NONNULL int parser_asUEL(Interpreter *interp, unsigned * restrict p, char quote,
                           TokenType *toktype);

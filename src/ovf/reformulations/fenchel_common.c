@@ -854,8 +854,6 @@ int fenchel_edit_empdag(CcfFenchelData * restrict fdat, Model * restrict mdl)
       return error_runtime();
    }
 
-   //{ GDB_STOP(); }
-
    daguid_t rarc_primal = rarcVFuid(mpid2uid(mpid_primal));
    empdag->mps.Varcs[mpid_primal].len = 0;
 

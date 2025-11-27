@@ -80,6 +80,7 @@ int vm_parse_sexpr(Interpreter * restrict interp, unsigned * restrict p,
 int vm_codegen_sexpr(Interpreter * restrict interp, SimpleExpr * restrict sexpr) NONNULL;
 
 int empvm_finalize(Interpreter *interp) NONNULL;
+int c_equvar_pairs(Interpreter * restrict interp, unsigned * restrict p) NONNULL;
 
 int c_switch_to_compmode(Interpreter *interp, bool *switched) NONNULL;
 int c_switch_to_immmode(Interpreter *interp) NONNULL;

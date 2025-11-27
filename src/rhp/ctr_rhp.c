@@ -557,7 +557,8 @@ int rctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi)
       equmeta->dual    = vi;
 
       ctr->varmeta[vi].ppty = VarPerpToViFunction;
-      CTR_DEBUG("Var '%s' ⟂ '%s'", ctr_printvarname(ctr, vi), ctr_printequname(ctr,ei));
+      CTR_DEBUG("Var '%s' ⟂ '%s' (#%u ⟂ #%u)", ctr_printvarname(ctr, vi),
+                ctr_printequname(ctr,ei), vi, ei);
    } else {
       CTR_DEBUG("Var '%s' ⟂ 0 (zero function)", ctr_printvarname(ctr, vi));
       ctr->varmeta[vi].ppty = VarPerpToZeroFunctionVi;
@@ -637,7 +638,7 @@ int rctr_var_in_equ(const Container *ctr, rhp_idx vi, rhp_idx ei, bool *res)
    return OK;
 }
 
-
+// FIXME: this is a hack
 int rctr_deactivate_equ(Container *ctr, rhp_idx ei)
 {
    assert(ctr_is_rhp(ctr));
@@ -709,7 +710,7 @@ static int process_flipped(Model *mdl)
 
    }
 
-   mdl->timings->reformulation.container.flipped = get_thrdtime() - start;
+   mdl->timings->reformulation.equvar.flipped = get_thrdtime() - start;
 
    return OK;
 }

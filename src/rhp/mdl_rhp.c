@@ -216,11 +216,21 @@ int rmdl_initctrfromfull(Model *mdl, Model *mdl_up)
    ModelType mdltype_up;
    S_CHECK(mdl_gettype(mdl_up, &mdltype_up));
 
-   if (mdltype_hasmetadata(mdltype_up)) {
+   if (ctr_up->varmeta && !ctr->varmeta) {
+      rhp_idx max_n = ctr_nvars_max(ctr);
+      MALLOC_(ctr->varmeta, VarMeta, max_n);
+   }
+
+   if (ctr_up->equmeta && !ctr->equmeta) {
+      rhp_idx max_m = ctr_nequs_max(ctr);
+      MALLOC_(ctr->equmeta, EquMeta, max_m);
+   }
+
+   if (mdltype_hasmetadata(mdltype_up) || (ctr_up->varmeta && ctr_up->equmeta)) {
       if (!ctr_up->varmeta || !ctr->varmeta) { return Error_NullPointer; }
       if (!ctr_up->equmeta || !ctr->equmeta) { return Error_NullPointer; }
-      memcpy(ctr->varmeta, ctr_up->varmeta, nvars_up*sizeof(struct var_meta));
-      memcpy(ctr->equmeta, ctr_up->equmeta, ctr_up->m*sizeof(struct equ_meta));
+      memcpy(ctr->varmeta, ctr_up->varmeta, nvars_up*sizeof(VarMeta));
+      memcpy(ctr->equmeta, ctr_up->equmeta, nequs_up*sizeof(EquMeta));
    }
 
    if (mdl_is_rhp(mdl_up)) {
@@ -243,7 +253,7 @@ int rmdl_initfromfullmdl(Model *mdl, Model *mdl_up)
 {
    double start = get_thrdtime();
 
-    S_CHECK(rmdl_initctrfromfull(mdl, mdl_up));
+   S_CHECK(rmdl_initctrfromfull(mdl, mdl_up));
 
    /* ---------------------------------------------------------------------
     *  Copy the empinfo

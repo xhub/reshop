@@ -53,43 +53,43 @@ int ctr_evalgradobj(const Container *ctr, double *x, double *f, double *g,
 /**
  * @brief Get the basis status (if available) for an abstract equation
  *
- * @param      ctr         the container
- * @param      e           the abstract equation
- * @param[out] equs_basis  the basis array
+ * @param      ctr          the container
+ * @param      e            the abstract equation
+ * @param[out] ebasis_info  the basis array
  *
  * @return       the error code
  */
-int ctr_getequsbasis(const Container *ctr, Aequ *e, int *equs_basis)
+int ctr_getequsbasis(const Container *ctr, Aequ *e, int *ebasis_info)
 {
-   return ctr->ops->getequsbasis(ctr, e, equs_basis);
+   return ctr->ops->getequsbasis(ctr, e, ebasis_info);
 }
 
 /**
  * @brief Get the multipliers (if available) for an abstract equation
  *
- * @param      ctr        the container
- * @param      e          the abstract equation
- * @param[out] equs_mult  the multiplier array
+ * @param      ctr    the container
+ * @param      e      the abstract equation
+ * @param[out] edual  the dual multiplier array
  *
  * @return       the error code
  */
-int ctr_getequsmult(const Container *ctr, Aequ *e, double *equs_mult)
+int ctr_getequsdual(const Container *ctr, Aequ *e, double *edual)
 {
-   return ctr->ops->getequsmult(ctr, e, equs_mult);
+   return ctr->ops->getequsdual(ctr, e, edual);
 }
 
 /**
  * @brief Get the values for an abstract equation
  *
- * @param      ctr        the container
- * @param      e          the abstract equation
- * @param[out] equs_val   the values array
+ * @param      ctr     the container
+ * @param      e       the abstract equation
+ * @param[out] elevel  the values array
  *
  * @return       the error code
  */
-int ctr_getequsval(const Container *ctr, Aequ *e, double *equs_val)
+int ctr_getequslevel(const Container *ctr, Aequ *e, double *elevel)
 {
-   return ctr->ops->getequsval(ctr, e, equs_val);
+   return ctr->ops->getequslevel(ctr, e, elevel);
 }
 
 /**
@@ -97,41 +97,41 @@ int ctr_getequsval(const Container *ctr, Aequ *e, double *equs_val)
  *
  * @param       ctr         the container
  * @param       v           the abstract var
- * @param[out]  vars_basis  the basis array
+ * @param[out]  vbasis_info  the basis array
  *
  * @return       the error code
  */
-int ctr_getvarsbasis(const Container *ctr, Avar *v, int *vars_basis)
+int ctr_getvarsbasis(const Container *ctr, Avar *v, int *vbasis_info)
 {
-   return ctr->ops->getvarsbasis(ctr, v, vars_basis);
+   return ctr->ops->getvarsbasis(ctr, v, vbasis_info);
 }
 
 /**
  * @brief Get the multipliers (if available) for an abstract variable
  *
- * @param       ctr        the container
- * @param       v          the abstract var
- * @param[out]  vars_mult  the multiplier array
+ * @param       ctr    the container
+ * @param       v      the abstract var
+ * @param[out]  vdual  the multiplier array
  *
  * @return       the error code
  */
-int ctr_getvarsmult(const Container *ctr, Avar *v, double *vars_mult)
+int ctr_getvarsdual(const Container *ctr, Avar *v, double *vdual)
 {
-   return ctr->ops->getvarsmult(ctr, v, vars_mult);
+   return ctr->ops->getvarsdual(ctr, v, vdual);
 }
 
 /**
  * @brief Get the values for an abstract variable
  *
- * @param      ctr       the container
- * @param      v         the abstract var
- * @param[out] vars_val  the values array
+ * @param      ctr     the container
+ * @param      v       the abstract var
+ * @param[out] vlevel  the values array
  *
  * @return       the error code
  */
-int ctr_getvarsval(const Container *ctr, Avar *v, double *vars_val)
+int ctr_getvarslevel(const Container *ctr, Avar *v, double *vlevel)
 {
-   return ctr->ops->getvarsval(ctr, v, vars_val);
+   return ctr->ops->getvarslevel(ctr, v, vlevel);
 }
 
 /**
@@ -151,15 +151,15 @@ int ctr_getequbyname(const Container *ctr, const char* name, rhp_idx *ei)
 /**
  * @brief Get the value of an equation
  *
- * @param      ctr  the container
- * @param      ei   the equation index
- * @param[out] val  the value
+ * @param      ctr    the container
+ * @param      ei     the equation index
+ * @param[out] level  the value
  *
  * @return     the error code
  */
-int ctr_getequval(const Container *ctr, rhp_idx ei, double *val)
+int ctr_getequlevel(const Container *ctr, rhp_idx ei, double *level)
 {
-   return ctr->ops->getequval(ctr, ei, val);
+   return ctr->ops->getequlevel(ctr, ei, level);
 }
 
 /**
@@ -167,13 +167,13 @@ int ctr_getequval(const Container *ctr, rhp_idx ei, double *val)
  *
  * @param      ctr   the container
  * @param      ei    the equation index
- * @param[out] mult  the multiplier
+ * @param[out] dual  the dual multiplier
  *
  * @return           the error code
  */
-int ctr_getequmult(const Container *ctr, rhp_idx ei, double *mult)
+int ctr_getequdual(const Container *ctr, rhp_idx ei, double *dual)
 {
-   return ctr->ops->getequmult(ctr, ei, mult);
+   return ctr->ops->getequdual(ctr, ei, dual);
 }
 
 /**
@@ -193,42 +193,55 @@ int ctr_getequperp(const Container *ctr, rhp_idx ei, rhp_idx *vi)
 }
 
 /**
+ * @brief Get the basis status of an equation
+ *
+ * @param      ctr          the container
+ * @param[out] basis_infos  the basis status
+ *
+ * @return            the error code
+ */
+int ctr_getallequsbasis(const Container *ctr, int *basis_infos)
+{
+   return ctr->ops->getallequsbasis(ctr, basis_infos);
+}
+
+/**
  * @brief Get all equations multiplier
  *
- * @param       ctr   the container
- * @param[out]  mult  the multiplier array, of appropriate size
+ * @param       ctr    the container
+ * @param[out]  duals  the multiplier array, of appropriate size
  *
  * @return      the error code
  */
-int ctr_getallequsmult(const Container *ctr, double *mult)
+int ctr_getallequsdual(const Container *ctr, double *duals)
 {
-   return ctr->ops->getallequsmult(ctr, mult);
+   return ctr->ops->getallequsdual(ctr, duals);
+}
+
+/** @brief Get all equations level values
+ *
+ * @param       ctr     the container
+ * @param[out]  levels  the value array, of appropriate size
+ *
+ * @return      the error code
+ */
+int ctr_getallequslevel(const Container *ctr, double *levels)
+{
+   return ctr->ops->getallequslevel(ctr, levels);
 }
 
 /**
  * @brief Get the basis status of an equation
  *
- * @param      ctr           the container
- * @param      ei            the equation index
- * @param[out] basis_status  the basis status
+ * @param      ctr         the container
+ * @param      ei          the equation index
+ * @param[out] basis_info  the basis status
  *
  * @return            the error code
  */
-int ctr_getequbasis(const Container *ctr, rhp_idx ei, int *basis_status)
+int ctr_getequbasis(const Container *ctr, rhp_idx ei, int *basis_info)
 {
-   return ctr->ops->getequbasis(ctr, ei, basis_status);
-}
-
-/** @brief Get all equations values
- *
- * @param       ctr   the container
- * @param[out]  vals  the value array, of appropriate size
- *
- * @return      the error code
- */
-int ctr_getallequsval(const Container *ctr, double *vals)
-{
-   return ctr->ops->getallequsval(ctr, vals);
+   return ctr->ops->getequbasis(ctr, ei, basis_info);
 }
 
 /**
@@ -278,13 +291,13 @@ int ctr_equvarcounts(Container *ctr)
  *
  * @param      ctr the container
  * @param      ei  the equation index
- * @param[out] val the constant value
+ * @param[out] cst the constant value
  *
  * @return         the error code
  */
-int ctr_getequcst(const Container *ctr, rhp_idx ei, double *val)
+int ctr_getequcst(const Container *ctr, rhp_idx ei, double *cst)
 {
-   return ctr->ops->getequcst(ctr, ei, val);
+   return ctr->ops->getequcst(ctr, ei, cst);
 }
 
 /**
@@ -332,28 +345,28 @@ int ctr_getvarbyname(const Container *ctr, const char* name, rhp_idx *vi)
 
 /** @brief Get the value of a variable
  *
- * @param      ctr  the container
- * @param      vi   the variable index
- * @param[out] val  the variable value
+ * @param      ctr    the container
+ * @param      vi     the variable index
+ * @param[out] level  the variable level value
  *
  * @return          the error code
  */
-int ctr_getvarval(const Container *ctr, rhp_idx vi, double *val)
+int ctr_getvarlevel(const Container *ctr, rhp_idx vi, double *level)
 {
-   return ctr->ops->getvarval(ctr, vi, val);
+   return ctr->ops->getvarlevel(ctr, vi, level);
 }
 
 /** @brief Get the multiplier of a variable
  *
  * @param      ctr   the container
  * @param      vi    the variable index
- * @param[out] mult  the variable multiplier
+ * @param[out] dual  the variable multiplier
  *
  * @return          the error code
  */
-int ctr_getvarmult(const Container *ctr, rhp_idx vi, double *mult)
+int ctr_getvardual(const Container *ctr, rhp_idx vi, double *dual)
 {
-   return ctr->ops->getvarmult(ctr, vi, mult);
+   return ctr->ops->getvardual(ctr, vi, dual);
 }
 
 /**
@@ -372,15 +385,15 @@ int ctr_getvarperp(const Container *ctr, rhp_idx vi, rhp_idx *ei)
 
 /** @brief Get the basis status of a variable
  *
- * @param      ctr           the container
- * @param      vi            the variable index
- * @param[out] basis_status  the variable basis status
+ * @param      ctr         the container
+ * @param      vi          the variable index
+ * @param[out] basis_info  the variable basis status
  *
  * @return          the error code
  */
-int ctr_getvarbasis(const Container *ctr, rhp_idx vi, int *basis_status)
+int ctr_getvarbasis(const Container *ctr, rhp_idx vi, int *basis_info)
 {
-   return ctr->ops->getvarbasis(ctr, vi, basis_status);
+   return ctr->ops->getvarbasis(ctr, vi, basis_info);
 }
 
 /** @brief Get the type of a variable
@@ -423,42 +436,54 @@ int ctr_getvarub(const Container *ctr, rhp_idx vi, double *ub)
    return ctr->ops->getvarub(ctr, vi, ub);
 }
 
-/** @brief Get all variables values
+/** @brief Get all variables basis info
  *
- * @param       ctr   the container
- * @param[out]  vals  the value array, of appropriate size
+ * @param       ctr          the container
+ * @param[out]  basis_infos  the value array, of appropriate size
  *
  * @return      the error code
  */
-int ctr_getallvarsval(const Container *ctr, double *vals)
+int ctr_getallvarsbasis(const Container *ctr, int *basis_infos)
 {
-   return ctr->ops->getallvarsval(ctr, vals);
+   return ctr->ops->getallvarsbasis(ctr, basis_infos);
+}
+
+/** @brief Get all variables values
+ *
+ * @param       ctr     the container
+ * @param[out]  levels  the value array, of appropriate size
+ *
+ * @return      the error code
+ */
+int ctr_getallvarslevel(const Container *ctr, double *levels)
+{
+   return ctr->ops->getallvarslevel(ctr, levels);
 }
 
 /** @brief Get all variables multipliers
  *
- * @param       ctr   the container
- * @param[out]  mult  the multipliers array, of appropriate size
+ * @param       ctr    the container
+ * @param[out]  duals  the multipliers array, of appropriate size
  *
  * @return      the error code
  */
-int ctr_getallvarsmult(const Container *ctr, double *mult)
+int ctr_getallvarsdual(const Container *ctr, double *duals)
 {
-   return ctr->ops->getallvarsmult(ctr, mult);
+   return ctr->ops->getallvarsdual(ctr, duals);
 }
 
 /**
  * @brief Set the basis status of an equation
  *
- * @param ctr    the container
- * @param ei     the equation index
- * @param basis_status  the basis status
+ * @param ctr         the container
+ * @param ei          the equation index
+ * @param basis_info  the basis status
  * 
  * @return       the error code
  */
-int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis_status)
+int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis_info)
 {
-   return ctr->ops->setequbasis(ctr, ei, basis_status);
+   return ctr->ops->setequbasis(ctr, ei, basis_info);
 }
 
 /**
@@ -466,13 +491,13 @@ int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis_status)
  *
  * @param ctr    the container
  * @param ei     the equation index
- * @param val    the value
+ * @param level  the value
  * 
  * @return       the error code
  */
-int ctr_setequval(Container *ctr, rhp_idx ei, double val)
+int ctr_setequlevel(Container *ctr, rhp_idx ei, double level)
 {
-   return ctr->ops->setequval(ctr, ei, val);
+   return ctr->ops->setequlevel(ctr, ei, level);
 }
 
 /**
@@ -494,17 +519,17 @@ int ctr_setequname(Container *ctr, rhp_idx ei, const char *name)
    return ctr->ops->setequname(ctr, ei, name);
 }
 
-/** @brief Set the multiplier of an equation
+/** @brief Set the dual multiplier of an equation
  *
  *  @param ctr   the container
  *  @param ei    the equation index
- *  @param mult  the equation multiplier
+ *  @param dual  the equation multiplier
  *
  *  @return      the error code
  */
-int ctr_setequmult(Container *ctr, rhp_idx ei, double mult)
+int ctr_setequdual(Container *ctr, rhp_idx ei, double dual)
 {
-   return ctr->ops->setequmult(ctr, ei, mult);
+   return ctr->ops->setequdual(ctr, ei, dual);
 }
 
 /** @brief Set the type of an equation
@@ -525,13 +550,13 @@ int ctr_setequtype(Container *ctr, rhp_idx ei, unsigned type, unsigned cone)
  *
  *  @param ctr   the container
  *  @param ei    the equation index
- *  @param val  the constant value
+ *  @param cst   the constant value
  *
  *  @return      the error code
  */
-int ctr_setequcst(Container *ctr, rhp_idx ei, double val)
+int ctr_setequcst(Container *ctr, rhp_idx ei, double cst)
 {
-   return ctr->ops->setequcst(ctr, ei, val);
+   return ctr->ops->setequcst(ctr, ei, cst);
 }
 
 
@@ -564,15 +589,15 @@ int ctr_setvarbounds(Container *ctr, rhp_idx vi, double lb, double ub)
 
 /** @brief Set the value of a variable
  *
- *  @param ctr   the container
- *  @param vi    the variable
- *  @param val   the variable name
+ *  @param ctr     the container
+ *  @param vi      the variable
+ *  @param level   the variable name
  *
  *  @return      the error code
  */
-int ctr_setvarval(Container *ctr, rhp_idx vi, double val)
+int ctr_setvarlevel(Container *ctr, rhp_idx vi, double level)
 {
-   return ctr->ops->setvarval(ctr, vi, val);
+   return ctr->ops->setvarlevel(ctr, vi, level);
 }
 
 /** @brief Set the name of a variable
@@ -588,30 +613,30 @@ int ctr_setvarname(Container *ctr, rhp_idx vi, const char *name)
    return ctr->ops->setvarname(ctr, vi, name);
 }
 
-/** @brief Set the multiplier of a variable
+/** @brief Set the dual multiplier of a variable
  *
  *  @param ctr   the container
  *  @param vi    the variable
- *  @param mult  the variable multiplier
+ *  @param dual  the variable multiplier
  *
  *  @return      the error code
  */
-int ctr_setvarmult(Container *ctr, rhp_idx vi, double mult)
+int ctr_setvardual(Container *ctr, rhp_idx vi, double dual)
 {
-   return ctr->ops->setvarval(ctr, vi, mult);
+   return ctr->ops->setvarlevel(ctr, vi, dual);
 }
 
 /** @brief Set the basis status of a variable
  *
- *  @param ctr   the container
- *  @param vi    the variable index
- *  @param basis_status  the basis status of the variable
+ *  @param ctr         the container
+ *  @param vi          the variable index
+ *  @param basis_info  the basis status of the variable
  *
  *  @return      the error code
  */
-int ctr_setvarbasis(Container *ctr, rhp_idx vi, int basis_status)
+int ctr_setvarbasis(Container *ctr, rhp_idx vi, int basis_info)
 {
-   return ctr->ops->setvarbasis(ctr, vi, basis_status);
+   return ctr->ops->setvarbasis(ctr, vi, basis_info);
 }
 
 /** @brief Set the type of a variable

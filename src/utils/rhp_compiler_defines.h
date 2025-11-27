@@ -81,7 +81,10 @@
 #  define FALLTHRU __attribute__((fallthrough));
 #endif
 
-#if !defined(__clang__) && (__GNUC__ >= 11)
+/* On 2025.11.11 https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Annotations-for-C-and-C++.html
+ * claims that clang also supports the attribute malloc (deallocate), byut local testing disagree */
+// #if ( defined(__clang_major__) && (__clang_major__ >= 21) ) || (__GNUC__ >= 11)
+#if !defined(__clang_major__) && (__GNUC__ >= 11)
    #define MALLOC_ATTR(...) __attribute__ ((malloc, malloc(__VA_ARGS__)))
    #define IGNORE_DEALLOC_MISMATCH(EXPR) \
        _Pragma("GCC diagnostic push"); _Pragma("GCC diagnostic ignored \"-Wmismatched-dealloc\""); \
@@ -192,11 +195,15 @@
 
 #if defined(__clang__)
 
+/* Mark function as valid deallocator */
 #define OWNERSHIP_TAKES(N) __attribute__ ((ownership_takes(malloc, N)))
+/* Mark function taking responsibility of deallocation for allocation-type */
+#define OWNERSHIP_HOLDS(N) __attribute__ ((ownership_holds(malloc, N)))
 #define OWNERSHIP_RETURNS __attribute__ ((ownership_returns(malloc)))
 
 #else /* NOT clang */
 
+#define OWNERSHIP_HOLDS(N) 
 #define OWNERSHIP_TAKES(N) 
 #define OWNERSHIP_RETURNS 
 

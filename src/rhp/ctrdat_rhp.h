@@ -158,12 +158,12 @@ typedef struct ctrdata_rhp {
 int cdat_init(Container *ctr, unsigned max_n, unsigned max_m) NONNULL;
 int cdat_dealloc(Container *ctr, RhpContainerData* cdat);
 int cdat_add_subctr(RhpContainerData* cdat, struct filter_subset* fs) NONNULL;
-OWNERSHIP_TAKES(2)
+OWNERSHIP_HOLDS(2)
 int cdat_equname_start(RhpContainerData* cdat, char *name) NONNULL;
 int cdat_equname_end(RhpContainerData* cdat) NONNULL;
 int cdat_equ_init(RhpContainerData *cdat, rhp_idx ei) NONNULL;
 int cdat_resize(RhpContainerData *cdat, unsigned max_n, unsigned max_m ) NONNULL;
-OWNERSHIP_TAKES(2)
+OWNERSHIP_HOLDS(2)
 int cdat_varname_start(RhpContainerData* cdat, char *name) NONNULL;
 int cdat_varname_end(RhpContainerData* cdat ) NONNULL;
 int cdat_add2free(RhpContainerData *cdat, void *mem) NONNULL;

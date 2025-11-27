@@ -310,7 +310,7 @@ static int print_nash_nodes(const struct nash_namedarray* nashs, FILE* f, const 
    return OK;
 }
 
-static int empdag2dot(const EmpDag *empdag, FILE *f)
+int empdag2dot(const EmpDag *empdag, FILE *f)
 {
    IO_PRINT(fputs("digraph structs {\n node [shape=\"box\", style=\"filled, rounded\", margin=0.2];\n", f));
 //   IO_PRINT(fputs(" edge [headclip=false, tailclip=false];\n", f));

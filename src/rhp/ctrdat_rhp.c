@@ -45,7 +45,7 @@ int rctr_reserve_eval_equvar(Container *ctr, unsigned size)
    struct equvar_eval *equvar_evals = &cdat->equvar_evals[cdat->current_stage];
 
    if (equvar_evals->max <= equvar_evals->len + size) {
-      equvar_evals->max = MAX(2*equvar_evals->max, equvar_evals->len + size);
+      equvar_evals->max = MAX(2*equvar_evals->max, equvar_evals->len + size + 2);
       /*  We may be off by 1 --xhub */
       REALLOC_(equvar_evals->pairs, struct equvar_pair,  equvar_evals->max);
    }

@@ -57,9 +57,9 @@ int mdl_timings_alloc(Model *mdl)
    simple_timing_init(&t->rhp.mdl_creation);
    simple_timing_init(&t->empdag.analysis);
 
-   t->reformulation.container.dualvar = 0.;
-   t->reformulation.container.flipped = 0.;
-   t->reformulation.container.total = 0.;
+   t->reformulation.equvar.dualvar = 0.;
+   t->reformulation.equvar.flipped = 0.;
+   t->reformulation.equvar.total = 0.;
 
    simple_timing_init(&t->reformulation.CCF.equilibrium);
    simple_timing_init(&t->reformulation.CCF.fenchel);
@@ -133,11 +133,11 @@ void mdl_timings_print(const Model *mdl, unsigned mode)
 
    printsimple(&l, "EmpDag analysis", &t->empdag.analysis);
 
-   if (t->reformulation.container.total > 0) {
-      printdbl(&l, "Container reformulation", t->reformulation.container.total);
+   if (t->reformulation.equvar.total > 0) {
+      printdbl(&l, "Container reformulation", t->reformulation.equvar.total);
       l.ident += offset;
-      printdbl(&l, "Flipped equations", t->reformulation.container.flipped);
-      printdbl(&l, "dualVar", t->reformulation.container.dualvar);
+      printdbl(&l, "Flipped equations", t->reformulation.equvar.flipped);
+      printdbl(&l, "dualVar", t->reformulation.equvar.dualvar);
       l.ident -= offset;
    }
 

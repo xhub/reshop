@@ -386,7 +386,7 @@ int mdl_checkmetadata(Model *mdl)
       const VarMeta var_md = ctr->varmeta[i];
 
       mpid_t mpid = var_md.mp_id;
-      if (!valid_mpid(mpid) && var_md.type != VarDefiningMap) {
+      if (!valid_mpid(mpid) && var_md.type != VarDefiningMap && var_md.type != VarMarginal) {
          errmc("[empdag] ERROR: variable '%s' is not attached to any MP node\n",
                ctr_printvarname(ctr, i));
          num_unattached_vars++;
@@ -468,7 +468,7 @@ int mdl_checkmetadata(Model *mdl)
          unsigned vbasictype = vmd_basictype(var_md.ppty);
 
          if (valid_ei(ei_dual) && ei_dual <= total_m) {
-           if (vbasictype == VarPerpToViFunction) { /* This is OK */
+           if (vbasictype == VarPerpToViFunction || vbasictype == VarMarginal) { /* This is OK */
            } else if (vbasictype == VarPerpToZeroFunctionVi) {
               /* If we have a SubZeroFunction, no dual equ must be present */
               errmc("[metadata check] ERROR: %s '%s' is perpendicular to the zero "
@@ -506,6 +506,7 @@ int mdl_checkmetadata(Model *mdl)
          }
          break;
       }
+      case VarMarginal:
       case VarDefiningMap:
          /* Doing nothing */
          break;
@@ -630,7 +631,9 @@ int mdl_checkmetadata(Model *mdl)
         }
         break;
       }
+
       case EquIsMap:
+      case EquDualizedConstraint:
          /* Do nothing for now */
          break;
       default:
@@ -755,7 +758,7 @@ int mdl_export(Model *mdl, Model *mdl_dst)
 //      S_CHECK(mdl_copyprobtype(mdl_solver, mdl));
 //   }
 
-   return OK;
+   return mdl_finalize(mdl_dst);
 }
 
 /**
@@ -953,16 +956,17 @@ int mdl_setmodelstat(Model *mdl, int modelstat)
 int mdl_settype(Model *mdl, ModelType type)
 {
    if (type >= mdltypeslen) {
-      error("%s ERROR: unknown model type %d\n", __func__, type);
+      error("[model] ERROR: cannot set modeltype to out of range value %d\n", type);
       return Error_InvalidValue;
    }
 
    mdl->commondata.mdltype = type;
-   
+ 
    trace_model("[model] %s model '%.*s' #%u: setting model type to %s\n",
                mdl_fmtargs(mdl), mdltype_name(type));
 
    Container *ctr = &mdl->ctr;
+
    if (mdltype_hasmetadata(type)) {
       rhp_idx max_n = ctr_nvars_max(ctr);
       if (!ctr->varmeta) {

@@ -32,8 +32,23 @@ int find_uelidx(Interpreter * restrict interp, const char uelstr[VMT(static 1)],
  * Low-level functions. Use with caution!
  * --------------------------------------------------------------------- */
 
-int advance(Interpreter * restrict interp, unsigned * restrict p,
+#define L(...)  VA_NARG_TYPED(TokenType, __VA_ARGS__), VA_ARRAY_TYPED(TokenType, __VA_ARGS__)
+
+int advance_chk(Interpreter * restrict interp, unsigned * restrict p,
+                TokenType *toktype, unsigned nargs, TokenType toktypes[VMT(static nargs)],
+                const char *msg) NONNULL;
+int advance_nochk(Interpreter * restrict interp, unsigned * restrict p,
              TokenType *toktype) NONNULL;
+
+/* After celebrating the use of a proper compiler, we could define advance as
+// Main macro
+#define advance(interp, p, toktype,...) advance_ ## __VA_OPT__(chk) (interp, p, toktype \
+  __VA_OPT(,) __VA_ARGS__ )
+*/
+
+//#define advance_chk advance_chk_
+#define advance advance_nochk
+
 int peek(Interpreter *interp, unsigned * restrict p, TokenType *toktype) NONNULL;
 
 int resolve_identas_(Interpreter * restrict interp, IdentData *ident,

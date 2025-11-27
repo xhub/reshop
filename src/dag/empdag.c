@@ -319,63 +319,7 @@ int empdag_fini(EmpDag *empdag)
 
    if (mp_len == 0) { return OK; }
 
-   pr_info("\nEMPDAG for %s model '%.*s' #%u has type %s\n", mdl_fmtargs(empdag->mdl),
-           empdag_typename(empdag->type));
-
-   unsigned n_opt = 0, n_vi = 0, n_ccflib = 0, n_hidden = 0, n_dual = 0, n_fooc = 0, n_mps = 0;
-
-   for (unsigned i = 0, len = empdag->mps.len; i < len; ++i) {
-      MathPrgm *mp = empdag->mps.arr[i];
-
-      if (!mp) { continue; }
-
-      n_mps++;
-
-      if (mp_ishidden(mp)) { n_hidden++; }
-      else if (mp_isopt(mp)) { n_opt++; }
-      else if (mp_isvi(mp)) { n_vi++; }
-      else if (mp_isccflib(mp)) { n_ccflib++; }
-      else if (mp_isdual(mp)) { n_dual++; }
-      else if (mp_isfooc(mp)) { n_fooc++; }
-      else { return error_runtime(); }
-   }
-
-   struct lineppty l = {.colw = 40, .mode = PO_INFO, .ident = 2 };
-
-   printuint(&l, "MPs", n_mps);
-   l.ident += 2;
-   printuint(&l, "OPT MPs", n_opt);
-   printuint(&l, "VI MPs", n_vi);
-   printuint(&l, "CCFLIB MPs", n_ccflib);
-   printuint(&l, "hidden MPs", n_hidden);
-   printuint(&l, "dual MPs", n_dual);
-   printuint(&l, "FOOC MPs", n_fooc);
-   l.ident -= 2;
-   printuint(&l, "Nash nodes", empdag->nashs.len);
-   printuint(&l, "VF arcs", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
-   printuint(&l, "CTRL arcs", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
-   printuint(&l, "Children of Nash nodes", empdag->nashs.arcs ? empdag->nashs.arcs->len : 0);
-
-   unsigned n_roots = empdag->roots.len;
-
-   if (n_roots == 1) {
-      daguid_t root = empdag->roots.arr[0];
-      printout(PO_INFO, "\n%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(root),
-                empdag_getname(empdag, root));
-   } else if (n_roots > 1) {
-      printout(PO_INFO, "\n%*sRoots are:\n", l.ident, "");
-      l.ident += 2;
-
-      for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
-         daguid_t root =  empdag->roots.arr[i];
-         printout(PO_INFO, "%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(root),
-                  empdag_getname(empdag, root));
-      }
-
-      l.ident -= 2;
-   }
-
-   printstr(PO_INFO, "\n");
+   empdag_print(empdag);
 
    return empdag_export(empdag->mdl);
 }
@@ -431,7 +375,7 @@ void empdag_rel(EmpDag *empdag)
  *
  * @return      the error code
  */
-int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
+int empdag_initFromModel(Model *mdl, const Avar *v_no)
 {
    assert(mdl_is_rhp(mdl));
    RhpContainerData *cdat = (RhpContainerData *)mdl->ctr.data;
@@ -454,6 +398,7 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
             __func__,  mdl_getname(mdl), mdl->id, mdltype_name(mdltype));
       return Error_NotImplemented;
    }
+
 
   /* ----------------------------------------------------------------------
    * If we have OVF, we need to set their MP first
@@ -507,7 +452,8 @@ int empdag_initDAGfrommodel(Model *mdl, const Avar *v_no)
    CMatElt **equs = cdat->cmat.equs;
    for (rhp_idx ei = 0, len = cdat->total_m; ei < len; ++ei) {
       if (equs[ei]) {
-         if (ei != objequ && !valid_mpid(emd[ei].mp_id)) {
+         /* TODO: is emd[ei].role == EquUndefined right? */
+         if (ei != objequ && !valid_mpid(emd[ei].mp_id) && emd[ei].role == EquUndefined) {
             S_CHECK(mp_addconstraint(mp, ei));
          }
       } else {
@@ -525,7 +471,7 @@ void empdag_reset_type(EmpDag* empdag)
    empdag->type = EmpDag_Unset;
 }
 
-int empdag_initfrommodel(EmpDag * restrict empdag, const Model *mdl_up)
+int empdag_initFromUpstream(EmpDag * restrict empdag, const Model *mdl_up)
 {
    rhp_idx objvar, objequ;
    RhpSense sense;
@@ -1261,7 +1207,7 @@ int empdag_simple_setobjequ(EmpDag *empdag, rhp_idx objequ)
    return OK;
 }
 
-int empdag_single_MP_to_Nash(EmpDag* empdag)
+int empdag_single_MP_to_Nash(EmpDag* empdag, const char *name)
 {
    unsigned n_mps = empdag->mps.len;
    if (n_mps != 1) {
@@ -1270,10 +1216,11 @@ int empdag_single_MP_to_Nash(EmpDag* empdag)
    }
 
    mdl_settype(empdag->mdl, MdlType_emp);
-   
+
+   empdag_reserve_mp(empdag, 2);
    MathPrgm *mp = empdag->mps.arr[0];
    nashid_t nashid;
-   S_CHECK(empdag_addnashnamed(empdag, "equilibrium", &nashid));
+   S_CHECK(empdag_addnashnamed(empdag, name, &nashid));
    S_CHECK(empdag_nashaddmpbyid(empdag, nashid, mp->id));
    S_CHECK(empdag_setroot(empdag, nashid2uid(nashid)));
 
@@ -1633,4 +1580,68 @@ bool arcVFb_chk_equ(const ArcVFBasicData *arc, mpid_t mpid, const Model *mdl)
    }
 
    return res;
+}
+
+void empdag_print(const EmpDag * empdag)
+{
+   pr_info("\nEMPDAG for %s model '%.*s' #%u has type %s\n", mdl_fmtargs(empdag->mdl),
+           empdag_typename(empdag->type));
+
+   unsigned n_opt = 0, n_vi = 0, n_ccflib = 0, n_hidden = 0, n_dual = 0, n_fooc = 0, n_mps = 0;
+
+   for (unsigned i = 0, len = empdag->mps.len; i < len; ++i) {
+      MathPrgm *mp = empdag->mps.arr[i];
+
+      if (!mp) { continue; }
+
+      n_mps++;
+
+      if (mp_ishidden(mp)) { n_hidden++; }
+      else if (mp_isopt(mp)) { n_opt++; }
+      else if (mp_isvi(mp)) { n_vi++; }
+      else if (mp_isccflib(mp)) { n_ccflib++; }
+      else if (mp_isdual(mp)) { n_dual++; }
+      else if (mp_isfooc(mp)) { n_fooc++; }
+      else { 
+         error("[empdag] ERROR: MP(%s) has unknown type '%s' (#%d). Please open a bug report.\n",
+               empdag_getmpname(empdag, mp->id), mptype2str(mp->type), mp->type);
+      }
+   }
+
+   struct lineppty l = {.colw = 40, .mode = PO_INFO, .ident = 2 };
+
+   printuint(&l, "MPs", n_mps);
+   l.ident += 2;
+   printuint(&l, "OPT MPs", n_opt);
+   printuint(&l, "VI MPs", n_vi);
+   printuint(&l, "CCFLIB MPs", n_ccflib);
+   printuint(&l, "hidden MPs", n_hidden);
+   printuint(&l, "dual MPs", n_dual);
+   printuint(&l, "FOOC MPs", n_fooc);
+   l.ident -= 2;
+   printuint(&l, "Nash nodes", empdag->nashs.len);
+   printuint(&l, "VF arcs", empdag->mps.Varcs ? empdag->mps.Varcs->len : 0);
+   printuint(&l, "CTRL arcs", empdag->mps.Carcs ? empdag->mps.Carcs->len : 0);
+   printuint(&l, "Children of Nash nodes", empdag->nashs.arcs ? empdag->nashs.arcs->len : 0);
+
+   unsigned n_roots = empdag->roots.len;
+
+   if (n_roots == 1) {
+      daguid_t root = empdag->roots.arr[0];
+      printout(PO_INFO, "\n%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(root),
+                empdag_getname(empdag, root));
+   } else if (n_roots > 1) {
+      printout(PO_INFO, "\n%*sRoots are:\n", l.ident, "");
+      l.ident += 2;
+
+      for (unsigned i = 0, len = empdag->roots.len; i < len; ++i) {
+         daguid_t root =  empdag->roots.arr[i];
+         printout(PO_INFO, "%*sRoot is %s(%s)\n", l.ident, "", daguid_type2str(root),
+                  empdag_getname(empdag, root));
+      }
+
+      l.ident -= 2;
+   }
+
+   printstr(PO_INFO, "\n");
 }

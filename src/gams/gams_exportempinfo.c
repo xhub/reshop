@@ -526,7 +526,7 @@ int gms_exportempinfo(Model *mdl_gms)
     if (uidisNash(root_uid)) {
 
     /* ----------------------------------------------------------------
-     * Do all the prepration work: create new directory, new file, ...
+     * Do all the preparation work: create new directory, new file, ...
      * ---------------------------------------------------------------- */
 
     S_CHECK(_prep_jams_solver(mdl_gms->data, gms, &file, empinfo_dat));
@@ -542,8 +542,8 @@ int gms_exportempinfo(Model *mdl_gms)
 
     S_CHECK(export_equilibrium_(&file, empdag, mpe, mdl_gms));
 
-    if (empinfo->num_dualvar > 0) {
-      S_CHECK(export_dualvars_(&file, mdl_gms, empinfo->num_dualvar));
+    if (empinfo->equvar.marginalVars.len > 0) {
+      S_CHECK(export_dualvars_(&file, mdl_gms, empinfo->equvar.marginalVars.len));
     }
 
     /* ----------------------------------------------------------------

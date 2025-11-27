@@ -9,11 +9,12 @@
 
 /** @brief Equation role */
 typedef enum {
-   EquUndefined                 ,  /**< undefined                             */
-   EquObjective                 ,  /**< an objective equation                 */
-   EquConstraint                ,  /**< a constraint                          */
-   EquViFunction                ,  /**< VI function                           */
-   EquIsMap                        /**< The equation defines a mapping        */
+   EquUndefined,                   /**< undefined                             */
+   EquObjective,                   /**< an objective equation                 */
+   EquConstraint,                  /**< a constraint                          */
+   EquViFunction,                  /**< VI function                           */
+   EquIsMap,                       /**< The equation defines a mapping        */
+   EquDualizedConstraint,          /**< Dualized constraint                   */
 } EquRole;
 
 /** @brief Equation properties */
@@ -24,6 +25,7 @@ typedef enum equ_ppty {
    EquPptyIsExplicit     = 4,  /**< defining equ for implicit var         */
    EquPptyIsSharedVi     = 8,  /**< a shared constraint of VI type        */
    EquPptyIsSharedGnep   = 16, /**< a shared constraint of GNEP type      */
+   EquPptyIsFlipped      = 32, /**< the equation is flipped               */
    EquPptyIsDeleted      = 64, /**< equation has been deleted             */
 } EquPpty;
 
@@ -34,7 +36,9 @@ __extension__ typedef enum ENUM_U8 {
    VarPrimal             ,  /**< a primal variable                     */
    VarDual               ,  /**< a dual variable                       */
    VarDefiningMap,          /**< variable defining a mapping           */
+   VarExplicitMap,          /**< variable defining a mapping           */
    VarImplicitMap,          /**< variable defining an implicit mapping */
+   VarMarginal,             /**< marginal of an equation               */
 } VarRole;
 
 /* Bit representation

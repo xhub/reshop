@@ -137,46 +137,53 @@ int ctr_copyequname(const Container *ctr, rhp_idx ei, char *name, unsigned len) 
 int ctr_copyvarname(const Container *ctr, rhp_idx vi, char *name, unsigned len) NONNULL;
 int ctr_fixvar(Container *ctr, rhp_idx vi, double val);
 int ctr_equvarcounts(Container *ctr) NONNULL;
-int ctr_getvarsmult(const Container *ctr, Avar *v, double *mult);
-int ctr_getvarsbasis(const Container *ctr, Avar *v, int *basis_status);
-int ctr_getvarsval(const Container *ctr, Avar *v, double *vals);
-int ctr_getequsmult(const Container *ctr, Aequ *e, double *mult);
-int ctr_getequsbasis(const Container *ctr, Aequ *e, int *basis_status);
-int ctr_getequsval(const Container *ctr, Aequ *e, double *vals);
+int ctr_getvarsbasis(const Container *ctr, Avar *v, int *vbasis_info);
+int ctr_getvarsdual(const Container *ctr, Avar *v, double *vdual);
+int ctr_getvarslevel(const Container *ctr, Avar *v, double *vlevel);
+int ctr_getequsdual(const Container *ctr, Aequ *e, double *edual);
+int ctr_getequsbasis(const Container *ctr, Aequ *e, int *ebasis_info);
+int ctr_getequslevel(const Container *ctr, Aequ *e, double *elevel);
 int ctr_getequbyname(const Container *ctr, const char* name, rhp_idx *ei);
-int ctr_getallequsmult(const Container *ctr, double *mult);
-int ctr_getequbasis(const Container *ctr, rhp_idx ei, int *basis);
-int ctr_getallequsval(const Container *ctr, double *vals);
-int ctr_getequval(const Container *ctr, rhp_idx ei, double *value);
+
+
+int ctr_getallequsbasis(const Container *ctr, int *basis_infos);
+int ctr_getallequsdual(const Container *ctr, double *duals);
+int ctr_getallequslevel(const Container *ctr, double *levels);
+
+int ctr_getequbasis(const Container *ctr, rhp_idx ei, int *basis_info);
+int ctr_getequlevel(const Container *ctr, rhp_idx ei, double *level);
 int ctr_getequperp(const Container *ctr, rhp_idx ei, rhp_idx *vi);
-int ctr_getequmult(const Container *ctr, rhp_idx ei, double *multiplier);
+int ctr_getequdual(const Container *ctr, rhp_idx ei, double *dual);
 int ctr_getequtype(const Container *ctr, rhp_idx ei, unsigned *type, unsigned *cone);
 int ctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *type);
-int ctr_getequcst(const Container *ctr, rhp_idx ei, double *val);
+int ctr_getequcst(const Container *ctr, rhp_idx ei, double *cst);
 int ctr_getspecialfloats(const Container *ctr, double *minf, double *pinf, double* nan);
 int ctr_getvarperp(const Container *ctr, rhp_idx vi, rhp_idx *ei);
-int ctr_getallvarsmult(const Container *ctr, double *mult);
-int ctr_getvarbasis(const Container *ctr, rhp_idx vi, rhp_idx *basis_status);
-int ctr_getallvarsval(const Container *ctr, double *vals);
+
+int ctr_getallvarsbasis(const Container *ctr, int *basis_infos);
+int ctr_getallvarsdual(const Container *ctr, double *duals);
+int ctr_getallvarslevel(const Container *ctr, double *levels);
+
+int ctr_getvarbasis(const Container *ctr, rhp_idx vi, int *basis_info);
 int ctr_getvarbounds(const Container *ctr, rhp_idx vi, double* lb, double *ub);
 int ctr_getvarbyname(const Container *ctr, const char* name, rhp_idx *vi);
-int ctr_getvarval(const Container *ctr, rhp_idx vi, double *val);
-int ctr_getvarmult(const Container *ctr, rhp_idx vi, double *mult);
+int ctr_getvarlevel(const Container *ctr, rhp_idx vi, double *level);
+int ctr_getvardual(const Container *ctr, rhp_idx vi, double *dual);
 int ctr_getvartype(const Container *ctr, rhp_idx vi, unsigned *type);
 int ctr_getvarlb(const Container *ctr, rhp_idx vi, double *lb);
 int ctr_getvarub(const Container *ctr, rhp_idx vi, double *ub);
-int ctr_setequcst(Container *ctr, rhp_idx ei, double val);
-int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis_status);
-int ctr_setequval(Container *ctr, rhp_idx ei, double val);
+int ctr_setequcst(Container *ctr, rhp_idx ei, double cst);
+int ctr_setequbasis(Container *ctr, rhp_idx ei, int basis_info);
+int ctr_setequlevel(Container *ctr, rhp_idx ei, double level);
 int ctr_setequname(Container *ctr, rhp_idx ei, const char *name);
-int ctr_setequmult(Container *ctr, rhp_idx ei, double mult);
+int ctr_setequdual(Container *ctr, rhp_idx ei, double dual);
 int ctr_setequtype(Container *ctr, rhp_idx ei, unsigned type, unsigned cone);
 int ctr_setequvarperp(Container *ctr, rhp_idx ei, rhp_idx vi);
-int ctr_setequrhs(Container *ctr, rhp_idx ei, double val);
+int ctr_setequrhs(Container *ctr, rhp_idx ei, double rhs);
 int ctr_setvarlb(Container *ctr, rhp_idx vi, double lb);
-int ctr_setvarbasis(Container *ctr, rhp_idx vi, int basis_status);
-int ctr_setvarval(Container *ctr, rhp_idx vi, double val);
-int ctr_setvarmult(Container *ctr, rhp_idx vi, double mult);
+int ctr_setvarbasis(Container *ctr, rhp_idx vi, int basis_info);
+int ctr_setvarlevel(Container *ctr, rhp_idx vi, double level);
+int ctr_setvardual(Container *ctr, rhp_idx vi, double dual);
 int ctr_setvarname(Container *ctr, rhp_idx vi, const char *name);
 int ctr_setvartype(Container *ctr, rhp_idx vi, unsigned type);
 int ctr_setvarub(Container *ctr, rhp_idx vi, double ub);
@@ -197,7 +204,7 @@ int ctr_prepare_export(Container *ctr_src, Container *ctr_dst) NONNULL;
 int ctr_markequasflipped(Container *ctr, Aequ *e) NONNULL;
 
 NONNULL static inline bool ctr_needtransformations(Container *ctr) {
-   return ctr->transformations.flipped_equs.size > 0;
+   return (ctr->transformations.flipped_equs.size > 0);
 }
 
 NONNULL

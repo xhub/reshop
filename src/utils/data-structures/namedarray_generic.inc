@@ -85,7 +85,7 @@ FN_SCOPE int RHP_MAKE_STR(stripmem)(struct RHP_ARRAY_TYPE *dat)
 }
 
 #ifdef RHP_ELT_SORT
-FN_SCOPE OWNERSHIP_TAKES(3)
+FN_SCOPE OWNERSHIP_HOLDS(3)
 int RHP_MAKE_STR(add)(struct RHP_ARRAY_TYPE *dat, RHP_ELT_TYPE elt, const char *name)
 {
 
@@ -117,7 +117,7 @@ int RHP_MAKE_STR(add)(struct RHP_ARRAY_TYPE *dat, RHP_ELT_TYPE elt, const char *
    return OK;
 }
 #else /* RHP_ELT_SORT */
-FN_SCOPE OWNERSHIP_TAKES(3)
+FN_SCOPE OWNERSHIP_HOLDS(3)
 int RHP_MAKE_STR(add)(struct RHP_ARRAY_TYPE *dat, RHP_ELT_TYPE elt, const char *name)
 {
 

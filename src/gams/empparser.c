@@ -93,6 +93,7 @@ static const char * const kw_str[] = {
    "SUM",
 };
 
+/** Problem type tokens */
 static const char * const probtype_str[] = {
   "dnlp",
   "lp",
@@ -1955,7 +1956,7 @@ static int read_gms_symbol(Interpreter * restrict interp, unsigned * restrict p)
    return OK;
 }
 
-int advance(Interpreter * restrict interp, unsigned * restrict p, TokenType *toktype)
+int advance_nochk(Interpreter * restrict interp, unsigned * restrict p, TokenType *toktype)
 {
    int status = lexer(interp, ParseCurrent, p);
    TokenType toktype_ = parser_getcurtoktype(interp);
@@ -1995,6 +1996,54 @@ int advance(Interpreter * restrict interp, unsigned * restrict p, TokenType *tok
    default:
       return OK;
    }
+}
+
+
+/**
+ * @brief Advance to the next token and check that it meets expectations
+ *
+ * @param interp    the EMP interpreter
+ * @param p         the position pointer
+ * @param toktype   token type
+ * @param nargs     the number of expected toktype
+ * @param toktypes  expected token types
+ * @param msg       the error message
+ *
+ * @return          the error code
+ */
+int advance_chk(Interpreter * restrict interp, unsigned * restrict p,
+                TokenType *toktype, unsigned nargs, TokenType toktypes[VMT(static nargs)],
+                const char *msg)
+{
+   int status = advance_nochk(interp, p, toktype);
+   if (status != OK) { return status; }
+
+   TokenType toktype_ = *toktype;
+   for (unsigned i = 0; i < nargs; ++i) {
+      if (toktype_ == toktypes[i]) { goto _ok; }
+   }
+
+   Token *tok = &interp->cur;
+
+   status = Error_EMPIncorrectSyntax;
+   error("[empparser] Error line %u: got the token '%.*s' of type '%s', but expected any of ",
+         tok->linenr, tok->len, tok->start, toktype2str(toktype_));
+
+   bool first = true;
+   for (unsigned i = 0; i < nargs; ++i) {
+      if (!first) {
+         printstr(PO_ERROR, ", ");
+      } else {
+         first = false;
+      }
+
+      error("'%s'", toktype2str(toktypes[i]));
+   }
+
+   error(".\n[empparser] Error msg is: %s\n", msg);
+
+_ok:
+   return status;
 }
 
 /* TODO: DELETE ? */
@@ -3277,7 +3326,7 @@ _err_missing_equal:
    return Error_EMPIncorrectSyntax;
 }
 
-int parse_DAG(Interpreter *interp, unsigned *p)
+NONNULL static int parse_DAG(Interpreter *interp, unsigned *p)
 {
    TokenType toktype = parser_getcurtoktype(interp);
 
@@ -3290,7 +3339,7 @@ int parse_DAG(Interpreter *interp, unsigned *p)
    return advance(interp, p, &toktype);
 }
 
-int parse_Nash(Interpreter *interp, unsigned *p)
+NONNULL static int parse_Nash(Interpreter *interp, unsigned *p)
 {
    TokenType toktype = parser_getcurtoktype(interp);
    assert(toktype == TOK_NASH);
@@ -3588,6 +3637,7 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
 
       interp->finalize.mp_owns_remaining_equs = mp->id;
       S_CHECK(advance(interp, p, &toktype));
+
    } else if (toktype == TOK_GMS_VAR) {
       /* Help the user understant his probable mistake */
       int offset;
@@ -3785,7 +3835,7 @@ _exit:
    return status;
 }
 
-int parse_equilibrium(Interpreter *interp)
+NONNULL static int parse_equilibrium(Interpreter *interp)
 {
    EmpInfo *empinfo = &interp->mdl->empinfo;
    EmpDag *empdag = &empinfo->empdag;
@@ -3810,7 +3860,7 @@ int parse_equilibrium(Interpreter *interp)
    return OK;
 }
 
-int parse_mp(Interpreter *interp, unsigned *p)
+NONNULL static int parse_mp(Interpreter *interp, unsigned *p)
 {
 
    /* ---------------------------------------------------------------------
@@ -3826,7 +3876,7 @@ int parse_mp(Interpreter *interp, unsigned *p)
 
    if (_has_single_mp(interp)) {
       _single_mp_to_implicit_Nash(interp);
-      S_CHECK(empdag_single_MP_to_Nash(&interp->mdl->empinfo.empdag));
+      S_CHECK(empdag_single_MP_to_Nash(&interp->mdl->empinfo.empdag, "equilibrium"));
       interp->finalize.mp_owns_remaining_vars = MpId_NA;
       interp->finalize.mp_owns_remaining_equs = MpId_NA;
    } 
@@ -4123,7 +4173,7 @@ _exit:
  *
  *  @return                  the error code
  *  */
-int parse_ovf(Interpreter * restrict interp, unsigned * restrict p)
+NONNULL static int parse_ovf(Interpreter * restrict interp, unsigned * restrict p)
 {
    /* -----------------------------------------------------------------------
     * We assume that the keyword OVF has already been consumed. Next operations:
@@ -4201,7 +4251,9 @@ int parse_ovf(Interpreter * restrict interp, unsigned * restrict p)
    return interp->ops->ovf_check(interp, ovfdef);
 }
 
-int parse_label(Interpreter *interp, unsigned *p)
+// FIXME: unused
+#ifdef DELETED_2025_11_07
+NONNULL static int parse_label(Interpreter *interp, unsigned *p) 
 {
    unsigned pos_ = *p;
    TokenType toktype;
@@ -4270,6 +4322,7 @@ _loop:
 
    return OK;
 }
+#endif
 
 NONNULL
 static int _parse_gmsopt(Interpreter* restrict interp, unsigned * restrict p,
@@ -4390,7 +4443,7 @@ static int _parse_gmsopt(Interpreter* restrict interp, unsigned * restrict p,
    return OK;
 }
 
-int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
+NONNULL static int parse_gdxin(Interpreter* restrict interp, unsigned * restrict p)
 {
    char *gdxfile = NULL, *gmsopt = NULL;
    int status = OK;
@@ -4482,7 +4535,7 @@ DBGUSED static inline bool alias_as_expected(GdxSymData *cursymdata, int type, i
  *
  * @return        the error code 
  */
-int parse_load(Interpreter* restrict interp, unsigned * restrict p)
+NONNULL static int parse_load(Interpreter* restrict interp, unsigned * restrict p)
 {
    int status = OK;
    GdxReader *gdxreader = gdx_reader_last(interp);
@@ -4690,7 +4743,7 @@ _err_symname:
  *
  * @return        the error code
  */
-int parse_labeldef(Interpreter * restrict interp, unsigned *p)
+NONNULL static int parse_labeldef(Interpreter * restrict interp, unsigned *p)
 {
    /* ---------------------------------------------------------------------
     * We tentatively seek to parse a statement of the form
@@ -4801,7 +4854,7 @@ NONNULL static int create_base_mp(Interpreter *interp, const char *mp_name,
    return OK;
 }
 
-int parse_bilevel(Interpreter *interp, unsigned *p)
+NONNULL static int parse_bilevel(Interpreter *interp, unsigned *p)
 {
    /* ------------------------------------------------------------
     * Here comes the definition of the bilevel problem in GAMS
@@ -5018,7 +5071,7 @@ _exit:
    return status;
 }
 
-int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
+NONNULL static int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
 {
 
   /* ----------------------------------------------------------------------
@@ -5117,149 +5170,6 @@ int parse_dualequ(Interpreter * restrict interp, unsigned * restrict p)
 
 }
 
-int parse_dualvar(Interpreter * restrict interp, unsigned * restrict p)
-{
-  /* ----------------------------------------------------------------------
-   * dualvar statement are of the form: 
-   *
-   * dualvar var [-] equ
-   *
-   * This keyword is valid in JAMS compatibility mode and EMPDAG
-   *
-   * TODO: minus case
-   * ---------------------------------------------------------------------- */
-   TokenType toktype;
-   S_CHECK(advance(interp, p, &toktype))
-
-   S_CHECK(parser_expect(interp, "expected a GAMS variable", TOK_GMS_VAR));
-
-   S_CHECK(advance(interp, p, &toktype))
-
-   PARSER_EXPECTS(interp, "in a dualvar statement, after the variable a "
-                  "(potentially flipped) equation is expected", TOK_MINUS,
-                  TOK_GMS_EQU);
-
-   S_CHECK(advance(interp, p, &toktype))
-   return OK;
-}
-
-static int parse_deffn_or_implicit(Interpreter * restrict interp, unsigned * restrict p)
-{
-  /* ----------------------------------------------------------------------
-   * implicit statement are of the form: 
-   *
-   * implicit var equ
-   *
-   * TODO: support implicit var(i) equ(i)
-   * ---------------------------------------------------------------------- */
-   TokenType kw_toktype = interp->cur.type, toktype;
-
-   VarRole vrole;
-   bool noNL;
-   switch (kw_toktype) {
-   case TOK_DEFFN:
-      vrole = VarDefiningMap;
-      noNL = true; 
-      break;
-   case TOK_IMPLICIT:
-      vrole = VarImplicitMap;
-      noNL = false;
-   break;
-   default:
-      return runtime_error(interp->linenr);
-   }
-
-   S_CHECK(advance(interp, p, &toktype))
-
-   PARSER_EXPECTS(interp, "after deffn/implicit, expecting a GAMS variable", TOK_GMS_VAR);
-
-   interp_save_tok(interp);
-
-   S_CHECK(advance(interp, p, &toktype))
-
-   PARSER_EXPECTS(interp, "in an deffn/implicit statement, a GAMS equation is expected after the variable", TOK_GMS_EQU);
-
-   if (interp->mdl) {
-      Model *mdl = interp->mdl;
-      Container *ctr = &mdl->ctr;
-      VarMeta *vmeta = ctr->varmeta;
-      EquMeta *emeta = ctr->equmeta;
-
-      Avar *v = &interp->pre.payload.v;
-      Aequ *e = &interp->cur.payload.e;
-
-      unsigned nvars = ctr_nvars(ctr);
-      unsigned nequs = ctr_nequs(ctr);
-
-      if (v->size != e->size) {
-         error("[empinterp] ERROR on line %u: the deffn/implicit keyword expects the "
-               "variable and equation to be of the same size. Here we have %u "
-               "vs %u\n", interp->linenr, v->size, e->size);
-         return Error_EMPIncorrectInput;
-      }
-
-      for (unsigned i = 0, len = v->size; i < len; ++i) {
-         rhp_idx vi = avar_fget(v, i);
-         rhp_idx ei = aequ_fget(e, i);
-
-         if (!chk_vi_(vi, nvars)) {
-            error("[empinterp] ERROR on line %u: the index %u of variable "
-                  "%.*s is outside of the range [0,%u). Position is %u.\n",
-                  interp->linenr, vi, tok_fmtargs(&interp->pre), nvars, i);
-            return Error_EMPRuntimeError;
-         }
-
-         if (!chk_ei_(ei, nequs)) {
-            error("[empinterp] ERROR on line %u: the index %u of equation %.*s "
-                  "is outside of the range [0,%u). Position is %u\n",
-                  interp->linenr, ei, tok_fmtargs(&interp->cur), nequs, i);
-            return Error_EMPRuntimeError;
-         }
-
-
-         double dummy;
-         int nlflag;
-         if (!ctr_equ_findvar(ctr, ei, vi, &dummy, &nlflag)) {
-            error("[empinterp] ERROR on line %u: while processing a deffn/implicit statement"
-                  "the variable '%s' is not present in equation '%s'\n",
-                  interp->linenr, ctr_printvarname(ctr, vi),
-                  ctr_printequname(ctr, ei));
-            return Error_EMPIncorrectInput;
-         }
-
-         if (nlflag && noNL) {
-            error("[empinterp] ERROR on line %u: while processing a deffn/implicit statement. "
-                  "The variable '%s' in equation '%s' appears nonlinearly."
-                  "This is now allowed\n", interp->linenr, ctr_printvarname(ctr, vi),
-                  ctr_printequname(ctr, ei));
-            return Error_EMPIncorrectInput;
-         }
-
-         vmeta[vi].type  = vrole;
-         vmeta[vi].ppty |= nlflag ? VarIsImplicitlyDefined : VarIsExplicitlyDefined;
-
-         emeta[ei].role  = EquIsMap;
-         emeta[ei].ppty |= nlflag ? EquPptyIsImplicit : EquPptyIsExplicit;
-
-      }
-
-      switch (kw_toktype) {
-      case TOK_DEFFN:
-         mdl->empinfo.num_deffn += v->size;
-         break;
-      case TOK_IMPLICIT:
-         mdl->empinfo.num_implicit += v->size;
-         break;
-      default:
-         return runtime_error(interp->linenr);
-      }
-
-
-   }
-
-   return advance(interp, p, &toktype);
-}
-
 static int parse_modeltype(Interpreter * restrict interp, unsigned * restrict p)
 {
   /* ----------------------------------------------------------------------
@@ -5269,10 +5179,11 @@ static int parse_modeltype(Interpreter * restrict interp, unsigned * restrict p)
    *
    * modeltype (mcp|nlp|minlp)
    *
-   * This keyword is valid in JAMS compatibility mode
+   * This keyword is valid only in JAMS compatibility mode
    * ---------------------------------------------------------------------- */
    TokenType toktype;
-   S_CHECK(advance(interp, p, &toktype))
+   S_CHECK(advance_chk(interp, p, &toktype, L(TOK_NLP, TOK_MCP, TOK_MINLP),
+                       "after modeltype, expecting nlp or mcp or minlp"));
 
    PARSER_EXPECTS(interp, "after modeltype, expecting nlp or mcp or minlp", TOK_NLP, TOK_MCP, TOK_MINLP);
 
@@ -5384,25 +5295,20 @@ int process_statement(Interpreter * restrict interp, unsigned * p, TokenType tok
       S_CHECK(parse_defvar(interp, p));
       break;
    case TOK_DEFFN:
-      S_CHECK(parse_deffn_or_implicit(interp, p));
+   case TOK_DUALVAR:
+   case TOK_EXPLICIT:
+   case TOK_IMPLICIT:
+      S_CHECK(c_equvar_pairs(interp, p));
       break;
    case TOK_DUALEQU:
       S_CHECK(parse_dualequ(interp, p));
-      break;
-   case TOK_DUALVAR:
-      S_CHECK(parse_dualvar(interp, p));
       break;
    case TOK_EQUILIBRIUM:
       S_CHECK(parse_equilibrium(interp));
       S_CHECK(advance(interp, p, &toktype));
       break;
-   case TOK_EXPLICIT:
-      TO_IMPLEMENT("EMPINFO EXPLICIT")
    case TOK_GDXIN:
       S_CHECK(parse_gdxin(interp, p));
-      break;
-   case TOK_IMPLICIT:
-      S_CHECK(parse_deffn_or_implicit(interp, p));
       break;
    case TOK_LOOP:
       S_CHECK(parse_loop(interp, p));

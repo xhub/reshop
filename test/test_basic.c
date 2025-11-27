@@ -852,11 +852,11 @@ int gnep_tragedy_common(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   int status = 0;
 
   struct rhp_avar *v = rhp_avar_new();
-  struct rhp_nash_equilibrium *mpe = rhp_empdag_newmpe(mdl);
+  struct rhp_nash_equilibrium *nash = rhp_empdag_newnash(mdl);
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, N_PLAYERS, 2*N_PLAYERS));
 
-  RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
+  RESHOP_CHECK(rhp_empdag_rootsetnash(mdl, nash));
 
   RESHOP_CHECK(rhp_add_varsinbox(mdl, N_PLAYERS, v, 0., 1.));
 
@@ -911,7 +911,7 @@ int gnep_tragedy_common(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
     RESHOP_CHECK(rhp_mdl_setequrhs(mdl, cons, 1));
     RESHOP_CHECK(rhp_mp_addconstraint(mp, cons));
 
-    RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp));
+    RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp));
   }
 
   struct sol_vals solvals;
@@ -955,12 +955,12 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   struct rhp_aequ *p_fn = rhp_aequ_new();
   struct rhp_aequ *y_fn = rhp_aequ_new();
 
-  struct rhp_nash_equilibrium *mpe = rhp_empdag_newmpe(mdl);
-  RHP_NONNULL(mpe);
+  struct rhp_nash_equilibrium *nash = rhp_empdag_newnash(mdl);
+  RHP_NONNULL(nash);
 
   RESHOP_CHECK(rhp_mdl_resize(mdl, 7, 10));
 
-  RESHOP_CHECK(rhp_empdag_rootsetmpe(mdl, mpe));
+  RESHOP_CHECK(rhp_empdag_rootsetnash(mdl, nash));
 
   RESHOP_CHECK(rhp_add_posvarsnamed(mdl, 3, x, "x"));
   RESHOP_CHECK(rhp_add_posvarsnamed(mdl, 3, p, "p"));
@@ -979,7 +979,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   RESHOP_CHECK(rhp_mdl_setequrhs(mdl, cons, 0));
   RESHOP_CHECK(rhp_mp_addconstraint(mp_ag, cons));
 
-  RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_ag));
+  RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp_ag));
 
   struct rhp_mathprgm *mp_mkt = rhp_empdag_newmp(mdl, RHP_FEAS);
 
@@ -994,7 +994,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
     rhp_aequ_get(p_fn, i, &p_fni);
 
     /*  TODO: create rhp_mdl_setvarsval(mdl, x, 1.) */
-    RESHOP_CHECK(rhp_mdl_setvarval(mdl, xi, 1.));
+    RESHOP_CHECK(rhp_mdl_setvarlevel(mdl, xi, 1.));
 
     RESHOP_CHECK(rhp_equ_addlvar(mdl, p_fni, xi, -1));
     RESHOP_CHECK(rhp_equ_addlvar(mdl, p_fni, yi, -Amat[i]));
@@ -1016,7 +1016,7 @@ int mopec(struct rhp_mdl *mdl, struct rhp_mdl *mdl_solver)
   RESHOP_CHECK(rhp_aequ_get(y_fn, 0, &yidx));
   RESHOP_CHECK(rhp_equ_addlin(mdl, yidx, p, Amat));
   RESHOP_CHECK(rhp_mp_addvipairs(mp_mkt, y_fn, y));
-  RESHOP_CHECK(rhp_empdag_mpeaddmp(mdl, mpe, mp_mkt));
+  RESHOP_CHECK(rhp_empdag_nashaddmp(mdl, nash, mp_mkt));
 
   /* ------------------------------------------------------------------------
    * Dirty trick: add the objequ last ...

@@ -98,7 +98,7 @@ int ovf_process_indices(Model *mdl, Avar *args, rhp_idx *eis)
       rhp_idx ei = equinfo.ei;
       eis[i] = ei;
 
-      S_CHECK(rmdl_equ_rm(mdl, ei));
+      S_CHECK(rmdl_rm_equ(mdl, ei));
       S_CHECK(rctr_add_eval_equvar(&mdl->ctr, ei, avar_fget(args, i)));
    }
 
@@ -167,7 +167,7 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
        * ------------------------------------------------------------------- */
       Avar v;
       avar_setcompact(&v, 1, vi_ovf);
-      S_CHECK(empdag_initDAGfrommodel(mdl, &v));
+      S_CHECK(empdag_initFromModel(mdl, &v));
       empdag_reset_type(empdag);
       S_CHECK(empdag_getmpbyid(empdag, 0, &mp));
 
@@ -187,16 +187,13 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
        * MP and the auxiliary OVF problem.
        * ------------------------------------------------------------------- */
       assert(!mp_parents || empdag_isroot(empdag, mpid2uid(mp->id)));
-      S_CHECK(rhp_ensure_mp(mdl, 2));
 
       char *nash_ovf_name;
       A_CHECK(nash_ovf_name, strdup(ovf_data->name));
-      A_CHECK(nash, empdag_newnashnamed(empdag, nash_ovf_name));
+      S_CHECK(empdag_single_MP_to_Nash(empdag, nash_ovf_name));
       free(nash_ovf_name);
 
-      S_CHECK(empdag_nashaddmpbyid(empdag, nash->id, mp->id));
-
-      S_CHECK(empdag_setroot(empdag, nashid2uid(nash->id)));
+      A_CHECK(nash, empdag->nashs.arr[0]);
 
       /* --------------------------------------------------------------------
        * The objective variable of the original problem won't have the correct
@@ -213,9 +210,9 @@ int ovf_equil_init(Model *mdl, struct ovf_basic_data *ovf_data, MathPrgm **mp_ov
       }
 
    } else if (mp_parents->len > 1) {
-      error("%s :: the OVF function is in an MP with more than"
-            "one parent (%d). This is not yet supported\n",
-            __func__, mp_parents->len);
+
+      error("[OVF] ERROR: the OVF function is in an MP with more than one parent (%d)."
+            "This is not yet supported\n", mp_parents->len);
       return Error_NotImplemented;
 
    } else {

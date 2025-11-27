@@ -178,7 +178,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
    set(pytarget _reshop.${Python3_SOABI})
 
    # asprintf is for compatibility, mostly on windows
-   set(reshop_py_sources ${reshop_py_wrap} ${CMAKE_SOURCE_DIR}/src/utils/os/asprintf.c)
+   set(reshop_py_sources ${reshop_py_wrap} ${CMAKE_SOURCE_DIR}/src/utils/os/asprintf.c ${CMAKE_SOURCE_DIR}/src/utils/os/asprintf.c)
 
    add_library(${pytarget} MODULE ${reshop_py_sources})
 

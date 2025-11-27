@@ -35,8 +35,8 @@
 %rename(equ_addquad)       rhp_equ_addquadabsolute;
 
 %rename(Model)             rhp_mdl;
-%rename(Avar)              rhp_avar;
-%rename(Aequ)              rhp_aequ;
+%rename(Vars)              rhp_avar;
+%rename(Equs)              rhp_aequ;
 %rename(MathPrgm)          rhp_mathprgm;
 %rename(NashEquilibrium)   rhp_nash_equilibrium;
 %rename(BackendType)       RhpBackendType;
@@ -57,9 +57,9 @@
 %feature("docstring") *::lo "Get the lower bound";
 %feature("docstring") *::up "Get the upper bound";
 %feature("docstring") *::basis "Get the basis status";
-%feature("docstring") *::multiplier "Get the multiplier value";
+%feature("docstring") *::dual "Get the dual multiplier value";
 %feature("docstring") *::marginal "Get the marginal value";
-%feature("docstring") *::value "Get the (level) value";
+%feature("docstring") *::level "Get the (level) value";
 
 /* Overload (set|get)_option */
 
@@ -72,6 +72,9 @@
 %ignore rhp_mdl_getopt_d;
 %ignore rhp_mdl_getopt_i;
 %ignore rhp_mdl_getopt_s;
+
+/* Useless, needs a FILE * stream */
+%ignore rhp_empdag_writeDOT;
 
 /* ----------------------------------------------------------------------
  * Basic exception handling, for setter: a tls global variable is set
@@ -260,11 +263,11 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
  * Typemap int *bstat -> return one of the basis constant objects
  * ---------------------------------------------------------------------- */
 %typemap(in,numinputs=0,noblock=1) 
-  int *basis_status ($*1_ltype temp, int res = SWIG_TMPOBJ) {
+  int *basis_info ($*1_ltype temp, int res = SWIG_TMPOBJ) {
   $1 = &temp;
 }
 
-%typemap(argout,noblock=1) int *basis_status {
+%typemap(argout,noblock=1) int *basis_info {
 #ifdef SWIGPYTHON
    PyObject *bstat = basisstatus_getobj(temp$argnum) ;
    if (!bstat) { SWIG_fail; }
@@ -307,7 +310,7 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
    %set_output(SWIG_From_double(temp$argnum));
 }
 
-%apply double *rhpDblOut { double *val, double *mult }
+%apply double *rhpDblOut { double *level, double *dual }
 
 %typemap(in,numinputs=0,noblock=1) (double *lb, double *ub) 
    (double lb_, double ub_) {
@@ -331,6 +334,8 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
 
    %set_output(py_dict);
 }
+
+
 
 %typemap(in,numinputs=0,noblock=1) 
   rhp_idx *rhpRhpIdxOut ($*1_ltype temp, int res = SWIG_TMPOBJ) {
@@ -375,8 +380,9 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
      %set_output((SWIG_Object)array$argnum);
   }
 
-%apply (double * rhpVecOutAvar) { double *vars_val, double *vars_mult };
-%apply (double * rhpVecOutAequ) { double *equs_val, double *equs_mult };
+// WARNING:: do not change these names
+%apply (double * rhpVecOutAvar) { double *vlevel, double *vdual };
+%apply (double * rhpVecOutAequ) { double *elevel, double *edual };
 
 
 
@@ -476,7 +482,7 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
 }
 
 /* getspecialfloats */
-%typemap(in,numinputs=1,noblock=1) (const struct rhp_mdl *mdl, double * minf, double * pinf, double * nan) (void *argp, double minf_, double pinf_, double nan_) {
+%typemap(in,numinputs=1,noblock=1) (const rhp_mdl_t *mdl, double * minf, double * pinf, double * nan) (void *argp, double minf_, double pinf_, double nan_) {
 //  if (!SWIG_Python_UnpackTuple(args, "mdl_getvarperp", 2, 2, swig_obj)) SWIG_fail;
   int res = SWIG_ConvertPtr(swig_obj[0], &argp,$1_descriptor, 0 |  0 );
   if (!SWIG_IsOK(res)) {
@@ -488,7 +494,7 @@ abstract_types(rhp_aequ_new, struct rhp_aequ);
    $4 = ($4_ltype)&nan_;
 }
 
-%typemap(argout) (const struct rhp_mdl *mdl, double *minf, double *pinf, double* nan) {
+%typemap(argout) (const rhp_mdl_t *mdl, double *minf, double *pinf, double* nan) {
    PyObject* py_dict = PyDict_New();
    if (!py_dict) { SWIG_fail; }
 
@@ -958,6 +964,80 @@ typedef struct rhp_mdl {
       fail: exception_code = -1;
      }
 
+     PyObject* draw_empdag() {
+        PyObject *tmpfile = NULL, *pydot_mod = NULL, *tempfile_mod = NULL, *py_fname = NULL, *graphs = NULL;
+        const char *fname = NULL;
+        FILE *f = NULL;
+
+        pydot_mod = PyImport_ImportModule("pydot");
+        if (!pydot_mod) {
+           PyErr_SetString(PyExc_RuntimeError, "Could not import pydot. Check that it is installed in your environment");
+           goto fail;
+        }
+        tempfile_mod = PyImport_ImportModule("tempfile");
+        if (!tempfile_mod) {
+           PyErr_SetString(PyExc_RuntimeError, "Could not import the tempfile");
+           goto fail;
+        }
+        tmpfile = PyObject_CallMethodObjArgs(tempfile_mod, PyString_FromString("NamedTemporaryFile"), NULL);
+        if (!tmpfile) {
+           PyErr_SetString(PyExc_RuntimeError, "Could not create a temporary file");
+           goto fail;
+        }
+
+        py_fname = PyObject_GetAttrString(tmpfile, "name");
+        if (!py_fname) {
+           PyErr_SetString(PyExc_RuntimeError, "Could not get the name of the temporary file");
+           goto fail;
+        }
+
+        fname = PyUnicode_AsUTF8(py_fname);
+        if (!fname) {
+           goto fail;
+        }
+
+        f = fopen(fname, "w");
+        if (!f) {
+           char buf[256], msg[512], msg_[] = "Could not open the temporary file. Error message is: ";
+           const char *dummy_ptr;
+           memcpy(msg, msg_, sizeof(msg_));
+           SYS_ERRMSG(sizeof(buf)-1, buf, &dummy_ptr);
+           strncat(msg, buf, sizeof(msg) - sizeof(msg_) - 1);
+
+           PyErr_SetString(PyExc_RuntimeError, msg);
+           goto fail;
+        }
+
+        RHP_FAIL(rhp_empdag_writeDOT($self, f), "Couldn't write the DOT representation");
+
+        fclose(f);
+
+        graphs = PyObject_CallMethodObjArgs(pydot_mod, PyString_FromString("graph_from_dot_file"), py_fname, NULL);
+        if (!graphs) {
+           goto fail;
+        }
+
+        PyObject_CallMethodObjArgs(tmpfile, PyString_FromString("close"), NULL);
+
+        Py_DECREF(py_fname);
+        Py_DECREF(tmpfile);
+        Py_DECREF(tempfile_mod);
+        Py_DECREF(pydot_mod);
+
+        return graphs;
+
+      fail: exception_code = -1;
+      if (tmpfile) {
+         PyObject_CallMethodObjArgs(tmpfile, PyString_FromString("close"), NULL);
+      }
+      Py_XDECREF(py_fname);
+      Py_XDECREF(tmpfile);
+      Py_XDECREF(pydot_mod);
+      Py_XDECREF(tempfile_mod);
+
+      return NULL;
+     }
+
   }
 } Model;
 
@@ -1053,11 +1133,11 @@ KLASS_GETTER(klass, klass_short, idxname, fnlast, member)
 VAR_GETONLY(lb, lo);
 VAR_GETONLY(ub, up);
 
-VAR_GETSET(val, value);
-VAR_GETSET(mult, multiplier);
+VAR_GETSET(level, value);
+VAR_GETSET(dual, multiplier);
 
-EQU_GETSET(val, value);
-EQU_GETSET(mult, multiplier);
+EQU_GETSET(level, value);
+EQU_GETSET(dual, multiplier);
 
 %attribute_readonly(rhp_variable_ref, const char*, name, dummy1, rhp_mdl_printvarname(self_->mdl, self_->vi));
 %attribute_readonly(rhp_equation_ref, const char*, name, dummy1, rhp_mdl_printequname(self_->mdl, self_->ei));
@@ -1075,9 +1155,9 @@ EQU_GETSET(mult, multiplier);
 
 %inline %{
 static PyObject* var_getbasis(struct rhp_variable_ref *o) {
-   int basis_status;
-   CHK_RET(rhp_mdl_getvarbasis(o->mdl, o->vi, &basis_status));
-   return basisstatus_getobj(basis_status);
+   int basis_info;
+   CHK_RET(rhp_mdl_getvarbasis(o->mdl, o->vi, &basis_info));
+   return basisstatus_getobj(basis_info);
 
    fail: return NULL;
 }
@@ -1086,9 +1166,9 @@ static void var_setbasis(struct rhp_variable_ref *o, BasisStatus *basis) {
 }
 
 static PyObject* equ_getbasis(struct rhp_equation_ref *o) {
-   int basis_status;
-   CHK_RET(rhp_mdl_getequbasis(o->mdl, o->ei, &basis_status));
-   return basisstatus_getobj(basis_status);
+   int basis_info;
+   CHK_RET(rhp_mdl_getequbasis(o->mdl, o->ei, &basis_info));
+   return basisstatus_getobj(basis_info);
 
    fail: return NULL;
 }
@@ -1221,9 +1301,9 @@ typedef struct rhp_nash_equilibrium {
    const char *__str__() {
       char *str;
 
-      unsigned id = rhp_mpe_getid($self);
-      unsigned nchildren = rhp_mpe_getnumchildren($self);
-      const char *name = rhp_mpe_getname($self);
+      unsigned id = rhp_nash_getid($self);
+      unsigned nchildren = rhp_nash_getnumchildren($self);
+      const char *name = rhp_nash_getname($self);
 
       IO_PRINT_SWIG(asprintf(&str, "Nash Equilibrium '%.*s' (ID #%u) with %u children.",
                           (int)(name ? strlen(name) : 6), name ? name : "NONAME", id, nchildren))

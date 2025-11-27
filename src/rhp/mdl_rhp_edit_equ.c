@@ -24,7 +24,7 @@
  *
  * @return              the error code
  */
-int rmdl_equ_rm(Model *mdl, rhp_idx ei)
+int rmdl_rm_equ(Model *mdl, rhp_idx ei)
 {
    assert(mdl_is_rhp(mdl));
 
@@ -58,8 +58,8 @@ int rmdl_equ_rm(Model *mdl, rhp_idx ei)
       if (mpid_regularmp(mpid)) {
          MathPrgm *mp = empdag_getmpfast(&mdl->empinfo.empdag, mpid);
          IdxArray *mpequs = &mp->equs;
-         int rc = rhp_idx_rmsorted(mpequs, ei);
-         if (rc) {
+
+         if (rhp_idx_rmsorted(mpequs, ei)) {
             error("Failed to remove equation %s from MP(%s)", ctr_printequname(ctr, ei),
                   empdag_getmpname(&mdl->empinfo.empdag, mpid));
             return Error_RuntimeError;
@@ -114,7 +114,7 @@ int rmdl_dup_equ(Model *mdl, rhp_idx *ei)
    trace_ctr("[container] DUP equ '%s' into '%s'\n",
              ctr_printequname(ctr, ei_src), ctr_printequname2(ctr, ei_new));
 
-   S_CHECK(rmdl_equ_rm(mdl, ei_src));
+   S_CHECK(rmdl_rm_equ(mdl, ei_src));
 
    /* Update the rosetta info  */
    cdat->equ_rosetta[ei_src].res.equ = ei_new;
@@ -190,7 +190,7 @@ int rmdl_equ_dup_except(Model *mdl, rhp_idx *ei, unsigned lin_space, rhp_idx vi_
    trace_ctr("[container] DUP equ '%s' into '%s'\n",
              ctr_printequname(ctr, ei_src), ctr_printequname2(ctr, ei_new));
 
-   S_CHECK(rmdl_equ_rm(mdl, ei_src));
+   S_CHECK(rmdl_rm_equ(mdl, ei_src));
 
    /* Update the rosetta info  */
    cdat->equ_rosetta[ei_src].res.equ = ei_new;
@@ -452,7 +452,7 @@ int rmdl_equ_flip(Model *mdl, rhp_idx ei, rhp_idx *ei_new)
       }
    }
 
-   S_CHECK(rmdl_equ_rm(mdl, ei));
+   S_CHECK(rmdl_rm_equ(mdl, ei));
 
    return OK;
 }

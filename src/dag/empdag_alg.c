@@ -1365,7 +1365,7 @@ int analyze_mp(EmpDagDfsData *dfsdata, mpid_t mpid, AnalysisData *data)
          assert(empdag_chk_vitype(&varmeta[vi]));
          mpid_t mp_var = varmeta[vi].mp_id;
 
-         if (!valid_mpid(mp_var)) {
+         if (!valid_mpid(mp_var) && varmeta[vi].type != VarMarginal) {
             int offset;
             error("[empdag] ERROR: var %n'%s' is not attached to any MP!\n",
                   &offset, mdl_printvarname(mdl, vi));

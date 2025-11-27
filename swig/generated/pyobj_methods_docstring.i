@@ -14,21 +14,6 @@ vi : VariableRef or int
 val : float
     The value.
 ";
-%feature("docstring") rhp_mdl::getvarsmult "getvarsmult(v, /)
---
-
-Get the multipliers (if available) for an abstract variable.
-
-Parameters
-----------
-v : Vars
-    The abstract var.
-
-Returns
--------
-float
-    The multiplier array.
-";
 %feature("docstring") rhp_mdl::getvarsbasis "getvarsbasis(v, /)
 --
 
@@ -44,7 +29,22 @@ Returns
 array of BasisStatus
     The basis array.
 ";
-%feature("docstring") rhp_mdl::getvarsval "getvarsval(v, /)
+%feature("docstring") rhp_mdl::getvarsdual "getvarsdual(v, /)
+--
+
+Get the multipliers (if available) for an abstract variable.
+
+Parameters
+----------
+v : Vars
+    The abstract var.
+
+Returns
+-------
+float
+    The multiplier array.
+";
+%feature("docstring") rhp_mdl::getvarslevel "getvarslevel(v, /)
 --
 
 Get the values for an abstract variable.
@@ -58,21 +58,6 @@ Returns
 -------
 float
     The values array.
-";
-%feature("docstring") rhp_mdl::getequsmult "getequsmult(e, /)
---
-
-Get the multipliers (if available) for an abstract equation.
-
-Parameters
-----------
-e : Equs
-    The abstract equation.
-
-Returns
--------
-float
-    The multiplier array.
 ";
 %feature("docstring") rhp_mdl::getequsbasis "getequsbasis(e, /)
 --
@@ -89,7 +74,22 @@ Returns
 array of BasisStatus
     The basis array.
 ";
-%feature("docstring") rhp_mdl::getequsval "getequsval(e, /)
+%feature("docstring") rhp_mdl::getequsdual "getequsdual(e, /)
+--
+
+Get the multipliers (if available) for an abstract equation.
+
+Parameters
+----------
+e : Equs
+    The abstract equation.
+
+Returns
+-------
+float
+    The dual multiplier array.
+";
+%feature("docstring") rhp_mdl::getequslevel "getequslevel(e, /)
 --
 
 Get the values for an abstract equation.
@@ -119,7 +119,17 @@ Returns
 EquationRef
     The equation index.
 ";
-%feature("docstring") rhp_mdl::getallequsmult "getallequsmult()
+%feature("docstring") rhp_mdl::getallequsbasis "getallequsbasis()
+--
+
+Get the basis status of an equation.
+
+Returns
+-------
+array of BasisStatus
+    The basis status.
+";
+%feature("docstring") rhp_mdl::getallequsdual "getallequsdual()
 --
 
 Get all equations multiplier.
@@ -129,17 +139,27 @@ Returns
 float
     The multiplier array, of appropriate size.
 ";
-%feature("docstring") rhp_mdl::getallequsval "getallequsval()
+%feature("docstring") rhp_mdl::getallequslevel "getallequslevel()
 --
 
-Get all equations values.
+Get all equations level values.
 
 Returns
 -------
 float
     The value array, of appropriate size.
 ";
-%feature("docstring") rhp_mdl::getallvarsmult "getallvarsmult()
+%feature("docstring") rhp_mdl::getallvarsbasis "getallvarsbasis()
+--
+
+Get all variables basis info.
+
+Returns
+-------
+array of BasisStatus
+    The value array, of appropriate size.
+";
+%feature("docstring") rhp_mdl::getallvarsdual "getallvarsdual()
 --
 
 Get all variables multipliers.
@@ -149,7 +169,7 @@ Returns
 float
     The multipliers array, of appropriate size.
 ";
-%feature("docstring") rhp_mdl::getallvarsval "getallvarsval()
+%feature("docstring") rhp_mdl::getallvarslevel "getallvarslevel()
 --
 
 Get all variables values.
@@ -189,7 +209,7 @@ Returns
 float
     The constant value.
 ";
-%feature("docstring") rhp_mdl::getequval "getequval(ei, /)
+%feature("docstring") rhp_mdl::getequlevel "getequlevel(ei, /)
 --
 
 Get the value of an equation.
@@ -221,7 +241,7 @@ Returns
 VariableRef
     The matched variable index.
 ";
-%feature("docstring") rhp_mdl::getequmult "getequmult(ei, /)
+%feature("docstring") rhp_mdl::getequdual "getequdual(ei, /)
 --
 
 Get the multiplier of an equation.
@@ -234,7 +254,7 @@ ei : EquationRef or int
 Returns
 -------
 float
-    The multiplier.
+    The dual multiplier.
 ";
 %feature("docstring") rhp_mdl::getequtype "getequtype(ei, /)
 --
@@ -428,7 +448,7 @@ Returns
 float
     The variable lower bound.
 ";
-%feature("docstring") rhp_mdl::getvarval "getvarval(vi, /)
+%feature("docstring") rhp_mdl::getvarlevel "getvarlevel(vi, /)
 --
 
 Get the value of a variable.
@@ -441,9 +461,9 @@ vi : VariableRef or int
 Returns
 -------
 float
-    The variable value.
+    The variable level value.
 ";
-%feature("docstring") rhp_mdl::getvarmult "getvarmult(vi, /)
+%feature("docstring") rhp_mdl::getvardual "getvardual(vi, /)
 --
 
 Get the multiplier of a variable.
@@ -512,7 +532,7 @@ n : int
 m : int
     The new number of equations.
 ";
-%feature("docstring") rhp_mdl::setequbasis "setequbasis(ei, basis_status, /)
+%feature("docstring") rhp_mdl::setequbasis "setequbasis(ei, basis_info, /)
 --
 
 Set the basis status of an equation.
@@ -521,10 +541,10 @@ Parameters
 ----------
 ei : EquationRef or int
     The equation index.
-basis_status : BasisStatus or int
+basis_info : BasisStatus or int
     The basis status.
 ";
-%feature("docstring") rhp_mdl::setequcst "setequcst(ei, val, /)
+%feature("docstring") rhp_mdl::setequcst "setequcst(ei, cst, /)
 --
 
 Set the constant value of an equation.
@@ -533,7 +553,7 @@ Parameters
 ----------
 ei : EquationRef or int
     The equation index.
-val : float
+cst : float
     The constant value.
 ";
 %feature("docstring") rhp_mdl::setequname "setequname(ei, name, /)
@@ -548,16 +568,16 @@ ei : EquationRef or int
 name : str
     The equation name.
 ";
-%feature("docstring") rhp_mdl::setequmult "setequmult(ei, mult, /)
+%feature("docstring") rhp_mdl::setequdual "setequdual(ei, dual, /)
 --
 
-Set the multiplier of an equation.
+Set the dual multiplier of an equation.
 
 Parameters
 ----------
 ei : EquationRef or int
     The equation index.
-mult : float
+dual : float
     The equation multiplier.
 ";
 %feature("docstring") rhp_mdl::setequtype "setequtype(ei, type, cone, /)
@@ -586,7 +606,7 @@ ei : EquationRef or int
 vi : VariableRef or int
     The variable.
 ";
-%feature("docstring") rhp_mdl::setequval "setequval(ei, val, /)
+%feature("docstring") rhp_mdl::setequlevel "setequlevel(ei, level, /)
 --
 
 Set the (level) value of an equation.
@@ -595,7 +615,7 @@ Parameters
 ----------
 ei : EquationRef or int
     The equation index.
-val : float
+level : float
     The value.
 ";
 %feature("docstring") rhp_mdl::settype "settype(type, /)
@@ -628,7 +648,7 @@ Parameters
 objvar : VariableRef or int
     The objective variable index.
 ";
-%feature("docstring") rhp_mdl::setequrhs "setequrhs(ei, val, /)
+%feature("docstring") rhp_mdl::setequrhs "setequrhs(ei, rhs, /)
 --
 
 Set the RHS of an equation.
@@ -637,7 +657,7 @@ Parameters
 ----------
 ei : EquationRef or int
     The equation index.
-val : float
+rhs : float
     The value of the RHS.
 ";
 %feature("docstring") rhp_mdl::setsolvername "setsolvername(solvername, /)
@@ -650,7 +670,7 @@ Parameters
 solvername : str
     The name of the solver.
 ";
-%feature("docstring") rhp_mdl::setvarbasis "setvarbasis(vi, basis_status, /)
+%feature("docstring") rhp_mdl::setvarbasis "setvarbasis(vi, basis_info, /)
 --
 
 Set the basis status of a variable.
@@ -659,7 +679,7 @@ Parameters
 ----------
 vi : VariableRef or int
     The variable index.
-basis_status : BasisStatus or int
+basis_info : BasisStatus or int
     The basis status of the variable.
 ";
 %feature("docstring") rhp_mdl::setvarbounds "setvarbounds(vi, lb, ub, /)
@@ -688,16 +708,16 @@ vi : VariableRef or int
 lb : float
     The variable lower bound.
 ";
-%feature("docstring") rhp_mdl::setvarmult "setvarmult(vi, mult, /)
+%feature("docstring") rhp_mdl::setvardual "setvardual(vi, dual, /)
 --
 
-Set the multiplier of a variable.
+Set the dual multiplier of a variable.
 
 Parameters
 ----------
 vi : VariableRef or int
     The variable.
-mult : float
+dual : float
     The variable multiplier.
 ";
 %feature("docstring") rhp_mdl::setvarname "setvarname(vi, name, /)
@@ -736,7 +756,7 @@ vi : VariableRef or int
 ub : float
     The variable upper bound.
 ";
-%feature("docstring") rhp_mdl::setvarval "setvarval(vi, val, /)
+%feature("docstring") rhp_mdl::setvarlevel "setvarlevel(vi, level, /)
 --
 
 Set the value of a variable.
@@ -745,7 +765,7 @@ Parameters
 ----------
 vi : VariableRef or int
     The variable.
-val : float
+level : float
     The variable name.
 ";
 %feature("docstring") rhp_mdl::exportmodel "exportmodel(mdl_dst, /)
@@ -782,7 +802,7 @@ Parameters
 mp : MathPrgm
     The mathematical program.
 ";
-%feature("docstring") rhp_mdl::empdag_rootsetmpe "empdag_rootsetmpe(mpe, /)
+%feature("docstring") rhp_mdl::empdag_rootsetnash "empdag_rootsetnash(mpe, /)
 --
 
 Set the root of the EMP dag to an equilibrium.
@@ -848,7 +868,7 @@ mp : MathPrgm
 mp_child : MathPrgm
     The child MathPrgm.
 ";
-%feature("docstring") rhp_mdl::empdag_mpeaddmp "empdag_mpeaddmp(mp, /)
+%feature("docstring") rhp_mdl::empdag_nashaddmp "empdag_nashaddmp(mp, /)
 --
 
 Add a mathematical programm into the equilibrium.
@@ -1755,7 +1775,7 @@ Returns
 MathPrgm
     The MathPrgm object.
 ";
-%feature("docstring") rhp_mdl::empdag_newmpe "empdag_newmpe()
+%feature("docstring") rhp_mdl::empdag_newnash "empdag_newnash()
 --
 
 Allocate an equilibrium object.
@@ -2034,7 +2054,7 @@ Returns
 int
     The number of variables.
 ";
-%feature("docstring") rhp_nash_equilibrium::getid "mpe_getid()
+%feature("docstring") rhp_nash_equilibrium::getid "nash_getid()
 --
 
 Get the ID of a Nash equilibrium.
@@ -2044,7 +2064,7 @@ Returns
 int
     The ID, or UINT_MAX on error.
 ";
-%feature("docstring") rhp_nash_equilibrium::getname "mpe_getname()
+%feature("docstring") rhp_nash_equilibrium::getname "nash_getname()
 --
 
 Get the name of a Nash equilibrium.
@@ -2054,7 +2074,7 @@ Returns
 str
     The name, or NULL on error.
 ";
-%feature("docstring") rhp_nash_equilibrium::getnumchildren "mpe_getnumchildren()
+%feature("docstring") rhp_nash_equilibrium::getnumchildren "nash_getnumchildren()
 --
 
 Get the number of children of a Nash equilibrium.

@@ -109,8 +109,6 @@ int ovf_fenchel(Model *mdl, OvfType type, OvfOpsData ovfd)
    rhp_idx vi_ovf = fdat.vi_ovf;
    unsigned n_dualvars_mult = avar_size(&fdat.dual.vars.v) +  avar_size(&fdat.dual.vars.w);
 
-//   { GDB_STOP(); }
-
    do {
 
       if (type == OvfType_Ccflib || type == OvfType_Ccflib_Dual) { break; }

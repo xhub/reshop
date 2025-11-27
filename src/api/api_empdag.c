@@ -81,7 +81,7 @@ int rhp_empdag_rootsetmp(Model *mdl, MathPrgm *mp)
  *
  * @return     the error code
  */
-int rhp_empdag_rootsetmpe(Model *mdl, Nash *mpe)
+int rhp_empdag_rootsetnash(Model *mdl, Nash *mpe)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
@@ -132,7 +132,7 @@ MathPrgm *rhp_empdag_newmp(Model *mdl, unsigned sense)
  *
  * @return     the equilibrium object
  */
-Nash* rhp_empdag_newmpe(Model *mdl)
+Nash* rhp_empdag_newnash(Model *mdl)
 {
   if (!mdl) {
       error("%s :: The model object is NULL\n", __func__);
@@ -154,7 +154,7 @@ Nash* rhp_empdag_newmpe(Model *mdl)
  *
  *  @return     the error code
  */
-int rhp_empdag_mpeaddmp(Model *mdl, Nash* mpe, MathPrgm *mp)
+int rhp_empdag_nashaddmp(Model *mdl, Nash* mpe, MathPrgm *mp)
 {
    S_CHECK(chk_mdl(mdl, __func__));
 
@@ -321,3 +321,22 @@ int rhp_empdag_mpaddmpCTRL(Model *mdl, MathPrgm *mp, MathPrgm *mp_child)
    return empdag_mpCTRLmpbyid(&mdl->empinfo.empdag, id_parent, id_child);
 }
 
+
+/**
+ * @brief Write a DOT representation of an EMPDAG
+ *
+ * The DOT language is used by graphviz
+ *
+ * @param mdl the model containing the EMPDAG
+ * @param f   the output stream
+ *
+ * @return    the error code
+ */
+int rhp_empdag_writeDOT(Model *mdl, FILE *f)
+{
+   S_CHECK(chk_mdl(mdl, __func__));
+   S_CHECK(chk_arg_nonnull(f, 2, __func__));
+
+   return empdag2dot(&mdl->empinfo.empdag, f);
+
+}

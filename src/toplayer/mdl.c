@@ -217,11 +217,12 @@ Model* mdl_new(BackendType backend)
 
    SN_CHECK_EXIT(ctr_init(&mdl->ctr, backend));
 
-   SN_CHECK_EXIT(empinfo_alloc(&mdl->empinfo, mdl));
+   SN_CHECK_EXIT(empinfo_init(mdl));
 
    SN_CHECK_EXIT(mdl_timings_alloc(mdl));
 
    return mdl;
+
 _exit:
    mdl_free(mdl);
    return NULL;

@@ -6,6 +6,7 @@
 #include "mdl_transform.h"
 #include "ovf_transform.h"
 #include "rhp_fwd.h"
+#include "rmdl_transform.h"
 #include "timings.h"
 #include "rhp_process.h"
 
@@ -45,7 +46,7 @@ int rhp_reformulate(Model *mdl_user, Model **mdl_reformulated)
       empinfo = &mdl_reform->empinfo;
 
       S_CHECK(rmdl_ctr_transform(mdl_reform));
-      mdl_user->timings->reformulation.container.total = get_thrdtime() - start;
+      mdl_user->timings->reformulation.equvar.total = get_thrdtime() - start;
 
    }
 
@@ -69,6 +70,26 @@ int rhp_reformulate(Model *mdl_user, Model **mdl_reformulated)
 
       mdl_reform->timings->reformulation.CCF.total = get_thrdtime() - start;
    }
+
+   if (empinfo_has_marginal_vars(&mdl_user->empinfo)) {
+
+      double start = get_thrdtime();
+
+      pr_info("%s model %.*s #%u: Performing marginal (dualvar) transformations.\n",
+           mdl_fmtargs(mdl_user));
+
+      if (!mdl_reform) {
+         trace_process("[process] %s model %.*s #%u: Copying model for EMPDAG "
+                       "reformulations.\n", mdl_fmtargs(mdl_user));
+
+         A_CHECK(mdl_reform, mdl_new(RhpBackendReSHOP));
+         S_CHECK(rmdl_initfromfullmdl(mdl_reform, mdl_user));
+      }
+
+      S_CHECK(rmdl_marginalVars(mdl_reform));
+
+      mdl_user->timings->reformulation.equvar.total = get_thrdtime() - start;
+    }
 
    if (empdag_needs_transformations(&mdl_user->empinfo.empdag)) {
 

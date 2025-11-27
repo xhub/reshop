@@ -464,16 +464,16 @@ static int rctr_getequsval(const Container *ctr, Aequ *e, double *vals)
    return OK;
 }
 
-static int rctr_getvarsbasis(const Container *ctr, Avar *v, int *basis)
+static int rctr_getvarsbasis(const Container *ctr, Avar *v, int *basis_info)
 {
-   assert(v && basis);
+   assert(v && basis_info);
    Var *vars = ctr->vars;
    size_t total_n = rctr_totaln(ctr);
    for (size_t i = 0; i < v->size; ++i) {
       rhp_idx vi = avar_fget(v, i);
       assert(valid_vi(vi));
       vi_inbounds(vi, total_n, __func__);
-      basis[i] = vars[vi].basis;
+      basis_info[i] = vars[vi].basis;
    }
 
    return OK;
@@ -1091,13 +1091,35 @@ static int rctr_getequmult(const Container *ctr, rhp_idx ei, double *multiplier)
    return OK;
 }
 
-static int rctr_getallequsmult(const Container *ctr, double *mult)
+static int rctr_getallequsbasis(const Container *ctr, int *basis_infos)
 {
-   assert(mult);
+   assert(basis_infos);
    Equ *equs = ctr->equs;
    size_t n = ctr_nvars(ctr);
    for (size_t i = 0; i < n; ++i) {
-      mult[i] = equs[i].multiplier;
+      basis_infos[i] = equs[i].basis;
+   }
+   return OK;
+}
+
+static int rctr_getallequsdual(const Container *ctr, double *duals)
+{
+   assert(duals);
+   Equ *equs = ctr->equs;
+   size_t n = ctr_nvars(ctr);
+   for (size_t i = 0; i < n; ++i) {
+      duals[i] = equs[i].multiplier;
+   }
+   return OK;
+}
+
+static int rctr_getallequslevel(const Container *ctr, double *vals)
+{
+   assert(vals);
+   Equ *equs = ctr->equs;
+   size_t n = ctr_nvars(ctr);
+   for (size_t i = 0; i < n; ++i) {
+      vals[i] = equs[i].value;
    }
    return OK;
 }
@@ -1112,17 +1134,6 @@ static int rctr_getequperp(const Container *ctr, rhp_idx ei, rhp_idx *vi)
   *vi = ctr->equmeta[ei].dual;
 
   return OK;
-}
-
-static int rctr_getallequsval(const Container *ctr, double *vals)
-{
-   assert(vals);
-   Equ *equs = ctr->equs;
-   size_t n = ctr_nvars(ctr);
-   for (size_t i = 0; i < n; ++i) {
-      vals[i] = equs[i].value;
-   }
-   return OK;
 }
 
 static int rctr_getequtype(const Container *ctr, rhp_idx ei, unsigned *type, unsigned *cone)
@@ -1181,24 +1192,35 @@ static int rctr_getvarbasis(const Container *ctr, rhp_idx vi, int *bstat)
    return OK;
 }
 
-static int rctr_getallvarsmult(const Container *ctr, double *mult)
+static int rctr_getallvarsbasis(const Container *ctr, int *basis_infos)
 {
-   assert(mult);
+   assert(basis_infos);
    Var *vars = ctr->vars;
    size_t n = ctr_nvars(ctr);
    for (size_t i = 0; i < n; ++i) {
-      mult[i] = vars[i].multiplier;
+      basis_infos[i] = vars[i].basis;
    }
    return OK;
 }
 
-static int rctr_getallvarsval(const Container *ctr, double *vals)
+static int rctr_getallvarsdual(const Container *ctr, double *duals)
 {
-   assert(vals);
+   assert(duals);
    Var *vars = ctr->vars;
    size_t n = ctr_nvars(ctr);
    for (size_t i = 0; i < n; ++i) {
-      vals[i] = vars[i].value;
+      duals[i] = vars[i].multiplier;
+   }
+   return OK;
+}
+
+static int rctr_getallvarsval(const Container *ctr, double *levels)
+{
+   assert(levels);
+   Var *vars = ctr->vars;
+   size_t n = ctr_nvars(ctr);
+   for (size_t i = 0; i < n; ++i) {
+      levels[i] = vars[i].value;
    }
    return OK;
 }
@@ -1404,6 +1426,7 @@ static int rctr_getequexprtype(const Container *ctr, rhp_idx ei, EquExprType *ty
 
 }
 
+// FIXME: rename
 static int rctr_equvarcounts(Container *ctr)
 {
    RhpContainerData *cdat = (RhpContainerData *)ctr->data;
@@ -1466,17 +1489,18 @@ const struct ctr_ops ctr_ops_rhp = {
    .evalgrad       = NULL,
    .evalgradobj    = NULL,
    .getequsbasis   = rctr_getequsbasis,
-   .getequsmult    = rctr_getequsmult,
-   .getequsval     = rctr_getequsval,
+   .getequsdual    = rctr_getequsmult,
+   .getequslevel     = rctr_getequsval,
    .getvarsbasis   = rctr_getvarsbasis,
-   .getvarsmult    = rctr_getvarsmult,
-   .getvarsval     = rctr_getvarsval,
+   .getvarsdual    = rctr_getvarsmult,
+   .getvarslevel     = rctr_getvarsval,
    .getequbyname   = rctr_notimpl3char_,
-   .getequval     = rctr_getequval,
-   .getequmult     = rctr_getequmult,
-   .getallequsmult    = rctr_getallequsmult,
+   .getequlevel     = rctr_getequval,
+   .getequdual     = rctr_getequmult,
    .getequperp     = rctr_getequperp,
-   .getallequsval     = rctr_getallequsval,
+   .getallequsbasis = rctr_getallequsbasis,
+   .getallequsdual  = rctr_getallequsdual,
+   .getallequslevel = rctr_getallequslevel,
    .getequbasis  = rctr_getequbasis,
    .getequname     = rctr_getequname_s,
    .getequtype     = rctr_getequtype,
@@ -1489,25 +1513,26 @@ const struct ctr_ops ctr_ops_rhp = {
    .getvarbyname   = rctr_notimpl3char_,
    .getvarlb       = rctr_getvarlb,
    .getvarub       = rctr_getvarub,
-   .getvarval     = rctr_getvarval,
-   .getvarmult     = rctr_getvarmult,
+   .getvarlevel     = rctr_getvarval,
+   .getvardual     = rctr_getvarmult,
    .getvarperp     = rctr_getvarperp,
-   .getallvarsmult    = rctr_getallvarsmult,
+   .getallvarsbasis  = rctr_getallvarsbasis,
+   .getallvarsdual   = rctr_getallvarsdual,
+   .getallvarslevel     = rctr_getallvarsval,
    .getvarbasis  = rctr_getvarbasis,
-   .getallvarsval     = rctr_getallvarsval,
    .getvartype     = rctr_getvartype,
    .isequcst       = rctr_isequcst,
    .resize         = rctr_resize,
-   .setequval     = rctr_setequval,
-   .setequmult     = rctr_setequmult,
+   .setequlevel     = rctr_setequval,
+   .setequdual     = rctr_setequmult,
    .setequname     = rctr_setequname_s,
    .setequtype     = rctr_setequtype,
    .setequvarperp  = rctr_setequvarperp,
    .setequcst         = rctr_setequcst,
    .setvarlb       = rctr_setvarlb,
    .setvarbounds   = rctr_setvarbounds,
-   .setvarval     = rctr_setvarval,
-   .setvarmult     = rctr_setvarmult,
+   .setvarlevel     = rctr_setvarval,
+   .setvardual     = rctr_setvarmult,
    .setvarname     = rctr_setvarname_s,
    .setvartype     = rctr_setvartype,
    .setvarub       = rctr_setvarub,
@@ -1541,18 +1566,19 @@ const struct ctr_ops ctr_ops_julia = {
    .evalgradobj    = NULL,
    .evalequvar     = rctr_evalequvar,
    .getequsbasis   = rctr_getequsbasis,
-   .getequsmult    = rctr_getequsmult,
-   .getequsval     = rctr_getequsval,
+   .getequsdual    = rctr_getequsmult,
+   .getequslevel     = rctr_getequsval,
    .getvarsbasis   = rctr_getvarsbasis,
-   .getvarsmult    = rctr_getvarsmult,
-   .getvarsval     = rctr_getvarsval,
+   .getvarsdual    = rctr_getvarsmult,
+   .getvarslevel     = rctr_getvarsval,
    .getequbyname   = rctr_getequbyname_s,
-   .getequval      = rctr_getequval,
-   .getequmult     = rctr_getequmult,
+   .getequlevel      = rctr_getequval,
+   .getequdual     = rctr_getequmult,
    .getequperp     = rctr_getequperp,
-   .getallequsmult = rctr_getallequsmult,
+   .getallequsbasis = rctr_getallequsbasis,
+   .getallequsdual  = rctr_getallequsdual,
+   .getallequslevel = rctr_getallequslevel,
    .getequbasis    = rctr_getequbasis,
-   .getallequsval  = rctr_getallequsval,
    .getequtype     = rctr_getequtype,
    .getequexprtype     = rctr_getequexprtype,
    .getcoljacinfo  = rctr_getcoljacinfo,
@@ -1563,24 +1589,24 @@ const struct ctr_ops ctr_ops_julia = {
    .getvarbyname   = rctr_getvarbyname_s,
    .getvarlb       = rctr_getvarlb,
    .getvarub       = rctr_getvarub,
-   .getvarval      = rctr_getvarval,
-   .getvarmult     = rctr_getvarmult,
+   .getvarlevel      = rctr_getvarval,
+   .getvardual     = rctr_getvarmult,
    .getvarperp     = rctr_getvarperp,
-   .getallvarsmult = rctr_getallvarsmult,
+   .getallvarsdual = rctr_getallvarsdual,
    .getvarbasis    = rctr_getvarbasis,
-   .getallvarsval  = rctr_getallvarsval,
+   .getallvarslevel  = rctr_getallvarsval,
    .getvartype     = rctr_getvartype,
    .resize         = rctr_resize,
    .isequcst       = rctr_isequcst,
-   .setequval      = rctr_setequval,
-   .setequmult     = rctr_setequmult,
+   .setequlevel      = rctr_setequval,
+   .setequdual     = rctr_setequmult,
    .setequname     = rctr_setequname_s,
    .setequtype     = rctr_setequtype,
    .setequvarperp  = rctr_setequvarperp,
    .setequcst      = rctr_setequcst,
    .setvarlb       = rctr_setvarlb,
-   .setvarval      = rctr_setvarval,
-   .setvarmult     = rctr_setvarmult,
+   .setvarlevel      = rctr_setvarval,
+   .setvardual     = rctr_setvarmult,
    .setvarname     = rctr_setvarname_s,
    .setvartype     = rctr_setvartype,
    .setvarub       = rctr_setvarub,

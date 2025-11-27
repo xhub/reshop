@@ -120,7 +120,7 @@ int view_equ_as_png(Model *mdl, rhp_idx ei)
       Container *ctr = &mdl->ctr;
       S_CHECK(gctr_getopcode(ctr, ei, &len, &instrs, &args));
 
-      nlopcode_print(PO_ERROR, instrs, args, len);
+      nlopcode_print(PO_DEBUG, instrs, args, len);
       S_CHECK(equ_nltree_fromgams(&ctr->equs[ei], len, instrs, args));
 
       // HACK ARENA
@@ -143,7 +143,20 @@ _exit:
 
 NONNULL static int export_all_equs(Model *mdl)
 {
-   for (unsigned i =0, len = mdl_nequs_total(mdl); i < len; ++i) {
+   for (unsigned i = 0, len = mdl_nequs_total(mdl); i < len; ++i) {
+      S_CHECK(view_equ_as_png(mdl, i));
+   }
+
+   return OK;
+}
+
+NONNULL static int export_active_equs(Model *mdl)
+{
+   Fops *fops = mdl->ctr.fops;
+   if (!fops) { return export_all_equs(mdl); }
+
+   for (unsigned i = 0, len = mdl_nequs_total(mdl); i < len; ++i) {
+      if (!fops->keep_equ(fops, i)) { continue; }
       S_CHECK(view_equ_as_png(mdl, i));
    }
 
@@ -172,6 +185,11 @@ int dot_export_equs(Model *mdl)
       S_CHECK_EXIT(export_all_equs(mdl));
       goto _exit;
    }
+
+   if (!strncmp(optval, "+active", len)) {
+      S_CHECK_EXIT(export_active_equs(mdl));
+   }
+
 
    /* TODO: support filtering once symbol names have been sorted */
 

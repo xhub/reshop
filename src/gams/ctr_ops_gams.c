@@ -431,7 +431,7 @@ static int gams_getequsmult(const Container *ctr, double *mult)
 
    return OK;
 }
-static int gams_getequsval(const Container *ctr, double *vals)
+static int gams_getallequsval(const Container *ctr, double *levels)
 {
    assert(ctr->backend == RhpBackendGamsGmo);
    gmoHandle_t gmo = ((struct ctrdata_gams *) ctr->data)->gmo;
@@ -439,10 +439,10 @@ static int gams_getequsval(const Container *ctr, double *vals)
 
    double gms_pinf = gmoPinf(gmo), gms_minf = gmoMinf(gmo), gms_na = gmoValNA(gmo);
 
-   GMSCHK(gmoGetEquL(gmo, vals));
+   GMSCHK(gmoGetEquL(gmo, levels));
 
    for (int i = 0, len = gmoM(gmo); i < len; ++i) {
-      vals[i] = dbl_from_gams(vals[i], gms_pinf, gms_minf, gms_na) - gmoGetRhsOne(gmo, i); 
+      levels[i] = dbl_from_gams(levels[i], gms_pinf, gms_minf, gms_na) - gmoGetRhsOne(gmo, i); 
    }
 
    return OK;
@@ -1100,19 +1100,19 @@ const struct ctr_ops ctr_ops_gams = {
    .evalgrad       = gams_evalgrad,
    .evalgradobj    = gams_evalgradobj,
    .getequsbasis   = gams_getaequbasis,
-   .getequsmult    = gams_getaequmult,
-   .getequsval     = gams_getaequval,
+   .getequsdual    = gams_getaequmult,
+   .getequslevel     = gams_getaequval,
    .getvarsbasis   = gams_getavarbasis,
-   .getvarsmult    = gams_getavarmult,
-   .getvarsval     = gams_getavarval,
+   .getvarsdual    = gams_getavarmult,
+   .getvarslevel     = gams_getavarval,
    .getequcst      = gams_getcst,
    .getequbyname   = gams_notimpl3char,
-   .getequval      = gams_getequval,
-   .getequmult     = gams_getequmult,
+   .getequlevel      = gams_getequval,
+   .getequdual     = gams_getequmult,
    .getequperp     = gams_getequperp,
-   .getallequsmult = gams_getequsmult,
+   .getallequsdual = gams_getequsmult,
    .getequbasis    = gams_getequbasis,
-   .getallequsval  = gams_getequsval,
+   .getallequslevel  = gams_getallequsval,
    .getequtype     = gams_getequtype,
    .getequexprtype = gams_getequexprtype,
    .getcoljacinfo  = gams_getcoljacinfo, /* RENAME */
@@ -1121,25 +1121,25 @@ const struct ctr_ops ctr_ops_gams = {
    .getvarbounds   = gams_getvarbounds,
    .getvarbyname   = gams_notimpl3char,
    .getvarlb       = gams_getvarlb,
-   .getvarval      = gams_getvarval,
-   .getvarmult     = gams_getvarmult,
+   .getvarlevel      = gams_getvarval,
+   .getvardual     = gams_getvarmult,
    .getvarperp     = gams_getvarperp,
-   .getallvarsmult = gams_getvarsmult,
+   .getallvarsdual = gams_getvarsmult,
    .getvarbasis    = gams_getvarbasis,
    .getvarub       = gams_getvarub,
-   .getallvarsval  = gams_getvarsval,
+   .getallvarslevel  = gams_getvarsval,
    .isequcst       = gams_isequcst,
    .resize         = gams_resize,
-   .setequval      = gams_setequval,
+   .setequlevel      = gams_setequval,
    .setequname     = gams_setequname,
-   .setequmult     = gams_setequmult,
+   .setequdual     = gams_setequmult,
    .setequbasis    = gams_setequbasis,
    .setequtype     = gams_setequtype,
    .setequvarperp  = gams_setequvarperp,
    .setequcst      = gams_setcst,
    .setvarlb       = gams_notimpl3,
-   .setvarval      = gams_setvarval,
-   .setvarmult     = gams_setvarmult,
+   .setvarlevel      = gams_setvarval,
+   .setvardual     = gams_setvarmult,
    .setvarbasis    = gams_setvarbasis,
    .setvartype     = gams_setvartype,
    .setvarub       = gams_notimpl3,

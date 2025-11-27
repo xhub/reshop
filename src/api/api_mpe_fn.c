@@ -13,7 +13,7 @@
  *
  * @return     the ID, or UINT_MAX on error
  */
-unsigned rhp_mpe_getid(const struct rhp_nash_equilibrium *mpe)
+unsigned rhp_nash_getid(const struct rhp_nash_equilibrium *mpe)
 {
    if (chk_nash(mpe, __func__) != OK) { return UINT_MAX; }
    return mpe->id;
@@ -28,7 +28,7 @@ unsigned rhp_mpe_getid(const struct rhp_nash_equilibrium *mpe)
  *
  * @return     the name, or NULL on error
  */
-const char* rhp_mpe_getname(const struct rhp_nash_equilibrium *mpe)
+const char* rhp_nash_getname(const struct rhp_nash_equilibrium *mpe)
 {
    SN_CHECK(chk_nash(mpe, __func__));
    unsigned mpe_id = mpe->id;
@@ -47,7 +47,7 @@ const char* rhp_mpe_getname(const struct rhp_nash_equilibrium *mpe)
  *
  * @return     the number of children, or UINT_MAX on error
  */
-unsigned rhp_mpe_getnumchildren(const struct rhp_nash_equilibrium *mpe)
+unsigned rhp_nash_getnumchildren(const struct rhp_nash_equilibrium *mpe)
 {
    if (chk_nash(mpe, __func__) != OK) { return UINT_MAX; }
    unsigned mpe_id = mpe->id;
@@ -63,7 +63,7 @@ unsigned rhp_mpe_getnumchildren(const struct rhp_nash_equilibrium *mpe)
  *
  * @param mpe  the Nash equilibrium
  */
-void rhp_mpe_print(struct rhp_nash_equilibrium *mpe)
+void rhp_nash_print(struct rhp_nash_equilibrium *mpe)
 {
    unsigned mpe_id = mpe->id;
    const struct nash_namedarray *mpes = &mpe->mdl->empinfo.empdag.nashs;
