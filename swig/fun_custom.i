@@ -80,7 +80,7 @@ void set_option(const char *name, SWIG_Object o)
    }
 
 
-fail: exception_code = -1;
+fail: rhp_exception_code = -1;
 }
 
 void mdl_set_option(struct rhp_mdl *mdl, const char *name, SWIG_Object o)
@@ -153,7 +153,7 @@ void mdl_set_option(struct rhp_mdl *mdl, const char *name, SWIG_Object o)
 
    return;
 
-   fail: exception_code = -1;
+   fail: rhp_exception_code = -1;
 }
 
 %}

@@ -1795,7 +1795,7 @@ S_CHECK_EXIT(dualslabel_add(dualslabel, mpid_dual));
                return Error_EMPIncorrectInput;
             }
 
-            assert(noNL && chk_var_in_equ || !(noNL && !chk_var_in_equ));
+            assert((noNL && chk_var_in_equ) || !(noNL && !chk_var_in_equ));
             if (noNL && nlflag) {
                error("[empinterp] ERROR on line %u: while processing a %s statement. "
                      "The variable '%s' in equation '%s' appears nonlinearly."

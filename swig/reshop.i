@@ -86,15 +86,15 @@
   %exception attribute {
      $action
   
-     if (exception_code != RHP_OK) {
-        int ecode = exception_code;
-        exception_code = RHP_OK; 
+     if (rhp_exception_code != RHP_OK) {
+        int ecode = rhp_exception_code;
+        rhp_exception_code = RHP_OK; 
         if (ecode == -1) {
            SWIG_fail; /* everything has been set by the callee */
         }
 
-        if (exception_msg) {
-           SWIG_exception(errcode_rhp2swig(ecode), exception_msg);
+        if (rhp_exception_msg) {
+           SWIG_exception(errcode_rhp2swig(ecode), rhp_exception_msg);
          } else {
             SWIG_exception(errcode_rhp2swig(ecode), "ERROR: exception present without message!");
          }
@@ -951,7 +951,7 @@ typedef struct rhp_mdl {
         RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");
         RHP_FAIL(rhp_gms_writesol2gdx($self, gdxname), "Couldn't write the solution as gdx");
         return;
-      fail: exception_code = -1;
+      fail: rhp_exception_code = -1;
      }
 
      void solve() {
@@ -961,7 +961,7 @@ typedef struct rhp_mdl {
         RHP_FAIL(rhp_solve(solver), "Couldn't solve the model");
         RHP_FAIL(rhp_postprocess(solver), "Couldn't report the solution");
         return;
-      fail: exception_code = -1;
+      fail: rhp_exception_code = -1;
      }
 
      PyObject* draw_empdag() {
@@ -1026,7 +1026,7 @@ typedef struct rhp_mdl {
 
         return graphs;
 
-      fail: exception_code = -1;
+      fail: rhp_exception_code = -1;
       if (tmpfile) {
          PyObject_CallMethodObjArgs(tmpfile, PyString_FromString("close"), NULL);
       }

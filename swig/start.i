@@ -112,9 +112,15 @@ SWIGINTERN int errcode_rhp2swig(int code)
 }
 
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
+
 SWIGINTERN const char unknown_err[] = "unknown error";
 
-SWIGINTERN unsigned win_strerror(unsigned sz, char buf[VMT(static sz)], const char **msg)
+SWIGINTERN rhp_errno_t win_strerror_(unsigned sz, char buf[VMT(static sz)], const char **msg)
 {
    DWORD err = GetLastError();
    unsigned length42 = FormatMessageA(
@@ -126,11 +132,19 @@ SWIGINTERN unsigned win_strerror(unsigned sz, char buf[VMT(static sz)], const ch
    return err;
 }
 
+#undef SYS_ERRMSG
+#define SYS_ERRMSG win_strerror_
+
+
 #else
 
 #include <errno.h>
 #include "macros.h"
-int posix_strerror(size_t sz, char buf[VMT(static sz)], const char **msg)
+
+#undef SYS_ERRMSG
+#define SYS_ERRMSG posix_strerror_
+
+SWIGINTERN int posix_strerror_(size_t sz, char buf[VMT(static sz)], const char **msg)
 {
    int errno_ = errno;
    STRERROR(buf, sz, *msg);
@@ -182,8 +196,8 @@ const RhpBackendType BackendInvalidObj  = {.backend = INT8_MAX};
 #define CHK_RET_EXCEPTION(expr) { \
   int status42 = (expr); \
   if (status42 != RHP_OK) { \
-    exception_code = status42; \
-    exception_msg = rhp_status_descr(status42); \
+    rhp_exception_code = status42; \
+    rhp_exception_msg = rhp_status_descr(status42); \
  } \
 }
 
@@ -197,8 +211,8 @@ const RhpBackendType BackendInvalidObj  = {.backend = INT8_MAX};
 
 static tlsvar PyObject* reshop_mod = NULL;
 // For Exception-stylen handling
-static tlsvar const char *exception_msg = NULL;
-static tlsvar int exception_code = RHP_OK;
+static tlsvar const char *rhp_exception_msg = NULL;
+static tlsvar int rhp_exception_code = RHP_OK;
 
 static PyObject * basisstatus_getobj(int bstat)
 {
