@@ -481,7 +481,7 @@ static int filter_gamsopcode_rosetta(const rhp_idx * restrict rosetta_vars,
 
             if (opcode >= 0 && opcode < nlOpcode_size) {
                instrs[i] = opcode;
-               args[i]   = offset_pool + vi;
+               args[i]   = offset_pool + vi + 1; /* WARNING: 1 based index ... */
             } else if (opcode == -1) {
                instrs[i] = nlPushI;
                args[i]   = (int)get_poolidx_negvar(datpool, vi);
