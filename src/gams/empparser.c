@@ -3407,6 +3407,67 @@ static int err_wildcard(unsigned linenr)
 }
 
 /**
+ * @brief Check if an ident is part of the labdel definition
+ *
+ * @param      interp  the interpreter
+ * @param      p       the pointer
+ * @param[out] res     on exit, true if the ident is the start of a definition
+ *
+ * @return        the error code
+ */
+static inline int found_labeldef(Interpreter * restrict interp, unsigned * restrict p,
+                                 bool * restrict res)
+{
+   /* ----------------------------------------------------------------
+          * Make sure the ident is not followed by a ':' as this could
+          * be a declaration on the next line. If we have a '(', then we seek
+          * to parse until we are over all the indices and then check for ':'
+          * ---------------------------------------------------------------- */
+   if (potential_labeldef(interp, p)) {
+      //            *p = interp->cur.start - interp->buf; /* we need to reset p */
+      *res = true;
+      return OK;
+   }
+
+   unsigned p2 = *p;
+   TokenType toktype;
+   S_CHECK(peek(interp, &p2, &toktype));
+   if (toktype == TOK_LPAREN) {
+      if (skip_gmsindices(interp->buf, &p2)) {
+         error("[empparser] while parsing the indices of '%.*s', got end-of-file\n",
+               emptok_getstrlen(&interp->cur), emptok_getstrstart(&interp->cur));
+         return Error_EMPIncorrectSyntax;
+      }
+
+      /* Consume ')' */
+      p2++;
+      S_CHECK(peek(interp, &p2, &toktype));
+
+      if (toktype == TOK_CONDITION) {
+
+         S_CHECK(peek(interp, &p2, &toktype));
+         if (toktype != TOK_LPAREN) {
+            TO_IMPLEMENT("After a conditional '$', a left parenthesis '(' is expected");
+         }
+
+         skip_conditional(interp->buf, &p2);
+         p2++; /* consume ')' */
+         S_CHECK(peek(interp, &p2, &toktype));
+      }
+
+      /* If we reached a node definition, exit */
+      if (toktype == TOK_COLON) {
+         *res = true;
+         return OK;
+      }
+   }
+
+   *res = false;
+   return OK;
+}
+
+
+/**
  * @brief Parse an optimization problem (min or max)
  *
  * @param mp      the optimization MP object
@@ -3579,46 +3640,11 @@ static int parse_opt(MathPrgm * restrict mp, Interpreter * restrict interp,
 
       } else if (toktype == TOK_IDENT) {
 
-         /* ----------------------------------------------------------------
-          * Make sure the ident is not followed by a ':' as this could
-          * be a declaration on the next line. If we have a '(', then we seek
-          * to parse until we are over all the indices and then check for ':'
-          * ---------------------------------------------------------------- */
-         if (potential_labeldef(interp, p)) {
-//            *p = interp->cur.start - interp->buf; /* we need to reset p */
-            goto exit_while;
-         }
+         bool res;
+         S_CHECK(found_labeldef(interp, p, &res));
 
-         unsigned p2 = *p;
-         S_CHECK(peek(interp, &p2, &toktype));
-         if (toktype == TOK_LPAREN) {
-            if (skip_gmsindices(interp->buf, &p2)) {
-               error("[empparser] while parsing the indices of '%.*s', got "
-                     "end-of-file\n", emptok_getstrlen(&interp->cur),
-                     emptok_getstrstart(&interp->cur));
-               return Error_EMPIncorrectSyntax;
-            }
+         if (res) { goto exit_while; }
 
-            /* Consume ')' */
-            p2++;
-            S_CHECK(peek(interp, &p2, &toktype));
-
-            if (toktype == TOK_CONDITION) {
-
-               S_CHECK(peek(interp, &p2, &toktype));
-               if (toktype != TOK_LPAREN) {
-                  TO_IMPLEMENT("After a conditional '$', a left parenthesis '(' is expected");
-               }
-
-               skip_conditional(interp->buf, &p2);
-               p2++; /* consume ')' */
-               S_CHECK(peek(interp, &p2, &toktype));
-            }
-
-            /* If we reached a node definition, exit */
-            if (toktype == TOK_COLON) { goto exit_while; }
-         }
- 
          /* ----------------------------------------------------------------
           * We have a MP or Nash in the constraints
           * ---------------------------------------------------------------- */
@@ -3727,6 +3753,11 @@ static int parse_vi(MathPrgm * restrict mp, Interpreter * restrict interp,
           * ---------------------------------------------------------------- */
          interp_save_tok(interp);
 
+         bool have_labeldef;
+         S_CHECK(found_labeldef(interp, p, &have_labeldef));
+
+         if (have_labeldef) { goto exit_while; }
+
          unsigned p2 = *p;
          S_CHECK(peek(interp, &p2, &toktype));
 
@@ -3748,9 +3779,6 @@ static int parse_vi(MathPrgm * restrict mp, Interpreter * restrict interp,
                mp->vi.has_kkt = true;
             }
 
-         } else if (toktype == TOK_COLON) {
-            /* The next token is a label definition */
-            return OK;
          } else {
             gmsindices_deactivate(&interp->gmsindices);
             TO_IMPLEMENT("VI with labels");
@@ -3799,6 +3827,7 @@ _advance:
       S_CHECK(advance(interp, p, &toktype));
    }
 
+exit_while:
    if (is_empty) {
       error("[empinterp] ERROR on line %u: empty VI declaration\n", interp->linenr);
       status = Error_EMPIncorrectSyntax;
