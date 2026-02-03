@@ -25,7 +25,7 @@ int view_png(const char *fname, const char *png_viewer)
 
   if (!png_viewer || png_viewer[0] == '\0') {
 #ifdef __APPLE__
-      png_viewer = "open -f ";
+      png_viewer = "open -a Preview ";
 #elif defined(__linux__)
       png_viewer = "feh - &";
 #else
@@ -37,7 +37,11 @@ int view_png(const char *fname, const char *png_viewer)
 
    if (png_viewer) {
       char *cmd;
+#ifdef __APPLE__
+      IO_PRINT(asprintf(&cmd, "%s \"%s.png\"", png_viewer, fname));
+#elif defined(__linux__)
       IO_PRINT(asprintf(&cmd, "cat \"%s.png\" | %s", fname, png_viewer));
+#endif
       int rc = system(cmd); /* YOLO */
       if (rc) {
          error("[empdag] ERROR: executing '%s' yielded return code %d\n", cmd, rc);
