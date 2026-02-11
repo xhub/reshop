@@ -631,7 +631,7 @@ type : int
 %feature("docstring") rhp_mdl::setobjsense "setobjsense(objsense, /)
 --
 
-Set the sense of a Model .
+Set the sense of a Model.
 
 Parameters
 ----------
@@ -792,26 +792,6 @@ Parameters
 reserve : int
     The number of MP that should have space.
 ";
-%feature("docstring") rhp_mdl::empdag_rootsetmp "empdag_rootsetmp(mp, /)
---
-
-Set the root of the EMP dag to a mathematical program.
-
-Parameters
-----------
-mp : MathPrgm
-    The mathematical program.
-";
-%feature("docstring") rhp_mdl::empdag_rootsetnash "empdag_rootsetnash(mpe, /)
---
-
-Set the root of the EMP dag to an equilibrium.
-
-Parameters
-----------
-mpe : Nash
-    The equilibrium.
-";
 %feature("docstring") rhp_mdl::gms_setgamscntr "gms_setgamscntr(cntrfile, /)
 --
 
@@ -877,6 +857,26 @@ Parameters
 ----------
 mp : MathPrgm
     The mathematical programm.
+";
+%feature("docstring") rhp_mdl::empdag_rootsetmp "empdag_rootsetmp(mp, /)
+--
+
+Set the root of the EMP dag to a mathematical program.
+
+Parameters
+----------
+mp : MathPrgm
+    The mathematical program.
+";
+%feature("docstring") rhp_mdl::empdag_rootsetnash "empdag_rootsetnash(mpe, /)
+--
+
+Set the root of the EMP dag to an equilibrium.
+
+Parameters
+----------
+mpe : Nash
+    The equilibrium.
 ";
 %feature("docstring") rhp_mdl::add_var "add_var()
 --
@@ -1784,6 +1784,76 @@ Returns
 -------
 Nash
     The equilibrium object.
+";
+%feature("docstring") rhp_mdl::empdag_getnarcs "empdag_getnarcs()
+--
+
+Get the number of arcs in the EMPDAG.
+
+Returns
+-------
+int
+    The number of arcs in the EMPDAG.
+";
+%feature("docstring") rhp_mdl::empdag_getnnodes "empdag_getnnodes()
+--
+
+Get the number of nodes in the EMPDAG.
+
+Returns
+-------
+int
+    The number of nodes in the EMPDAG.
+";
+%feature("docstring") rhp_mdl::empdag_getnmps "empdag_getnmps()
+--
+
+Get the number of MPs in the EMPDAG.
+
+Returns
+-------
+int
+    The number of MPs in the EMPDAG.
+";
+%feature("docstring") rhp_mdl::empdag_getnnashs "empdag_getnnashs()
+--
+
+Get the number of Nash equilibrium in the EMPDAG.
+
+Returns
+-------
+int
+    The number of Nash equilibrium in the EMPDAG.
+";
+%feature("docstring") rhp_mdl::empdag_getmp "empdag_getmp(idx, /)
+--
+
+Get an MP by its index.
+
+Parameters
+----------
+idx : int
+    The MP index.
+
+Returns
+-------
+MathPrgm
+    The MP object.
+";
+%feature("docstring") rhp_mdl::empdag_getnash "empdag_getnash(idx, /)
+--
+
+Get an MP by its index.
+
+Parameters
+----------
+idx : int
+    The.
+
+Returns
+-------
+NashEquilibrium
+    The Nash Equilibrium object.
 ";
 %feature("docstring") rhp_mdl::nvars_total "nvars_total()
 --

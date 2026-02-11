@@ -31,7 +31,7 @@ enum EmpDagPpty {
 
 enum {
    DagErrDagCycle = 1,
-   DagErrMpeNoChild = 2,
+   DagErrNashNoChild = 2,
    DagErrGeneric = 3,
    DagErrLen = 4,
 };
@@ -149,6 +149,7 @@ typedef struct empdag_dfs {
    unsigned num_nonleaf;
    unsigned num_visited;
    unsigned num_visited_dual;
+   EmpDagEdgeStats arc_stats;
    DfsState * restrict nodes_stat;
    unsigned * restrict postorder;         /**< Nodal timestamp postorder fashion */
    unsigned * restrict preorder;          /**< Nodal timestamp in preorder fashion */
@@ -387,6 +388,7 @@ int dfsdata_init(EmpDagDfsData *dfsdata, EmpDag * restrict empdag)
    dfsdata->num_nashs = empdag->nashs.len;
    dfsdata->num_nodes = empdag->mps.len + empdag->nashs.len;
    dfsdata->max_depth = 0;
+   memset(&dfsdata->arc_stats, 0, sizeof(dfsdata->arc_stats));
 
    unsigned num_nodes = dfsdata->num_nodes;
    unsigned num_mps = dfsdata->num_mps;
@@ -686,6 +688,10 @@ int dfs_mpC(mpid_t mpid, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata)
 
    /* We are at a leaf node */
    unsigned Vlen = Varcs->len, Clen = Carcs->len;
+
+   dfsdata->arc_stats.num_ctrl += Clen;
+   dfsdata->arc_stats.num_vf += Vlen;
+
    if (Clen == 0 && Vlen == 0) {
       dfsdata->max_depth = MAX(dfsdata->max_depth, pathdata.depth);
    }
@@ -932,15 +938,20 @@ int dfs_nash(nashid_t id_parent, EmpDagDfsData *dfsdata, DfsPathDataFwd pathdata
    dfsdata->preorder[node_idx] = ++dfsdata->timestamp;
 
    /* We are at a leaf node */
-   if (arcs->len == 0) {
+
+   unsigned narcs = arcs->len;
+
+   dfsdata->arc_stats.num_equil += narcs;
+
+   if (narcs == 0) {
       error("[empdag] ERROR: Nash(%s) has no child.\n", empdag_getnashname(empdag, id_parent));
-      return -DagErrMpeNoChild;
+      return -DagErrNashNoChild;
    }
 
 
    pathdata_child.pathtype = DfsPathEquil;
 
-   for (unsigned i = 0, len = arcs->len; i < len; ++i) {
+   for (unsigned i = 0; i < narcs; ++i) {
       daguid_t uid_child = arcs->arr[i];
       dagid_t id_child = uid2id(uid_child);
 
@@ -1541,12 +1552,12 @@ NONNULL static
 int analyze_nash(EmpDagDfsData *dfsdata, nashid_t nashid, AnalysisData *data)
 {
    EmpDag *empdag = dfsdata->empdag;
-   const DagNashArray *mpes = &empdag->nashs;
+   const DagNashArray *nashs = &empdag->nashs;
    DagNashPpty * restrict nash_ppty = &dfsdata->nash_ppty[nashid];
    unsigned num_err = 0;
 
    /* ---------------------------------------------------------------------
-    * We just want to compute the level of the mpe node.
+    * We just want to compute the level of the nash node.
     * An Nash node can only have an MP as parent.
     * --------------------------------------------------------------------- */
 
@@ -1554,8 +1565,8 @@ int analyze_nash(EmpDagDfsData *dfsdata, nashid_t nashid, AnalysisData *data)
    const DagMpArray *mps = &empdag->mps;
    bool mp_parent_opt = false, mp_parent_vi = false;
 
-   if (mpes->rarcs[nashid].len > 0) {
-      daguid_t uid = mpes->rarcs[nashid].arr[0];
+   if (nashs->rarcs[nashid].len > 0) {
+      daguid_t uid = nashs->rarcs[nashid].arr[0];
       dagid_t pid = uid2id(uid);
       assert(uidisMP(pid));
 
@@ -1571,15 +1582,15 @@ int analyze_nash(EmpDagDfsData *dfsdata, nashid_t nashid, AnalysisData *data)
       level = 0;
    }
 
-   for (unsigned i = 1, len = mpes->rarcs[nashid].len; i < len; ++i) {
-      daguid_t uid = mpes->rarcs[nashid].arr[i];
+   for (unsigned i = 1, len = nashs->rarcs[nashid].len; i < len; ++i) {
+      daguid_t uid = nashs->rarcs[nashid].arr[i];
       dagid_t pid = uid2id(uid);
       assert(uidisMP(pid));
       unsigned l = dfsdata->mp_ppty[pid].level;
 
       if (l != level) {
          error("[empdag] Nash(%s) has different levels by different parents: %u "
-               "vs %u\n", mpes->names[nashid], l, level);
+               "vs %u\n", nashs->names[nashid], l, level);
          return Error_NotImplemented;
       }
 
@@ -1905,6 +1916,7 @@ _hack_skip_analysis_dual: ;
    empdag->features.istree = dfsdata.isTree;
    empdag->features.hasVFpath = dfsdata.hasVFPath;
    empdag->node_stats.num_active = dfsdata.num_visited;
+   memcpy(&empdag->arc_stats, &dfsdata.arc_stats, sizeof(dfsdata.arc_stats));
 
 _exit_analysis_loop:
    analysis_data_free(&analysis_data);

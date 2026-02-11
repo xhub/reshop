@@ -12,6 +12,7 @@ typedef struct rhp_mdl rhp_mdl_t;
 struct rhp_ctr_filter_ops;
 typedef struct rhp_nlnode rhp_nlnode_t;
 typedef struct rhp_nltree rhp_nltree_t;
+typedef struct rhp_empdag rhp_empdag_t;
 typedef struct rhp_mathprgm rhp_mathprgm_t;
 typedef struct rhp_nash_equilibrium rhp_nash_equilibrium_t;
 typedef struct rhp_ovfdef rhp_ovf_t;
@@ -311,8 +312,6 @@ RHP_PUBLIB const char *rhp_mdl_solvestattxt(const rhp_mdl_t *mdl, int solvestat)
 //RHP_PUBLIB
 RHP_PUBLIB int rhp_ensure_mp(rhp_mdl_t *mdl, unsigned reserve);
 RHP_PUBLIB void rhp_print_emp(const rhp_mdl_t *mdl);
-RHP_PUBLIB int rhp_empdag_rootsetmp(rhp_mdl_t *mdl, rhp_mathprgm_t *mp);
-RHP_PUBLIB int rhp_empdag_rootsetnash(rhp_mdl_t *mdl, rhp_nash_equilibrium_t *nash);
 
 /* -------------------------------------------------------------------------
  * GAMS specific functions
@@ -386,11 +385,24 @@ RHP_PUBLIB RHP_MALLOC(rhp_arcVF_free) rhp_empdag_arcVF_t * rhp_arcVF_new(void);
 RHP_PUBLIB int rhp_arcVF_init(rhp_empdag_arcVF_t *arcVF, rhp_idx ei);
 RHP_PUBLIB int rhp_arcVF_setvar(rhp_empdag_arcVF_t *arcVF, rhp_idx vi);
 RHP_PUBLIB int rhp_arcVF_setcst(rhp_empdag_arcVF_t *arcVF, double cst);
+RHP_PUBLIB int rhp_arcVF_type2str(rhp_empdag_arcVF_t *arcVF);
+RHP_PUBLIB int rhp_arcVF_getmpidtarget(rhp_empdag_arcVF_t *arcVF);
 
 /* -------------------------------------------------------------------------
  * EMPDAG misc
  * ------------------------------------------------------------------------- */
 
+RHP_PUBLIB unsigned rhp_empdag_getnarcs(const rhp_mdl_t *mdl);
+RHP_PUBLIB unsigned rhp_empdag_getnnodes(const rhp_mdl_t *mdl);
+RHP_PUBLIB unsigned rhp_empdag_getnmps(const rhp_mdl_t *mdl);
+RHP_PUBLIB unsigned rhp_empdag_getnnashs(const rhp_mdl_t *mdl);
+
+RHP_PUBLIB rhp_mathprgm_t * rhp_empdag_getmp(const rhp_mdl_t *mdl, unsigned idx);
+RHP_PUBLIB rhp_nash_equilibrium_t * rhp_empdag_getnash(const rhp_mdl_t *mdl, unsigned idx);
+
+
+RHP_PUBLIB int rhp_empdag_rootsetmp(rhp_mdl_t *mdl, rhp_mathprgm_t *mp);
+RHP_PUBLIB int rhp_empdag_rootsetnash(rhp_mdl_t *mdl, rhp_nash_equilibrium_t *nash);
 RHP_PUBLIB int rhp_empdag_writeDOT(rhp_mdl_t *mdl, FILE *f);
 
 /* -------------------------------------------------------------------------

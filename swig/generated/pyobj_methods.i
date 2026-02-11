@@ -63,14 +63,14 @@
 	int setvarlevel(rhp_idx vi, double level);
 	int exportmodel(rhp_mdl_t * mdl_dst);
 	int ensure_mp(unsigned int reserve);
-	int empdag_rootsetmp(rhp_mathprgm_t * mp);
-	int empdag_rootsetnash(rhp_nash_equilibrium_t * nash);
 	int gms_setgamscntr(const char * cntrfile);
 	int gms_setgamsdir(const char * gamsdir);
 	int gms_writesol2gdx(const char * gdxname);
 	int empdag_mpaddmpVF(rhp_mathprgm_t * mp, rhp_mathprgm_t * mp_child, rhp_empdag_arcVF_t * arcVF);
 	int empdag_mpaddmpCTRL(rhp_mathprgm_t * mp, rhp_mathprgm_t * mp_child);
 	int empdag_nashaddmp(rhp_nash_equilibrium_t * nash, rhp_mathprgm_t * mp);
+	int empdag_rootsetmp(rhp_mathprgm_t * mp);
+	int empdag_rootsetnash(rhp_nash_equilibrium_t * nash);
 	int add_var(rhp_idx * vi);
 	int add_var(rhp_idx * vi, const char * name) { return rhp_add_varnamed (self, vi, name); };
 	int add_vars(unsigned int size, rhp_vars_t * vout);
@@ -146,6 +146,12 @@
 	void print_emp(void);
 	rhp_mathprgm_t * empdag_newmp(unsigned int sense);
 	rhp_nash_equilibrium_t * empdag_newnash(void);
+	unsigned int empdag_getnarcs(void);
+	unsigned int empdag_getnnodes(void);
+	unsigned int empdag_getnmps(void);
+	unsigned int empdag_getnnashs(void);
+	rhp_mathprgm_t * empdag_getmp(unsigned int idx);
+	rhp_nash_equilibrium_t * empdag_getnash(unsigned int idx);
 	unsigned int nvars_total(void);
 	unsigned int nequs_total(void);
 	rhp_nltree_t * getnltree(rhp_idx ei);
@@ -194,14 +200,14 @@
 }
 %header %{
 #define rhp_mdl_ensure_mp rhp_ensure_mp
-#define rhp_mdl_empdag_rootsetmp rhp_empdag_rootsetmp
-#define rhp_mdl_empdag_rootsetnash rhp_empdag_rootsetnash
 #define rhp_mdl_gms_setgamscntr rhp_gms_setgamscntr
 #define rhp_mdl_gms_setgamsdir rhp_gms_setgamsdir
 #define rhp_mdl_gms_writesol2gdx rhp_gms_writesol2gdx
 #define rhp_mdl_empdag_mpaddmpVF rhp_empdag_mpaddmpVF
 #define rhp_mdl_empdag_mpaddmpCTRL rhp_empdag_mpaddmpCTRL
 #define rhp_mdl_empdag_nashaddmp rhp_empdag_nashaddmp
+#define rhp_mdl_empdag_rootsetmp rhp_empdag_rootsetmp
+#define rhp_mdl_empdag_rootsetnash rhp_empdag_rootsetnash
 #define rhp_mdl_add_var rhp_add_var
 #define rhp_mdl_add_varnamed rhp_add_varnamed
 #define rhp_mdl_add_vars rhp_add_vars
@@ -265,6 +271,12 @@
 #define rhp_mdl_print_emp rhp_print_emp
 #define rhp_mdl_empdag_newmp rhp_empdag_newmp
 #define rhp_mdl_empdag_newnash rhp_empdag_newnash
+#define rhp_mdl_empdag_getnarcs rhp_empdag_getnarcs
+#define rhp_mdl_empdag_getnnodes rhp_empdag_getnnodes
+#define rhp_mdl_empdag_getnmps rhp_empdag_getnmps
+#define rhp_mdl_empdag_getnnashs rhp_empdag_getnnashs
+#define rhp_mdl_empdag_getmp rhp_empdag_getmp
+#define rhp_mdl_empdag_getnash rhp_empdag_getnash
 #define rhp_mdl_newsolvermdl rhp_newsolvermdl
 #define rhp_mdl_get_nb_lequ_le rhp_get_nb_lequ_le
 #define rhp_mdl_get_nb_lequ_ge rhp_get_nb_lequ_ge

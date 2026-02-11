@@ -40,12 +40,22 @@ minor_iter_limit 1
 major_iter_limit 1
 $offEcho
 
+* Allow normal crash
+$onEcho > path.op2
+conv_tol 1e-10
+factorization_method conopt
+output_preprocess_level 2
+output_warnings 1
+path_basis_modify_tol 1000000
+path_basis_modify_verbose 1
+$offEcho
+
 $onEcho > %gams.emp%.opt
 subsolveropt 1
 $offEcho
 
 $onEcho > %gams.emp%.op2
-subsolveropt 1
+subsolveropt 2
 $offEcho
 
 option optca = 1e-12;
@@ -341,15 +351,6 @@ display QLd, F_Ld, Z_Ld;
 
 
 
-abort$[smax{n$n.first, abs(QLd(n))} > %tol%]   'wrong costs', QLd, QL, cost_L;
-abort$[smax{n, abs(y_Ld(n))} > %tol%]  'wrong probability measures', y_Ld, y.l, y_L;
-abort$[smax{n, abs(v_Ld(n))} > %tol%]  'wrong VaR', v_Ld, v.l, v_L;
-
-abort$[smax{n$(NOT n.first), F_Ld(n)} > %tol%]     'wrong F.l', F_Ld;
-abort$[smax{n$(NOT n.first), Z_Ld(n)} > %tol%]     'wrong Z.l', Z_Ld;
-
-$exit
-
 embeddedCode python:
 import graphviz
 
@@ -472,5 +473,12 @@ except Exception as e:
     print("Please ensure the Graphviz software is installed and in your system's PATH.")
 
 endEmbeddedCode
+
+abort$[smax{n$n.first, abs(QLd(n))} > %tol%]   'wrong costs', QLd, QL, cost_L;
+abort$[smax{n, abs(y_Ld(n))} > %tol%]  'wrong probability measures', y_Ld, y.l, y_L;
+abort$[smax{n, abs(v_Ld(n))} > %tol%]  'wrong VaR', v_Ld, v.l, v_L;
+
+abort$[smax{n$(NOT n.first), F_Ld(n)} > %tol%]     'wrong F.l', F_Ld;
+abort$[smax{n$(NOT n.first), Z_Ld(n)} > %tol%]     'wrong Z.l', Z_Ld;
 
 

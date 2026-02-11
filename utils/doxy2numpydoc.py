@@ -9,6 +9,8 @@ from typing import NamedTuple, Union
 
 doxydir = sys.argv[1]
 
+sname = os.path.basename(__file__)
+
 class FnArg(NamedTuple):
     name: str
     type: str
@@ -83,53 +85,57 @@ reshop_argout_multiple = {
 }
 
 types_c2swig = {
+    'Aequ *': 'Equs',
+    'ArcVFData *': 'ArcVFData',
+    'Avar *': 'Vars',
+    'LinearEquation': 'LinearEquation',
     'MathPrgm *': 'MathPrgm',
     'Model *': 'Model',
     'Nash *': 'Nash',
-    'struct rhp_nash_equilibrium *': 'Nash',
+    'NlTree *': 'NlTree',   #Do a better job here
     'OvfDef *': 'OvfDef',
-    'ArcVFData *': 'ArcVFData',
-    'struct rhp_mdl *':  'Model',
-    'struct rhp_aequ *': 'Equs',
-    'struct rhp_avar *': 'Vars',
-    'Avar *': 'Vars',
-    'Aequ *': 'Equs',
     'SpMat *': 'scipy matrix',
     'bool': 'Bool',
     'char *': 'str',
     'const char *': 'str',
-    'short': 'int',
-    'unsigned': 'int',
-    'size_t': 'int',
-    'double': 'float',
     'double *': 'array-like of float',
-    'int *': 'array-like of int',
-    'NlTree *': 'NlTree',   #Do a better job here
-    'LinearEquation': 'LinearEquation',
+    'double': 'float',
     'enum rhp_backendtype': 'RhpBackendType',
+    'int *': 'array-like of int',
+    'rhp_mathprgm_t *': 'MathPrgm',
+    'rhp_nash_equilibrium_t *': 'NashEquilibrium',
+    'short': 'int',
+    'size_t': 'int',
+    'struct rhp_aequ *': 'Equs',
+    'struct rhp_avar *': 'Vars',
+    'struct rhp_mdl *':  'Model',
+    'struct rhp_nash_equilibrium *': 'Nash',
+    'unsigned': 'int',
 }
 
 argout_c2swig = {
+    'Aequ *': 'Equs',
+    'ArcVFData *': 'ArcVFData',
+    'Avar *': 'Vars',
     'MathPrgm *': 'MathPrgm',
     'Model *': 'Model',
     'Model **': 'Model',
     'Nash *': 'Nash',
-    'struct rhp_mdl *':  'Model',
-    'struct rhp_aequ *': 'Equs',
-    'struct rhp_avar *': 'Vars',
-    'Avar *': 'Vars',
-    'Aequ *': 'Equs',
-    'ArcVFData *': 'ArcVFData',
+    'NlNode ***': 'NlNode **',   #Do a better job here
+    'NlTree *': 'NlTree',   #Do a better job here
     'OvfDef **': 'OvfDef',
     'char **': 'str',
-    'unsigned *': 'int',
-    'unsigned **': 'array of int',
     'double *': 'float',
     'int *': 'BasisStatus',
     'int **': 'array of int',
     'rhp_idx **': 'array of int',
-    'NlNode ***': 'NlNode **',   #Do a better job here
-    'NlTree *': 'NlTree',   #Do a better job here
+    'rhp_mathprgm_t *': 'MathPrgm',
+    'rhp_nash_equilibrium_t *': 'NashEquilibrium',
+    'struct rhp_aequ *': 'Equs',
+    'struct rhp_avar *': 'Vars',
+    'struct rhp_mdl *':  'Model',
+    'unsigned *': 'int',
+    'unsigned **': 'array of int',
 }
 
 reshop_argstypechange = (
@@ -277,7 +283,7 @@ def fnArg_c2swig(arg: FnArg) -> FnArg:
         elif name in ('basis_info', 'ebasis_info', 'vbasis_info'): 
             typ = "BasisStatus or int"
         else:
-            assert (f"ERROR: Unhandled rhp_idx argument '{name}' in {arg}")
+            assert (f"[{sname}] ERROR: Unhandled rhp_idx argument '{name}' in {arg}")
 
     elif typ == 'rhp_idx *' or typ == 'int *':
         if name == 'vis':
@@ -287,7 +293,7 @@ def fnArg_c2swig(arg: FnArg) -> FnArg:
         elif name in ('colidx', 'rowidx'):
             typ = "array of indices"
         else:
-            print(f"ERROR: Unhandled rhp_idx * argument '{name}' in {arg}")
+            print(f"[{sname}] ERROR: Unhandled rhp_idx * argument '{name}' in {arg}")
     else:
         typ = types_c2swig.get(typ, typ)
 
@@ -321,7 +327,7 @@ def fnArgOut_c2swig(arg: FnArg) -> FnRet:
         typ = argout_c2swig.get(typ, "")
 
     if typ == "":
-        print(f"ERROR: unhandled type {arg.type.strip()} in argout {arg}")
+        print(f"[{sname}] ERROR: unhandled type {arg.type.strip()} in argout {arg}")
 
     return FnRet(name="", type=typ, descr=descr)
 
@@ -336,12 +342,12 @@ def fnRet_c2swig(ret: FnRet) -> FnRet:
         elif 'equation' in descr:
             typ = 'EquationRef'
         else:
-            print(f"ERROR: unhandle rhp_idx case in {ret}")
+            print(f"[{sname}] ERROR: unhandle rhp_idx case in {ret}")
 
     else:
         typ = types_c2swig.get(typ, "")
         if typ == "":
-            print(f"ERROR: unhandled type {ret.type.strip()} in ret {ret}")
+            print(f"[{sname}] ERROR: unhandled type {ret.type.strip()} in ret {ret}")
 
     return FnRet(name=ret.name.strip(), type=typ, descr=descr)
 
@@ -402,12 +408,12 @@ def fnDecl_c2swig(fn: FnDecl) -> Union[FnDecl,None]:
         if arg.name in reshop_argname2ret or (typ, arg.name) in reshop_argout_simple:
             fnswig.ret.append(fnArgOut_c2swig(arg))
             if arg.direction != 'out':
-                print(f"ERROR: in function {fn.name}, argument {arg.name} is considered as output, but direction is '{arg.direction}', should be 'out'")
+                print(f"[{sname}] ERROR: in function {fn.name}, argument {arg.name} is considered as output, but direction is '{arg.direction}', should be 'out'")
 
             continue
 
         if 'out' == arg.direction:
-                print(f"ERROR: in function {fn.name}, argument '{arg.type} {arg.name}' has direction '{arg.direction}' but is not considered as output in the script")
+                print(f"[{sname}] ERROR: in function {fn.name}, argument '{arg.type} {arg.name}' has direction '{arg.direction}' but is not considered as output in the script")
 
         # Normal arg
         fnswig.args.append(fnArg_c2swig(arg))
@@ -443,8 +449,8 @@ def processTag(e) -> str:
     elif e.tag in ignore_tags:
         return ""
  
-    print(f"ERROR: unhandled tag {e.tag} in {e}")
-    return "ERROR"
+    print(f"[{sname}] ERROR: unhandled tag {e.tag} in {e}")
+    return "[{sname}] ERROR"
 
 def parse_mixed_text(e) -> str:
     if e is None: return ""
@@ -537,7 +543,7 @@ def main(fname: str):
 
     func_nodes = API_header_tree.findall(f".//memberdef[@kind='function']") + API_header_tree.findall(f".//member[@kind='function']")
     if not func_nodes:
-        print(f"ERROR: Could not get any function in {file_xml_path}")
+        print(f"[{sname}] ERROR: Could not get any function in {file_xml_path}")
 
     publicFn = [func_node.findtext("name") for func_node in func_nodes]
 
@@ -583,13 +589,13 @@ def main(fname: str):
                         pdesc = 'the model'
                         pname = 'mdl'
                     else:
-                        print(f"ERROR: could not find type for parameter {pname} in function {name}")
+                        print(f"[{sname}] ERROR: could not find type for parameter {pname} in function {name}")
                         ptype = ""
                 else:
                     ptype = " ".join(c.strip() for c in ptype_xml.itertext("type"))
                     ptype = parse_mixed_text(ptype_xml.find("type"))
             else:
-                print(f"ERROR: in {name}, missing argument name")
+                print(f"[{sname}] ERROR: in {name}, missing argument name")
                 ptype = ""
 
             params.append(FnArg(name=pname.strip(), type=ptype.strip(), direction=pdir.strip(), descr=pdesc.strip()))
@@ -612,13 +618,14 @@ def main(fname: str):
     # The ignored functions are not relevant
     pubNotDecl = publicFnSet - fnDeclsSet - set(reshop_ignore) - set(overloadedFn)
     if pubNotDecl:
-        print("ERROR: the following public function(s) are not properly documented")
+        print("[{sname}] ERROR: the following public function(s) are not properly documented")
         for name in sorted(list(pubNotDecl)):
             print(name)
+        print("\nHints:\n- Check that they are part of the Doxygen publicAPI group")
 
     fnDeclNotPublic = fnDeclsSet - publicFnSet
     if fnDeclNotPublic:
-        print("ERROR: the following documented function(s) are not public")
+        print("[{sname}] ERROR: the following documented function(s) are not public")
         for name in sorted(list(fnDeclNotPublic)):
             print(name)
 
@@ -633,7 +640,7 @@ def main(fname: str):
                     optional_fnargs.append(fnarg)
                     break
         if len(optional_argnames) != len(optional_fnargs):
-            print(f"ERROR: expected {len(optional_argnames)} optional argument, but only found {len(optional_fnargs)}: {optional_fnargs}")
+            print(f"[{sname}] ERROR: expected {len(optional_argnames)} optional argument, but only found {len(optional_fnargs)}: {optional_fnargs}")
 
         for opt_fnarg in optional_fnargs:
             fnargs.remove(opt_fnarg)
@@ -654,7 +661,7 @@ def main(fname: str):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("ERROR: need to provide one argument: the XML index file")
+        print(f"[{sname}] ERROR: need to provide one argument: the XML index file")
 
     script = Path(sys.argv[0])
     with open(script.parent.joinpath("reshop_generators_config.csv"), "r") as f:

@@ -70,10 +70,10 @@ endEmbeddedCode
 EmbeddedCode Python:
 import reshop as rhp
 import IPython
+m = rhp.Model(r"%gams.scrdir%gamscntr.%gams.scrext%")
 IPython.embed(colors="neutral")
 
 
-m = rhp.Model(r"%gams.scrdir%gamscntr.%gams.scrext%")
 m.solve(r"%gams.scrdir%savepoint.gdx")
 
 # Uncomment to start IPython

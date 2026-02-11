@@ -5,6 +5,7 @@
 
 #include "reshop.h"
 #include "rhpidx.h"
+#include "rhp_defines.h"
 
 /** Model status */
 typedef struct {
@@ -47,4 +48,27 @@ typedef struct rhp_linear_equation {
    double *vals;
    struct rhp_mdl *mdl;
 } LinearEquation;
+
+/** Python EMPDAG object */
+typedef struct rhp_empdag {
+   const rhp_mdl_t *mdl;
+} EmpDag;
+
+typedef struct rhp_tuple_empnodes {
+   const rhp_mdl_t *mdl;
+} EmpNodesTuple;
+
+typedef struct rhp_tuple_empmps {
+   const rhp_mdl_t *mdl;
+} EmpMathPrgmTuple;
+
+typedef struct rhp_tuple_empnashs {
+   const rhp_mdl_t *mdl;
+} EmpNashEquilibriumTuple;
+
+typedef struct rhp_tuple_emparcs {
+   const rhp_mdl_t *mdl;
+   u32        nidx;
+} EmpArcsTuple;
+
 #endif

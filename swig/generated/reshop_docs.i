@@ -168,6 +168,100 @@ mp : MathPrgm
 mp_child : MathPrgm
     The child MathPrgm.
 ") rhp_empdag_mpaddmpCTRL;
+%feature("autodoc", "empdag_getnarcs(mdl, /)
+--
+
+Get the number of arcs in the EMPDAG.
+
+Parameters
+----------
+mdl : Model
+    The model.
+
+Returns
+-------
+int
+    The number of arcs in the EMPDAG.
+") rhp_empdag_getnarcs;
+%feature("autodoc", "empdag_getnmps(mdl, /)
+--
+
+Get the number of MPs in the EMPDAG.
+
+Parameters
+----------
+mdl : Model
+    The model.
+
+Returns
+-------
+int
+    The number of MPs in the EMPDAG.
+") rhp_empdag_getnmps;
+%feature("autodoc", "empdag_getnnashs(mdl, /)
+--
+
+Get the number of Nash equilibrium in the EMPDAG.
+
+Parameters
+----------
+mdl : Model
+    The model.
+
+Returns
+-------
+int
+    The number of Nash equilibrium in the EMPDAG.
+") rhp_empdag_getnnashs;
+%feature("autodoc", "empdag_getnnodes(mdl, /)
+--
+
+Get the number of nodes in the EMPDAG.
+
+Parameters
+----------
+mdl : Model
+    The model.
+
+Returns
+-------
+int
+    The number of nodes in the EMPDAG.
+") rhp_empdag_getnnodes;
+%feature("autodoc", "empdag_getmp(mdl, idx, /)
+--
+
+Get an MP by its index.
+
+Parameters
+----------
+mdl : rhp_mdl_t *
+    The model.
+idx : int
+    The MP index.
+
+Returns
+-------
+MathPrgm
+    The MP object.
+") rhp_empdag_getmp;
+%feature("autodoc", "empdag_getnash(mdl, idx, /)
+--
+
+Get an MP by its index.
+
+Parameters
+----------
+mdl : rhp_mdl_t *
+    The model.
+idx : int
+    The.
+
+Returns
+-------
+NashEquilibrium
+    The Nash Equilibrium object.
+") rhp_empdag_getnash;
 %feature("autodoc", "aequ_new()
 --
 
@@ -906,7 +1000,7 @@ type : int
 %feature("autodoc", "mdl_setobjsense(mdl, objsense, /)
 --
 
-Set the sense of a Model .
+Set the sense of a Model.
 
 Parameters
 ----------

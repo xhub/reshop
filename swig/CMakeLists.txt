@@ -64,18 +64,6 @@ if(CLANG_EXECUTABLE AND BUILD_DOCUMENTATION)
       COMMENT           "Generating SWIG methods from API"
    )
 
-   find_program(NUMPYDOC_EXE numpydoc)
-
-   if (NUMPYDOC_EXE)
-      add_custom_command(
-         OUTPUT             "${CMAKE_BINARY_DIR}/generated/numpydoc.stdout"
-         COMMAND            "${NUMPYDOC_EXE}" lint ${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.py > "${CMAKE_BINARY_DIR}/generated/numpydoc.stdout"
-         WORKING_DIRECTORY  "${CMAKE_CURRENT_SOURCE_DIR}"
-         COMMENT            "Checking docstrings"
-      )
-      set(DOXY2NUMPYDOC_EXTRA MAIN_DEPENDENCY ${CMAKE_BINARY_DIR}/generated/numpydoc.stdout)
-   endif(NUMPYDOC_EXE)
-
    add_custom_command(
       OUTPUT            "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods_docstring.i"
                         "${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.i"
@@ -89,6 +77,19 @@ if(CLANG_EXECUTABLE AND BUILD_DOCUMENTATION)
       ${DOXY2NUMPYDOC_EXTRA}
       COMMENT           "Generating SWIG docstrings from doxygen"
    )
+
+   find_program(NUMPYDOC_EXE numpydoc)
+
+   if (NUMPYDOC_EXE)
+      add_custom_command(
+         OUTPUT             "${CMAKE_BINARY_DIR}/generated/numpydoc.stdout"
+         COMMAND            "${NUMPYDOC_EXE}" lint ${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.py > "${CMAKE_BINARY_DIR}/generated/numpydoc.stdout"
+         WORKING_DIRECTORY  "${CMAKE_CURRENT_SOURCE_DIR}"
+         DEPENDS            "${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.py"
+         COMMENT            "Checking docstrings"
+      )
+      set(DOXY2NUMPYDOC_EXTRA MAIN_DEPENDENCY ${CMAKE_BINARY_DIR}/generated/numpydoc.stdout)
+   endif(NUMPYDOC_EXE)
 
    LIST(APPEND GENERATED_I "${CMAKE_CURRENT_SOURCE_DIR}/generated/pyobj_methods_docstring.i"
                            "${CMAKE_CURRENT_SOURCE_DIR}/generated/reshop_docs.i"

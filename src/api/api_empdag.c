@@ -9,6 +9,10 @@
 #include "mdl.h"
 #include "mdl_rhp.h"
 
+/** @file api_empdag.c
+ * EMPDAG API functions
+ */
+
 /** This ensure that the model is of EMP type.
  * If the model type is unset, we set it to EMP.
  * If it is already set to a different type than EMP,
@@ -327,6 +331,8 @@ int rhp_empdag_mpaddmpCTRL(Model *mdl, MathPrgm *mp, MathPrgm *mp_child)
  *
  * The DOT language is used by graphviz
  *
+ * @ingroup publicAPI
+ *
  * @param mdl the model containing the EMPDAG
  * @param f   the output stream
  *
@@ -339,4 +345,119 @@ int rhp_empdag_writeDOT(Model *mdl, FILE *f)
 
    return empdag2dot(&mdl->empinfo.empdag, f);
 
+}
+
+/** @brief Get the number of arcs in the EMPDAG
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param mdl the model
+ *
+ *  @return    the number of arcs in the EMPDAG
+ */
+unsigned rhp_empdag_getnarcs(const Model *mdl)
+{
+   if (chk_mdl(mdl, __func__) != OK) {
+      return UINT_MAX;
+   }
+
+   const EmpDagEdgeStats *arc_stats = &mdl->empinfo.empdag.arc_stats;
+
+   return arc_stats->num_ctrl + arc_stats->num_equil + arc_stats->num_vf;
+}
+
+/** @brief Get the number of MPs in the EMPDAG
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param mdl the model
+ *
+ *  @return    the number of MPs in the EMPDAG
+ */
+unsigned rhp_empdag_getnmps(const Model *mdl)
+{
+   if (chk_mdl(mdl, __func__) != OK) {
+      return UINT_MAX;
+   }
+
+   return mdl->empinfo.empdag.mps.len;
+}
+
+/** @brief Get the number of Nash equilibrium in the EMPDAG
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param mdl the model
+ *
+ *  @return    the number of Nash equilibrium in the EMPDAG
+ */
+unsigned rhp_empdag_getnnashs(const Model *mdl)
+{
+   if (chk_mdl(mdl, __func__) != OK) {
+      return UINT_MAX;
+   }
+
+   return mdl->empinfo.empdag.nashs.len;
+}
+
+/** @brief Get the number of nodes in the EMPDAG
+ *
+ *  @ingroup publicAPI
+ *
+ *  @param mdl the model
+ *
+ *  @return    the number of nodes in the EMPDAG
+ */
+unsigned rhp_empdag_getnnodes(const Model *mdl)
+{
+   if (chk_mdl(mdl, __func__) != OK) {
+      return UINT_MAX;
+   }
+
+   return mdl->empinfo.empdag.nashs.len + mdl->empinfo.empdag.mps.len;
+}
+
+/**
+ * @brief Get an MP by its index
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl  the model
+ * @param idx  the MP index
+ *
+ * @return     the MP object
+ */
+rhp_mathprgm_t * rhp_empdag_getmp(const rhp_mdl_t *mdl, unsigned idx)
+{
+   const EmpDag *empdag = &mdl->empinfo.empdag;
+   if (idx >= empdag->mps.len) {
+      error("[empdag] ERROR: MP ID #%u greater than number of MPs %u\n", idx,
+            empdag->mps.len);
+      return NULL;
+   }
+
+   return empdag->mps.arr[idx];
+}
+
+
+/**
+ * @brief Get an MP by its index
+ *
+ * @ingroup publicAPI
+ *
+ * @param mdl  the model
+ * @param idx  the Nash Equilibrium index
+ *
+ * @return     the Nash Equilibrium object
+ */
+rhp_nash_equilibrium_t * rhp_empdag_getnash(const rhp_mdl_t *mdl, unsigned idx)
+{
+   const EmpDag *empdag = &mdl->empinfo.empdag;
+   if (idx >= empdag->mps.len) {
+      error("[empdag] ERROR: MP ID #%u greater than number of MPs %u\n", idx,
+            empdag->mps.len);
+      return NULL;
+   }
+
+   return empdag->nashs.arr[idx];
 }
