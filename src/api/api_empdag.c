@@ -276,6 +276,43 @@ int rhp_arcVF_setcst(ArcVFData *arcVF, double cst)
 }
 
 /**
+ * @brief Get the textual description of the arcVF type
+ *
+ * @param arcVF  the arcVF
+ *
+ * @ingroup publicAPI
+ *
+ * @return       the textual description
+ */
+const char *rhp_arcVF_type2str(rhp_empdag_arcVF_t *arcVF)
+{
+   if (!arcVF) {
+      return "ERROR: arcVF is NULL";
+   }
+
+   return arcVFType2str(arcVF->type);
+}
+
+
+/**
+ * @brief Get the target MP of the arcVF
+ *
+ * @ingroup publicAPI
+ *
+ * @param arcVF  the arcVF
+ *
+ * @return       the MP ID
+ */
+unsigned rhp_arcVF_getmpidtarget(rhp_empdag_arcVF_t *arcVF)
+{
+   if (!arcVF) {
+      return UINT_MAX;
+   }
+
+   return arcVF->mpid_child;
+}
+
+/**
  * @brief Add a value function arc between two MathPrgm
  *
  * @ingroup publicAPI
@@ -338,7 +375,7 @@ int rhp_empdag_mpaddmpCTRL(Model *mdl, MathPrgm *mp, MathPrgm *mp_child)
  *
  * @return    the error code
  */
-int rhp_empdag_writeDOT(Model *mdl, FILE *f)
+int rhp_empdag_writeDOT(const Model *mdl, FILE *f)
 {
    S_CHECK(chk_mdl(mdl, __func__));
    S_CHECK(chk_arg_nonnull(f, 2, __func__));

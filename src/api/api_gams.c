@@ -174,6 +174,9 @@ static int gams_initpool_from_gmo(Container *ctr, double * restrict gms_pool, in
 /**
  * @brief Load a model from a ReSHOP control file
  *
+ * This function differs from rhp_mdl_newfromcntr just in
+ * that it uses the GAMS logging operations.
+ *
  * @warning This assumes that the model is a reshop model.
  * It will try to load the empinfo and reshop options
  *

@@ -1,8 +1,12 @@
 #include "checks.h"
 #include "compat.h"
+#include "ctrdat_gams.h"
 #include "macros.h"
 #include "mdl.h"
+#include "mdl_gams.h"
+#include "reshop-gams.h"
 #include "reshop.h"
+#include "sys_utils.h"
 #include "var.h"
 
 /**
@@ -143,4 +147,86 @@ Model *rhp_newsolvermdl(Model *mdl)
    myfreeenvval(backend_env);
 
    return mdl_new(mdl_type);
+}/**
+ * @brief Load a model from a ReSHOP control file
+ *
+ * This function differs from rhp_mdl_newfromcntr just in that it uses the regular
+ * logging operations and not the GAMS one from the control file.
+ *
+ * @warning This assumes that the model is a reshop model.
+ * It will try to load the empinfo and reshop options
+ *
+ * @ingroup publicAPI
+ *
+ * @param       cntrfile  the GAMS control file 
+ * @param[out]  mdlout    the model
+ *
+ * @return           the error code
+ */
+int rhp_mdl_newfromcntr(const char *cntrfile, Model **mdlout)
+{
+   int status = OK;
+   char buffer[2048];
+
+   *mdlout = NULL;
+   S_CHECK(chk_arg_nonnull(cntrfile, 1, __func__));
+   
+   FILE* fptr = fopen(cntrfile, RHP_READ_TEXT);
+   if (!fptr) {
+      error("[GAMS] ERROR: couldn't open control file '%s'\n", cntrfile);
+      return Error_RuntimeError;
+   }
+
+   /* GAMSDIR seems to be on the 29th line */
+   for (unsigned i = 0; i < 29; ++i) {
+      if (!fgets(buffer, sizeof buffer, fptr)) {
+         error("[GAMS] ERROR: failed to get %u-th line of control file '%s'\n",
+               i, cntrfile);
+         IO_CALL(fclose(fptr));
+         return Error_RuntimeError;
+      }
+   }
+
+   IO_CALL(fclose(fptr));
+
+   size_t len = strlen(buffer);
+   if (len <= 1) {
+      error("[GAMS] ERROR: bogus gamsdir '%s' from control file '%s'\n", buffer,
+            cntrfile);
+      return Error_RuntimeError;
+   }
+
+   /* fgets keeps the newline character in, remove it */
+   trim_newline(buffer, len);
+
+   Model *mdl;
+   A_CHECK(mdl, mdl_new(RhpBackendGamsGmo));
+
+   S_CHECK_EXIT(rhp_gms_setgamsdir(mdl, buffer));
+
+   S_CHECK_EXIT(rhp_gms_loadlibs(buffer));
+
+   S_CHECK_EXIT(rhp_gms_setgamscntr(mdl, cntrfile));
+
+   S_CHECK_EXIT(gcdat_loadmdl(mdl->ctr.data, mdl->data));
+
+   /* Print the reshop banner, after setting the printops */
+   rhp_print_banner();
+
+   *mdlout = mdl;
+
+   S_CHECK(gmdl_loadrhpoptions(mdl));
+
+   S_CHECK(rhp_gms_fillmdl(mdl));
+
+   S_CHECK(rhp_gms_readempinfo(mdl, NULL));
+
+   S_CHECK(mdl_check(mdl));
+
+   return OK;
+
+_exit:
+   mdl_release(mdl);
+   return status;
 }
+

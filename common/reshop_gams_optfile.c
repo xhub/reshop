@@ -23,27 +23,24 @@
       char msg[1024]; \
       (void)snprintf(msg, sizeof(msg), "ERROR: Call to " #fn " for option '%s' failed with error %s (%d)\n", \
          s, rhp_status_descr(status42), status42); \
-      gevLogStatPChar(jh->eh, msg); \
+      rhp_print(msg); \
+      rhp_print("\n"); \
       status = status42; \
       goto _exit; \
    } \
 }
 
-static int concat(gevHandle_t eh, const char* sysdir, const char *fname, char outstr[GMS_SSSIZE])
+static int concat(const char* sysdir, const char *fname, char outstr[GMS_SSSIZE])
 {
    size_t sysdir_len = strlen(sysdir);
    size_t buf_len = strlen(fname);
    if (sysdir_len >= GMS_SSSIZE) {
-      gevLogStatPChar(eh, "*** ReSHOP: ERROR! sysdir string '");
-      gevLogStatPChar(eh, sysdir);
-      gevLogStatPChar(eh, "' is too long!\n");
+      rhp_print("*** ReSHOP: ERROR! sysdir string '%s' is too long!\n", sysdir);
       return 1;
    }
 
    if (buf_len >= GMS_SSSIZE || sysdir_len >= GMS_SSSIZE-buf_len) {
-      gevLogStat(eh, "*** ReSHOP: ERROR! concatenation of strings is too long:");
-      gevLogStatPChar(eh, sysdir);
-      gevLogStat(eh, fname);
+      rhp_print("*** ReSHOP: ERROR! concatenation of strings is too long:\n%s\n\nand\n\n%s\n", sysdir, fname);
       return 1;
    }
 
@@ -53,24 +50,21 @@ static int concat(gevHandle_t eh, const char* sysdir, const char *fname, char ou
    return 0;
 }
 
-static void err_fname_missing(gevHandle_t eh, char fname[GMS_SSSIZE])
+static void err_fname_missing(char fname[GMS_SSSIZE])
 {
-   gevLogStatPChar(eh, "*** ReSHOP: ERROR! Option definition file '");
-   gevLogStatPChar(eh, fname);
-   gevLogStatPChar(eh, "' does not exist\n");
+   rhp_print("*** ReSHOP: ERROR! Option definition file '%s'\n", fname);
 }
 
-static void err_fname_permission(gevHandle_t eh, char fname[GMS_SSSIZE])
+static void err_fname_permission(char fname[GMS_SSSIZE])
 {
-   gevLogStatPChar(eh, "*** ReSHOP: ERROR! Cannot read (permission issue) option definition file '");
-   gevLogStatPChar(eh, fname);
-   gevLogStatPChar(eh, "'\n");
-
+   rhp_print("*** ReSHOP: ERROR! Cannot read (permission issue) option definition file '%s'\n", fname);
 }
-static int get_deffile(gevHandle_t eh, const char* sysdir, char fname[GMS_SSSIZE])
+
+static int get_deffile(const char* sysdir, char fname[GMS_SSSIZE])
 {
    char fname_sysdir[GMS_SSSIZE];
    int rc = 0;
+
   /* ----------------------------------------------------------------------
    * We do a nice check of whether we can read the file (R_OK).
    * If not, then we check if the file exists (F_OK). If yes, error.
@@ -80,12 +74,12 @@ static int get_deffile(gevHandle_t eh, const char* sysdir, char fname[GMS_SSSIZE
    if (!access(fname, R_OK)) { return 0; }
 
    if (!access(fname, F_OK)) {
-      err_fname_permission(eh, fname_sysdir);
+      err_fname_permission(fname_sysdir);
       return 1;
    }
 
    /* fname might just be the filename, without any path */
-   rc = concat(eh, sysdir, fname, fname_sysdir);
+   rc = concat(sysdir, fname, fname_sysdir);
    if (rc) { return rc; }
 
    if (!access(fname_sysdir, R_OK)) {
@@ -95,10 +89,10 @@ static int get_deffile(gevHandle_t eh, const char* sysdir, char fname[GMS_SSSIZE
    }
  
    if (access(fname_sysdir, F_OK)) {
-       err_fname_missing(eh, fname);
-       err_fname_missing(eh, fname_sysdir);
+       err_fname_missing(fname);
+       err_fname_missing(fname_sysdir);
     } else {
-       err_fname_permission(eh, fname_sysdir);
+       err_fname_permission(fname_sysdir);
     }
 
    return 1;
@@ -120,36 +114,33 @@ int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir)
 
       if (!cfgDefFileName(ch, solvername, buf)) {
          /* Get the default def file: gamsSysdir/optreshop.def */
-         rc = concat(eh, sysdir, "optreshop.def", buf);
-         if (rc > 0) return rc;
+         rc = concat(sysdir, "optreshop.def", buf);
       } else {
-         rc = get_deffile(eh, sysdir, buf);
+         rc = get_deffile(sysdir, buf);
          if (rc > 0) return rc;
       }
 
       if (optReadDefinition(oh, buf)) {
-         gevLogStat(eh, buf);
-
-         gevStatCon(eh);
+         rhp_print(buf);
+         rhp_print("\n");
 
          for (int i = 1; i <= optMessageCount(oh); i++) {
             optGetMessage(oh, i, buf, &ival);
-            gevStatC(eh, buf);
+            rhp_print(buf);
+            rhp_print("\n");
          }
 
-         gevStatCoff(eh);
          optClearMessages(oh);
+ 
          return 1;
       }
 
-      gevStatCon(eh);
-
       for (int i = 1; i <= optMessageCount(oh); i++) {
          optGetMessage(oh, i, buf, &ival);
-         gevStatC(eh, buf);
+         rhp_print(buf);
+         rhp_print("\n");
       }
 
-      gevStatCoff(eh);
       optClearMessages(oh);
    } else {
       optResetAll(oh);
@@ -167,18 +158,17 @@ int opt_process(rhpRec_t *jh, bool need_init, const char* sysdir)
       optEchoSet(oh, 1);
       optRecentEnabledSet(oh, 1);
       optReadParameterFile(oh, buf);
-      gevStatCon(eh);
 
       for (int i = 1; i <= optMessageCount(oh); i++) {
          optGetMessage(oh, i, buf, &ival);
 
          if (ival <= optMsgFileLeave || ival == optMsgUserError) {
-            gevLogStat(eh, buf);
+            rhp_print(buf);
+            rhp_print("\n");
          }
       }
 
       optClearMessages(oh);
-      gevStatCoff(eh);
       optRecentEnabledSet(oh, 0);
       optEchoSet(oh, 0);
    }

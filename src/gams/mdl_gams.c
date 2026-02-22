@@ -470,14 +470,12 @@ int gmdl_loadrhpoptions(Model *mdl)
    char msg[GMS_SSSIZE];
 
    if (!optGetReadyD(sysdir, msg, sizeof(msg))) {
-      gevLogStatPChar(r.eh, "[GAMS] ERROR: Could not load option library: ");
-      gevLogStat(r.eh, msg);
+      error("[GAMS] ERROR: Could not load option library: %s\n", msg);
       return Error_GamsCallFailed;
    }
 
    if (!optCreate(&r.oh, msg, sizeof(msg))) {
-      gevLogStatPChar(r.eh, "[GAMS] ERROR: Could not create option struct: ");
-      gevLogStat(r.eh, msg);
+      error("[GAMS] ERROR: Could not create option struct: %s\n", msg);
       return Error_GamsCallFailed;
    }
 

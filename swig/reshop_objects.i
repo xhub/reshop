@@ -316,7 +316,7 @@ typedef struct rhp_mdl {
 
       rhp_mdl(const char *gms_controlfile) {
          struct rhp_mdl *mdl;
-         int rc = rhp_gms_newfromcntr(gms_controlfile, &mdl);
+         int rc = rhp_mdl_newfromcntr(gms_controlfile, &mdl);
          if (!mdl) {
             SWIG_exception(SWIG_RuntimeError, "Couldn't create model from control file");
          }
@@ -427,6 +427,7 @@ typedef struct rhp_mdl {
            PyErr_SetString(PyExc_RuntimeError, "Could not import the tempfile");
            goto fail;
         }
+
         tmpfile = PyObject_CallMethodObjArgs(tempfile_mod, PyString_FromString("NamedTemporaryFile"), NULL);
         if (!tmpfile) {
            PyErr_SetString(PyExc_RuntimeError, "Could not create a temporary file");
@@ -892,6 +893,180 @@ typedef struct rhp_nash_equilibrium {
                              mdlbackendname, mdlname, mdlid, nmps, nnashs, narcs));
       return str;
       fail: return NULL;
+   }
+
+   PyObject *_repr_svg_() {
+      PyObject *tempfile_mod = NULL, *graphviz_mod = NULL;
+      PyObject *temp_file_obj = NULL, *fp = NULL;
+      PyObject *dot_data = NULL, *ss = NULL, *out = NULL;
+      FILE *f = NULL;
+
+      // 1. Import modules
+      tempfile_mod = PyImport_ImportModule("tempfile");
+      graphviz_mod = PyImport_ImportModule("graphviz");
+      if (!tempfile_mod) goto fail;
+      if (!graphviz_mod) {
+         need_graphviz = need_graphviz == 0 ? 1 : need_graphviz;
+         goto fail;
+      }
+
+      // Calling TemporaryFile() returns a context manager
+      fp = PyObject_CallMethod(tempfile_mod, "TemporaryFile", NULL);
+      if (!fp) goto fail;
+
+      int fd = PyObject_AsFileDescriptor(fp);
+      if (fd == -1) {
+          PyErr_SetString(PyExc_TypeError, "Object does not have a valid file descriptor.");
+          goto fail;
+      }
+
+      f = fdopen(fd, "w+");
+      if (!f) {
+         PyErr_SetString(PyExc_OSError, "Failed to convert fd to FILE pointer.");
+         goto fail;
+      }
+
+      RHP_FAIL(rhp_empdag_writeDOT($self->mdl, f), "Couldn't write the DOT representation");
+
+      rewind(f);
+
+      // 3. dot_data = fp.read()
+      dot_data = PyObject_CallMethod(fp, "read", NULL);
+      if (!dot_data) goto fail;
+
+      ss = PyObject_CallMethod(graphviz_mod, "pipe", "ssO", "dot", "svg", dot_data);
+      if (!ss) {
+         goto fail;
+      }
+
+      out = PyObject_CallMethod(ss, "decode", "s", "utf-8");
+ 
+      PyObject_CallMethod(fp, "close", NULL);
+
+fail:
+      Py_XDECREF(tempfile_mod);
+      Py_XDECREF(graphviz_mod);
+      Py_XDECREF(temp_file_obj);
+      Py_XDECREF(fp);
+      Py_XDECREF(dot_data);
+      Py_XDECREF(ss);
+
+      return out; 
+    }
+
+
+   const char *_repr_html_() {
+      char *str;
+      // The idea is that the SVG rendering fails, then we are called and output a message
+      // about the graphviz module being needed. 
+      PyObject *py_svg = $parentclassname__repr_svg_($self);
+
+      if (py_svg) {
+         const char *svg = PyUnicode_AsUTF8(py_svg);
+         IO_PRINT_SWIG(asprintf(&str, "<div>%s</div>", svg));
+
+         Py_XDECREF(py_svg);
+
+         return str;
+      }
+
+
+      const char *prefix;
+
+      if (need_graphviz == 1) {
+         prefix = "<div><strong style=\"color:red\">Install the <tt>graphiz</tt> package to get an SVG rendering of the empdag</strong></div><br>";
+         need_graphviz = 2;
+      }  else {
+         prefix = "";
+      }
+
+      const rhp_mdl_t *mdl = $self->mdl;
+      unsigned mdlid = rhp_mdl_getid(mdl);
+      const char *mdlname = rhp_mdl_getname(mdl);
+      const char *mdlbackendname = rhp_mdl_getbackendname(mdl);
+
+      unsigned narcs = rhp_empdag_getnarcs(mdl);
+      unsigned nmps = rhp_empdag_getnmps(mdl);
+      unsigned nnashs = rhp_empdag_getnnashs(mdl);
+
+      IO_PRINT_SWIG(asprintf(&str, "%s<div>EmpDag for %s model <it>%s</it> (#%u) with %u MPs, %u Nashs, %u arcs.</div>",
+                             prefix, mdlbackendname, mdlname, mdlid, nmps, nnashs, narcs));
+     return str;
+     fail:
+     Py_XDECREF(py_svg);
+     return NULL;
+
+   }
+
+   const char *_repr_javascript_() {
+      if (is_running_in_vscode()) {
+         return NULL;
+      }
+
+      char *str;
+      // The idea is that the SVG rendering fails, then we are called and output a message
+      // about the graphviz module being needed. 
+      PyObject *py_svg = $parentclassname__repr_svg_($self);
+
+      if (py_svg) {
+         const char *svg = PyUnicode_AsUTF8(py_svg);
+         static uint32_t btnId = 0;
+         btnId++;
+         IO_PRINT_SWIG(asprintf(&str, 
+         "(function() {\n"
+         "const container = (element.get && typeof element.get === 'function') ? element.get(0) : element;\n"
+         "container.innerHTML = `\n"
+
+         "<button id=\"open_empdag_svg_%u\" style=\"padding: 8px 16px; background-color: #005a9c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;\">\n"
+         "    View EMPDAG in a new tab\n"
+         "</button><br>\n\n"
+
+         "<div>%s<div>`;\n"
+
+         "const open_empdag_svg = container.querySelector(\"#open_empdag_svg_%u\");\n"
+ 
+         "open_empdag_svg.onclick = function() {\n"
+         "       const svgData = `%s`;\n"
+         "       const blob = new Blob([svgData], {type: \"image/svg+xml\"});"
+         "       const url = URL.createObjectURL(blob);\n"
+         "       window.open(url, \"_blank\");\n"
+         "   };\n"
+         "})();\n",
+         btnId, svg, btnId, svg));
+
+         Py_XDECREF(py_svg);
+
+         return str;
+      }
+
+
+      const char *prefix;
+
+      if (need_graphviz == 1) {
+         prefix = "<div><strong style=\"color:red\">Install the <tt>graphiz</tt> package to get an SVG rendering of the empdag</strong></div><br>";
+         need_graphviz = 2;
+      }  else {
+         prefix = "";
+      }
+
+      const rhp_mdl_t *mdl = $self->mdl;
+      unsigned mdlid = rhp_mdl_getid(mdl);
+      const char *mdlname = rhp_mdl_getname(mdl);
+      const char *mdlbackendname = rhp_mdl_getbackendname(mdl);
+
+      unsigned narcs = rhp_empdag_getnarcs(mdl);
+      unsigned nmps = rhp_empdag_getnmps(mdl);
+      unsigned nnashs = rhp_empdag_getnnashs(mdl);
+
+      IO_PRINT_SWIG(asprintf(&str, "%s<div>EmpDag for %s model <it>%s</it> (#%u) with %u MPs, %u Nashs, %u arcs.</div>",
+                             prefix, mdlbackendname, mdlname, mdlid, nmps, nnashs, narcs));
+
+
+     return str;
+     fail:
+     Py_XDECREF(py_svg);
+     return NULL;
+
    }
 
    def_pretty_print_alloc()

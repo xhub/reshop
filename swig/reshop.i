@@ -76,6 +76,8 @@
 /* Useless, needs a FILE * stream */
 %ignore rhp_empdag_writeDOT;
 
+%ignore rhp_print;
+
 /* ----------------------------------------------------------------------
  * Basic exception handling, for setter: a tls global variable is set
  * to indicate the error. The indicator is then checked against it.

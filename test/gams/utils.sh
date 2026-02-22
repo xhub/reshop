@@ -149,7 +149,7 @@ exec_gams() {
    local gms_name=$1
    shift
    set +e
-   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo="$GMSLO" keep=1 optfile=1 emp="$EMPSLV" "$@"
+   env RHP_NO_STOP=1 RHP_NO_BACKTRACE=1 gams "${gms_name}" lo="$GMSLO" keep=1 optfile=1 emp="$EMPSLV" --reshop_test=1 "$@"
    local status=$?
    if [ $status != 0 ]; then
       e_error "${gms_name} with args has failed: status = ${status}"

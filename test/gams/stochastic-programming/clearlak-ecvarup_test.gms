@@ -349,7 +349,14 @@ R_Ld(n) = abs(R.l(n) - R_L(n));
 
 display QLd, F_Ld, Z_Ld;
 
+abort$[smax{n$n.first, abs(QLd(n))} > %tol%]   'wrong costs', QLd, QL, cost_L;
+abort$[smax{n, abs(y_Ld(n))} > %tol%]  'wrong probability measures', y_Ld, y.l, y_L;
+abort$[smax{n, abs(v_Ld(n))} > %tol%]  'wrong VaR', v_Ld, v.l, v_L;
 
+abort$[smax{n$(NOT n.first), F_Ld(n)} > %tol%]     'wrong F.l', F_Ld;
+abort$[smax{n$(NOT n.first), Z_Ld(n)} > %tol%]     'wrong Z.l', Z_Ld;
+
+$if set reshop_test $exit
 
 embeddedCode python:
 import graphviz
@@ -473,12 +480,5 @@ except Exception as e:
     print("Please ensure the Graphviz software is installed and in your system's PATH.")
 
 endEmbeddedCode
-
-abort$[smax{n$n.first, abs(QLd(n))} > %tol%]   'wrong costs', QLd, QL, cost_L;
-abort$[smax{n, abs(y_Ld(n))} > %tol%]  'wrong probability measures', y_Ld, y.l, y_L;
-abort$[smax{n, abs(v_Ld(n))} > %tol%]  'wrong VaR', v_Ld, v.l, v_L;
-
-abort$[smax{n$(NOT n.first), F_Ld(n)} > %tol%]     'wrong F.l', F_Ld;
-abort$[smax{n$(NOT n.first), Z_Ld(n)} > %tol%]     'wrong Z.l', Z_Ld;
 
 

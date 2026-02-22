@@ -124,8 +124,8 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
          unsigned id = uid2id(uid);
  
 
-         IO_PRINT(fprintf(f, " MP%u -> %s%u [%s];\n", mpid,
-                         isMP ? "MP" : "Nash", id, arcstyle_CTRL));
+         IO_PRINT(fprintf(f, " MP%u -> %s%u [%s];\n", mpid, isMP ? "MP" : "Nash", id,
+                          arcstyle_CTRL));
       }
 
       const VarcArray *Varcs = &mps->Varcs[i];
@@ -144,10 +144,12 @@ static int print_mp_arcs(const EmpDag* empdag, FILE* f)
             break;
          case ArcVFMultipleBasic: {
             IO_PRINT(fputs("[ {", f));
+
             for (unsigned k = 0, klen = arcVF->basics_dat.len; k < klen; ++k) {
                if (k >= 1) { IO_PRINT(fputs("},<BR/> {", f)) };
                arcVF_basic_arcdat(&arcVF->basics_dat.list[k], mp, empdag->mdl, f, &labelcolor);
             }
+
             IO_PRINT(fputs("} ]", f));
             labelcolor = "black";
             break;
@@ -312,7 +314,7 @@ static int print_nash_nodes(const struct nash_namedarray* nashs, FILE* f, const 
 
 int empdag2dot(const EmpDag *empdag, FILE *f)
 {
-   IO_PRINT(fputs("digraph structs {\n node [shape=\"box\", style=\"filled, rounded\", margin=0.2];\n", f));
+   IO_PRINT(fputs("digraph structs {\n  bgcolor=\"transparent\";\n  node [shape=\"box\", style=\"filled, rounded\", margin=0.2];\n", f));
 //   IO_PRINT(fputs(" edge [headclip=false, tailclip=false];\n", f));
    IO_PRINT(fprintf(f, " label=\"EMPDAG for %s model '%.*s' #%u\"; rankdir=LR;\n", mdl_fmtargs(empdag->mdl)));
 

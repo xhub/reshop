@@ -135,8 +135,10 @@ SWIGINTERN rhp_errno_t win_strerror_(unsigned sz, char buf[VMT(static sz)], cons
 #undef SYS_ERRMSG
 #define SYS_ERRMSG win_strerror_
 
+#include <io.h>
+#define fdopen _fdopen
 
-#else
+#else // !_WIN32
 
 #include <errno.h>
 #include "macros.h"
@@ -214,6 +216,9 @@ static tlsvar PyObject* reshop_mod = NULL;
 static tlsvar const char *rhp_exception_msg = NULL;
 static tlsvar int rhp_exception_code = RHP_OK;
 
+static tlsvar uint8_t need_graphviz = 0;
+
+
 static PyObject * basisstatus_getobj(int bstat)
 {
 
@@ -270,6 +275,55 @@ static PyObject * backendtype_getobj(int backendtype)
 
    return o;
 }
+
+
+/* Cross-platform environment array access */
+#ifdef _WIN32
+    /* On Windows (MSVCRT), the environment array is named _environ */
+    #define ENV_ARRAY _environ
+#else
+    /* On POSIX (Linux/macOS), it is named environ */
+    extern char **environ;
+    #define ENV_ARRAY environ
+#endif
+
+static tlsvar int8_t in_vscode = 0;
+
+static bool is_running_in_vscode(void) {
+
+   if (in_vscode != 0) {
+      return in_vscode == 1;
+   }
+
+    /* 1. Direct checks for the most common indicators */
+    if (getenv("VSCODE_PID") != NULL) {
+        in_vscode = 1;
+        return true;
+    }
+
+    const char *term_program = getenv("TERM_PROGRAM");
+    if (term_program != NULL && strcmp(term_program, "vscode") == 0) {
+        in_vscode = 1;
+        return true;
+    }
+
+    /* 2. Fallback: Iterate over all environment variables */
+    /* ENV_ARRAY is an array of strings formatted as "KEY=VALUE" */
+    if (ENV_ARRAY != NULL) {
+        for (char **env = ENV_ARRAY; *env != NULL; ++env) {
+            /* Check if the current string starts with "VSCODE_" */
+            if (strncmp(*env, "VSCODE_", 7) == 0) {
+                in_vscode = 1;
+                return true;
+            }
+        }
+    }
+
+    in_vscode = -1;
+    return false;
+}
+
+
 %}
 
 %include target_datatypes.i

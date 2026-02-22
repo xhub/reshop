@@ -102,6 +102,8 @@ static inline const char *get_mode_color(unsigned mode)
 #define STDERR_FILENO _fileno( stderr )
 #endif
 
+#ifndef GMSRHP_UX
+
 #ifdef WITH_BACKTRACE
 
 #if defined(__linux__) || defined (__APPLE__)
@@ -352,6 +354,12 @@ static CONSTRUCTOR_ATTR void register_signals(void)
 #endif /* (defined(__linux__) || defined(__APPLE__)) */
 
 #endif /* WITH_BACKTRACE */
+
+#else  /* !defined(GMSRHP_UX) */
+
+static void rhp_backtrace(void) {}
+
+#endif /* !defined(GMSRHP_UX) */
 
 
 /* ------------------------------------------------------------------------

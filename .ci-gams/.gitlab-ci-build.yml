@@ -141,7 +141,6 @@ build-dac:
     - cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_GAMS_DRIVER=1 -DBUILD_PYTHON=python3 -S .
     - cmake --build build -v 2>&1 | tee build_log.txt
     - cmake --install build -v
-    - codesign --force --timestamp --sign 
     - python3 ciscripts/report_for_log.py clang build_log.txt warnings.xml
 
     # libconoptlu.dylib requires some gcc libs. 

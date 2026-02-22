@@ -305,6 +305,8 @@ RHP_PUBLIB int rhp_mdl_exportmodel(rhp_mdl_t *mdl, rhp_mdl_t *mdl_dst);
 RHP_PUBLIB const char *rhp_mdl_modelstattxt(const rhp_mdl_t *mdl, int modelstat);
 RHP_PUBLIB const char *rhp_mdl_solvestattxt(const rhp_mdl_t *mdl, int solvestat);
 
+RHP_PUBLIB int rhp_mdl_newfromcntr(const char *cntrfile, rhp_mdl_t **mdl);
+
 /* -------------------------------------------------------------------------
  * EMP info API
  * ------------------------------------------------------------------------- */
@@ -385,8 +387,8 @@ RHP_PUBLIB RHP_MALLOC(rhp_arcVF_free) rhp_empdag_arcVF_t * rhp_arcVF_new(void);
 RHP_PUBLIB int rhp_arcVF_init(rhp_empdag_arcVF_t *arcVF, rhp_idx ei);
 RHP_PUBLIB int rhp_arcVF_setvar(rhp_empdag_arcVF_t *arcVF, rhp_idx vi);
 RHP_PUBLIB int rhp_arcVF_setcst(rhp_empdag_arcVF_t *arcVF, double cst);
-RHP_PUBLIB int rhp_arcVF_type2str(rhp_empdag_arcVF_t *arcVF);
-RHP_PUBLIB int rhp_arcVF_getmpidtarget(rhp_empdag_arcVF_t *arcVF);
+RHP_PUBLIB const char * rhp_arcVF_type2str(rhp_empdag_arcVF_t *arcVF);
+RHP_PUBLIB unsigned rhp_arcVF_getmpidtarget(rhp_empdag_arcVF_t *arcVF);
 
 /* -------------------------------------------------------------------------
  * EMPDAG misc
@@ -403,7 +405,7 @@ RHP_PUBLIB rhp_nash_equilibrium_t * rhp_empdag_getnash(const rhp_mdl_t *mdl, uns
 
 RHP_PUBLIB int rhp_empdag_rootsetmp(rhp_mdl_t *mdl, rhp_mathprgm_t *mp);
 RHP_PUBLIB int rhp_empdag_rootsetnash(rhp_mdl_t *mdl, rhp_nash_equilibrium_t *nash);
-RHP_PUBLIB int rhp_empdag_writeDOT(rhp_mdl_t *mdl, FILE *f);
+RHP_PUBLIB int rhp_empdag_writeDOT(const rhp_mdl_t *mdl, FILE *f);
 
 /* -------------------------------------------------------------------------
  * ReSHOP internal model modification
@@ -576,6 +578,8 @@ RHP_PUBLIB int rhp_postprocess(rhp_mdl_t *mdl_solver);
 RHP_PUBLIB void rhp_set_printops(void* data, rhp_print_fn print, rhp_flush_fn flush,
                       unsigned flags);
 RHP_PUBLIB void rhp_set_printopsdefault(void);
+
+RHP_PUBLIB void rhp_print(const char *fmt, ...);
 
 /* -------------------------------------------------------------------------
  * ReSHOP misc functions

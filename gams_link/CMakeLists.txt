@@ -78,6 +78,7 @@ else()
   set(GAMSLINK_INSTALL_DIR ${OUTPUT_DIR})
 endif()
 
+target_compile_definitions(${RESHOP_GAMSLINK_EXE} PRIVATE GMSRHP_UX)
 
 foreach(_T ${RESHOP_GAMSLINK_TARGETS})
   SET_C_WARNINGS(${_T})

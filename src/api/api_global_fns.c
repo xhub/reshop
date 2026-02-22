@@ -9,6 +9,7 @@
 #include "rhpgui_launcher.h"
 #include "status.h"
 #include "string_utils.h"
+#include <stdarg.h>
 
 #ifdef __x86_64__
 #   define RHP_ARCH "amd64"
@@ -487,4 +488,46 @@ _exit:
    }
 
    return status;
+}
+
+/**
+ * @brief Print (as info) via the reshop logging system
+ *
+ * @ingroup publicAPI
+ *
+ * @param fmt  the format string
+ *
+ */
+#if defined(__clang__) || defined (__GNUC__)
+__attribute__((format(printf, 1, 2)))
+#endif
+void rhp_print(const char *fmt, ...)
+{
+   va_list ap;
+   char *buf = NULL;
+   int rc = 0;
+
+   va_start(ap, fmt);
+   rc = vsnprintf(buf, rc, fmt, ap);
+   va_end(ap);
+
+   if (rc <= 0) {
+      return;
+   }
+   rc++; /* for '\0' */
+   buf = malloc(rc);
+   if (!buf) return;
+
+   va_start(ap, fmt);
+   rc = vsnprintf(buf, rc, fmt, ap);
+   va_end(ap);
+
+   if (rc <= 0) {
+      free(buf);
+      return;
+   }
+
+   printstr(PO_INFO, buf);
+
+   free(buf);
 }
