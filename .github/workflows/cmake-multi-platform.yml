@@ -110,23 +110,25 @@ jobs:
         echo "PY313=$cleanPath313" >> $env:GITHUB_OUTPUT
         echo "PY314=$cleanPath314" >> $env:GITHUB_OUTPUT
 
-    - name: Dummy python path storage
-      if: ! contains(matrix.os, 'windows')
-      id: python_path
-      run: |
-        cleanPath312 = ${{ steps.cp312.outputs.python-path }}
-        cleanPath313 = ${{ steps.cp313.outputs.python-path }}
-        cleanPath314 = ${{ steps.cp314.outputs.python-path }}
-        echo "PY312=$cleanPath312" >> "$GITHUB_OUTPUT"
-        echo "PY313=$cleanPath313" >> "$GITHUB_OUTPUT"
-        echo "PY314=$cleanPath314" >> "$GITHUB_OUTPUT"
-
     - name: Setup MSVC
       if: matrix.c_compiler == 'cl'
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Configure CMake
-      if: matrix.build_type != 'Debug' || !contains(matrix.os, 'windows')
+    - name: Configure CMake on unix
+      if: ! contains(matrix.os, 'windows')
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: >
+        cmake -G Ninja -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DBUILD_PYTHON="{{ steps.cp312.output.python-path }} {{ steps.cp313.output.python-path }} {{ steps.cp314.output.python-path }}"
+        -DBUILD_GAMS_DRIVER=1
+        -S ${{ github.workspace }}
+
+    - name: Configure CMake on windows
+      if: contains(matrix.os, 'windows') && matrix.build_type != 'Debug'
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >
