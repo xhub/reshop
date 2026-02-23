@@ -138,9 +138,37 @@ jobs:
         path: ${{ steps.strings.outputs.build-output-dir }}/output
         overwrite: true
 
-    - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        packages-dir: ${{ steps.strings.outputs.build-output-dir }}/output
-        verbose: true
-        repository-url: https://test.pypi.org/legacy/
+  pypi-publish:
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://test.pypi.org/p/reshop
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      - name: Download windows-2025 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-windows-2025-clang-Release
+          path: dist
+
+      - name: Download macos artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-macos-latest-clang-Release
+          path: dist
+
+      - name: Download linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-ubuntu-latest-gcc-Release
+          path: dist
+
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+#          packages-dir: ${{ steps.strings.outputs.build-output-dir }}/output
+          verbose: true
+          repository-url: https://test.pypi.org/legacy/
