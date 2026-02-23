@@ -150,14 +150,21 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       execute_process (COMMAND ${Python3_EXECUTABLE} "--version"
                        OUTPUT_VARIABLE PyCmd_VERSION
                        OUTPUT_STRIP_TRAILING_WHITESPACE)
-      separate_arguments (outlist UNIX_COMMAND ${PyCmd_VERSION})
+      separate_arguments (outlist NATIVE_COMMAND ${PyCmd_VERSION})
+ 
+      message(STATUS "For BUILD_PYTHON argument ${P}; full version is ${PyCmd_VERSION}\nParsed is ${outlist}")
  
       LIST(POP_BACK outlist Py3_VERSION)
- 
+
       # Unset a bunch of stuff to ensure find_package does something ...
-      unset(Python3_Found)
+      unset(Python3_etound)
+      unset(Python3_Interpreter_FOUND)
+      unset(Python3_EXECUTABLE)
+      unset(Python3_INTERPRETER)
       unset(Python3_Library)
+      unset(Python3_NumPy_FOUND)
       unset(Python3_NumPy_INCLUDE_DIRS)
+      unset(Python3_NumPy_VERSION)
  
       find_package (Python3 REQUIRED
                     COMPONENTS Development.Module NumPy
