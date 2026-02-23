@@ -146,7 +146,12 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       # Regular python discovery. We need to force the version to the one
       # specified as argument
       set(Python3_EXECUTABLE ${Py3_EXECUTABLE})
- 
+      execute_process(COMMAND ${Py3_EXECUTABLE} -c "import sys; print(f'{sys.executable}')"
+                      OUTPUT_VARIABLE Python3_EXECUTABLE
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+      message(STATUS "For BUILD_PYTHON argument ${Py3_EXECUTABLE}, executable is ${Python3_EXECUTABLE}")
+
       execute_process (COMMAND ${Python3_EXECUTABLE} -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
                        RESULT_VARIABLE PyCmd_VERSION_RC
                        OUTPUT_VARIABLE Py3_VERSION
@@ -161,7 +166,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       #      separate_arguments (outlist NATIVE_COMMAND ${PyCmd_VERSION})
  
       #message(STATUS "For BUILD_PYTHON argument ${P}; full version is ${PyCmd_VERSION}\nParsed is ${outlist}")
-      message(STATUS "For BUILD_PYTHON argument ${P}, the version is ${Py3_VERSION}")
+      message(STATUS "For BUILD_PYTHON argument ${Py3_EXECUTABLE}, the version is ${Py3_VERSION}; stderr is ${PyCmd_VERSION_STDERR}")
  
       #LIST(POP_BACK outlist Py3_VERSION)
 
