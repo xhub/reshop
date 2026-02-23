@@ -192,24 +192,26 @@ jobs:
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-    #  - name: Download windows-2025 artifacts
-    #    uses: actions/download-artifact@v4
-    #    with:
-    #      name: artifacts-windows-2025-clang-Release
-    #      path: dist
+      - name: Download windows-2025 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-windows-2025-clang-Release
+          path: output
 
       - name: Download macos artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-macos-latest-clang-Release
-          path: dist
+          path: output
 
       - name: Download linux artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-ubuntu-latest-gcc-Release
-          path: dist
+          path: output
 
+      - name: Remove non-wheel files
+        run: mv output/*.whl dist/
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
