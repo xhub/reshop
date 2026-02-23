@@ -419,6 +419,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
 endmacro()
 
 # Main loop
-foreach (P IN LISTS BUILD_PYTHON)
+separate_arguments(BUILD_PYTHON_LIST NATIVE_COMMAND "${BUILD_PYTHON}")
+foreach (P IN LISTS BUILD_PYTHON_LIST)
    SETUP_SWIG_PYTHON_MODULE(${P})
 endforeach()
