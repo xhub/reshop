@@ -165,12 +165,13 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       LIST(POP_BACK outlist Py3_VERSION)
 
       # Unset a bunch of stuff to ensure find_package does something ...
-      unset(Python3_etound)
+      unset(Python3_Found)
       unset(Python3_Interpreter_FOUND)
-      unset(Python3_EXECUTABLE)
+      #unset(Python3_EXECUTABLE)
       unset(Python3_INTERPRETER)
       unset(Python3_Library)
       unset(Python3_NumPy_FOUND)
+      unset(Python3_NumPy_INCLUDE_DIR)
       unset(Python3_NumPy_INCLUDE_DIRS)
       unset(Python3_NumPy_VERSION)
  
