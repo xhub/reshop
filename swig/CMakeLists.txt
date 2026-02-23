@@ -13,6 +13,57 @@ if (LINUX AND DISTRIB)
 endif()
 
 
+function(clone_imported_target ORIG_TARGET NEW_TARGET)
+    # 1. Safety check: ensure the original target actually exists
+    if(NOT TARGET ${ORIG_TARGET})
+        message(FATAL_ERROR "Cannot clone: Target '${ORIG_TARGET}' does not exist.")
+    endif()
+
+    # 2. Extract the target type (e.g., SHARED_LIBRARY, STATIC_LIBRARY)
+    get_target_property(TARGET_TYPE ${ORIG_TARGET} TYPE)
+
+    # 3. Map the internal CMake type to the add_library keyword
+    if(TARGET_TYPE STREQUAL "SHARED_LIBRARY")
+        set(LIB_TYPE SHARED)
+    elseif(TARGET_TYPE STREQUAL "STATIC_LIBRARY")
+        set(LIB_TYPE STATIC)
+    elseif(TARGET_TYPE STREQUAL "UNKNOWN_LIBRARY")
+        set(LIB_TYPE UNKNOWN)
+    elseif(TARGET_TYPE STREQUAL "INTERFACE_LIBRARY")
+        set(LIB_TYPE INTERFACE)
+    else()
+        message(FATAL_ERROR "Unsupported target type for cloning: ${TARGET_TYPE}")
+    endif()
+
+    # 4. Create the brand new, disconnected imported target
+    add_library(${NEW_TARGET} ${LIB_TYPE} IMPORTED)
+
+    # 5. Define the list of crucial properties to copy.
+    # (You can add more specific properties here if your project needs them)
+    set(PROPERTIES_TO_CLONE
+        IMPORTED_LOCATION
+        IMPORTED_IMPLIB
+        IMPORTED_LOCATION_RELEASE
+        IMPORTED_LOCATION_DEBUG
+        INTERFACE_INCLUDE_DIRECTORIES
+        INTERFACE_LINK_LIBRARIES
+        INTERFACE_COMPILE_DEFINITIONS
+        INTERFACE_COMPILE_OPTIONS
+    )
+
+    # 6. Loop through and copy each property if it exists
+    foreach(PROP IN LISTS PROPERTIES_TO_CLONE)
+        get_target_property(PROP_VALUE ${ORIG_TARGET} ${PROP})
+        
+        # In CMake, if a property is missing, it returns "<VAR>-NOTFOUND".
+        # This standard if() check safely evaluates to false if it was not found.
+        if(PROP_VALUE)
+            set_target_properties(${NEW_TARGET} PROPERTIES ${PROP} "${PROP_VALUE}")
+        endif()
+    endforeach()
+endfunction()
+
+
 # We generate the python bindings in 2 steps:
 # - 1. Use SWIG to generate the wrapper (just python for now)
 # - 2. For each specified python interpreter, compile the module
@@ -231,7 +282,8 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       if (${Py3_EXECUTABLE} MATCHES "GMSPython") 
          set(_LIB ${Python3_LIBRARIES})
       else()
-         set(_LIB Python3::Module)
+         clone_imported_target(Python3::Module ${pytarget}::Module)
+         set(_LIB ${pytarget}::Module)
       endif()
 
       target_link_libraries(${pytarget} PRIVATE ${_LIB} ${RESHOP_LIBNAME})
@@ -395,7 +447,8 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
          COMMENT "Properly tag wheel"
          VERBATIM)
 
-   else()
+   else() # Other than linux (with distrib) just copy the wheel
+
       add_custom_command(TARGET ${pytarget}_package POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory dist ${OUTPUT_DIR}
             WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
