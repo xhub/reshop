@@ -37,10 +37,10 @@ int view_png(const char *fname, const char *png_viewer)
 
    if (png_viewer) {
       char *cmd;
-#ifdef __APPLE__
-      IO_PRINT(asprintf(&cmd, "%s \"%s.png\"", png_viewer, fname));
-#elif defined(__linux__)
+#if defined(__linux__)
       IO_PRINT(asprintf(&cmd, "cat \"%s.png\" | %s", fname, png_viewer));
+#else
+      IO_PRINT(asprintf(&cmd, "%s \"%s.png\"", png_viewer, fname));
 #endif
       int rc = system(cmd); /* YOLO */
       if (rc) {
