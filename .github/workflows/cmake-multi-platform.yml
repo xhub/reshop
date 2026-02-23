@@ -93,7 +93,6 @@ jobs:
       id: cp314
       with:
         python-version: 3.14
-        update-environment: false
 
     - name: Install dependencies
       run: |
