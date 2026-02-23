@@ -97,9 +97,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip3.12 install numpy scipy pytest setuptools
-        pip3.13 install numpy scipy pytest setuptools
-        pip3.14 install swig==4.3.1.post0 numpy scipy pytest setuptools
+        ${{ steps.cp312.outputs.python-path }} -m pip install numpy scipy pytest setuptools
+        ${{ steps.cp313.outputs.python-path }} -m pip install numpy scipy pytest setuptools
+        ${{ steps.cp314.outputs.python-path }} -m pip install swig==4.3.1.post0 numpy scipy pytest setuptools
 
     - name: Cleanup python path (windows)
       if: contains(matrix.os, 'windows')
