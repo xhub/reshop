@@ -126,8 +126,8 @@ jobs:
       if: matrix.c_compiler == 'cl'
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Configure CMake on linux
-      if: contains(matrix.os, 'ubuntu')
+    - name: Configure CMake on linux/amd64
+      if: contains(matrix.os, 'ubuntu-latest') 
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >
@@ -140,8 +140,8 @@ jobs:
         -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
-    - name: Configure CMake on macos
-      if: contains(matrix.os, 'macos')
+    - name: Configure CMake on macos and linux/arm64
+      if: contains(matrix.os, 'macos') || contains(matrix.os, 'arm')
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >

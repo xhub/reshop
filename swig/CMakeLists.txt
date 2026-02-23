@@ -8,8 +8,12 @@ find_package(SWIG REQUIRED)
 include(UseSWIG)
 
 # linux target for python wheel
-if (LINUX AND DISTRIB)
-   set(PYTHON_WHEEL_PLAT "manylinux_2_28_x86_64")
+if (LINUX)
+   if (DISTRIB) #proxy for amd64
+      set(PYTHON_WHEEL_PLAT "manylinux_2_28_x86_64")
+   else()
+      set(PYTHON_WHEEL_PLAT "auto")
+   endif()
 endif()
 
 
