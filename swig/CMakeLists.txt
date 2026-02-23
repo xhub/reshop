@@ -126,7 +126,9 @@ if (NOT PATH_SOLVER_COPIED)
 endif()
 
 
-macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
+macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
+
+   cmake_path(SET Py3_EXECUTABLE "${Py3_arg}")
 
    # With GMSPython, we expect the configuration to be stored as a cmake file
    if (${Py3_EXECUTABLE} MATCHES "GMSPython") 
@@ -143,15 +145,18 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
 
    else ()
 
+      if(IS_ABSOLUTE Py3_EXECUTABLE)
+         cmake_path(SET Python3_EXECUTABLE "${Py3_EXECUTABLE}")
+      else()
       # Regular python discovery. We need to force the version to the one
       # specified as argument
-      set(Python3_EXECUTABLE ${Py3_EXECUTABLE})
-      execute_process(COMMAND ${Py3_EXECUTABLE} -c [[import sys; print(f'{sys.executable}')]]
-                      OUTPUT_VARIABLE Python3_EXECUTABLE
-                      ECHO_OUTPUT_VARIABLE
-                      ECHO_ERROR_VARIABLE
-                      COMMAND_ECHO STDOUT
-                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+         execute_process(COMMAND ${Py3_EXECUTABLE} -c [[import sys; print(f'{sys.executable}')]]
+                         OUTPUT_VARIABLE Python3_EXECUTABLE
+                         ECHO_OUTPUT_VARIABLE
+                         ECHO_ERROR_VARIABLE
+                         COMMAND_ECHO STDOUT
+                         OUTPUT_STRIP_TRAILING_WHITESPACE)
+      endif()
 
       message(STATUS "For BUILD_PYTHON argument ${Py3_EXECUTABLE}, executable is ${Python3_EXECUTABLE}")
 
