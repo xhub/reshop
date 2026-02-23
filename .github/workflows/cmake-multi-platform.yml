@@ -123,7 +123,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DBUILD_PYTHON="${{ steps.cp312.output.python-path }} ${{ steps.cp313.output.python-path }} ${{ steps.cp314.output.python-path }}"
+        -DBUILD_PYTHON="${{ steps.cp312.outputs.python-path }} ${{ steps.cp313.outputs.python-path }} ${{ steps.cp314.outputs.python-path }}"
         -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
@@ -136,7 +136,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DBUILD_PYTHON="${{ steps.python_path.output.PY312 }} ${{ steps.python_path.output.PY313 }} ${{ steps.python_path.output.PY314 }}"
+        -DBUILD_PYTHON="${{ steps.python_path.outputs.PY312 }} ${{ steps.python_path.outputs.PY313 }} ${{ steps.python_path.outputs.PY314 }}"
         -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
