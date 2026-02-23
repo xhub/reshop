@@ -211,7 +211,9 @@ jobs:
           path: output
 
       - name: Remove non-wheel files
-        run: mv output/*.whl dist/
+        run: |
+          mkdir dist
+          mv output/*.whl dist/
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
