@@ -100,24 +100,26 @@ jobs:
 
     - name: Cleanup python path (windows)
       if: contains(matrix.os, 'windows')
+      id: python_path
       shell: pwsh
       run: |
-        $cleanPath312 = ${{ steps.cp312.outputs.python-path }}.Replace('\', '/')
-        $cleanPath313 = ${{ steps.cp313.outputs.python-path }}.Replace('\', '/')
-        $cleanPath314 = ${{ steps.cp314.outputs.python-path }}.Replace('\', '/')
-        echo "PY312=$cleanPath312" >> $env:GITHUB_ENV
-        echo "PY313=$cleanPath313" >> $env:GITHUB_ENV
-        echo "PY314=$cleanPath314" >> $env:GITHUB_ENV
+        $cleanPath312 = "${{ steps.cp312.outputs.python-path }}".Replace('\', '/')
+        $cleanPath313 = "${{ steps.cp313.outputs.python-path }}".Replace('\', '/')
+        $cleanPath314 = "${{ steps.cp314.outputs.python-path }}".Replace('\', '/')
+        echo "PY312=$cleanPath312" >> $env:GITHUB_OUTPUT
+        echo "PY313=$cleanPath313" >> $env:GITHUB_OUTPUT
+        echo "PY314=$cleanPath314" >> $env:GITHUB_OUTPUT
 
     - name: Dummy python path storage
       if: ! contains(matrix.os, 'windows')
+      id: python_path
       run: |
         cleanPath312 = ${{ steps.cp312.outputs.python-path }}
         cleanPath313 = ${{ steps.cp313.outputs.python-path }}
         cleanPath314 = ${{ steps.cp314.outputs.python-path }}
-        echo "PY312=$cleanPath312" >> "$GITHUB_ENV"
-        echo "PY313=$cleanPath313" >> "$GITHUB_ENV"
-        echo "PY314=$cleanPath314" >> "$GITHUB_ENV"
+        echo "PY312=$cleanPath312" >> "$GITHUB_OUTPUT"
+        echo "PY313=$cleanPath313" >> "$GITHUB_OUTPUT"
+        echo "PY314=$cleanPath314" >> "$GITHUB_OUTPUT"
 
     - name: Setup MSVC
       if: matrix.c_compiler == 'cl'
@@ -132,7 +134,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DBUILD_PYTHON="$env:PY312 $env:PY313 $env:PY314"
+        -DBUILD_PYTHON="{{ steps.python_path.output.PY312 }} {{ steps.python_path.output.PY313 }} {{ steps.python_path.output.PY314 }}"
         -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
