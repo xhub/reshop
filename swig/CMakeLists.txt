@@ -128,6 +128,10 @@ endif()
 
 macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
 
+   if (WINDOWS)
+      string(REGEX REPLACE "\\" "\\\\" Py3_arg ${Py3_arg})
+   endif()
+
    cmake_path(SET Py3_EXECUTABLE "${Py3_arg}")
 
    # With GMSPython, we expect the configuration to be stored as a cmake file
