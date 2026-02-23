@@ -148,8 +148,16 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       set(Python3_EXECUTABLE ${Py3_EXECUTABLE})
  
       execute_process (COMMAND ${Python3_EXECUTABLE} "--version"
+                       RESULT_VARIABLE PyCmd_VERSION_RC
                        OUTPUT_VARIABLE PyCmd_VERSION
+                       ERROR_VARIABLE  PyCmd_VERSION_STDERR
                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+         if (PyCmd_VERSION_RC GREATER 0)
+         message(FATAL_ERROR "'{Python3_EXECUTABLE} --version' failed with code ${PyCmd_VERSION_RC}. Stderr content is \n${PyCmd_VERSION_STDERR}\n\n"
+                          "Stdout content is \n${PyCmd_VERSION}\n")
+         endif()
+
       separate_arguments (outlist NATIVE_COMMAND ${PyCmd_VERSION})
  
       message(STATUS "For BUILD_PYTHON argument ${P}; full version is ${PyCmd_VERSION}\nParsed is ${outlist}")
