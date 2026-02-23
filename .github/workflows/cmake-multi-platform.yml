@@ -115,7 +115,7 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure CMake on unix
-      if: ! contains(matrix.os, 'windows')
+      if: !contains(matrix.os, 'windows')
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >
@@ -123,7 +123,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DBUILD_PYTHON="{{ steps.cp312.output.python-path }} {{ steps.cp313.output.python-path }} {{ steps.cp314.output.python-path }}"
+        -DBUILD_PYTHON="${{ steps.cp312.output.python-path }} ${{ steps.cp313.output.python-path }} ${{ steps.cp314.output.python-path }}"
         -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
@@ -136,7 +136,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DBUILD_PYTHON="{{ steps.python_path.output.PY312 }} {{ steps.python_path.output.PY313 }} {{ steps.python_path.output.PY314 }}"
+        -DBUILD_PYTHON="${{ steps.python_path.output.PY312 }} ${{ steps.python_path.output.PY313 }} ${{ steps.python_path.output.PY314 }}"
         -DBUILD_GAMS_DRIVER=1
         -S ${{ github.workspace }}
 
