@@ -400,6 +400,8 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       list(APPEND PY_BIN_FILES ${ICX_CL_DIR}/libmmd.dll)
    endif()
 
+   string(TIMESTAMP TAG_BUILD %Y%m%d%H%M UTC)
+
    add_custom_command(
       OUTPUT ${PYTHON_PROJECT_DIR}/dist/timestamp
       COMMAND ${CMAKE_COMMAND} -E remove_directory dist reshop
@@ -408,7 +410,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/swig/__init__.py reshop
       COMMAND ${CMAKE_COMMAND} -E copy ${PY_BIN_FILES} reshop
       # bdist_egg
-      COMMAND ${VENV_Python3_EXECUTABLE} setup.py egg_info --tag-date --tag-build=dev bdist_wheel -p ${Python3_platform}
+      COMMAND ${VENV_Python3_EXECUTABLE} setup.py egg_info --tag-build=dev${TAG_BUILD} bdist_wheel -p ${Python3_platform}
       COMMAND ${CMAKE_COMMAND} -E touch dist/timestamp
       MAIN_DEPENDENCY
         ${CMAKE_BINARY_DIR}/swig/setup.py.gen
