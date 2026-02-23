@@ -81,16 +81,19 @@ jobs:
       id: cp312
       with:
         python-version: 3.12
+        update-environment: false
 
     - uses: actions/setup-python@v6
       id: cp313
       with:
         python-version: 3.13
+        update-environment: false
 
     - uses: actions/setup-python@v6
       id: cp314
       with:
         python-version: 3.14
+        update-environment: false
 
     - name: Install dependencies
       run: |
@@ -180,6 +183,7 @@ jobs:
 
   pypi-publish:
     name: Upload release to PyPI
+    if: always()
     needs: [build]
     runs-on: ubuntu-latest
     environment:

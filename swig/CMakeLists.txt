@@ -282,6 +282,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       endif()
 
       set(TEST_PYTHON_EXECUTABLE ${VENV_Python3_EXECUTABLE})
+
       # Set working directory to top-level. Avoid loading wrong module
       set(TEST_PYTHON_WRKDIR ${CMAKE_BINARY_DIR})
 
@@ -325,6 +326,7 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       endif (NOT EXISTS ${VENV_DIR})
 
    else(VENV_TESTING)
+
       if (DARLING)
          set(TEST_PYTHON_EXECUTABLE ${DARLING} shell /Library/Frameworks/Python.framework/Versions/3.12/bin/python3)
       else()
