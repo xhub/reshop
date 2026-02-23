@@ -378,12 +378,6 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
                      DEPENDS ${PYTHON_PROJECT_DIR}/dist/timestamp
                      WORKING_DIRECTORY ${PYTHON_PROJECT_DIR})
 
-   add_custom_command(TARGET ${pytarget}_package POST_BUILD
-         COMMAND ${CMAKE_COMMAND} -E copy_directory dist ${OUTPUT_DIR}
-         WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
-         COMMENT "Copy wheel to output"
-         VERBATIM)
-
    ###################
    ##  Python Test  ##
    ###################
@@ -396,10 +390,18 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       endif()
 
       add_custom_command(TARGET ${pytarget}_package POST_BUILD
-         COMMAND sh -c "${AUDITWHEEL} repair --plat ${PYTHON_WHEEL_PLAT} dist/*.whl"
+         COMMAND sh -c "${AUDITWHEEL} repair --plat ${PYTHON_WHEEL_PLAT} -w ${OUTPUT_DIR} dist/*.whl"
          WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
          COMMENT "Properly tag wheel"
          VERBATIM)
+
+   else()
+      add_custom_command(TARGET ${pytarget}_package POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory dist ${OUTPUT_DIR}
+            WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
+            COMMENT "Copy wheel to output"
+            VERBATIM)
+
    endif() #Linux
   
    if(VENV_TESTING)
