@@ -4,6 +4,8 @@
 # Bump to 3.25 for LINUX, and kill compat code below
 cmake_minimum_required (VERSION 3.21)
 
+message(STATUS "The CMake version is: ${CMAKE_VERSION}")
+
 # This needs to be set at the top
 # We need that for TLS
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)

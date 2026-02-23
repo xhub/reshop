@@ -147,22 +147,23 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_EXECUTABLE)
       # specified as argument
       set(Python3_EXECUTABLE ${Py3_EXECUTABLE})
  
-      execute_process (COMMAND ${Python3_EXECUTABLE} "--version"
+      execute_process (COMMAND ${Python3_EXECUTABLE} -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
                        RESULT_VARIABLE PyCmd_VERSION_RC
-                       OUTPUT_VARIABLE PyCmd_VERSION
+                       OUTPUT_VARIABLE Py3_VERSION
                        ERROR_VARIABLE  PyCmd_VERSION_STDERR
                        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
          if (PyCmd_VERSION_RC GREATER 0)
          message(FATAL_ERROR "'{Python3_EXECUTABLE} --version' failed with code ${PyCmd_VERSION_RC}. Stderr content is \n${PyCmd_VERSION_STDERR}\n\n"
-                          "Stdout content is \n${PyCmd_VERSION}\n")
+                          "Stdout content is \n${Py3_VERSION}\n")
          endif()
 
-      separate_arguments (outlist NATIVE_COMMAND ${PyCmd_VERSION})
+      #      separate_arguments (outlist NATIVE_COMMAND ${PyCmd_VERSION})
  
-      message(STATUS "For BUILD_PYTHON argument ${P}; full version is ${PyCmd_VERSION}\nParsed is ${outlist}")
+      #message(STATUS "For BUILD_PYTHON argument ${P}; full version is ${PyCmd_VERSION}\nParsed is ${outlist}")
+      message(STATUS "For BUILD_PYTHON argument ${P}, the version is ${Py3_VERSION}")
  
-      LIST(POP_BACK outlist Py3_VERSION)
+      #LIST(POP_BACK outlist Py3_VERSION)
 
       # Unset a bunch of stuff to ensure find_package does something ...
       unset(Python3_Found)
