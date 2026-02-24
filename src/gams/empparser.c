@@ -692,10 +692,14 @@ static inline int _tok_one(Token *tok, const char *str)
    return OK;
 }
 
+#define validc(c) ((c) != '\0') 
+#define notEOL(c) (validc(c) && (c) != '\n') 
+
+
 static inline unsigned _toklen(const char *str)
 {
    unsigned len = 0;
-   while (!(isspace(str[len]) || str[len] == EOF)) {
+   while (!(isspace(str[len]) || !validc(str[len]))) {
       len++;
    }
 
@@ -714,9 +718,6 @@ static inline int tok_eof(Token *tok)
  *
  * ---------------------------------------------------------------------- */
 
-
-#define validc(c) ((c) != '\0' && (c) != EOF) 
-#define notEOL(c) (validc(c) && (c) != '\n') 
 
 static inline void inc_linenr(Interpreter *interp, unsigned p)
 {
@@ -779,12 +780,12 @@ static inline bool skipws(const char * restrict buf, unsigned * restrict p)
        * Skip commented line
        * ------------------------------------------------------------------- */
       if (buf[_p] == '*') {
-         while (buf[_p] != '\0' && buf[_p] != '\n') _p++;
+         while validc((buf[_p]) && buf[_p] != '\n') _p++;
       }
    }
 
    (*p) = _p;
-   return buf[_p] == '\0' || buf[_p] == EOF;
+   return buf[_p] == '\0';
 }
 
 static inline bool potential_labeldef(Interpreter *interp, const unsigned * restrict p)
@@ -829,7 +830,7 @@ static inline bool parser_skipws(Interpreter *interp, unsigned * restrict p)
    }
 
    (*p) = _p;
-   return buf[_p] == '\0' || buf[_p] == EOF;
+   return buf[_p] == '\0';
 }
 
 static bool tok_UELstr(Token *tok, const char * restrict buf, unsigned * restrict pos, char quote)
@@ -881,7 +882,7 @@ static bool skip_gmsindices(const char * restrict buf, unsigned *pos)
    /* quoted UELs can contain ')'. Hence, we record whether we have one or not*/
    bool in_squote = false, in_dquote = false;
 
-   while (buf[p] != '\0' && (in_squote || in_dquote || buf[p] != ')')) {
+   while validc((buf[p]) && (in_squote || in_dquote || buf[p] != ')')) {
       char c = buf[p];
       if (c == '\'' && !in_dquote) {
          in_squote = !in_squote;
@@ -894,7 +895,7 @@ static bool skip_gmsindices(const char * restrict buf, unsigned *pos)
 
    *pos = p;
 
-   return buf[p] == '\0' || buf[p] == EOF;
+   return buf[p] == '\0';
 }
 
 /**
@@ -916,7 +917,7 @@ static bool skip_conditional(const char * restrict buf, unsigned *pos)
 
    unsigned n_parent = 1;
 
-   while (buf[p] != '\0' && n_parent > 0) {
+   while validc((buf[p]) && n_parent > 0) {
       p++;
       char c = buf[p];
       if (c == '\'' && !in_dquote) {
@@ -934,7 +935,7 @@ static bool skip_conditional(const char * restrict buf, unsigned *pos)
 
    *pos = p;
 
-   return buf[p] == '\0' || buf[p] == EOF;
+   return buf[p] == '\0';
 }
 
 /**
@@ -965,7 +966,7 @@ static bool tok_getgmssymname(Token *tok, const char * restrict buf,
    tok->len = len;
    tok->start = &buf[pos_];
 
-   return buf[lpos] == '\0' || buf[lpos] == EOF;
+   return buf[lpos] == '\0';
 }
 
 UNUSED static bool _tok_untilws(Token *tok, const char * restrict buf, unsigned * restrict pos)
@@ -973,14 +974,14 @@ UNUSED static bool _tok_untilws(Token *tok, const char * restrict buf, unsigned 
    unsigned lpos = *pos;
    unsigned pos_ = lpos;
 
-   while (!isspace(buf[lpos]) && buf[lpos] != EOF &&  buf[lpos] != '\0') lpos++;
+   while (!isspace(buf[lpos]) && validc(buf[lpos])) lpos++;
 
    unsigned len = lpos - pos_;
    *pos = lpos;
    tok->len = len;
    tok->start = &buf[pos_];
 
-   return buf[lpos] == EOF ||  buf[lpos] == '\0';
+   return buf[lpos] == '\0';
 }
 
 UNUSED static bool _tok_untilEOL(Token *tok, const char * restrict buf, unsigned * restrict pos)
@@ -988,14 +989,14 @@ UNUSED static bool _tok_untilEOL(Token *tok, const char * restrict buf, unsigned
    unsigned lpos = *pos;
    unsigned pos_ = lpos;
 
-   while (buf[lpos] != '\n' && buf[lpos] != EOF &&  buf[lpos] != '\0') lpos++;
+   while (buf[lpos] != '\n' && validc(buf[lpos])) lpos++;
 
    unsigned len = lpos - pos_;
    *pos = lpos;
    tok->len = len;
    tok->start = &buf[pos_];
 
-   return buf[lpos] == EOF ||  buf[lpos] == '\0';
+   return buf[lpos] == '\0';
 }
 
 /**
@@ -1016,14 +1017,14 @@ static bool tok_untilchar(Token *tok, const char * restrict buf, char c,
    unsigned lpos = *pos;
    unsigned pos_ = lpos;
 
-   while (buf[lpos] != '\n' && buf[lpos] != c && buf[lpos] != EOF && buf[lpos] != '\0') lpos++;
+   while (buf[lpos] != '\n' && buf[lpos] != c && validc(buf[lpos])) lpos++;
 
    unsigned len = lpos - pos_;
    *pos = lpos;
    tok->len = len;
    tok->start = &buf[pos_];
 
-   return buf[lpos] == EOF ||  buf[lpos] == '\0';
+   return buf[lpos] == '\0';
 }
 
 /**
@@ -1044,7 +1045,7 @@ static bool tok_untilcharnoEOL(Token *tok, const char * restrict buf, char c,
    unsigned lpos = *pos;
    unsigned pos_ = lpos;
 
-   while (buf[lpos] != '\n' && buf[lpos] != c && buf[lpos] != EOF && buf[lpos] != '\0') lpos++;
+   while (buf[lpos] != '\n' && buf[lpos] != c && validc(buf[lpos])) lpos++;
 
    unsigned len = lpos - pos_;
    *pos = lpos;
@@ -1403,14 +1404,14 @@ bool tok_untilwsorchar(Token *tok, const char * restrict buf, char c,
    unsigned lpos = *pos;
    unsigned pos_ = lpos;
 
-   while (!isspace(buf[lpos]) && buf[lpos] != EOF && buf[lpos] != '\0' && buf[lpos] != c) lpos++;
+   while (!isspace(buf[lpos]) && validc(buf[lpos]) && buf[lpos] != c) lpos++;
 
    unsigned len = lpos - pos_;
    *pos = lpos;
    tok->len = len;
    tok->start = &buf[pos_];
 
-   return buf[lpos] == EOF ||  buf[lpos] == '\0';
+   return buf[lpos] == '\0';
 }
 
 static void _chk_kw(const char *str1, const char *str2, unsigned len,
