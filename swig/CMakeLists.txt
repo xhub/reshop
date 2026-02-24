@@ -482,10 +482,6 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       set (PYTEST_OPTS "--rootdir=/tmp")
    endif()
 
-   add_test(NAME python-${pytarget}-tests
-            COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest -q -s ${PYTEST_OPTS} ${PYTEST_DIR}
-            WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
-
    set (ENVVARS)
 
    if (APPLE)
@@ -504,9 +500,16 @@ macro(SETUP_SWIG_PYTHON_MODULE Py3_arg)
       message(STATUS "[python] Setting RHP_PATH_FILENAME=${RHP_PATH_FILENAME}")
    endif()
 
-   if (ENVVARS)
-      message(STATUS "[python] Setting env vars ${ENVVARS}")
-      set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "${ENVVARS}")
+   # Tests require the PATH solver
+   if (RHP_PATH_FILENAME)
+      add_test(NAME python-${pytarget}-tests
+               COMMAND ${TEST_PYTHON_EXECUTABLE} -m pytest -q -s ${PYTEST_OPTS} ${PYTEST_DIR}
+               WORKING_DIRECTORY ${TEST_PYTHON_WRKDIR})
+
+      if (ENVVARS)
+         message(STATUS "[python] Setting env vars ${ENVVARS}")
+         set_tests_properties(python-${pytarget}-tests PROPERTIES ENVIRONMENT "${ENVVARS}")
+      endif()
    endif()
 
 endmacro()

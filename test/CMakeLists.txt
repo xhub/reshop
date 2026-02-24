@@ -125,10 +125,12 @@ endif()
 
 # We have ensured that the PATH libraries are available
 
-ADD_PUBLIC_TEST(test_ovf_fitting_reshop.c test_ovf_fitting_common.c)
-#add_test(ovf_fitting_reshop_initvar test_ovf_fitting_reshop)
-#set_tests_properties(ovf_fitting_reshop_initvar PROPERTIES ENVIRONMENT "RHP_OVF_INIT_NEW_VARIABLES=1" )
-ADD_PUBLIC_TEST(test_basic_reshop.c test_basic.c test_common.c)
-ADD_PUBLIC_TEST(test_crm_reshop.c test_crm.c test_common.c ../src/utils/os/asprintf.c)
-
-ADD_PUBLIC_TEST(test_ovf_reshop.c test_ovf.c test_common.c)
+if (RHP_PATH_FILENAME)
+   ADD_PUBLIC_TEST(test_ovf_fitting_reshop.c test_ovf_fitting_common.c)
+   #add_test(ovf_fitting_reshop_initvar test_ovf_fitting_reshop)
+   #set_tests_properties(ovf_fitting_reshop_initvar PROPERTIES ENVIRONMENT "RHP_OVF_INIT_NEW_VARIABLES=1" )
+   ADD_PUBLIC_TEST(test_basic_reshop.c test_basic.c test_common.c)
+   ADD_PUBLIC_TEST(test_crm_reshop.c test_crm.c test_common.c ../src/utils/os/asprintf.c)
+ 
+   ADD_PUBLIC_TEST(test_ovf_reshop.c test_ovf.c test_common.c)
+endif()
