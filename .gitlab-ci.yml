@@ -34,6 +34,8 @@ build:
     - export N_PROCS=$(grep "cpu cores" /proc/cpuinfo | uniq | tail -c 2) PATH="$HOME"/.local/bin:"$PATH"
     # - sed -i -e 's|http://deb.debian.org|https://ftps.crans.org|' /etc/apt/sources.list.d/debian.sources
       #    - echo 'Dir::Bin::Methods::ftp "ftp";' | tee -a /etc/apt/apt.conf.d/99local-ftp
+    # As of 2026.02.024 this is broken. The deadline was 2026.02.01
+    - sed -i 's/\(sha1\.second_preimage_resistance =\).*/\1 9999-01-01/' /usr/share/apt/default-sequoia.config
     - apt-get update -y
     - apt-get install graphviz bzip2 pax-utils -y  # bzip2 for gams-c-api, pax-utils for lddtree; swig is now installed via PyPI
     - apt-get install -y python3-numpy python3-scipy python3-pytest python3-setuptools python-wheel-common python3-venv python3-dev python3-pip
