@@ -23,7 +23,7 @@
 #define SWIG_NewPointerObj_(ptr, type, flags) SWIG_InternalNewPointerObj(ptr, type, flags)
 %}
 
-#else
+#else  // SWIGPYTHON_BUILTIN
 
 %runtime %{
 #define SWIG_NewPointerObj_(ptr, type, flags) SWIG_NewPointerObj(ptr, type, flags)

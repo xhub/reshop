@@ -20,8 +20,8 @@ void set_log_fd(rhpfd_t fd);
 
 #define error(format, ...)   printout(PO_ERROR, format, __VA_ARGS__)
 #define errormsg(msg)        printstr(PO_ERROR, msg)
-#define errbug(format, ...)  printout(PO_ERROR, format " Please report his as a bug\n", __VA_ARGS__)
-#define errbugmsg(format)    printout(PO_ERROR, format " Please report his as a bug\n")
+#define errbug(format, ...)  printout(PO_ERROR, format " Please report this as a bug\n", __VA_ARGS__)
+#define errbugmsg(format)    printout(PO_ERROR, format " Please report this as a bug\n")
 
 void fatal_error(const char *format, ...) FORMAT_CHK(1,2);
 
