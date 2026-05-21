@@ -721,9 +721,36 @@ static int gams_copysolveoptions(Model *mdl, const Model *mdl_src)
       /* Copy a few interesting parameters */
       const GmsContainerData *gms_src = (const GmsContainerData *)mdl_src->ctr.data;
       gmoOptFileSet(gms_dst->gmo, gmoOptFile(gms_src->gmo));
-      gevSetIntOpt(gms_dst->gev, gevKeep, gevGetIntOpt(gms_src->gev, gevKeep));
+
+      gevSetDblOpt(gms_dst->gev, gevCutOff, gevGetDblOpt(gms_src->gev, gevCutOff));
+      gevSetDblOpt(gms_dst->gev, gevCheat, gevGetDblOpt(gms_src->gev, gevCheat));
+      gevSetDblOpt(gms_dst->gev, gevHeapLimit, gevGetDblOpt(gms_src->gev, gevHeapLimit));
       gevSetDblOpt(gms_dst->gev, gevOptCR, gevGetDblOpt(gms_src->gev, gevOptCR));
       gevSetDblOpt(gms_dst->gev, gevOptCA, gevGetDblOpt(gms_src->gev, gevOptCA));
+      gevSetDblOpt(gms_dst->gev, gevResLim, gevGetDblOpt(gms_src->gev, gevResLim));
+#if GEVAPIVERSION >= 10
+      gevSetIntOpt(gms_dst->gev, gevRequestMarginals, gevGetIntOpt(gms_src->gev, gevRequestMarginals));
+#endif
+      gevSetDblOpt(gms_dst->gev, gevTryInt, gevGetDblOpt(gms_src->gev, gevTryInt));
+      gevSetDblOpt(gms_dst->gev, gevWorkFactor, gevGetDblOpt(gms_src->gev, gevWorkFactor));
+      gevSetDblOpt(gms_dst->gev, gevWorkSpace, gevGetDblOpt(gms_src->gev, gevWorkSpace));
+
+      gevSetIntOpt(gms_dst->gev, gevDomLim, gevGetIntOpt(gms_src->gev, gevDomLim));
+      gevSetIntOpt(gms_dst->gev, gevInteger1, gevGetIntOpt(gms_src->gev, gevInteger1));
+      gevSetIntOpt(gms_dst->gev, gevInteger2, gevGetIntOpt(gms_src->gev, gevInteger2));
+      gevSetIntOpt(gms_dst->gev, gevInteger3, gevGetIntOpt(gms_src->gev, gevInteger3));
+      gevSetIntOpt(gms_dst->gev, gevInteger4, gevGetIntOpt(gms_src->gev, gevInteger4));
+      gevSetIntOpt(gms_dst->gev, gevInteger5, gevGetIntOpt(gms_src->gev, gevInteger5));
+      gevSetIntOpt(gms_dst->gev, gevKeep, gevGetIntOpt(gms_src->gev, gevKeep));
+      gevSetIntOpt(gms_dst->gev, gevNodeLim, gevGetIntOpt(gms_src->gev, gevNodeLim));
+      gevSetIntOpt(gms_dst->gev, gevThreadsRaw, gevGetIntOpt(gms_src->gev, gevThreadsRaw));
+      gevSetIntOpt(gms_dst->gev, gevUseCutOff, gevGetIntOpt(gms_src->gev, gevUseCutOff));
+      gevSetIntOpt(gms_dst->gev, gevUseCheat, gevGetIntOpt(gms_src->gev, gevUseCheat));
+
+      char buf[GMS_SSSIZE];
+      gevSetStrOpt(gms_dst->gev, gevNameExtFFile, gevGetStrOpt(gms_src->gev, gevNameExtFFile, buf));
+      gevSetStrOpt(gms_dst->gev, gevNameScenFile, gevGetStrOpt(gms_src->gev, gevNameScenFile, buf));
+      gevSetStrOpt(gms_dst->gev, gevNameScrExt, gevGetStrOpt(gms_src->gev, gevNameScrExt, buf));
       break;
    }
    case RhpBackendReSHOP:
